@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { fetchEssays } from "../services/essayService";
 import type { Essay } from "../types/Essay";
 import EssayCard from "../components/EssayCard";
+import { useNavigate } from "react-router-dom";
 
 const TeacherDashboard: React.FC = () => {
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadEssays() {
@@ -32,6 +34,14 @@ const TeacherDashboard: React.FC = () => {
       <h1 className="text-2xl text-primary font-bold mb-4">
         Teacher Dashboard
       </h1>
+
+      {/* Test error button */}
+      <button
+        onClick={() => navigate("/non-existent-page")} // this will trigger your 404
+        className="mb-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+      >
+        Trigger 404 Error
+      </button>
 
       {/* Loading state */}
       {loading && <p className="text-gray-500">Loading essays...</p>}
