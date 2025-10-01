@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { ReactNode } from "react";
 import {
   Home,
   FileText,
@@ -22,9 +23,11 @@ interface MenuItem {
   badge?: number;
 }
 
-const ClientSidebar: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+interface ClientSidebarProps {
+  children: ReactNode;
+}
+
+const ClientSidebar: React.FC<ClientSidebarProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Dashboard");
