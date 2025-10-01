@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const EduComposeLogin: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    console.log("Login attempt:", { email, password });
-  };
+  //   const handleLogin = () => {
+  //     console.log("Login attempt:", { email, password });
+  //   };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
@@ -172,7 +174,8 @@ const EduComposeLogin: React.FC = () => {
 
               {/* Login Button */}
               <button
-                onClick={handleLogin}
+                // onClick={handleLogin}
+                onClick={() => navigate("/dashboard")}
                 className="w-full text-white py-3 rounded-lg font-semibold bg-gradient-to-r from-primary to-accent shadow-lg hover:from-accent hover:to-primary transition-all transform hover:-translate-y-0.5"
               >
                 Login
