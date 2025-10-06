@@ -4,8 +4,6 @@
 
 Empowering educators with AI-driven insights to provide deeper, more effective feedback on student writing — **without replacing the human touch.**
 
----
-
 ## The Challenge: An Unsustainable Workload
 
 Essay evaluation is essential for student learning but creates a massive burden on teachers. Delivering **personalized, consistent, and high-quality feedback** for every student often becomes unrealistic.
@@ -19,8 +17,6 @@ Essay evaluation is essential for student learning but creates a massive burden 
 > **Result:** Teachers spend most of their time error-checking — not mentoring.
 
 EduCompose changes that.
-
----
 
 ## 💡 Our Solution: A Teacher-Centered Approach
 
@@ -39,8 +35,6 @@ Automates the **first-pass analysis** of grammar, readability, and logical flow 
 
 Keeps **human feedback authentic.** The AI assists teachers, not replaces them, strengthening the teacher-student relationship.
 
----
-
 ## ⚙️ How It Works: Technology Stack
 
 EduCompose integrates multiple AI layers for essay evaluation:
@@ -51,8 +45,6 @@ EduCompose integrates multiple AI layers for essay evaluation:
 4. **Teacher Report Output** – Actionable insights highlighting key weaknesses and strengths.
 
 > A full pipeline: _Essay → AI Analysis → Insightful Report → Teacher Decision._
-
----
 
 ## 🧩 Live Simulation: From Essay to Insight
 
@@ -65,8 +57,6 @@ EduCompose demonstrates its process through a sample essay analysis:
 - Generates **feedback-ready insights** for teacher review
 
 Teachers can simulate and interpret AI analysis before applying it to real classrooms.
-
----
 
 ## 🧪 Research Plan
 
@@ -103,8 +93,6 @@ Teacher expertise and essay datasets are used for validation.
 - **Primary:** Senior high school & college English teachers
 - **Secondary:** Students providing essay data samples
 
----
-
 ## 🌍 Impact
 
 EduCompose bridges **AI innovation and classroom practicality.**
@@ -117,8 +105,6 @@ By giving teachers deeper, data-driven insights into student writing, it:
 - Promotes scalable, personalized instruction
 
 > **Mission:** Empower teachers with AI — not replace them.
-
----
 
 ## Contributors
 
