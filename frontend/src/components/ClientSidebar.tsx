@@ -1,35 +1,41 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Home,
   FileText,
   BarChart3,
-  Settings,
   Users,
-  BookOpen,
   Menu,
   X,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  Bell,
-  Search,
+  BarChart2,
+  Notebook,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface MenuItem {
   icon: React.ReactNode;
   label: string;
   path: string;
-  badge?: number;
 }
 
 interface ClientSidebarProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  isMobileOpen: boolean;
+  setIsMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const ClientSidebar: React.FC<ClientSidebarProps> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+const ClientSidebar: React.FC<ClientSidebarProps> = ({
+  children,
+  isMobileOpen,
+  setIsMobileOpen,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [xButtonHeight, setXButtonHeight] = useState(0);
+
+  const xButtonRef = useRef<HTMLButtonElement>(null);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,35 +47,28 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ children }) => {
     },
     {
       icon: <FileText className='w-5 h-5' />,
-      label: "Essays",
+      label: "Essay Management",
       path: "/essays",
-      badge: 5,
     },
     {
       icon: <BarChart3 className='w-5 h-5' />,
-      label: "Analytics",
+      label: "Analysis Report",
       path: "/analytics",
     },
     {
-      icon: <Users className='w-5 h-5' />,
-      label: "Students",
+      icon: <BarChart2 className='w-5 h-5' />,
+      label: "Class Insights",
       path: "/students",
     },
     {
-      icon: <BookOpen className='w-5 h-5' />,
-      label: "Resources",
+      icon: <Users className='w-5 h-5' />,
+      label: "Student Profile",
       path: "/resources",
     },
     {
-      icon: <Bell className='w-5 h-5' />,
-      label: "Notifications",
+      icon: <Notebook className='w-5 h-5' />,
+      label: "Teacher Notes",
       path: "/notifications",
-      badge: 3,
-    },
-    {
-      icon: <Settings className='w-5 h-5' />,
-      label: "Settings",
-      path: "/settings",
     },
   ];
 
@@ -81,146 +80,134 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ children }) => {
     setIsMobileOpen(false);
   };
 
+  const textVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  };
+
+  // Track desktop vs mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 1024;
+      setIsDesktop(desktop);
+      if (!desktop) {
+        setIsOpen(false);
+        setIsLocked(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Measure X button height
+  useEffect(() => {
+    if (xButtonRef.current) {
+      setXButtonHeight(xButtonRef.current.offsetHeight + 16);
+    }
+  }, [isMobileOpen]);
+
   return (
     <div className='flex h-screen overflow-hidden'>
-      {/* ☰ Mobile toggle */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className='lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg bg-primary'
-      >
-        {isMobileOpen ? (
-          <X className='w-6 h-6 text-white' />
-        ) : (
-          <Menu className='w-6 h-6 text-white' />
-        )}
-      </button>
-
-      {/* Overlay for mobile */}
-      {isMobileOpen && (
-        <div
-          className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
       <aside
-        className={`fixed lg:relative h-full transition-all duration-300 z-40 flex flex-col border-r border-neutral3 bg-white ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-        style={{ width: isOpen ? "280px" : "80px" }}
+        className='fixed lg:relative h-full transition-all duration-300 z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
+        style={{
+          width: isDesktop
+            ? isOpen
+              ? "280px"
+              : "80px"
+            : isMobileOpen
+            ? "280px"
+            : "0px",
+        }}
+        onMouseEnter={() => {
+          if (isDesktop && !isLocked) setIsOpen(true);
+        }}
+        onMouseLeave={() => {
+          if (isDesktop && !isLocked) setIsOpen(false);
+        }}
       >
-        {/* Header */}
-        <div className='flex items-center justify-between p-4 border-b border-neutral3'>
-          {isOpen ? (
-            <div className='flex items-center space-x-2'>
-              <div className='w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white bg-gradient-to-tr from-primary to-accent'>
-                EC
-              </div>
-              <div>
-                <h1 className='font-bold text-lg text-primary'>EduCompose</h1>
-                <p className='text-xs text-gray-500'>Client Portal</p>
-              </div>
-            </div>
-          ) : (
-            <div className='w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white bg-gradient-to-tr from-primary to-accent mx-auto'>
-              EC
+        {/* Header inside sidebar */}
+        <div className='flex items-center justify-between p-4'>
+          {isDesktop && (
+            <div
+              onClick={() => setIsLocked(!isLocked)}
+              className={`w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center cursor-pointer transition-colors duration-200 ${
+                isLocked ? "bg-accent" : "bg-transparent"
+              }`}
+            >
+              <Menu className='text-white' size={24} />
             </div>
           )}
         </div>
-
-        {/* Collapse button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className='hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full items-center justify-center shadow-lg bg-primary border-2 border-white'
-        >
-          {isOpen ? (
-            <ChevronLeft className='w-4 h-4 text-white' />
-          ) : (
-            <ChevronRight className='w-4 h-4 text-white' />
-          )}
-        </button>
-
-        {/* Search bar */}
-        {isOpen && (
-          <div className='p-4'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' />
-              <input
-                type='text'
-                placeholder='Search...'
-                className='w-full pl-10 pr-4 py-2 rounded-lg text-sm outline-none bg-neutral2 border border-neutral3 focus:border-primary focus:bg-white'
-              />
-            </div>
-          </div>
-        )}
 
         {/* Navigation links */}
-        <nav className='flex-1 overflow-y-auto p-4'>
-          <ul className='space-y-2'>
-            {menuItems.map((item) => (
-              <li key={item.label}>
-                <button
-                  onClick={() => handleItemClick(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
-                    isOpen ? "justify-start" : "justify-center"
-                  } ${
-                    activePath === item.path
-                      ? "bg-primary/10 text-primary"
-                      : "text-gray-600 hover:bg-neutral2"
-                  }`}
+        <nav className='flex-1 p-4'>
+          <ul className='space-y-2 overflow-hidden'>
+            {menuItems.map((item, index) => {
+              const isActive = activePath === item.path;
+              return (
+                <li
+                  key={item.label}
+                  style={{
+                    marginTop:
+                      !isDesktop && index === 0
+                        ? `${xButtonHeight}px`
+                        : undefined,
+                  }}
                 >
-                  <span className='flex-shrink-0'>{item.icon}</span>
-                  {isOpen && (
-                    <>
-                      <span className='flex-1 text-left font-medium'>
-                        {item.label}
+                  <button
+                    onClick={() => handleItemClick(item.path)}
+                    className={`group w-full flex items-center rounded-lg ${
+                      isActive
+                        ? "bg-neutral1 text-primary"
+                        : "text-white hover:bg-neutral2 hover:text-primary"
+                    }`}
+                  >
+                    <div className='flex items-center w-full'>
+                      <span className='flex-shrink-0 flex items-center justify-center p-3'>
+                        {item.icon}
                       </span>
-                      {item.badge && (
-                        <span className='px-2 py-1 text-xs font-bold text-white rounded-full bg-primary'>
-                          {item.badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-                  {!isOpen && item.badge && (
-                    <span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-primary' />
-                  )}
-                </button>
-              </li>
-            ))}
+                      <AnimatePresence>
+                        {(isDesktop ? isOpen : isMobileOpen) && (
+                          <motion.span
+                            initial='hidden'
+                            animate='visible'
+                            exit='hidden'
+                            variants={textVariants}
+                            className='font-medium whitespace-nowrap'
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
-
-        {/* Footer / Profile */}
-        <div className='border-t border-neutral3 p-4'>
-          {isOpen ? (
-            <>
-              <div className='flex items-center gap-3 mb-3'>
-                <div className='w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-tr from-secondary to-primary'>
-                  JD
-                </div>
-                <div className='flex-1'>
-                  <p className='font-semibold text-sm text-gray-800'>
-                    John Doe
-                  </p>
-                  <p className='text-xs text-gray-500'>Client</p>
-                </div>
-              </div>
-              <button className='w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:text-red-600 bg-neutral2 hover:bg-red-50 transition-all'>
-                <LogOut className='w-5 h-5' />
-                <span className='font-medium'>Logout</span>
-              </button>
-            </>
-          ) : (
-            <button className='w-full flex justify-center p-2 rounded-lg text-gray-600 hover:text-red-600 bg-neutral2 hover:bg-red-50 transition-all'>
-              <LogOut className='w-5 h-5' />
-            </button>
-          )}
-        </div>
       </aside>
 
-      {/* Right content */}
+      {/* Mobile X overlay */}
+      {isMobileOpen && !isDesktop && (
+        <>
+          <button
+            ref={xButtonRef}
+            onClick={() => setIsMobileOpen(false)}
+            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary'
+          >
+            <X className='w-6 h-6 text-white' />
+          </button>
+          <div
+            className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
+            onClick={() => setIsMobileOpen(false)}
+          />
+        </>
+      )}
+
+      {/* Main content */}
       <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
         {children}
       </main>

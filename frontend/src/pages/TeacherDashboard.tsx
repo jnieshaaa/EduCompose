@@ -28,14 +28,14 @@ const TeacherDashboard: React.FC = () => {
     loadEssays();
   }, []);
 
-  const handleViewEssay = (essayId: string) => {
-    navigate(`/essay/${essayId}`);
-  };
+  // const handleViewEssay = (essayId: string) => {
+  //   navigate(`/essay/${essayId}`);
+  // };
 
   // Loading State Check
   if (loading) {
     return (
-      <div className='p-8 min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
+      <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
         <p className='text-4xl font-bold text-green-400'>Loading Essay</p>
       </div>
     );
@@ -44,7 +44,7 @@ const TeacherDashboard: React.FC = () => {
   // Error State Check
   if (error) {
     return (
-      <div className='p-8 min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
+      <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
         <div className='text-red-600 font-semibold border-2 border-red-200 p-6 rounded-lg bg-red-50 inline-block'>
           {error}
         </div>
@@ -55,7 +55,7 @@ const TeacherDashboard: React.FC = () => {
   const hasEssays = essays.length > 0;
 
   return (
-    <div className='p-8 min-h-screen bg-gradient-to-b from-gray-50 to-gray-100'>
+    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100'>
       <div className='text-center'>
         <header>
           <motion.h1
@@ -71,7 +71,7 @@ const TeacherDashboard: React.FC = () => {
             className='text-gray-500 mt-2 mb-10'
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }} // slightly after h1
+            transition={{ delay: 0.2 }}
           >
             Monitor class progress and learning objectives.
           </motion.p>
