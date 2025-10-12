@@ -119,7 +119,7 @@ ${selectedPrompt}`;
         `<h3 class="text-xl font-semibold mb-2 text-primary">${promptRecipes[promptKey].title}</h3>
          <div class="p-4 bg-white border border-gray-200 rounded-lg whitespace-pre-wrap">${text}</div>`
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Analysis failed:", error);
       setOutput(
         `<div class="p-4 bg-red-100 text-red-700 rounded-lg">
@@ -157,7 +157,7 @@ ${selectedPrompt}`;
   );
 
   return (
-    <div className='p-8 min-h-screen bg-gradient-to-b from-gray-50 to-gray-100'>
+    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100'>
       <div className='text-center'>
         <header>
           <motion.h1
@@ -173,12 +173,13 @@ ${selectedPrompt}`;
             className='text-gray-500 mt-2 mb-10'
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }} // slightly after h1
+            transition={{ delay: 0.2 }}
           >
             Cross-check essays for factual and stylistic accuracy.
           </motion.p>
         </header>
       </div>
+
       {/* Inputs */}
       <motion.div
         className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'
@@ -186,9 +187,7 @@ ${selectedPrompt}`;
         animate='visible'
         variants={{
           hidden: {},
-          visible: {
-            transition: { staggerChildren: 0.1 },
-          },
+          visible: { transition: { staggerChildren: 0.1 } },
         }}
       >
         {[
