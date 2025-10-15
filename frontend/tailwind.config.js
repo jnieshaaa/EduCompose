@@ -15,7 +15,6 @@ module.exports = {
           500: "#045568",
           600: "#0791B2", // base
         },
-
         secondary: {
           DEFAULT: "#8CB5B9", // main
           50: "#BCD4D6",
@@ -47,7 +46,6 @@ module.exports = {
           500: "#9A625E",
           600: "#B98F8C", // base
         },
-
         support: {
           DEFAULT: "#00E5FF", // keep
           light: "#5EE2FF",
@@ -55,36 +53,52 @@ module.exports = {
         },
 
         success: {
-          DEFAULT: "#10B981",
+          default: "#10B981",
           light: "#6EE7B7",
           dark: "#047857",
         },
         warning: {
-          DEFAULT: "#F59E0B",
+          default: "#F59E0B",
           light: "#FCD34D",
           dark: "#B45309",
         },
         error: {
-          DEFAULT: "#EF4444",
+          default: "#EF4444",
           light: "#FCA5A5",
           dark: "#991B1B",
         },
         info: {
-          DEFAULT: "#38BDF8",
+          default: "#38BDF8",
           light: "#BAE6FD",
           dark: "#0284C7",
         },
 
         neutral: {
-          50: "#FFFFFF", // pure white
-          100: "#F0FDFE", // background with faint aqua tint
-          200: "#E0F2FE", // light blue-gray
-          300: "#CBD5E1", // neutral borders
-          400: "#94A3B8", // muted text
-          500: "#64748B", // normal text
-          600: "#475569", // dark text
-          900: "#0F172A", // headings
+          50: "#FFFFFF",
+          100: "#F0FDFE",
+          200: "#E0F2FE",
+          300: "#CBD5E1",
+          400: "#94A3B8",
+          500: "#64748B",
+          600: "#475569",
+          900: "#0F172A",
         },
+      },
+
+      keyframes: {
+        shine: {
+          "0%": { transform: "translateX(-80%)" },
+          "100%": { transform: "translateX(300%)" },
+        },
+      },
+
+      animation: {
+        shine: "shine 0.5s ease-in-out forwards",
+      },
+
+      backgroundImage: {
+        "shine-gradient":
+          "linear-gradient(130deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
       },
     },
   },

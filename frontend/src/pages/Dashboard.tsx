@@ -59,22 +59,13 @@ const TeacherDashboard: React.FC = () => {
       <div className='text-center'>
         <header>
           <motion.h1
-            className='text-3xl font-extrabold text-primary tracking-tight'
+            className='text-3xl font-extrabold text-primary-default mb-8 tracking-tight'
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            Teacher Dashboard
+            Dashboard
           </motion.h1>
-
-          <motion.p
-            className='text-gray-500 mt-2 mb-10'
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            Monitor class progress and learning objectives.
-          </motion.p>
         </header>
       </div>
 

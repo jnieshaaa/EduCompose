@@ -43,32 +43,32 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     {
       icon: <Home className='w-5 h-5' />,
       label: "Dashboard",
-      path: "/dashboard",
+      path: "/Dashboard",
     },
     {
       icon: <FileText className='w-5 h-5' />,
       label: "Essay Management",
-      path: "/essays",
+      path: "/EssayManagement",
     },
     {
       icon: <BarChart3 className='w-5 h-5' />,
       label: "Analysis Report",
-      path: "/analytics",
+      path: "/AnalysisReport",
     },
     {
       icon: <BarChart2 className='w-5 h-5' />,
       label: "Class Insights",
-      path: "/students",
+      path: "/ClassInsights",
     },
     {
       icon: <Users className='w-5 h-5' />,
       label: "Student Profile",
-      path: "/resources",
+      path: "/StudentProfile",
     },
     {
       icon: <Notebook className='w-5 h-5' />,
       label: "Teacher Notes",
-      path: "/notifications",
+      path: "/TeacherNotes",
     },
   ];
 
@@ -80,12 +80,19 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     setIsMobileOpen(false);
   };
 
+  useEffect(() => {
+    const currentItem = menuItems.find(
+      (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
+    );
+    const pageTitle = currentItem ? currentItem.label : "EduCompose";
+    document.title = pageTitle;
+  }, [location.pathname]);
+
   const textVariants = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
   };
 
-  // Track desktop vs mobile
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024;
@@ -99,7 +106,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Measure X button height
   useEffect(() => {
     if (xButtonRef.current) {
       setXButtonHeight(xButtonRef.current.offsetHeight + 16);
@@ -110,7 +116,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     <div className='flex h-screen overflow-hidden'>
       {/* Sidebar */}
       <aside
-        className='fixed lg:relative h-full transition-all duration-300 z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
+        className='fixed lg:relative h-full transition-all duration-300 z-40 flex flex-col border-r border-neutral3 bg-primary-default overflow-hidden'
         style={{
           width: isDesktop
             ? isOpen
@@ -133,7 +139,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
             <div
               onClick={() => setIsLocked(!isLocked)}
               className={`w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center cursor-pointer transition-colors duration-200 ${
-                isLocked ? "bg-accent" : "bg-transparent"
+                isLocked ? "bg-primary-dark" : "bg-transparent"
               }`}
             >
               <Menu className='text-white' size={24} />
@@ -158,10 +164,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                 >
                   <button
                     onClick={() => handleItemClick(item.path)}
-                    className={`group w-full flex items-center rounded-lg ${
+                    className={`group w-full flex items-center rounded-lg transition-colors duration-200 ${
                       isActive
-                        ? "bg-neutral1 text-primary"
-                        : "text-white hover:bg-neutral2 hover:text-primary"
+                        ? "bg-neutral-50 text-primary-default"
+                        : "bg-primary-default text-white hover:bg-neutral-100 hover:text-primary-default"
                     }`}
                   >
                     <div className='flex items-center w-full'>
@@ -196,7 +202,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           <button
             ref={xButtonRef}
             onClick={() => setIsMobileOpen(false)}
-            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary'
+            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary-default'
           >
             <X className='w-6 h-6 text-white' />
           </button>
