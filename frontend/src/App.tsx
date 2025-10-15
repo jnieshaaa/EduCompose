@@ -1,37 +1,34 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import EduComposeLogin from "./pages/Login";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import Essay from "./pages/Essay";
+import Dashboard from "./pages/Dashboard";
+import EssayManagement from "./pages/EssayManagement";
 import ClientLayout from "./components/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
+import ClickEffect from "./components/ClickEffect";
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ClickEffect />
       <Routes>
-        {/* Public route */}
         <Route path='/' element={<EduComposeLogin />} />
-
-        {/* Protected layout with sidebar + header */}
         <Route
-          path='/dashboard'
+          path='/Dashboard'
           element={
             <ClientLayout>
-              <TeacherDashboard />
+              <Dashboard />
             </ClientLayout>
           }
         />
         <Route
-          path='/essays'
+          path='/EssayManagement'
           element={
             <ClientLayout>
-              <Essay />
+              <EssayManagement />
             </ClientLayout>
           }
         />
-
-        {/* Catch-all error */}
         <Route path='*' element={<ErrorPage code={404} />} />
       </Routes>
     </BrowserRouter>

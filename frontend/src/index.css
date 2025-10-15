@@ -21,3 +21,12 @@ body {
   margin: 0;
   padding: 0;
 }
+::selection {
+  color: #fff;
+  background: #0791b2;
+}
+
+::-moz-selection {
+  color: #fff;
+  background: #0791b2;
+}

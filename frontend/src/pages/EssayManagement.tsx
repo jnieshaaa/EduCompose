@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_KEY = ""; // ← API key here
+const API_KEY = "";
 const MAX_RETRIES = 5;
 
 declare const __firebase_config: string | undefined;
@@ -10,7 +10,6 @@ const firebaseConfig =
     ? JSON.parse(__firebase_config || "null")
     : null;
 
-// PROMPT RECIPES
 const promptRecipes = {
   verbatim: {
     title: "1. Detect Rote Output (Verbatim/Structure)",
@@ -31,7 +30,6 @@ const promptRecipes = {
 
 type PromptKey = keyof typeof promptRecipes;
 
-// BACKOFF FETCH
 const exponentialBackoffFetch = async (
   url: string,
   options: RequestInit,
@@ -58,13 +56,17 @@ const exponentialBackoffFetch = async (
   }
 };
 
-// MAIN COMPONENT
 const Essay: React.FC = () => {
   const [groundTruth, setGroundTruth] = useState("");
   const [studentEssay, setStudentEssay] = useState("");
   const [promptKey, setPromptKey] = useState<PromptKey | "">("");
   const [output, setOutput] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const wordCountGT = groundTruth.trim().split(/\s+/).filter(Boolean).length;
+  const charCountGT = groundTruth.length;
+  const wordCountSE = studentEssay.trim().split(/\s+/).filter(Boolean).length;
+  const charCountSE = studentEssay.length;
 
   useEffect(() => {
     if (firebaseConfig) console.log("Firebase config detected.");
@@ -116,7 +118,7 @@ ${selectedPrompt}`;
         "Error: No analysis returned.";
 
       setOutput(
-        `<h3 class="text-xl font-semibold mb-2 text-primary">${promptRecipes[promptKey].title}</h3>
+        `<h3 class="text-xl font-semibold mb-2 text-primary-default">${promptRecipes[promptKey].title}</h3>
          <div class="p-4 bg-white border border-gray-200 rounded-lg whitespace-pre-wrap">${text}</div>`
       );
     } catch (error: unknown) {
@@ -130,6 +132,16 @@ ${selectedPrompt}`;
       setIsLoading(false);
     }
   }, [groundTruth, studentEssay, promptKey]);
+
+  const handleUpload =
+    (setter: React.Dispatch<React.SetStateAction<string>>) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setter(reader.result as string);
+      reader.readAsText(file);
+    };
 
   const renderOutput = () => (
     <AnimatePresence mode='wait'>
@@ -148,7 +160,7 @@ ${selectedPrompt}`;
           key='placeholder'
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className='p-6 mt-10 bg-primary/10 rounded-xl text-center border-dashed border-2 border-primary'
+          className='p-6 mt-10 bg-primary-default/10 rounded-xl text-center border-dashed border-2 border-primary-default'
         >
           Analysis results will appear here after execution.
         </motion.div>
@@ -157,38 +169,22 @@ ${selectedPrompt}`;
   );
 
   return (
-    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100'>
+    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 full-h-screen flex flex-col'>
       <div className='text-center'>
-        <header>
-          <motion.h1
-            className='text-3xl font-extrabold text-primary tracking-tight'
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            Essay Verification Tool
-          </motion.h1>
-
-          <motion.p
-            className='text-gray-500 mt-2 mb-10'
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            Cross-check essays for factual and stylistic accuracy.
-          </motion.p>
-        </header>
+        <motion.h1
+          className='text-3xl font-extrabold text-primary-default tracking-tight'
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
+          Essay Management
+        </motion.h1>
       </div>
 
-      {/* Inputs */}
       <motion.div
-        className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'
-        initial='hidden'
-        animate='visible'
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.1 } },
-        }}
+        className='mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6'
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
       >
         {[
           {
@@ -206,36 +202,64 @@ ${selectedPrompt}`;
         ].map((field) => (
           <motion.div
             key={field.id}
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
+            className='bg-white p-4 rounded-xl shadow-lg border border-gray-100 flex flex-col'
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
           >
             <label
               htmlFor={field.id}
-              className='block text-sm font-semibold text-gray-700 mb-1'
+              className='text-sm font-semibold text-gray-700 mb-2'
             >
               {field.label}
             </label>
             <textarea
               id={field.id}
-              rows={10}
-              placeholder='Paste text...'
-              className='w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm transition-all'
+              rows={8}
+              className='flex-grow p-3 rounded-lg text-sm leading-relaxed resize-none mb-2 outline-none transition'
+              placeholder='Type or paste your text here...'
               value={field.value}
               onChange={(e) => field.setter(e.target.value)}
             />
+            <div className='flex justify-between items-center text-sm text-gray-500 mb-2'>
+              <span>
+                {field.id === "groundTruth"
+                  ? `${wordCountGT} Words ${charCountGT} Characters`
+                  : `${wordCountSE} Words ${charCountSE} Characters`}
+              </span>
+
+              <label className='flex items-center space-x-2 px-3 py-1 bg-white rounded-lg hover:bg-gray-100 cursor-pointer transition'>
+                <svg
+                  className='w-4 h-4'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'
+                  />
+                </svg>
+                <span>Upload</span>
+                <input
+                  type='file'
+                  accept='.txt'
+                  className='hidden'
+                  onChange={handleUpload(field.setter)}
+                />
+              </label>
+            </div>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Prompt Selection */}
       <motion.div
-        className='flex flex-col sm:flex-row items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-400 shadow-sm'
+        className='mt-4 flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-lg'
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className='w-full sm:w-2/3 mb-4 sm:mb-0'>
+        <div className='w-full sm:w-2/3 mb-2 sm:mb-0'>
           <label
             htmlFor='promptSelect'
             className='block text-sm font-bold text-gray-700 mb-1'
@@ -244,7 +268,7 @@ ${selectedPrompt}`;
           </label>
           <select
             id='promptSelect'
-            className='w-full p-2 border border-gray-300 rounded-md bg-white shadow-sm'
+            className='w-full p-2 border border-gray-300 rounded-md bg-white shadow-sm outline-none'
             value={promptKey}
             onChange={(e) => setPromptKey(e.target.value as PromptKey)}
           >
@@ -264,14 +288,12 @@ ${selectedPrompt}`;
           whileTap={{ scale: 0.97 }}
           onClick={runAnalysis}
           disabled={isLoading}
-          className='w-full sm:w-1/3 px-4 py-3 bg-primary text-white font-semibold rounded-lg shadow hover:opacity-90 transition disabled:opacity-50 sm:ml-4'
+          className='w-full sm:w-1/3 px-4 py-3 bg-primary-default text-white font-semibold rounded-lg shadow hover:opacity-90 transition disabled:opacity-50 sm:ml-4'
         >
           {isLoading ? "Analyzing..." : "Run Analysis"}
         </motion.button>
       </motion.div>
-
-      {/* Output */}
-      {renderOutput()}
+      <div className='flex-grow'>{renderOutput()}</div>
     </div>
   );
 };

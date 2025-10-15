@@ -6,65 +6,74 @@ module.exports = {
       colors: {
         // 🌊 Brand Core
         primary: {
-          DEFAULT: "#0791B2", // main brand tone
-          light: "#67E8F9", // same as secondary – for light backgrounds
-          dark: "#0E7490", // same as accent – for hover/active states
-          hover: "#00A4C9", // slightly brighter for hover
-          focus: "#06B6D4", // focus ring / outline color
-          muted: "#A5F3FC", // very soft tint for subtle backgrounds
+          default: "#0791B2",
+          light: "#67E8F9",
+          dark: "#0E7490",
+          hover: "#00A4C9",
+          focus: "#06B6D4",
+          muted: "#A5F3FC",
         },
-
         secondary: {
-          DEFAULT: "#67E8F9", // keep
-          light: "#A5F3FC", // gentle tint for cards/sections
-          dark: "#38BDF8", // slightly deeper version
+          default: "#67E8F9",
+          light: "#A5F3FC",
+          dark: "#38BDF8",
         },
-
         accent: {
-          DEFAULT: "#0E7490", // keep
-          light: "#14B8A6", // teal accent variant
-          dark: "#164E63", // deep cyan-teal
+          default: "#0E7490",
+          light: "#14B8A6",
+          dark: "#164E63",
         },
-
         support: {
-          DEFAULT: "#00E5FF", // keep
-          light: "#5EE2FF", // bright highlight
-          dark: "#00B7CC", // deeper tone for balance
+          default: "#00E5FF",
+          light: "#5EE2FF",
+          dark: "#00B7CC",
         },
-
-        // ✅ Functional Colors
         success: {
-          DEFAULT: "#10B981",
+          default: "#10B981",
           light: "#6EE7B7",
           dark: "#047857",
         },
         warning: {
-          DEFAULT: "#F59E0B",
+          default: "#F59E0B",
           light: "#FCD34D",
           dark: "#B45309",
         },
         error: {
-          DEFAULT: "#EF4444",
+          default: "#EF4444",
           light: "#FCA5A5",
           dark: "#991B1B",
         },
         info: {
-          DEFAULT: "#38BDF8",
+          default: "#38BDF8",
           light: "#BAE6FD",
           dark: "#0284C7",
         },
-
-        // ⚪ Neutral / Base
         neutral: {
-          50: "#FFFFFF", // pure white
-          100: "#F0FDFE", // background with faint aqua tint
-          200: "#E0F2FE", // light blue-gray
-          300: "#CBD5E1", // neutral borders
-          400: "#94A3B8", // muted text
-          500: "#64748B", // normal text
-          600: "#475569", // dark text
-          900: "#0F172A", // headings
+          50: "#FFFFFF",
+          100: "#F0FDFE",
+          200: "#E0F2FE",
+          300: "#CBD5E1",
+          400: "#94A3B8",
+          500: "#64748B",
+          600: "#475569",
+          900: "#0F172A",
         },
+      },
+
+      keyframes: {
+        shine: {
+          "0%": { transform: "translateX(-80%)" },
+          "100%": { transform: "translateX(300%)" },
+        },
+      },
+
+      animation: {
+        shine: "shine 0.5s ease-in-out forwards",
+      },
+
+      backgroundImage: {
+        "shine-gradient":
+          "linear-gradient(130deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
       },
     },
   },
