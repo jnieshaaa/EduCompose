@@ -6,33 +6,54 @@ module.exports = {
       colors: {
         // 🌊 Brand Core
         primary: {
-          DEFAULT: "#0791B2", // main brand tone
-          light: "#67E8F9", // same as secondary – for light backgrounds
-          dark: "#0E7490", // same as accent – for hover/active states
-          hover: "#00A4C9", // slightly brighter for hover
-          focus: "#06B6D4", // focus ring / outline color
-          muted: "#A5F3FC", // very soft tint for subtle backgrounds
+          DEFAULT: "#0791B2", // main
+          50: "#10C9F6",
+          100: "#09B9E3",
+          200: "#08A5CB",
+          300: "#067D99",
+          400: "#056981",
+          500: "#045568",
+          600: "#0791B2", // base
         },
 
         secondary: {
-          DEFAULT: "#67E8F9", // keep
-          light: "#A5F3FC", // gentle tint for cards/sections
-          dark: "#38BDF8", // slightly deeper version
+          DEFAULT: "#8CB5B9", // main
+          50: "#BCD4D6",
+          100: "#ACC9CC",
+          200: "#9CBFC3",
+          300: "#7CABAF",
+          400: "#6CA1A6",
+          500: "#5E959A",
+          600: "#8CB5B9", // base
+        },
+
+        tertiary: {
+          DEFAULT: "#772714", // main
+          50: "#E06345",
+          100: "#DC512F",
+          200: "#CF4423",
+          300: "#A3361B",
+          400: "#8D2F18",
+          500: "#772714",
         },
 
         accent: {
-          DEFAULT: "#0E7490", // keep
-          light: "#14B8A6", // teal accent variant
-          dark: "#164E63", // deep cyan-teal
+          DEFAULT: "#B98F8C", // main
+          50: "#D6BDBC",
+          100: "#CCAEAC",
+          200: "#C39E9C",
+          300: "#AF807C",
+          400: "#A6706C",
+          500: "#9A625E",
+          600: "#B98F8C", // base
         },
 
         support: {
           DEFAULT: "#00E5FF", // keep
-          light: "#5EE2FF", // bright highlight
-          dark: "#00B7CC", // deeper tone for balance
+          light: "#5EE2FF",
+          dark: "#00B7CC",
         },
 
-        // ✅ Functional Colors
         success: {
           DEFAULT: "#10B981",
           light: "#6EE7B7",
@@ -54,7 +75,6 @@ module.exports = {
           dark: "#0284C7",
         },
 
-        // ⚪ Neutral / Base
         neutral: {
           50: "#FFFFFF", // pure white
           100: "#F0FDFE", // background with faint aqua tint
