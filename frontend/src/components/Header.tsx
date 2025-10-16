@@ -43,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
             <span className='text-lg font-bold relative z-10'>
               <span className='text-gray-500'>Edu</span>
-              <span className='text-primary-default'>Compose</span>
+              <span className='text-primary'>Compose</span>
             </span>
           </div>
         </div>
@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           onMouseLeave={() => setIsDropdownOpen(false)}
         >
           <div
-            className='w-8 h-8 rounded-full border border-primary-default flex items-center justify-center bg-primary-default/20 text-sm font-semibold'
+            className='w-8 h-8 rounded-full border border-primary flex items-center justify-center bg-primary/20 text-sm font-semibold'
             title='User Profile'
           >
             {user.name[0]}

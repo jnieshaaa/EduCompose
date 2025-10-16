@@ -17,7 +17,7 @@ const EduComposeLogin: React.FC = () => {
   };
 
   return (
-    <div className='relative min-h-screen flex flex-col lg:flex-row bg-gradient-to-tr from-primary-default via-primary-dark to-primary-default overflow-hidden'>
+    <div className='relative min-h-screen flex flex-col lg:flex-row bg-gradient-to-tr from-primary via-primary-400 to-primary overflow-hidden'>
       {/* subtle overlay */}
       <div className='absolute inset-0 bg-black/5'></div>
 
@@ -31,7 +31,7 @@ const EduComposeLogin: React.FC = () => {
       <div className='flex-1 hidden lg:flex items-center justify-center p-12 relative overflow-hidden'>
         <div className='relative z-10 text-white max-w-md'>
           <h1 className='text-5xl font-bold mb-4 tracking-tight'>
-            Edu<span className='text-primary-light'>Compose</span>
+            Edu<span className='text-primary-50'>Compose</span>
           </h1>
           <p className='text-xl font-semibold mb-8'>
             Teacher's Companion for Essay Evaluation
@@ -39,7 +39,7 @@ const EduComposeLogin: React.FC = () => {
           <ul className='space-y-4'>
             <li className='flex items-start space-x-3'>
               <svg
-                className='w-6 h-6 mt-1 flex-shrink-0'
+                className='w-6 h-6 flex-shrink-0'
                 fill='currentColor'
                 viewBox='0 0 20 20'
               >
@@ -53,7 +53,7 @@ const EduComposeLogin: React.FC = () => {
             </li>
             <li className='flex items-start space-x-3'>
               <svg
-                className='w-6 h-6 mt-1 flex-shrink-0'
+                className='w-6 h-6 flex-shrink-0'
                 fill='currentColor'
                 viewBox='0 0 20 20'
               >
@@ -67,7 +67,7 @@ const EduComposeLogin: React.FC = () => {
             </li>
             <li className='flex items-start space-x-3'>
               <svg
-                className='w-6 h-6 mt-1 flex-shrink-0'
+                className='w-6 h-6 flex-shrink-0'
                 fill='currentColor'
                 viewBox='0 0 20 20'
               >
@@ -88,10 +88,10 @@ const EduComposeLogin: React.FC = () => {
         <div className='w-full max-w-md rounded-lg bg-neutral1 relative z-10'>
           {/* Mobile Logo */}
           <div className='lg:hidden text-center mb-8'>
-            <h1 className='text-4xl font-bold mb-2 text-primary-default'>
-              Edu<span className='text-primary-focus'>Compose</span>
+            <h1 className='text-4xl font-bold mb-2 text-white'>
+              Edu<span className='text-primary-50'>Compose</span>
             </h1>
-            <p className='text-gray-600'>
+            <p className='text-white font-semibold'>
               Teacher's Companion for Essay Evaluation
             </p>
           </div>
@@ -163,20 +163,19 @@ const EduComposeLogin: React.FC = () => {
                 <label className='flex items-center cursor-pointer'>
                   <input
                     type='checkbox'
-                    className='w-4 h-4 border-gray-300  rounded text-primary-default focus:ring-primary-default'
+                    className='w-4 h-4 border-gray-300  rounded text-primary focus:ring-primary'
                   />
                   <span className='ml-2 text-gray-600'>Remember me</span>
                 </label>
-                <button className='font-medium text-primary-dark hover:text-primary-focus transition-colors'>
+                <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
                   Forgot password?
                 </button>
               </div>
 
               {/* Login Button */}
               <button
-                // onClick={handleLogin}
                 onClick={() => navigate("/dashboard")}
-                className='w-full text-white py-3 rounded-lg font-semibold bg-gradient-to-r from-primary-default to-primary-focus shadow-lg hover:from-primary-focus hover:to-primary-default transition-all transform hover:-translate-y-0.5'
+                className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300'
               >
                 Login
               </button>
@@ -185,8 +184,8 @@ const EduComposeLogin: React.FC = () => {
             {/* Sign Up */}
             <p className='text-center text-gray-600 text-sm mt-6'>
               Don’t have an account?{" "}
-              <button className='font-semibold text-primary-default hover:text-primary-focus transition-colors'>
-                Sign up now
+              <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
+                Sign up now!
               </button>
             </p>
           </div>

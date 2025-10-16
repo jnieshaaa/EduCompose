@@ -4,9 +4,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Brand Core
         primary: {
-          DEFAULT: "#0791B2", // main
+          DEFAULT: "#0791B2",
           50: "#10C9F6",
           100: "#09B9E3",
           200: "#08A5CB",
@@ -15,7 +14,7 @@ module.exports = {
           500: "#045568",
         },
         secondary: {
-          DEFAULT: "#8CB5B9", // main
+          DEFAULT: "#8CB5B9",
           50: "#BCD4D6",
           100: "#ACC9CC",
           200: "#9CBFC3",
@@ -25,7 +24,7 @@ module.exports = {
         },
 
         tertiary: {
-          DEFAULT: "#B22807", // main
+          DEFAULT: "#B22807",
           50: "#E06345",
           100: "#DC512F",
           200: "#CF4423",
@@ -35,7 +34,7 @@ module.exports = {
         },
 
         accent: {
-          DEFAULT: "#B98F8C", // main
+          DEFAULT: "#B98F8C",
           50: "#D6BDBC",
           100: "#CCAEAC",
           200: "#C39E9C",
@@ -44,7 +43,7 @@ module.exports = {
           500: "#9A625E",
         },
         support: {
-          DEFAULT: "#00E5FF", // keep
+          DEFAULT: "#00E5FF",
           light: "#5EE2FF",
           dark: "#00B7CC",
         },

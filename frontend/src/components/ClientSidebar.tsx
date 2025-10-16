@@ -116,7 +116,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     <div className='flex h-screen overflow-hidden'>
       {/* Sidebar */}
       <aside
-        className='fixed lg:relative h-full transition-all duration-300 z-40 flex flex-col border-r border-neutral3 bg-primary-default overflow-hidden'
+        className='fixed lg:relative h-full transition-all duration-200 z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
         style={{
           width: isDesktop
             ? isOpen
@@ -139,7 +139,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
             <div
               onClick={() => setIsLocked(!isLocked)}
               className={`w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center cursor-pointer transition-colors duration-200 ${
-                isLocked ? "bg-primary-dark" : "bg-transparent"
+                isLocked ? "bg-primary-400" : "bg-transparent"
               }`}
             >
               <Menu className='text-white' size={24} />
@@ -164,10 +164,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                 >
                   <button
                     onClick={() => handleItemClick(item.path)}
-                    className={`group w-full flex items-center rounded-lg transition-colors duration-200 ${
+                    className={`btn-fade group w-full flex items-center rounded-lg ${
                       isActive
-                        ? "bg-neutral-50 text-primary-default"
-                        : "bg-primary-default text-white hover:bg-neutral-100 hover:text-primary-default"
+                        ? "bg-neutral-50 text-primary"
+                        : "bg-primary text-white hover:bg-neutral-100 hover:text-primary"
                     }`}
                   >
                     <div className='flex items-center w-full'>
@@ -202,7 +202,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           <button
             ref={xButtonRef}
             onClick={() => setIsMobileOpen(false)}
-            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary-default'
+            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary'
           >
             <X className='w-6 h-6 text-white' />
           </button>

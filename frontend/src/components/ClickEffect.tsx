@@ -14,7 +14,7 @@ const ClickEffect: React.FC = () => {
 
       setTimeout(() => {
         setRipples((prev) => prev.filter((r) => r.id !== id));
-      }, 300);
+      }, 500);
     };
 
     document.body.addEventListener("click", handleClick, { passive: true });
@@ -36,14 +36,14 @@ const ClickEffect: React.FC = () => {
           key={ripple.id}
           style={{
             position: "absolute",
-            left: ripple.x - 10,
-            top: ripple.y - 10,
+            left: ripple.x - 3,
+            top: ripple.y - 2,
             width: 10,
             height: 10,
-            borderRadius: "50%",
-            border: "2px solid rgba(0,150,255,0.7)",
+            borderRadius: "100%",
+            border: "1px solid rgba(0, 149, 255, 1)",
             transform: "scale(0)",
-            animation: "ripple 0.4s ease-out forwards",
+            animation: "ripple 0.2s ease-out forwards",
           }}
         />
       ))}

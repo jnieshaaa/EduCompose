@@ -21,12 +21,20 @@ body {
   margin: 0;
   padding: 0;
 }
+
 ::selection {
   color: #fff;
-  background: #0791b2;
+  background: #f200ff;
 }
 
 ::-moz-selection {
   color: #fff;
   background: #0791b2;
+}
+
+.btn-fade {
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.btn-fade:hover {
+  transition: none;
 }

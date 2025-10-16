@@ -118,7 +118,7 @@ ${selectedPrompt}`;
         "Error: No analysis returned.";
 
       setOutput(
-        `<h3 class="text-xl font-semibold mb-2 text-primary-default">${promptRecipes[promptKey].title}</h3>
+        `<h3 class="text-xl font-semibold mb-2 text-primary">${promptRecipes[promptKey].title}</h3>
          <div class="p-4 bg-white border border-gray-200 rounded-lg whitespace-pre-wrap">${text}</div>`
       );
     } catch (error: unknown) {
@@ -160,7 +160,7 @@ ${selectedPrompt}`;
           key='placeholder'
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className='p-6 mt-10 bg-primary-default/10 rounded-xl text-center border-dashed border-2 border-primary-default'
+          className='p-6 mt-10 bg-primary/10 rounded-xl text-center border-dashed border-2 border-primary'
         >
           Analysis results will appear here after execution.
         </motion.div>
@@ -172,7 +172,7 @@ ${selectedPrompt}`;
     <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 full-h-screen flex flex-col'>
       <div className='text-center'>
         <motion.h1
-          className='text-3xl font-extrabold text-primary-default tracking-tight'
+          className='text-3xl font-extrabold text-primary tracking-tight'
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
@@ -284,11 +284,11 @@ ${selectedPrompt}`;
         </div>
 
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.9 }}
           onClick={runAnalysis}
           disabled={isLoading}
-          className='w-full sm:w-1/3 px-4 py-3 bg-primary-default text-white font-semibold rounded-lg shadow hover:opacity-90 transition disabled:opacity-50 sm:ml-4'
+          className='w-full sm:w-1/3 px-4 py-3 bg-primary text-white font-semibold rounded-lg shadow hover:bg-primary-200 transition disabled:opacity-50 sm:ml-4'
         >
           {isLoading ? "Analyzing..." : "Run Analysis"}
         </motion.button>

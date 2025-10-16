@@ -59,7 +59,7 @@ const TeacherDashboard: React.FC = () => {
       <div className='text-center'>
         <header>
           <motion.h1
-            className='text-3xl font-extrabold text-primary-default mb-8 tracking-tight'
+            className='text-3xl font-extrabold text-primary mb-8 tracking-tight'
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
