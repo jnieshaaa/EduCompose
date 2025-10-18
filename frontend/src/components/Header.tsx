@@ -31,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
     "/TeacherNotes": "Teacher Notes",
   };
 
-  const currentLabel = routeLabels[location.pathname] || "EduCompose";
+  const currentLabel = routeLabels[location.pathname] || "Dashboard";
 
   return (
     <header className='flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
@@ -57,9 +57,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
               transition={{ duration: 0.2 }}
               className='flex items-center space-x-2'
             >
-              <span className='text-lg font-semibold cursor-default'>
-                {currentLabel}
-              </span>
+              <span className='text-lg font-semibold'>{currentLabel}</span>
             </motion.div>
           )}
         </AnimatePresence>

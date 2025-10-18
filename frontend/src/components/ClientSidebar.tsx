@@ -107,7 +107,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         }}
       >
         {/* Header */}
-        <div className='flex items-center h-20 border-b border-white p-2.5 relative cursor-default'>
+        <div className='flex items-center h-20 border-b border-white p-2.5 relative'>
           <div className='relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
             <img
               src={eduComposeLogo}

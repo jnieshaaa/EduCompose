@@ -210,7 +210,7 @@ ${selectedPrompt}`;
               onChange={(e) => field.setter(e.target.value)}
             />
             <div className='flex justify-between items-center text-sm text-gray-500 mb-2 '>
-              <span className='cursor-default'>
+              <span>
                 {field.id === "groundTruth"
                   ? `${wordCountGT} Words ${charCountGT} Characters`
                   : `${wordCountSE} Words ${charCountSE} Characters`}

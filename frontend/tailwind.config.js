@@ -22,7 +22,6 @@ module.exports = {
           400: "#6CA1A6",
           500: "#5E959A",
         },
-
         tertiary: {
           DEFAULT: "#B22807",
           50: "#E06345",
@@ -32,7 +31,6 @@ module.exports = {
           400: "#8D2F18",
           500: "#772714",
         },
-
         accent: {
           DEFAULT: "#B98F8C",
           50: "#D6BDBC",
@@ -47,7 +45,6 @@ module.exports = {
           light: "#5EE2FF",
           dark: "#00B7CC",
         },
-
         success: {
           default: "#10B981",
           light: "#6EE7B7",
@@ -68,7 +65,6 @@ module.exports = {
           light: "#BAE6FD",
           dark: "#0284C7",
         },
-
         neutral: {
           50: "#FFFFFF",
           100: "#F0FDFE",
@@ -84,7 +80,7 @@ module.exports = {
       keyframes: {
         shine: {
           "0%": { transform: "translateX(-70%)" },
-          "100%": { transform: "translateX(290%)" },
+          "100%": { transform: "translateX(300%)" },
         },
       },
 
@@ -94,11 +90,15 @@ module.exports = {
 
       backgroundImage: {
         "shine-gradient":
-          "linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
+          "linear-gradient(135deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
       },
 
       fontSize: {
         xxs: "0.625rem",
+      },
+      cursor: {
+        default: "url('/cursor-triangle.png') 4 4, auto",
+        pointer: "url('/cursor-pointer.png') 4 4, pointer",
       },
     },
   },

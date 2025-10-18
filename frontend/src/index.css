@@ -38,3 +38,26 @@ body {
 .btn-fade:hover {
   transition: none;
 }
+
+html,
+body,
+select,
+label {
+  cursor: url("/cursor-triangle.png") 0 0, auto;
+}
+
+button:not(:disabled),
+a,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+.cursor-pointer {
+  cursor: url("/cursor-pointer.png") 5 0, pointer !important;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  cursor: auto !important;
+}
