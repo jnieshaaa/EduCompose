@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import eduComposeLogo from "../assets/EduCompose.png";
-import { Menu, Settings, LogOut } from "lucide-react";
+import { Menu, X, Settings, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface HeaderProps {
   onMenuClick: () => void;
+  isBurgerActive: boolean;
 }
 
 const user = {
@@ -13,50 +13,58 @@ const user = {
   email: "EduCompose@gmail.com",
 };
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
-    // 1. logout logic
-    // 2. Login route
     navigate("/login");
   };
 
+  const routeLabels: Record<string, string> = {
+    "/Dashboard": "Dashboard",
+    "/EssayManagement": "Essay Management",
+    "/AnalysisReport": "Analysis Report",
+    "/ClassInsights": "Class Insights",
+    "/StudentProfile": "Student Profile",
+    "/TeacherNotes": "Teacher Notes",
+  };
+
+  const currentLabel = routeLabels[location.pathname] || "EduCompose";
+
   return (
     <header className='flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
-      {/* Left Section */}
-      <div
-        className='relative cursor-pointer overflow-hidden group'
-        onClick={onMenuClick}
-      >
-        <div className='flex items-center space-x-2'>
-          <Menu className='w-6 h-6 text-gray-700 lg:hidden' />
-          <div className='flex items-center space-x-2'>
-            <div className='w-8 h-8 rounded overflow-hidden flex items-center justify-center'>
-              <img
-                src={eduComposeLogo}
-                alt='Logo'
-                className='w-full h-full object-cover'
-              />
-            </div>
+      <div className='flex items-center space-x-2'>
+        <button
+          onClick={onMenuClick}
+          className='p-2 rounded-lg hover:bg-gray-100'
+        >
+          {isBurgerActive ? (
+            <X className='w-6 h-6 text-gray-700' />
+          ) : (
+            <Menu className='w-6 h-6 text-gray-700' />
+          )}
+        </button>
 
-            <span className='text-lg font-bold relative z-10'>
-              <span className='text-gray-500'>Edu</span>
-              <span className='text-primary'>Compose</span>
-            </span>
-          </div>
-        </div>
-
-        <div className='absolute inset-0 pointer-events-none overflow-hidden'>
-          <div
-            className='absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full
-               z-20 group-hover:animate-shine'
-          ></div>
-        </div>
+        <AnimatePresence mode='wait'>
+          {!isBurgerActive && (
+            <motion.div
+              key={currentLabel}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.2 }}
+              className='flex items-center space-x-2'
+            >
+              <span className='text-lg font-semibold cursor-default'>
+                {currentLabel}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Right Section */}
       <div className='flex items-center space-x-3 relative'>
         <div
           className='flex items-center cursor-pointer ml-3 relative'
@@ -87,7 +95,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             ></path>
           </svg>
 
-          {/* Dropdown Menu */}
           <AnimatePresence>
             {isDropdownOpen && (
               <motion.div
@@ -97,13 +104,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 className='absolute right-0 top-12 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50'
               >
-                {/* User Info */}
                 <div className='px-4 py-3 border-b border-gray-200'>
                   <p className='font-semibold text-gray-800'>{user.name}</p>
                   <p className='text-sm text-gray-500'>{user.email}</p>
                 </div>
 
-                {/* Menu Items */}
                 <div className='flex flex-col'>
                   <button className='flex items-center gap-2 px-4 py-3 hover:bg-gray-100 text-gray-700 w-full'>
                     <Settings size={18} /> Settings

@@ -5,7 +5,7 @@ import EssayCard from "../components/EssayCard";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-const TeacherDashboard: React.FC = () => {
+const Dashboard: React.FC = () => {
   const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +28,6 @@ const TeacherDashboard: React.FC = () => {
     loadEssays();
   }, []);
 
-  // const handleViewEssay = (essayId: string) => {
-  //   navigate(`/essay/${essayId}`);
-  // };
-
-  // Loading State Check
   if (loading) {
     return (
       <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
@@ -41,7 +36,6 @@ const TeacherDashboard: React.FC = () => {
     );
   }
 
-  // Error State Check
   if (error) {
     return (
       <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
@@ -56,27 +50,12 @@ const TeacherDashboard: React.FC = () => {
 
   return (
     <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100'>
-      <div className='text-center'>
-        <header>
-          <motion.h1
-            className='text-3xl font-extrabold text-primary mb-8 tracking-tight'
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            Dashboard
-          </motion.h1>
-        </header>
-      </div>
-
-      {/* Empty State Check */}
       {!hasEssays && (
         <div className='text-center py-10 text-gray-500 text-lg'>
           No essays have been submitted yet. Keep an eye out! 👀
         </div>
       )}
 
-      {/* Essay list */}
       {hasEssays && (
         <AnimatePresence>
           <motion.div
@@ -106,4 +85,4 @@ const TeacherDashboard: React.FC = () => {
   );
 };
 
-export default TeacherDashboard;
+export default Dashboard;

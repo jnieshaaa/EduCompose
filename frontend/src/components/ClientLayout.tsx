@@ -2,28 +2,25 @@ import React, { useState } from "react";
 import ClientSidebar from "./ClientSidebar";
 import Header from "./Header";
 
-interface ClientLayoutProps {
-  children?: React.ReactNode;
-}
+const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
+  children,
+}) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
-  // Mobile sidebar state lifted here
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev);
+  };
 
   return (
     <div className='flex h-screen'>
-      {/* Sidebar */}
       <ClientSidebar
-        isMobileOpen={isMobileOpen}
-        setIsMobileOpen={setIsMobileOpen}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* Main area */}
       <div className='flex-1 flex flex-col'>
-        {/* Header: pass toggle function */}
-        <Header onMenuClick={() => setIsMobileOpen((prev) => !prev)} />
+        <Header onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
 
-        {/* Page content */}
         <main className='flex-1 overflow-y-auto bg-neutral2'>{children}</main>
       </div>
     </div>

@@ -2,15 +2,11 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const EduComposeLogin: React.FC = () => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
-  //   const handleLogin = () => {
-  //     console.log("Login attempt:", { email, password });
-  //   };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
@@ -175,10 +171,44 @@ const EduComposeLogin: React.FC = () => {
               {/* Login Button */}
               <button
                 onClick={() => navigate("/dashboard")}
-                className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300'
+                className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all'
               >
                 Login
               </button>
+
+              {/* Divider */}
+              <div className='flex items-center my-6'>
+                <hr className='flex-grow border-gray-300' />
+                <span className='mx-3 text-gray-500 text-sm'>or</span>
+                <hr className='flex-grow border-gray-300' />
+              </div>
+
+              {/* Social Login Buttons */}
+              <div className='flex flex-col space-y-3'>
+                <button
+                  onClick={() => handleSocialLogin("Google")}
+                  className='w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-neutral3 bg-white text-gray-700 hover:bg-gray-50 transition-all'
+                >
+                  <img
+                    src='/google-icon.svg'
+                    alt='Google'
+                    className='w-5 h-5'
+                  />
+                  Continue with Google
+                </button>
+
+                <button
+                  onClick={() => handleSocialLogin("Facebook")}
+                  className='w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-neutral3 bg-white text-gray-700 hover:bg-gray-50 transition-all'
+                >
+                  <img
+                    src='/facebook-icon.svg'
+                    alt='Facebook'
+                    className='w-5 h-5'
+                  />
+                  Continue with Facebook
+                </button>
+              </div>
             </div>
 
             {/* Sign Up */}
@@ -195,4 +225,4 @@ const EduComposeLogin: React.FC = () => {
   );
 };
 
-export default EduComposeLogin;
+export default Login;

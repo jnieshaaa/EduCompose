@@ -56,7 +56,7 @@ const exponentialBackoffFetch = async (
   }
 };
 
-const Essay: React.FC = () => {
+const EssayManagament: React.FC = () => {
   const [groundTruth, setGroundTruth] = useState("");
   const [studentEssay, setStudentEssay] = useState("");
   const [promptKey, setPromptKey] = useState<PromptKey | "">("");
@@ -170,19 +170,8 @@ ${selectedPrompt}`;
 
   return (
     <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 full-h-screen flex flex-col'>
-      <div className='text-center'>
-        <motion.h1
-          className='text-3xl font-extrabold text-primary tracking-tight'
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          Essay Management
-        </motion.h1>
-      </div>
-
       <motion.div
-        className='mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6'
+        className='grid grid-cols-1 lg:grid-cols-2 gap-6'
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -220,8 +209,8 @@ ${selectedPrompt}`;
               value={field.value}
               onChange={(e) => field.setter(e.target.value)}
             />
-            <div className='flex justify-between items-center text-sm text-gray-500 mb-2'>
-              <span>
+            <div className='flex justify-between items-center text-sm text-gray-500 mb-2 '>
+              <span className='cursor-default'>
                 {field.id === "groundTruth"
                   ? `${wordCountGT} Words ${charCountGT} Characters`
                   : `${wordCountSE} Words ${charCountSE} Characters`}
@@ -298,4 +287,4 @@ ${selectedPrompt}`;
   );
 };
 
-export default Essay;
+export default EssayManagament;

@@ -83,18 +83,22 @@ module.exports = {
 
       keyframes: {
         shine: {
-          "0%": { transform: "translateX(-80%)" },
-          "100%": { transform: "translateX(300%)" },
+          "0%": { transform: "translateX(-70%)" },
+          "100%": { transform: "translateX(290%)" },
         },
       },
 
       animation: {
-        shine: "shine 0.5s ease-in-out forwards",
+        shine: "shine 0.4s ease-in-out forwards",
       },
 
       backgroundImage: {
         "shine-gradient":
-          "linear-gradient(130deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
+          "linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
+      },
+
+      fontSize: {
+        xxs: "0.625rem",
       },
     },
   },

@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react"; // 1. Imported useMemo
 import {
   Home,
   FileText,
   BarChart3,
   Users,
-  Menu,
-  X,
   BarChart2,
   Notebook,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import eduComposeLogo from "../assets/EduCompose.png";
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -20,154 +19,141 @@ interface MenuItem {
 
 interface ClientSidebarProps {
   children?: React.ReactNode;
-  isMobileOpen: boolean;
-  setIsMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ClientSidebar: React.FC<ClientSidebarProps> = ({
   children,
-  isMobileOpen,
-  setIsMobileOpen,
+  isSidebarOpen,
+  setIsSidebarOpen,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [xButtonHeight, setXButtonHeight] = useState(0);
-
-  const xButtonRef = useRef<HTMLButtonElement>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  const menuItems: MenuItem[] = [
-    {
-      icon: <Home className='w-5 h-5' />,
-      label: "Dashboard",
-      path: "/Dashboard",
-    },
-    {
-      icon: <FileText className='w-5 h-5' />,
-      label: "Essay Management",
-      path: "/EssayManagement",
-    },
-    {
-      icon: <BarChart3 className='w-5 h-5' />,
-      label: "Analysis Report",
-      path: "/AnalysisReport",
-    },
-    {
-      icon: <BarChart2 className='w-5 h-5' />,
-      label: "Class Insights",
-      path: "/ClassInsights",
-    },
-    {
-      icon: <Users className='w-5 h-5' />,
-      label: "Student Profile",
-      path: "/StudentProfile",
-    },
-    {
-      icon: <Notebook className='w-5 h-5' />,
-      label: "Teacher Notes",
-      path: "/TeacherNotes",
-    },
-  ];
+  // 🔑 FIX 1: Wrap menuItems creation in useMemo to stabilize the array
+  const menuItems: MenuItem[] = useMemo(
+    () => [
+      {
+        icon: <Home className='w-5 h-5' />,
+        label: "Dashboard",
+        path: "/Dashboard",
+      },
+      {
+        icon: <FileText className='w-5 h-5' />,
+        label: "Essay Management",
+        path: "/EssayManagement",
+      },
+      {
+        icon: <BarChart3 className='w-5 h-5' />,
+        label: "Analysis Report",
+        path: "/AnalysisReport",
+      },
+      {
+        icon: <BarChart2 className='w-5 h-5' />,
+        label: "Class Insights",
+        path: "/ClassInsights",
+      },
+      {
+        icon: <Users className='w-5 h-5' />,
+        label: "Student Profile",
+        path: "/StudentProfile",
+      },
+      {
+        icon: <Notebook className='w-5 h-5' />,
+        label: "Teacher Notes",
+        path: "/TeacherNotes",
+      },
+    ],
+    []
+  );
 
   const [activePath, setActivePath] = useState(location.pathname);
   useEffect(() => setActivePath(location.pathname), [location.pathname]);
 
   const handleItemClick = (path: string) => {
     navigate(path);
-    setIsMobileOpen(false);
+    if (!isDesktop) setIsSidebarOpen(false);
   };
 
   useEffect(() => {
     const currentItem = menuItems.find(
       (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
     );
-    const pageTitle = currentItem ? currentItem.label : "EduCompose";
-    document.title = pageTitle;
-  }, [location.pathname]);
+    document.title = currentItem ? currentItem.label : "EduCompose";
+  }, [location.pathname, menuItems]);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const textVariants = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
   };
 
-  useEffect(() => {
-    const handleResize = () => {
-      const desktop = window.innerWidth >= 1024;
-      setIsDesktop(desktop);
-      if (!desktop) {
-        setIsOpen(false);
-        setIsLocked(false);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (xButtonRef.current) {
-      setXButtonHeight(xButtonRef.current.offsetHeight + 16);
-    }
-  }, [isMobileOpen]);
-
   return (
     <div className='flex h-screen overflow-hidden'>
       {/* Sidebar */}
       <aside
-        className='fixed lg:relative h-full transition-all duration-200 z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
+        className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
         style={{
-          width: isDesktop
-            ? isOpen
-              ? "280px"
-              : "80px"
-            : isMobileOpen
-            ? "280px"
-            : "0px",
-        }}
-        onMouseEnter={() => {
-          if (isDesktop && !isLocked) setIsOpen(true);
-        }}
-        onMouseLeave={() => {
-          if (isDesktop && !isLocked) setIsOpen(false);
+          width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
+          transition: "width 0.2s",
         }}
       >
-        {/* Header inside sidebar */}
-        <div className='flex items-center justify-between p-4'>
-          {isDesktop && (
-            <div
-              onClick={() => setIsLocked(!isLocked)}
-              className={`w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center cursor-pointer transition-colors duration-200 ${
-                isLocked ? "bg-primary-400" : "bg-transparent"
-              }`}
-            >
-              <Menu className='text-white' size={24} />
+        {/* Header */}
+        <div className='flex items-center h-20 border-b border-white p-2.5 relative cursor-default'>
+          <div className='relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
+            <img
+              src={eduComposeLogo}
+              alt='EduCompose Logo'
+              className='w-full h-full object-cover cursor-none'
+            />
+            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
+              <div className='absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 group-hover:animate-shine'></div>
+            </div>
+          </div>
+
+          {isSidebarOpen && (
+            <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
+              <AnimatePresence>
+                <motion.div
+                  initial='hidden'
+                  animate='visible'
+                  exit='hidden'
+                  variants={textVariants}
+                  className='flex flex-col max-w-[200px]'
+                >
+                  <h1 className='font-bold text-2xl text-white whitespace-nowrap'>
+                    EduCompose
+                  </h1>
+                  <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
+                    Teacher’s Companion for Essay Evaluation
+                  </p>
+                </motion.div>
+              </AnimatePresence>
             </div>
           )}
         </div>
 
-        {/* Navigation links */}
+        {/* Navigation */}
         <nav className='flex-1 p-4'>
           <ul className='space-y-2 overflow-hidden'>
-            {menuItems.map((item, index) => {
+            {menuItems.map((item) => {
               const isActive = activePath === item.path;
               return (
-                <li
-                  key={item.label}
-                  style={{
-                    marginTop:
-                      !isDesktop && index === 0
-                        ? `${xButtonHeight}px`
-                        : undefined,
-                  }}
-                >
+                <li key={item.label}>
                   <button
                     onClick={() => handleItemClick(item.path)}
                     className={`btn-fade group w-full flex items-center rounded-lg ${
                       isActive
                         ? "bg-neutral-50 text-primary"
-                        : "bg-primary text-white hover:bg-neutral-100 hover:text-primary"
+                        : "bg-primary text-white hover:text-cyan-200"
                     }`}
                   >
                     <div className='flex items-center w-full'>
@@ -175,7 +161,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                         {item.icon}
                       </span>
                       <AnimatePresence>
-                        {(isDesktop ? isOpen : isMobileOpen) && (
+                        {isSidebarOpen && (
                           <motion.span
                             initial='hidden'
                             animate='visible'
@@ -196,24 +182,14 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         </nav>
       </aside>
 
-      {/* Mobile X overlay */}
-      {isMobileOpen && !isDesktop && (
-        <>
-          <button
-            ref={xButtonRef}
-            onClick={() => setIsMobileOpen(false)}
-            className='lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg shadow-lg bg-primary'
-          >
-            <X className='w-6 h-6 text-white' />
-          </button>
-          <div
-            className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
-            onClick={() => setIsMobileOpen(false)}
-          />
-        </>
+      {/* Mobile overlay */}
+      {!isDesktop && isSidebarOpen && (
+        <div
+          className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
-      {/* Main content */}
       <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
         {children}
       </main>
