@@ -6,6 +6,7 @@ import EssayManagement from "./pages/EssayManagement";
 import ClientLayout from "./components/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
+import SectionsList from "./pages/SectionsList";
 
 const App: React.FC = () => {
   return (
@@ -26,6 +27,14 @@ const App: React.FC = () => {
           element={
             <ClientLayout>
               <EssayManagement />
+            </ClientLayout>
+          }
+        />
+        <Route
+          path='/SectionsList'
+          element={
+            <ClientLayout>
+              <SectionsList />
             </ClientLayout>
           }
         />

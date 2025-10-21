@@ -58,8 +58,8 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       },
       {
         icon: <Users className='w-5 h-5' />,
-        label: "Student Profile",
-        path: "/StudentProfile",
+        label: "Sections List",
+        path: "/SectionsList",
       },
       {
         icon: <Notebook className='w-5 h-5' />,
