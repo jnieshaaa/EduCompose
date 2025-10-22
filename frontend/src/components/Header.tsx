@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Menu, X, Settings, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -15,11 +15,12 @@ const user = {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [shineMount, setShineMount] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
-    navigate("/login");
+    navigate("/");
   };
 
   const routeLabels: Record<string, string> = {
@@ -33,17 +34,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";
 
+  useEffect(() => {
+    setShineMount(true);
+  }, []);
+
   return (
     <header className='flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
       <div className='flex items-center space-x-2'>
         <button
           onClick={onMenuClick}
-          className='p-2 rounded-lg hover:bg-gray-100'
+          className='p-2 rounded-lg hover:bg-neutral-300/30'
         >
           {isBurgerActive ? (
-            <X className='w-6 h-6 text-gray-700' />
+            <X className='w-6 h-6 text-neutral-900' />
           ) : (
-            <Menu className='w-6 h-6 text-gray-700' />
+            <Menu className='w-6 h-6 text-neutral-900' />
           )}
         </button>
 
@@ -57,7 +62,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
               transition={{ duration: 0.2 }}
               className='flex items-center space-x-2'
             >
-              <span className='text-lg font-semibold'>{currentLabel}</span>
+              <span className='relative text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group'>
+                {currentLabel}
+                <span
+                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient
+                    transform -translate-x-full z-20
+                    ${
+                      shineMount ? "animate-shine" : ""
+                    } group-hover:animate-shine`}
+                  onAnimationEnd={() => setShineMount(false)}
+                ></span>
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -102,17 +117,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 className='absolute right-0 top-12 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50'
               >
-                <div className='px-4 py-3 border-b border-gray-200'>
-                  <p className='font-semibold text-gray-800'>{user.name}</p>
-                  <p className='text-sm text-gray-500'>{user.email}</p>
+                <div className='px-4 py-3 border-b border-neutral-300/30'>
+                  <p className='font-semibold text-neutral-900'>{user.name}</p>
+                  <p className='text-sm text-neutral-400'>{user.email}</p>
                 </div>
 
                 <div className='flex flex-col'>
-                  <button className='flex items-center gap-2 px-4 py-3 hover:bg-gray-100 text-gray-700 w-full'>
+                  <button className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full'>
                     <Settings size={18} /> Settings
                   </button>
                   <button
-                    className='flex items-center gap-2 px-4 py-3 hover:bg-gray-100 text-gray-700 w-full'
+                    className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full'
                     onClick={handleLogout}
                   >
                     <LogOut size={18} /> Logout

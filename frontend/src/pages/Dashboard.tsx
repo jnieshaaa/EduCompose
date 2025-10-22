@@ -1,85 +1,28 @@
-import React, { useEffect, useState } from "react";
-import { fetchEssays } from "../services/essayService";
-import type { Essay } from "../types/Essay";
-import EssayCard from "../components/EssayCard";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { useLocation } from "react-router-dom";
 
 const Dashboard: React.FC = () => {
-  const [essays, setEssays] = useState<Essay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const location = useLocation();
+  const essayText = (location.state as { essayText?: string })?.essayText || "";
 
-  useEffect(() => {
-    async function loadEssays() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchEssays();
-        setEssays(data);
-      } catch (err) {
-        console.error("Failed to fetch essays:", err);
-        setError("⚠️ Failed to load essays. Try again later.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadEssays();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
-        <p className='text-4xl font-bold text-green-400'>Loading Essay</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 text-center py-20'>
-        <div className='text-red-600 font-semibold border-2 border-red-200 p-6 rounded-lg bg-red-50 inline-block'>
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  const hasEssays = essays.length > 0;
+  const wordCount =
+    essayText.trim() === "" ? 0 : essayText.trim().split(/\s+/).length;
+  const charCount = essayText.length;
 
   return (
-    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100'>
-      {!hasEssays && (
-        <div className='text-center py-10 text-gray-500 text-lg'>
-          No essays have been submitted yet. Keep an eye out! 👀
-        </div>
-      )}
+    <div className='p-6'>
+      {essayText ? (
+        <div className='bg-white p-6 rounded-xl shadow-md'>
+          <h2 className='font-semibold mb-2'>Essay Text:</h2>
+          <p className='mb-4 whitespace-pre-wrap'>{essayText}</p>
 
-      {hasEssays && (
-        <AnimatePresence>
-          <motion.div
-            className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {essays.map((essay, index) => (
-              <motion.div
-                key={essay.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: index * 0.05 }}
-                className='hover:shadow-lg transition-shadow'
-                onClick={() => navigate(`/essay/${essay.id}`)}
-              >
-                <EssayCard essay={essay} />
-              </motion.div>
-            ))}
-          </motion.div>
-        </AnimatePresence>
+          <div className='text-sm text-neutral-700'>
+            <p>Word Count: {wordCount}</p>
+            <p>Character Count: {charCount}</p>
+          </div>
+        </div>
+      ) : (
+        <p>No essay provided. Go back to Essay Management to submit one.</p>
       )}
     </div>
   );

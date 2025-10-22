@@ -94,10 +94,10 @@ const Login: React.FC = () => {
 
           <div className='rounded-2xl shadow-xl bg-white p-8 md:p-10'>
             <div className='mb-8'>
-              <h2 className='text-3xl font-bold text-gray-800 mb-2'>
+              <h2 className='text-3xl font-bold text-neutral-900 mb-2'>
                 Welcome Back
               </h2>
-              <p className='text-gray-600'>Login to access your dashboard</p>
+              <p className='text-neutral-900'>Login to access your dashboard</p>
             </div>
 
             <div className='space-y-5'>
@@ -105,18 +105,18 @@ const Login: React.FC = () => {
               <div>
                 <label
                   htmlFor='email'
-                  className='block text-sm font-medium text-gray-700 mb-2'
+                  className='block text-sm font-medium text-neutral-600 mb-2'
                 >
                   Email or Username
                 </label>
                 <div className='relative'>
-                  <Mail className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
+                  <Mail className='absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5' />
                   <input
                     id='email'
                     type='text'
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className='w-full pl-11 pr-4 py-3 border border-neutral3 rounded-lg bg-white text-gray-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
+                    className='w-full pl-11 pr-4 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
                     placeholder='Enter your email'
                   />
                 </div>
@@ -126,24 +126,24 @@ const Login: React.FC = () => {
               <div>
                 <label
                   htmlFor='password'
-                  className='block text-sm font-medium text-gray-700 mb-2'
+                  className='block text-sm font-medium text-neutral-600 mb-2'
                 >
                   Password
                 </label>
                 <div className='relative'>
-                  <Lock className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
+                  <Lock className='absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5' />
                   <input
                     id='password'
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className='w-full pl-11 pr-12 py-3 border border-neutral3 rounded-lg bg-white text-gray-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
+                    className='w-full pl-11 pr-12 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
                     placeholder='Enter your password'
                   />
                   <button
                     type='button'
                     onClick={() => setShowPassword(!showPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                    className='absolute right-3 top-1/2 -translate-y-1/2 text-neutral-900 hover:text-neutral-400'
                   >
                     {showPassword ? (
                       <EyeOff className='w-5 h-5' />
@@ -157,11 +157,8 @@ const Login: React.FC = () => {
               {/* Remember + Forgot */}
               <div className='flex items-center justify-between text-sm'>
                 <label className='flex items-center cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    className='w-4 h-4 border-gray-300  rounded text-primary focus:ring-primary'
-                  />
-                  <span className='ml-2 text-gray-600'>Remember me</span>
+                  <input type='checkbox' className='w-4 h-4' />
+                  <span className='ml-2 text-neutral-900'>Remember me</span>
                 </label>
                 <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
                   Forgot password?
@@ -178,7 +175,7 @@ const Login: React.FC = () => {
             </div>
 
             {/* Sign Up */}
-            <p className='text-center text-gray-600 text-sm mt-6'>
+            <p className='text-center text-neutral-900 text-sm mt-6'>
               Don’t have an account?{" "}
               <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
                 Sign up now!

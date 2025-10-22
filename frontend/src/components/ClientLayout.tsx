@@ -21,7 +21,9 @@ const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
       <div className='flex-1 flex flex-col'>
         <Header onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
 
-        <main className='flex-1 overflow-y-auto bg-neutral2'>{children}</main>
+        <main className='flex-1 overflow-y-auto bg-neutral-300/10'>
+          {children}
+        </main>
       </div>
     </div>
   );

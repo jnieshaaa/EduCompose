@@ -119,7 +119,7 @@ ${selectedPrompt}`;
 
       setOutput(
         `<h3 class="text-xl font-semibold mb-2 text-primary">${promptRecipes[promptKey].title}</h3>
-         <div class="p-4 bg-white border border-gray-200 rounded-lg whitespace-pre-wrap">${text}</div>`
+         <div class="p-4 bg-white border border-neutral-300/20 rounded-lg whitespace-pre-wrap">${text}</div>`
       );
     } catch (error: unknown) {
       console.error("Analysis failed:", error);
@@ -169,7 +169,7 @@ ${selectedPrompt}`;
   );
 
   return (
-    <div className='p-8 bg-gradient-to-b from-gray-50 to-gray-100 full-h-screen flex flex-col'>
+    <div className='p-8 flex flex-col'>
       <motion.div
         className='grid grid-cols-1 lg:grid-cols-2 gap-6'
         initial={{ opacity: 0, y: 20 }}
@@ -191,13 +191,13 @@ ${selectedPrompt}`;
         ].map((field) => (
           <motion.div
             key={field.id}
-            className='bg-white p-4 rounded-xl shadow-lg border border-gray-100 flex flex-col'
+            className='bg-white p-4 rounded-xl shadow-lg border border-neutral-300/40 flex flex-col'
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <label
               htmlFor={field.id}
-              className='text-sm font-semibold text-gray-700 mb-2'
+              className='text-sm font-semibold text-neutral-900 mb-2'
             >
               {field.label}
             </label>
@@ -209,14 +209,14 @@ ${selectedPrompt}`;
               value={field.value}
               onChange={(e) => field.setter(e.target.value)}
             />
-            <div className='flex justify-between items-center text-sm text-gray-500 mb-2 '>
+            <div className='flex justify-between items-center text-sm text-neutral-600 mb-2 '>
               <span>
                 {field.id === "groundTruth"
                   ? `${wordCountGT} Words ${charCountGT} Characters`
                   : `${wordCountSE} Words ${charCountSE} Characters`}
               </span>
 
-              <label className='flex items-center space-x-2 px-3 py-1 bg-white rounded-lg hover:bg-gray-100 cursor-pointer transition'>
+              <label className='flex items-center space-x-2 px-3 py-1 bg-white rounded-lg hover:bg-neutral-300/40 cursor-pointer transition'>
                 <svg
                   className='w-4 h-4'
                   fill='none'
@@ -251,13 +251,13 @@ ${selectedPrompt}`;
         <div className='w-full sm:w-2/3 mb-2 sm:mb-0'>
           <label
             htmlFor='promptSelect'
-            className='block text-sm font-bold text-gray-700 mb-1'
+            className='block text-sm font-semibold text-neutral-900 mb-1'
           >
             3. Select Verification Prompt
           </label>
           <select
             id='promptSelect'
-            className='w-full p-2 border border-gray-300 rounded-md bg-white shadow-sm outline-none'
+            className='w-full p-2 border border-neutral-400 rounded-md bg-white shadow-sm outline-none'
             value={promptKey}
             onChange={(e) => setPromptKey(e.target.value as PromptKey)}
           >

@@ -1,5 +1,5 @@
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import EduComposeLogin from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import EssayManagement from "./pages/EssayManagement";
@@ -7,13 +7,36 @@ import ClientLayout from "./components/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 import SectionsList from "./pages/SectionsList";
+import IntroModal from "./components/IntroModal";
+import LandingPage from "./pages/LandingPage";
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    const modalShown = sessionStorage.getItem("introModalShown");
+
+    if (location.pathname === "/" && !modalShown) {
+      setShowIntro(true);
+      sessionStorage.setItem("introModalShown", "true");
+    }
+  }, [location.pathname]);
+
+  const handleClose = () => {
+    setShowIntro(false);
+  };
+
   return (
-    <BrowserRouter>
+    <>
       <ClickEffect />
+      <IntroModal isOpen={showIntro} onClose={handleClose} />
+
       <Routes>
-        <Route path='/' element={<EduComposeLogin />} />
+        <Route path='/' element={<LandingPage />} />
+
+        <Route path='/Login' element={<EduComposeLogin />} />
+
         <Route
           path='/Dashboard'
           element={
@@ -22,6 +45,7 @@ const App: React.FC = () => {
             </ClientLayout>
           }
         />
+
         <Route
           path='/EssayManagement'
           element={
@@ -30,6 +54,7 @@ const App: React.FC = () => {
             </ClientLayout>
           }
         />
+
         <Route
           path='/SectionsList'
           element={
@@ -38,8 +63,17 @@ const App: React.FC = () => {
             </ClientLayout>
           }
         />
+
         <Route path='*' element={<ErrorPage code={404} />} />
       </Routes>
+    </>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 };

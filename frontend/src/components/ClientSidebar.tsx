@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react"; // 1. Imported useMemo
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
   FileText,
@@ -29,11 +29,11 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [logoShine, setLogoShine] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 🔑 FIX 1: Wrap menuItems creation in useMemo to stabilize the array
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
@@ -91,6 +91,12 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    setLogoShine(true);
+    const timeout = setTimeout(() => setLogoShine(false), 1000);
+    return () => clearTimeout(timeout);
+  }, []);
+
   const textVariants = {
     hidden: { opacity: 0, x: -10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
@@ -98,7 +104,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 
   return (
     <div className='flex h-screen overflow-hidden'>
-      {/* Sidebar */}
       <aside
         className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
         style={{
@@ -115,7 +120,11 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               className='w-full h-full object-cover cursor-none'
             />
             <div className='absolute inset-0 pointer-events-none overflow-hidden'>
-              <div className='absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 group-hover:animate-shine'></div>
+              <div
+                className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
+      ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
+                onAnimationEnd={() => setLogoShine(false)}
+              ></div>
             </div>
           </div>
 
@@ -153,7 +162,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                     className={`btn-fade group w-full flex items-center rounded-lg ${
                       isActive
                         ? "bg-neutral-50 text-primary"
-                        : "bg-primary text-white hover:text-cyan-200"
+                        : "bg-primary text-white hover:text-support-superlight"
                     }`}
                   >
                     <div className='flex items-center w-full'>
@@ -182,7 +191,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         </nav>
       </aside>
 
-      {/* Mobile overlay */}
+      {/* Mobile Sidebar */}
       {!isDesktop && isSidebarOpen && (
         <div
           className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'

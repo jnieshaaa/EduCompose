@@ -43,6 +43,7 @@ module.exports = {
         support: {
           DEFAULT: "#00E5FF",
           light: "#5EE2FF",
+          superlight: "#A3F5FD",
           dark: "#00B7CC",
         },
         success: {

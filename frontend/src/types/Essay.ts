@@ -1,4 +1,3 @@
-// Model for essay data
 export type Essay = {
   id: number;
   studentName: string;
