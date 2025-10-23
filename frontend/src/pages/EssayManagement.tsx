@@ -144,23 +144,23 @@ ${selectedPrompt}`;
     };
 
   const renderOutput = () => (
-    <AnimatePresence mode='wait'>
+    <AnimatePresence mode="wait">
       {output ? (
         <motion.div
-          key='output'
+          key="output"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.4 }}
-          className='mt-8'
+          className="mt-8"
           dangerouslySetInnerHTML={{ __html: output }}
         />
       ) : (
         <motion.div
-          key='placeholder'
+          key="placeholder"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className='p-6 mt-10 bg-primary/10 rounded-xl text-center border-dashed border-2 border-primary'
+          className="p-6 mt-10 bg-primary/10 rounded-xl text-center border-dashed border-2 border-primary"
         >
           Analysis results will appear here after execution.
         </motion.div>
@@ -169,9 +169,9 @@ ${selectedPrompt}`;
   );
 
   return (
-    <div className='p-8 flex flex-col'>
+    <div className="p-8 flex flex-col">
       <motion.div
-        className='grid grid-cols-1 lg:grid-cols-2 gap-6'
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -191,50 +191,50 @@ ${selectedPrompt}`;
         ].map((field) => (
           <motion.div
             key={field.id}
-            className='bg-white p-4 rounded-xl shadow-lg border border-neutral-300/40 flex flex-col'
+            className="bg-white p-4 rounded-xl shadow-lg border border-neutral-300/40 flex flex-col"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <label
               htmlFor={field.id}
-              className='text-sm font-semibold text-neutral-900 mb-2'
+              className="text-sm font-semibold text-neutral-900 mb-2"
             >
               {field.label}
             </label>
             <textarea
               id={field.id}
               rows={8}
-              className='flex-grow p-3 rounded-lg text-sm leading-relaxed resize-none mb-2 outline-none transition'
-              placeholder='Type or paste your text here...'
+              className="flex-grow p-3 rounded-lg text-sm leading-relaxed resize-none mb-2 outline-none transition"
+              placeholder="Type or paste your text here..."
               value={field.value}
               onChange={(e) => field.setter(e.target.value)}
             />
-            <div className='flex justify-between items-center text-sm text-neutral-600 mb-2 '>
+            <div className="flex justify-between items-center text-sm text-neutral-600 mb-2 ">
               <span>
                 {field.id === "groundTruth"
                   ? `${wordCountGT} Words ${charCountGT} Characters`
                   : `${wordCountSE} Words ${charCountSE} Characters`}
               </span>
 
-              <label className='flex items-center space-x-2 px-3 py-1 bg-white rounded-lg hover:bg-neutral-300/40 cursor-pointer transition'>
+              <label className="flex items-center space-x-2 px-3 py-1 bg-white rounded-lg hover:bg-neutral-300/40 cursor-pointer transition">
                 <svg
-                  className='w-4 h-4'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
                   <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     strokeWidth={2}
-                    d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12'
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                   />
                 </svg>
                 <span>Upload</span>
                 <input
-                  type='file'
-                  accept='.txt'
-                  className='hidden'
+                  type="file"
+                  accept=".txt"
+                  className="hidden"
                   onChange={handleUpload(field.setter)}
                 />
               </label>
@@ -244,24 +244,24 @@ ${selectedPrompt}`;
       </motion.div>
 
       <motion.div
-        className='mt-4 flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-lg'
+        className="mt-4 flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-lg"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className='w-full sm:w-2/3 mb-2 sm:mb-0'>
+        <div className="w-full sm:w-2/3 mb-2 sm:mb-0">
           <label
-            htmlFor='promptSelect'
-            className='block text-sm font-semibold text-neutral-900 mb-1'
+            htmlFor="promptSelect"
+            className="block text-sm font-semibold text-neutral-900 mb-1"
           >
             3. Select Verification Prompt
           </label>
           <select
-            id='promptSelect'
-            className='w-full p-2 border border-neutral-400 rounded-md bg-white shadow-sm outline-none'
+            id="promptSelect"
+            className="w-full p-2 border border-neutral-400 rounded-md bg-white shadow-sm outline-none"
             value={promptKey}
             onChange={(e) => setPromptKey(e.target.value as PromptKey)}
           >
-            <option value='' disabled>
+            <option value="" disabled>
               Choose analysis type...
             </option>
             {Object.keys(promptRecipes).map((key) => (
@@ -277,12 +277,12 @@ ${selectedPrompt}`;
           whileTap={{ scale: 0.9 }}
           onClick={runAnalysis}
           disabled={isLoading}
-          className='w-full sm:w-1/3 px-4 py-3 bg-primary text-white font-semibold rounded-lg shadow hover:bg-primary-200 transition disabled:opacity-50 sm:ml-4'
+          className="w-full sm:w-1/3 px-4 py-3 bg-primary text-white font-semibold rounded-lg shadow hover:bg-primary-200 transition disabled:opacity-50 sm:ml-4"
         >
           {isLoading ? "Analyzing..." : "Run Analysis"}
         </motion.button>
       </motion.div>
-      <div className='flex-grow'>{renderOutput()}</div>
+      <div className="flex-grow">{renderOutput()}</div>
     </div>
   );
 };

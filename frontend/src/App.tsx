@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import EduComposeLogin from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import EssayManagement from "./pages/EssayManagement";
-import ClientLayout from "./components/ClientLayout";
+import ClientLayout from "./layout/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 import SectionsList from "./pages/SectionsList";
@@ -33,12 +32,10 @@ const AppContent: React.FC = () => {
       <IntroModal isOpen={showIntro} onClose={handleClose} />
 
       <Routes>
-        <Route path='/' element={<LandingPage />} />
-
-        <Route path='/Login' element={<EduComposeLogin />} />
+        <Route path="/" element={<LandingPage />} />
 
         <Route
-          path='/Dashboard'
+          path="/Dashboard"
           element={
             <ClientLayout>
               <Dashboard />
@@ -47,7 +44,7 @@ const AppContent: React.FC = () => {
         />
 
         <Route
-          path='/EssayManagement'
+          path="/EssayManagement"
           element={
             <ClientLayout>
               <EssayManagement />
@@ -56,7 +53,7 @@ const AppContent: React.FC = () => {
         />
 
         <Route
-          path='/SectionsList'
+          path="/SectionsList"
           element={
             <ClientLayout>
               <SectionsList />
@@ -64,7 +61,7 @@ const AppContent: React.FC = () => {
           }
         />
 
-        <Route path='*' element={<ErrorPage code={404} />} />
+        <Route path="*" element={<ErrorPage code={404} />} />
       </Routes>
     </>
   );
