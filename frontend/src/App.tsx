@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import EssayManagement from "./pages/EssayManagement";
+import ClassManagement from "./pages/ClassManagement";
+import AssignmentManagement from "./pages/AssignmentManagement";
+import Gradebook from "./pages/Gradebook";
 import ClientLayout from "./layout/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
@@ -48,6 +51,33 @@ const AppContent: React.FC = () => {
           element={
             <ClientLayout>
               <EssayManagement />
+            </ClientLayout>
+          }
+        />
+
+        <Route
+          path="/ClassManagement"
+          element={
+            <ClientLayout>
+              <ClassManagement />
+            </ClientLayout>
+          }
+        />
+
+        <Route
+          path="/AssignmentManagement"
+          element={
+            <ClientLayout>
+              <AssignmentManagement />
+            </ClientLayout>
+          }
+        />
+
+        <Route
+          path="/Gradebook"
+          element={
+            <ClientLayout>
+              <Gradebook />
             </ClientLayout>
           }
         />

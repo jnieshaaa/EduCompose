@@ -4,11 +4,17 @@ import {
   FileText,
   BarChart3,
   Users,
-  BarChart2,
-  Notebook,
+  GraduationCap,
+  ClipboardList,
+  Award,
+  Settings,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import Tooltip from "./ui/Tooltip";
 import eduComposeLogo from "../assets/EduCompose.png";
 
 interface MenuItem {
@@ -37,34 +43,49 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
-        icon: <Home className='w-5 h-5' />,
+        icon: <Home className="w-5 h-5" />,
         label: "Dashboard",
         path: "/Dashboard",
       },
       {
-        icon: <FileText className='w-5 h-5' />,
+        icon: <FileText className="w-5 h-5" />,
         label: "Essay Management",
         path: "/EssayManagement",
       },
       {
-        icon: <BarChart3 className='w-5 h-5' />,
-        label: "Analysis Report",
-        path: "/AnalysisReport",
+        icon: <GraduationCap className="w-5 h-5" />,
+        label: "Class Management",
+        path: "/ClassManagement",
       },
       {
-        icon: <BarChart2 className='w-5 h-5' />,
-        label: "Class Insights",
-        path: "/ClassInsights",
+        icon: <ClipboardList className="w-5 h-5" />,
+        label: "Assignments",
+        path: "/AssignmentManagement",
       },
       {
-        icon: <Users className='w-5 h-5' />,
-        label: "Sections List",
-        path: "/SectionsList",
+        icon: <Award className="w-5 h-5" />,
+        label: "Gradebook",
+        path: "/Gradebook",
       },
       {
-        icon: <Notebook className='w-5 h-5' />,
-        label: "Teacher Notes",
-        path: "/TeacherNotes",
+        icon: <BarChart3 className="w-5 h-5" />,
+        label: "Analytics",
+        path: "/Analytics",
+      },
+      {
+        icon: <Users className="w-5 h-5" />,
+        label: "Students",
+        path: "/Students",
+      },
+      {
+        icon: <Bell className="w-5 h-5" />,
+        label: "Notifications",
+        path: "/Notifications",
+      },
+      {
+        icon: <Settings className="w-5 h-5" />,
+        label: "Settings",
+        path: "/Settings",
       },
     ],
     []
@@ -103,23 +124,23 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   };
 
   return (
-    <div className='flex h-screen overflow-hidden'>
+    <div className="flex h-screen overflow-hidden">
       <aside
-        className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
+        className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden"
         style={{
           width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
         }}
       >
         {/* Header */}
-        <div className='flex items-center h-20 border-b border-white p-2.5 relative'>
-          <div className='relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
+        <div className="flex items-center h-20 border-b border-white p-2.5 relative">
+          <div className="relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group">
             <img
               src={eduComposeLogo}
-              alt='EduCompose Logo'
-              className='w-full h-full object-cover cursor-none'
+              alt="EduCompose Logo"
+              className="w-full h-full object-cover cursor-none"
             />
-            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div
                 className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
       ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
@@ -129,61 +150,88 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           </div>
 
           {isSidebarOpen && (
-            <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
+            <div className="ml-3 flex flex-col overflow-hidden w-[184px]">
               <AnimatePresence>
                 <motion.div
-                  initial='hidden'
-                  animate='visible'
-                  exit='hidden'
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
                   variants={textVariants}
-                  className='flex flex-col max-w-[200px]'
+                  className="flex flex-col max-w-[200px]"
                 >
-                  <h1 className='font-bold text-2xl text-white whitespace-nowrap'>
+                  <h1 className="font-bold text-2xl text-white whitespace-nowrap">
                     EduCompose
                   </h1>
-                  <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
-                    Teacher’s Companion for Essay Evaluation
+                  <p className="text-xxs font-md mt-0.5 text-white whitespace-nowrap">
+                    Teacher's Companion for Essay Evaluation
                   </p>
                 </motion.div>
               </AnimatePresence>
             </div>
           )}
+
+          {/* Toggle Button - Desktop Only */}
+          {isDesktop && (
+            <Tooltip
+              content={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              position="right"
+              delay={200}
+            >
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200"
+              >
+                {isSidebarOpen ? (
+                  <ChevronLeft className="w-4 h-4 text-white" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-white" />
+                )}
+              </button>
+            </Tooltip>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className='flex-1 p-4'>
-          <ul className='space-y-2 overflow-hidden'>
+        <nav className="flex-1 p-4">
+          <ul className="space-y-2 overflow-hidden">
             {menuItems.map((item) => {
               const isActive = activePath === item.path;
               return (
                 <li key={item.label}>
-                  <button
-                    onClick={() => handleItemClick(item.path)}
-                    className={`btn-fade group w-full flex items-center rounded-lg ${
-                      isActive
-                        ? "bg-neutral-50 text-primary"
-                        : "bg-primary text-white hover:text-support-superlight"
-                    }`}
+                  <Tooltip
+                    content={item.label}
+                    position="right"
+                    delay={200}
+                    disabled={isSidebarOpen}
                   >
-                    <div className='flex items-center w-full'>
-                      <span className='flex-shrink-0 flex items-center justify-center p-3'>
-                        {item.icon}
-                      </span>
-                      <AnimatePresence>
-                        {isSidebarOpen && (
-                          <motion.span
-                            initial='hidden'
-                            animate='visible'
-                            exit='hidden'
-                            variants={textVariants}
-                            className='font-medium whitespace-nowrap'
-                          >
-                            {item.label}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => handleItemClick(item.path)}
+                      className={`btn-fade group w-full flex items-center rounded-lg ${
+                        isActive
+                          ? "bg-neutral-50 text-primary"
+                          : "bg-primary text-white hover:text-support-superlight"
+                      }`}
+                    >
+                      <div className="flex items-center w-full">
+                        <span className="flex-shrink-0 flex items-center justify-center p-3">
+                          {item.icon}
+                        </span>
+                        <AnimatePresence>
+                          {isSidebarOpen && (
+                            <motion.span
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                              variants={textVariants}
+                              className="font-medium whitespace-nowrap"
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </button>
+                  </Tooltip>
                 </li>
               );
             })}
@@ -194,12 +242,12 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       {/* Mobile Sidebar */}
       {!isDesktop && isSidebarOpen && (
         <div
-          className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
+      <main className="flex-1 h-screen overflow-y-auto bg-neutral2">
         {children}
       </main>
     </div>
