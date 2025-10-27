@@ -17,8 +17,8 @@ const Dashboard: React.FC = () => {
           <p className='mb-4 whitespace-pre-wrap'>{essayText}</p>
 
           <div className='text-sm text-neutral-700'>
-            <p>Word Count: {wordCount}</p>
-            <p>Character Count: {charCount}</p>
+            <p>{wordCount} Word</p>
+            <p>{charCount} Character</p>
           </div>
         </div>
       ) : (

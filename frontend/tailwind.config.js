@@ -91,7 +91,7 @@ module.exports = {
 
       backgroundImage: {
         "shine-gradient":
-          "linear-gradient(135deg, rgba(0, 0, 0, 0) 0%, rgba(255,255,255,1) 50%, rgba(0, 0, 0, 0) 100%)",
+          "linear-gradient(135deg, rgba(0, 0, 0, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(0, 0, 0, 0) 100%)",
       },
 
       fontSize: {
