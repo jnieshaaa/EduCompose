@@ -9,12 +9,16 @@ import {
   Award,
   Settings,
   Bell,
-  ChevronLeft,
-  ChevronRight,
+  Info,
+  BookOpen,
+  Target,
+  Zap,
+  Shield,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./ui/Tooltip";
+import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 
 interface MenuItem {
@@ -36,6 +40,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [logoShine, setLogoShine] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -217,6 +222,40 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
             })}
           </ul>
         </nav>
+
+        {/* Info Tab at Bottom */}
+        <div className='p-4 border-t border-white'>
+          <Tooltip
+            content="About EduCompose"
+            position='right'
+            delay={200}
+            disabled={isSidebarOpen}
+          >
+            <button
+              onClick={() => setIsInfoModalOpen(true)}
+              className="btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight"
+            >
+              <div className='flex items-center w-full flex-1'>
+                <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                  <Info className='w-5 h-5' />
+                </span>
+                <AnimatePresence>
+                  {isSidebarOpen && (
+                    <motion.span
+                      initial='hidden'
+                      animate='visible'
+                      exit='hidden'
+                      variants={textVariants}
+                      className='font-medium whitespace-nowrap flex-1'
+                    >
+                      About EduCompose
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+            </button>
+          </Tooltip>
+        </div>
       </aside>
 
       {/* Mobile Sidebar */}
@@ -230,6 +269,89 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
         {children}
       </main>
+
+      {/* Info Modal */}
+      <Modal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title="About EduCompose"
+        size="lg"
+      >
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="bg-gradient-to-r from-primary to-primary-500 rounded-lg p-6 text-white">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <img
+                  src={eduComposeLogo}
+                  alt="EduCompose Logo"
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">EduCompose</h3>
+                <p className="text-white text-opacity-90">Teacher's Companion for Essay Evaluation</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+              <div className="flex items-center space-x-3 mb-2">
+                <BookOpen className="w-6 h-6 text-primary" />
+                <h4 className="font-semibold text-neutral-900">Essay Management</h4>
+              </div>
+              <p className="text-sm text-neutral-600">
+                Streamline essay collection, organization, and grading with our intuitive management system.
+              </p>
+            </div>
+
+            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+              <div className="flex items-center space-x-3 mb-2">
+                <Target className="w-6 h-6 text-primary" />
+                <h4 className="font-semibold text-neutral-900">Smart Analytics</h4>
+              </div>
+              <p className="text-sm text-neutral-600">
+                Get detailed insights into student performance and writing patterns with advanced analytics.
+              </p>
+            </div>
+
+            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+              <div className="flex items-center space-x-3 mb-2">
+                <Zap className="w-6 h-6 text-primary" />
+                <h4 className="font-semibold text-neutral-900">Quick Grading</h4>
+              </div>
+              <p className="text-sm text-neutral-600">
+                Accelerate your grading process with automated tools and customizable rubrics.
+              </p>
+            </div>
+
+            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+              <div className="flex items-center space-x-3 mb-2">
+                <Shield className="w-6 h-6 text-primary" />
+                <h4 className="font-semibold text-neutral-900">Secure Platform</h4>
+              </div>
+              <p className="text-sm text-neutral-600">
+                Your data and student information are protected with enterprise-grade security.
+              </p>
+            </div>
+          </div>
+
+          {/* Version Info */}
+          <div className="bg-neutral-200 rounded-lg p-4 border border-neutral-300">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-medium text-neutral-900">Version 1.0.0</p>
+                <p className="text-xs text-neutral-600">Last updated: December 2024</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-neutral-600">Made with ❤️ for educators</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
