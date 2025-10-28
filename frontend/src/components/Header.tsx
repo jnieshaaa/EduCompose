@@ -1,45 +1,61 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, X, Settings, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useLoader } from "../components/ui/LoaderContext";
 
 interface HeaderProps {
   onMenuClick: () => void;
   isBurgerActive: boolean;
 }
 
-const user = {
-  name: "EduCompose",
-  email: "EduCompose@gmail.com",
-};
+const user = { name: "EduCompose", email: "EduCompose@gmail.com" };
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
+  const { loading } = useLoader();
+  const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const handleLogout = () => {
-    navigate("/");
-  };
 
   const routeLabels: Record<string, string> = {
     "/Dashboard": "Dashboard",
     "/EssayManagement": "Essay Management",
-    "/AnalysisReport": "Analysis Report",
-    "/ClassInsights": "Class Insights",
-    "/StudentProfile": "Student Profile",
-    "/TeacherNotes": "Teacher Notes",
+    "/ClassManagement": "Class Management",
+    "/AssignmentManagement": "Assignment Management",
+    "/Gradebook": "Gradebook",
+    "/SectionsList": "Sections List",
   };
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";
 
+  useEffect(() => setShineMount(true), [location.pathname]);
+
+  // Animate progress bar
   useEffect(() => {
-    setShineMount(true);
-  }, []);
+    let timer: NodeJS.Timeout;
+    if (loading) {
+      setProgress(0);
+      const start = Date.now();
+      const step = () => {
+        const elapsed = Date.now() - start;
+        const value = Math.min(95, elapsed / 12); // max 95%
+        setProgress(value);
+        if (value < 95) timer = setTimeout(step, 16);
+      };
+      step();
+    } else {
+      setProgress(100);
+      timer = setTimeout(() => setProgress(0), 300);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  const handleLogout = () => navigate("/");
 
   return (
-    <header className='flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
+    <header className='relative flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm overflow-hidden'>
       <div className='flex items-center space-x-2'>
         <button
           onClick={onMenuClick}
@@ -65,13 +81,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
               <span className='relative text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group'>
                 {currentLabel}
                 <span
-                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient
-                    transform -translate-x-full z-20
-                    ${
-                      shineMount ? "animate-shine" : ""
-                    } group-hover:animate-shine`}
+                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 ${
+                    shineMount ? "animate-shine" : ""
+                  } group-hover:animate-shine`}
                   onAnimationEnd={() => setShineMount(false)}
-                ></span>
+                />
               </span>
             </motion.div>
           )}
@@ -98,14 +112,13 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
             fill='none'
             stroke='currentColor'
             viewBox='0 0 24 24'
-            xmlns='http://www.w3.org/2000/svg'
           >
             <path
               strokeLinecap='round'
               strokeLinejoin='round'
               strokeWidth='2'
               d='M19 9l-7 7-7-7'
-            ></path>
+            />
           </svg>
 
           <AnimatePresence>
@@ -121,7 +134,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                   <p className='font-semibold text-neutral-900'>{user.name}</p>
                   <p className='text-sm text-neutral-400'>{user.email}</p>
                 </div>
-
                 <div className='flex flex-col'>
                   <button className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full'>
                     <Settings size={18} /> Settings
@@ -137,6 +149,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
             )}
           </AnimatePresence>
         </div>
+      </div>
+
+      {/* Top progress bar */}
+      <div className='absolute bottom-0 left-0 w-full h-[2px] rounded-full overflow-hidden'>
+        <motion.div
+          className='h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-50'
+          style={{ width: `${progress}%` }}
+          transition={{ ease: "linear", duration: 0.1 }}
+        />
       </div>
     </header>
   );
