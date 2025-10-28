@@ -5,6 +5,7 @@ import EssayManagement from "./pages/EssayManagement";
 import ClassManagement from "./pages/ClassManagement";
 import AssignmentManagement from "./pages/AssignmentManagement";
 import Gradebook from "./pages/Gradebook";
+import Students from "./pages/Students";
 import Settings from "./pages/Settings";
 import ClientLayout from "./layout/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
@@ -42,9 +43,9 @@ const AppContent: React.FC = () => {
       <IntroModal isOpen={showIntro} onClose={handleClose} />
 
       <Routes>
-        <Route path='/' element={<LandingPage />} />
+        <Route path="/" element={<LandingPage />} />
         <Route
-          path='/Dashboard'
+          path="/Dashboard"
           element={
             <ClientLayout>
               <Dashboard />
@@ -52,7 +53,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/EssayManagement'
+          path="/EssayManagement"
           element={
             <ClientLayout>
               <EssayManagement />
@@ -60,7 +61,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/ClassManagement'
+          path="/ClassManagement"
           element={
             <ClientLayout>
               <ClassManagement />
@@ -68,7 +69,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/AssignmentManagement'
+          path="/AssignmentManagement"
           element={
             <ClientLayout>
               <AssignmentManagement />
@@ -76,7 +77,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/Gradebook'
+          path="/Gradebook"
           element={
             <ClientLayout>
               <Gradebook />
@@ -92,14 +93,22 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/SectionsList'
+          path="/Students"
+          element={
+            <ClientLayout>
+              <Students />
+            </ClientLayout>
+          }
+        />
+        <Route
+          path="/SectionsList"
           element={
             <ClientLayout>
               <SectionsList />
             </ClientLayout>
           }
         />
-        <Route path='*' element={<ErrorPage code={404} />} />
+        <Route path="*" element={<ErrorPage code={404} />} />
       </Routes>
     </>
   );
