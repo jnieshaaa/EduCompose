@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
 
 interface CardProps {
   children: React.ReactNode;
@@ -8,21 +8,32 @@ interface CardProps {
   onClick?: () => void;
 }
 
-const Card: React.FC<CardProps> = ({ 
-  children, 
-  className = '', 
-  hover = false, 
-  onClick 
+const Card: React.FC<CardProps> = ({
+  children,
+  className = "",
+  hover = false,
+  onClick,
 }) => {
-  const baseClasses = 'bg-white rounded-xl shadow-sm border border-neutral-200 p-6';
-  const hoverClasses = hover ? 'hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer' : '';
-  
+  const baseClasses =
+    "bg-white rounded-xl shadow-sm border border-neutral-200 p-6";
+  const hoverClasses = hover
+    ? "hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer"
+    : "";
+
   return (
     <motion.div
       className={`${baseClasses} ${hoverClasses} ${className}`}
       onClick={onClick}
-      whileHover={hover ? { y: -2 } : {}}
-      transition={{ duration: 0.2 }}
+      whileHover={
+        hover
+          ? {
+              boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+              backgroundColor: "rgba(255,255,255,0.97)",
+              scale: 1.015, // subtle “pop” illusion
+            }
+          : {}
+      }
+      transition={{ duration: 0.15, ease: "easeOut" }}
     >
       {children}
     </motion.div>

@@ -57,12 +57,12 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-neutral-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className='p-6'>
+        <div className='animate-pulse space-y-6'>
+          <div className='h-8 bg-primary-500 rounded w-1/4'></div>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-neutral-200 rounded-lg"></div>
+              <div key={i} className='h-24 bg-primary-500 rounded-lg'></div>
             ))}
           </div>
         </div>
@@ -71,73 +71,73 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className='p-6 space-y-6'>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between'>
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="text-neutral-600 mt-1">
+          <h1 className='text-3xl font-bold text-neutral-900'>Dashboard</h1>
+          <p className='text-neutral-600 mt-1'>
             Welcome back! Here's what's happening with your classes.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex space-x-3">
-          <Button variant="ghost" size="sm">
-            <Filter className="w-4 h-4 mr-2" />
+        <div className='mt-4 sm:mt-0 flex space-x-3'>
+          <Button variant='ghost' size='sm'>
+            <Filter className='w-4 h-4 mr-2' />
             Filter
           </Button>
-          <Button variant="primary" size="sm">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button variant='primary' size='sm'>
+            <Plus className='w-4 h-4 mr-2' />
             New Essay
           </Button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="max-w-md">
+      <div className='max-w-md'>
         <Input
-          placeholder="Search essays..."
+          placeholder='Search essays...'
           value={searchTerm}
           onChange={setSearchTerm}
-          type="text"
+          type='text'
         />
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
         <StatsCard
-          title="Total Essays"
+          title='Total Essays'
           value={stats?.total_essays || 0}
           icon={BookOpen}
-          color="primary"
+          color='primary'
           change={{ value: 12, type: "increase" }}
         />
         <StatsCard
-          title="Active Classes"
+          title='Active Classes'
           value={stats?.total_classes || 0}
           icon={GraduationCap}
-          color="success"
+          color='success'
           change={{ value: 5, type: "increase" }}
         />
         <StatsCard
-          title="Total Students"
+          title='Total Students'
           value={stats?.total_students || 0}
           icon={Users}
-          color="info"
+          color='info'
           change={{ value: 8, type: "increase" }}
         />
         <StatsCard
-          title="Avg Score"
-          value="87%"
+          title='Avg Score'
+          value='87%'
           icon={TrendingUp}
-          color="warning"
+          color='warning'
           change={{ value: 3, type: "increase" }}
         />
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Recent Activity */}
-        <div className="lg:col-span-2">
+        <div className='lg:col-span-2'>
           <RecentActivity
             essays={filteredEssays}
             onEssayClick={(essay) => {
@@ -148,22 +148,22 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-6">
+        <div className='space-y-6'>
           <Card>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+            <h3 className='text-lg font-semibold text-neutral-900 mb-4'>
               Quick Actions
             </h3>
-            <div className="space-y-3">
-              <Button variant="primary" className="w-full justify-start">
-                <Plus className="w-4 h-4 mr-2" />
+            <div className='space-y-3'>
+              <Button variant='primary' className='w-full justify-start'>
+                <Plus className='w-4 h-4 mr-2' />
                 Add New Essay
               </Button>
-              <Button variant="secondary" className="w-full justify-start">
-                <Users className="w-4 h-4 mr-2" />
+              <Button variant='secondary' className='w-full justify-start'>
+                <Users className='w-4 h-4 mr-2' />
                 Manage Students
               </Button>
-              <Button variant="ghost" className="w-full justify-start">
-                <GraduationCap className="w-4 h-4 mr-2" />
+              <Button variant='ghost' className='w-full justify-start'>
+                <GraduationCap className='w-4 h-4 mr-2' />
                 Create Class
               </Button>
             </div>
@@ -171,49 +171,49 @@ const Dashboard: React.FC = () => {
 
           {/* Performance Overview */}
           <Card>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+            <h3 className='text-lg font-semibold text-neutral-900 mb-4'>
               Performance Overview
             </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-600">
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-neutral-600'>
                   Grammar Accuracy
                 </span>
-                <span className="text-sm font-semibold text-neutral-900">
+                <span className='text-sm font-semibold text-neutral-900'>
                   92%
                 </span>
               </div>
-              <div className="w-full bg-neutral-200 rounded-full h-2">
+              <div className='w-full bg-neutral-200 rounded-full h-2'>
                 <div
-                  className="bg-success-default h-2 rounded-full"
+                  className='bg-success-default h-2 rounded-full'
                   style={{ width: "92%" }}
                 ></div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-600">Readability</span>
-                <span className="text-sm font-semibold text-neutral-900">
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-neutral-600'>Readability</span>
+                <span className='text-sm font-semibold text-neutral-900'>
                   87%
                 </span>
               </div>
-              <div className="w-full bg-neutral-200 rounded-full h-2">
+              <div className='w-full bg-neutral-200 rounded-full h-2'>
                 <div
-                  className="bg-primary h-2 rounded-full"
+                  className='bg-primary h-2 rounded-full'
                   style={{ width: "87%" }}
                 ></div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-600">
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-neutral-600'>
                   Argument Strength
                 </span>
-                <span className="text-sm font-semibold text-neutral-900">
+                <span className='text-sm font-semibold text-neutral-900'>
                   89%
                 </span>
               </div>
-              <div className="w-full bg-neutral-200 rounded-full h-2">
+              <div className='w-full bg-neutral-200 rounded-full h-2'>
                 <div
-                  className="bg-info-default h-2 rounded-full"
+                  className='bg-info-default h-2 rounded-full'
                   style={{ width: "89%" }}
                 ></div>
               </div>
