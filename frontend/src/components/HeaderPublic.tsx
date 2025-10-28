@@ -1,5 +1,6 @@
-import React, { useState } from "react"; // <-- ✅ add useState here
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import eduComposeLogo from "../assets/EduCompose.png";
 
 interface HeaderPublicProps {
@@ -7,80 +8,123 @@ interface HeaderPublicProps {
 }
 
 const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
-  // ✅ define the shine state
-  const [shineActive, setShineActive] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className='bg-white shadow-md sticky top-0 z-10'>
-      <div className='container mx-auto px-4 py-3 flex items-center justify-between'>
+    <header className="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo and Site Title */}
-        <Link
-          to='/'
-          className='relative flex items-center space-x-2 group overflow-hidden'
-          onMouseEnter={() => setShineActive(true)}
-        >
-          {/* 🔥 Unified shine covering logo + text */}
-          <span
-            className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient pointer-events-none z-20 ${
-              shineActive ? "animate-shine" : ""
-            }`}
-            style={{
-              transform: "translateX(-150%)", // start far left
-            }}
-            onAnimationEnd={() => setShineActive(false)}
-          ></span>
-
-          {/* Logo + Text */}
-          <div className='flex items-center space-x-2 z-10 relative'>
+        <Link to="/" className="flex items-center space-x-3 group">
+          <div className="relative">
             <img
               src={eduComposeLogo}
-              alt='EduCompose Logo'
-              className='h-10 w-10'
+              alt="EduCompose Logo"
+              className="h-8 w-8"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.onerror = null;
-                target.src =
-                  "https://placehold.co/32x32/3b82f6/ffffff?text=Logo";
+                target.src = "https://placehold.co/32x32/8b5cf6/ffffff?text=E";
               }}
             />
-            <span className='text-2xl font-bold'>
-              <span className='text-neutral-600'>Edu</span>
-              <span className='text-primary'>Compose</span>
-            </span>
           </div>
+          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            EduCompose
+          </span>
         </Link>
 
-        {/* Navigation Links */}
-        <nav>
-          <ul className='flex space-x-6 items-center'>
-            <li>
-              <Link
-                to='/'
-                className='text-neutral-700 hover:text-primary-200 transition-colors font-medium'
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link
-                to='/tools'
-                className='text-neutral-700 hover:text-primary-200 transition-colors font-medium'
-              >
-                Tools
-              </Link>
-            </li>
-            <li>
-              <button
-                type='button'
-                onClick={onLoginClick}
-                className='px-4 py-2 rounded-lg text-white bg-primary font-semibold hover:bg-primary-300 transition-colors shadow-md'
-              >
-                Login
-              </button>
-            </li>
-          </ul>
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-8">
+          <Link
+            to="/"
+            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+          >
+            Home
+          </Link>
+          <Link
+            to="/features"
+            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+          >
+            Features
+          </Link>
+          <Link
+            to="/pricing"
+            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+          >
+            Pricing
+          </Link>
+          <Link
+            to="/about"
+            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+          >
+            About
+          </Link>
+          <button
+            type="button"
+            onClick={onLoginClick}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            Get Started
+          </button>
         </nav>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          {isMenuOpen ? (
+            <X className="w-6 h-6 text-gray-600" />
+          ) : (
+            <Menu className="w-6 h-6 text-gray-600" />
+          )}
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100">
+          <div className="px-4 py-4 space-y-4">
+            <Link
+              to="/"
+              className="block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/features"
+              className="block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Features
+            </Link>
+            <Link
+              to="/pricing"
+              className="block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Pricing
+            </Link>
+            <Link
+              to="/about"
+              className="block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              About
+            </Link>
+            <button
+              type="button"
+              onClick={(e) => {
+                onLoginClick?.(e);
+                setIsMenuOpen(false);
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
