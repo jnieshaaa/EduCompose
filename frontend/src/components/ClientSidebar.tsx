@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Award,
   Settings,
-  Bell,
   Info,
   BookOpen,
   Target,
@@ -81,11 +80,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         icon: <Users className="w-5 h-5" />,
         label: "Students",
         path: "/Students",
-      },
-      {
-        icon: <Bell className="w-5 h-5" />,
-        label: "Notifications",
-        path: "/Notifications",
       },
       {
         icon: <Settings className="w-5 h-5" />,
