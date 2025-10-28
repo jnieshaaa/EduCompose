@@ -48,47 +48,47 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
-        icon: <Home className='w-5 h-5' />,
+        icon: <Home className="w-5 h-5" />,
         label: "Dashboard",
         path: "/Dashboard",
       },
       {
-        icon: <FileText className='w-5 h-5' />,
+        icon: <FileText className="w-5 h-5" />,
         label: "Essay Management",
         path: "/EssayManagement",
       },
       {
-        icon: <GraduationCap className='w-5 h-5' />,
+        icon: <GraduationCap className="w-5 h-5" />,
         label: "Class Management",
         path: "/ClassManagement",
       },
       {
-        icon: <ClipboardList className='w-5 h-5' />,
+        icon: <ClipboardList className="w-5 h-5" />,
         label: "Assignments",
         path: "/AssignmentManagement",
       },
       {
-        icon: <Award className='w-5 h-5' />,
+        icon: <Award className="w-5 h-5" />,
         label: "Gradebook",
         path: "/Gradebook",
       },
       {
-        icon: <BarChart3 className='w-5 h-5' />,
+        icon: <BarChart3 className="w-5 h-5" />,
         label: "Analytics",
         path: "/Analytics",
       },
       {
-        icon: <Users className='w-5 h-5' />,
+        icon: <Users className="w-5 h-5" />,
         label: "Students",
         path: "/Students",
       },
       {
-        icon: <Bell className='w-5 h-5' />,
+        icon: <Bell className="w-5 h-5" />,
         label: "Notifications",
         path: "/Notifications",
       },
       {
-        icon: <Settings className='w-5 h-5' />,
+        icon: <Settings className="w-5 h-5" />,
         label: "Settings",
         path: "/Settings",
       },
@@ -129,23 +129,24 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   };
 
   return (
-    <div className='flex h-screen overflow-hidden'>
+    <div className="flex h-screen overflow-hidden">
       <aside
-        className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary overflow-hidden'
+        className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
         style={{
           width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
+          overflow: isSidebarOpen ? "hidden" : "visible",
         }}
       >
         {/* Header */}
-        <div className='flex items-center h-20 border-b border-white p-2.5 relative'>
-          <div className='relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
+        <div className="flex items-center h-20 border-b border-white p-2.5 relative">
+          <div className="relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group">
             <img
               src={eduComposeLogo}
-              alt='EduCompose Logo'
-              className='w-full h-full object-cover cursor-none'
+              alt="EduCompose Logo"
+              className="w-full h-full object-cover cursor-none"
             />
-            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div
                 className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
           ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
@@ -155,19 +156,19 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           </div>
 
           {isSidebarOpen && (
-            <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
+            <div className="ml-3 flex flex-col overflow-hidden w-[184px]">
               <AnimatePresence>
                 <motion.div
-                  initial='hidden'
-                  animate='visible'
-                  exit='hidden'
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
                   variants={textVariants}
-                  className='flex flex-col max-w-[200px]'
+                  className="flex flex-col max-w-[200px]"
                 >
-                  <h1 className='font-bold text-2xl text-white whitespace-nowrap'>
+                  <h1 className="font-bold text-2xl text-white whitespace-nowrap">
                     EduCompose
                   </h1>
-                  <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
+                  <p className="text-xxs font-md mt-0.5 text-white whitespace-nowrap">
                     Teacher's Companion for Essay Evaluation
                   </p>
                 </motion.div>
@@ -177,15 +178,18 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className='flex-1 p-4'>
-          <ul className='space-y-2 overflow-hidden'>
+        <nav className="flex-1 p-4">
+          <ul
+            className="space-y-2"
+            style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
+          >
             {menuItems.map((item) => {
               const isActive = activePath === item.path;
               return (
                 <li key={item.label}>
                   <Tooltip
                     content={item.label}
-                    position='right'
+                    position="right"
                     delay={200}
                     disabled={isSidebarOpen}
                   >
@@ -197,18 +201,18 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                           : "bg-primary text-white hover:text-support-superlight"
                       }`}
                     >
-                      <div className='flex items-center w-full flex-1'>
-                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                      <div className="flex items-center w-full flex-1">
+                        <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
                           {item.icon}
                         </span>
                         <AnimatePresence>
                           {isSidebarOpen && (
                             <motion.span
-                              initial='hidden'
-                              animate='visible'
-                              exit='hidden'
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
                               variants={textVariants}
-                              className='font-medium whitespace-nowrap flex-1'
+                              className="font-medium whitespace-nowrap flex-1"
                             >
                               {item.label}
                             </motion.span>
@@ -224,10 +228,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         </nav>
 
         {/* Info Tab at Bottom */}
-        <div className='p-4 border-t border-white'>
+        <div className="p-4 border-t border-white">
           <Tooltip
             content="About EduCompose"
-            position='right'
+            position="right"
             delay={200}
             disabled={isSidebarOpen}
           >
@@ -235,18 +239,18 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               onClick={() => setIsInfoModalOpen(true)}
               className="btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight"
             >
-              <div className='flex items-center w-full flex-1'>
-                <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                  <Info className='w-5 h-5' />
+              <div className="flex items-center w-full flex-1">
+                <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
+                  <Info className="w-5 h-5" />
                 </span>
                 <AnimatePresence>
                   {isSidebarOpen && (
                     <motion.span
-                      initial='hidden'
-                      animate='visible'
-                      exit='hidden'
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
                       variants={textVariants}
-                      className='font-medium whitespace-nowrap flex-1'
+                      className="font-medium whitespace-nowrap flex-1"
                     >
                       About EduCompose
                     </motion.span>
@@ -261,12 +265,12 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       {/* Mobile Sidebar */}
       {!isDesktop && isSidebarOpen && (
         <div
-          className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
+      <main className="flex-1 h-screen overflow-y-auto bg-neutral2">
         {children}
       </main>
 
@@ -290,7 +294,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               </div>
               <div>
                 <h3 className="text-2xl font-bold">EduCompose</h3>
-                <p className="text-white text-opacity-90">Teacher's Companion for Essay Evaluation</p>
+                <p className="text-white text-opacity-90">
+                  Teacher's Companion for Essay Evaluation
+                </p>
               </div>
             </div>
           </div>
@@ -300,40 +306,52 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
             <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <BookOpen className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">Essay Management</h4>
+                <h4 className="font-semibold text-neutral-900">
+                  Essay Management
+                </h4>
               </div>
               <p className="text-sm text-neutral-600">
-                Streamline essay collection, organization, and grading with our intuitive management system.
+                Streamline essay collection, organization, and grading with our
+                intuitive management system.
               </p>
             </div>
 
             <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Target className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">Smart Analytics</h4>
+                <h4 className="font-semibold text-neutral-900">
+                  Smart Analytics
+                </h4>
               </div>
               <p className="text-sm text-neutral-600">
-                Get detailed insights into student performance and writing patterns with advanced analytics.
+                Get detailed insights into student performance and writing
+                patterns with advanced analytics.
               </p>
             </div>
 
             <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Zap className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">Quick Grading</h4>
+                <h4 className="font-semibold text-neutral-900">
+                  Quick Grading
+                </h4>
               </div>
               <p className="text-sm text-neutral-600">
-                Accelerate your grading process with automated tools and customizable rubrics.
+                Accelerate your grading process with automated tools and
+                customizable rubrics.
               </p>
             </div>
 
             <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Shield className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">Secure Platform</h4>
+                <h4 className="font-semibold text-neutral-900">
+                  Secure Platform
+                </h4>
               </div>
               <p className="text-sm text-neutral-600">
-                Your data and student information are protected with enterprise-grade security.
+                Your data and student information are protected with
+                enterprise-grade security.
               </p>
             </div>
           </div>
@@ -342,11 +360,17 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           <div className="bg-neutral-200 rounded-lg p-4 border border-neutral-300">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium text-neutral-900">Version 1.0.0</p>
-                <p className="text-xs text-neutral-600">Last updated: December 2024</p>
+                <p className="text-sm font-medium text-neutral-900">
+                  Version 1.0.0
+                </p>
+                <p className="text-xs text-neutral-600">
+                  Last updated: December 2024
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-neutral-600">Made with ❤️ for educators</p>
+                <p className="text-xs text-neutral-600">
+                  Made with ❤️ for educators
+                </p>
               </div>
             </div>
           </div>
