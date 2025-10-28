@@ -5,6 +5,7 @@ import EssayManagement from "./pages/EssayManagement";
 import ClassManagement from "./pages/ClassManagement";
 import AssignmentManagement from "./pages/AssignmentManagement";
 import Gradebook from "./pages/Gradebook";
+import Settings from "./pages/Settings";
 import ClientLayout from "./layout/ClientLayout";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
@@ -79,6 +80,14 @@ const AppContent: React.FC = () => {
           element={
             <ClientLayout>
               <Gradebook />
+            </ClientLayout>
+          }
+        />
+        <Route
+          path='/Settings'
+          element={
+            <ClientLayout>
+              <Settings />
             </ClientLayout>
           }
         />
