@@ -27,8 +27,13 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
               }}
             />
           </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            EduCompose
+          <span>
+            <span className="text-2xl font-bold bg-primary-200 bg-clip-text text-transparent">
+              Edu
+            </span>
+            <span className="text-2xl font-bold bg-neutral-600 bg-clip-text text-transparent">
+              Compose
+            </span>
           </span>
         </Link>
 
@@ -36,32 +41,20 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
         <nav className="hidden md:flex items-center space-x-8">
           <Link
             to="/"
-            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+            className="text-neutral-500 hover:text-primary-100 transition-colors font-medium"
           >
             Home
           </Link>
           <Link
-            to="/features"
-            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
-          >
-            Features
-          </Link>
-          <Link
-            to="/pricing"
-            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
-          >
-            Pricing
-          </Link>
-          <Link
             to="/about"
-            className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
+            className="text-neutral-500 hover:text-primary-100 transition-colors font-medium"
           >
             About
           </Link>
           <button
             type="button"
             onClick={onLoginClick}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="bg-primary-200 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg"
           >
             Get Started
           </button>
