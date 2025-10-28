@@ -38,19 +38,19 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
   }, []);
 
   return (
-    <div className='min-h-screen flex items-center justify-center p-6'>
-      <div className='max-w-2xl w-full'>
-        <div className='rounded-2xl shadow-2xl p-8 md:p-12 text-center bg-white border border-neutral-300/30'>
-          <div className='flex justify-center mb-6'>
-            <div className='w-24 h-24 rounded-full flex items-center justify-center bg-primary-50/20'>
-              <AlertCircle className='w-12 h-12 text-primary-500' />
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-2xl w-full">
+        <div className="rounded-2xl shadow-2xl p-8 md:p-12 text-center bg-white border border-neutral-300/30">
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center bg-primary-50/20">
+              <AlertCircle className="w-12 h-12 text-primary-500" />
             </div>
           </div>
 
           <h1
-            className='relative text-7xl md:text-8xl font-bold mb-4 
+            className="relative text-7xl md:text-8xl font-bold mb-4 
               bg-gradient-to-br from-primary-50 to-primary-500 
-              bg-clip-text text-transparent overflow-hidden group'
+              bg-clip-text text-transparent overflow-hidden group"
           >
             {code}
             <span
@@ -63,39 +63,39 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
             ></span>
           </h1>
 
-          <h2 className='text-2xl md:text-3xl font-bold text-neutral-900 mb-4'>
+          <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-4">
             {errorMessages[code] || "Error"}
           </h2>
 
-          <p className='text-neutral-600 text-lg mb-12 max-w-md mx-auto'>
+          <p className="text-neutral-600 text-lg mb-12 max-w-md mx-auto">
             {message ||
               errorDescriptions[code] ||
               "Sorry, something went wrong."}
           </p>
 
-          <div className='flex flex-col sm:flex-row gap-4 justify-center items-center'>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={handleGoBack}
-              className='flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-200 hover:text-primary-500 hover:border-primary transition-all'
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-200 hover:text-primary-500 hover:border-primary transition-all"
             >
-              <ArrowLeft className='w-5 h-5' />
+              <ArrowLeft className="w-5 h-5" />
               Go Back
             </button>
 
             <button
               onClick={handleGoHome}
-              className='flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-primary shadow-lg hover:bg-primary-300 transition-all'
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-primary shadow-lg hover:bg-primary-300 transition-all"
             >
-              <Home className='w-5 h-5' />
+              <Home className="w-5 h-5" />
               Go Home
             </button>
 
             {code === 500 && (
               <button
                 onClick={handleRefresh}
-                className='flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-100 hover:border-primary-500 transition-all'
+                className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-100 hover:border-primary-500 transition-all"
               >
-                <RefreshCw className='w-5 h-5' />
+                <RefreshCw className="w-5 h-5" />
                 Retry
               </button>
             )}

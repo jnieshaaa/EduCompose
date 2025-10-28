@@ -212,7 +212,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                               animate="visible"
                               exit="hidden"
                               variants={textVariants}
-                              className="font-medium whitespace-nowrap flex-1"
+                              className="font-medium whitespace-nowrap flex-1 pr-4"
                             >
                               {item.label}
                             </motion.span>
@@ -250,7 +250,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                       animate="visible"
                       exit="hidden"
                       variants={textVariants}
-                      className="font-medium whitespace-nowrap flex-1"
+                      className="font-medium whitespace-nowrap flex-1 pr-4"
                     >
                       About EduCompose
                     </motion.span>
