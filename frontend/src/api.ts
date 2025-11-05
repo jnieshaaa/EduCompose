@@ -147,13 +147,41 @@ export const analysisApi = {
     essayId: number,
     analysisType:
       | "grammar"
-      | "style"
+      | "readability"
+      | "coherence"
       | "argument"
       | "comprehensive" = "comprehensive"
   ) => {
     return apiRequest<AnalysisResponse>("/analysis/analyze", {
       method: "POST",
       body: JSON.stringify({ essay_id: essayId, analysis_type: analysisType }),
+    });
+  },
+
+  batchAnalyze: async (
+    essayIds: number[],
+    analysisType:
+      | "grammar"
+      | "readability"
+      | "coherence"
+      | "argument"
+      | "comprehensive" = "comprehensive"
+  ) => {
+    return apiRequest<{
+      total_analyzed: number;
+      results: Array<{
+        essay_id: number;
+        essay_title: string;
+        student_id: number;
+        analysis: AnalysisResponse;
+        error?: string;
+      }>;
+    }>("/analysis/batch-analyze", {
+      method: "POST",
+      body: JSON.stringify({
+        essay_ids: essayIds,
+        analysis_type: analysisType,
+      }),
     });
   },
 

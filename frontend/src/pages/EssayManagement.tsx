@@ -9,7 +9,8 @@ import {
   Download,
 } from "lucide-react";
 import EssayCard from "../components/essay/EssayCard";
-import EssayAnalysisModal from "../components/essay/EssayAnalysisModal";
+import EnhancedEssayAnalysisModal from "../components/essay/EnhancedEssayAnalysisModal";
+import BatchAnalysisButton from "../components/essay/BatchAnalysisButton";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -27,6 +28,7 @@ const EssayManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [selectedEssays, setSelectedEssays] = useState<number[]>([]);
   const [showNewEssayModal, setShowNewEssayModal] = useState(false);
   const [newEssay, setNewEssay] = useState({
     title: "",
@@ -154,6 +156,15 @@ const EssayManagement: React.FC = () => {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
+          {selectedEssays.length > 0 && (
+            <BatchAnalysisButton
+              selectedEssays={essays.filter((e) => selectedEssays.includes(e.id))}
+              onAnalysisComplete={() => {
+                setSelectedEssays([]);
+                // Refresh essays list
+              }}
+            />
+          )}
           <Button variant="ghost" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -310,15 +321,33 @@ const EssayManagement: React.FC = () => {
         </Card>
       )}
 
-      {/* Analysis Modal */}
+      {/* Enhanced Analysis Modal */}
       {selectedEssay && (
-        <EssayAnalysisModal
+        <EnhancedEssayAnalysisModal
           isOpen={showAnalysisModal}
           onClose={() => {
             setShowAnalysisModal(false);
             setSelectedEssay(null);
           }}
           essay={selectedEssay}
+          onAnalysisComplete={(analysis) => {
+            // Update essay with analysis results
+            setEssays((prev) =>
+              prev.map((e) =>
+                e.id === selectedEssay.id
+                  ? {
+                      ...e,
+                      status: "analyzed" as const,
+                      overall_score: analysis.scores.overall,
+                      grammar_score: analysis.scores.grammar,
+                      readability_score: analysis.scores.readability,
+                      coherence_score: analysis.scores.coherence,
+                      argument_strength_score: analysis.scores.argument_strength,
+                    }
+                  : e
+              )
+            );
+          }}
         />
       )}
 
