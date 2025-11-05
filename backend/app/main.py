@@ -1,12 +1,18 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from typing import List
+from fastapi.security import HTTPBearer
 import uvicorn
 
-from . import models, routes
-from .database import get_db, engine
+from . import models
+from .database import engine
+from .controllers import (
+    auth_router,
+    users_router,
+    classes_router,
+    students_router,
+    essays_router,
+    analysis_router
+)
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -31,13 +37,13 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Include routers
-app.include_router(routes.auth_router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(routes.users_router, prefix="/api/users", tags=["Users"])
-app.include_router(routes.classes_router, prefix="/api/classes", tags=["Classes"])
-app.include_router(routes.students_router, prefix="/api/students", tags=["Students"])
-app.include_router(routes.essays_router, prefix="/api/essays", tags=["Essays"])
-app.include_router(routes.analysis_router, prefix="/api/analysis", tags=["Analysis"])
+# Include routers (controllers)
+app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(users_router, prefix="/api/users", tags=["Users"])
+app.include_router(classes_router, prefix="/api/classes", tags=["Classes"])
+app.include_router(students_router, prefix="/api/students", tags=["Students"])
+app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
+app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
 
 @app.get("/")
 async def root():

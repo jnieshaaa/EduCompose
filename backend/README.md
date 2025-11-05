@@ -114,24 +114,57 @@ DATABASE_URL=postgresql://username:password@localhost/edukompose
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI application
-│   ├── models.py        # SQLAlchemy models
-│   ├── schemas.py       # Pydantic schemas
-│   ├── routes.py        # API routes
-│   ├── services.py      # Business logic
-│   └── database.py      # Database configuration
-├── requirements.txt     # Python dependencies
-├── start.py            # Startup script
-├── env.example         # Environment variables example
-└── README.md           # This file
+│   ├── main.py              # FastAPI application entry point
+│   ├── database.py          # Database configuration
+│   ├── models/              # Database models (MVC - Model)
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── user.py
+│   │   ├── class_model.py
+│   │   ├── student.py
+│   │   ├── essay.py
+│   │   └── analysis_report.py
+│   ├── schemas/             # Request/Response schemas
+│   │   ├── __init__.py
+│   │   ├── auth_schemas.py
+│   │   ├── user_schemas.py
+│   │   ├── class_schemas.py
+│   │   ├── student_schemas.py
+│   │   ├── essay_schemas.py
+│   │   └── analysis_schemas.py
+│   ├── controllers/         # Request handlers (MVC - Controller)
+│   │   ├── __init__.py
+│   │   ├── auth_controller.py
+│   │   ├── user_controller.py
+│   │   ├── class_controller.py
+│   │   ├── student_controller.py
+│   │   ├── essay_controller.py
+│   │   └── analysis_controller.py
+│   ├── services/            # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── auth_service.py
+│   │   └── essay_analysis_service.py
+│   └── nlp_modules/         # NLP analysis modules
+│       ├── __init__.py
+│       ├── grammar_analyzer.py
+│       ├── readability_analyzer.py
+│       ├── coherence_analyzer.py
+│       ├── argument_miner.py
+│       └── knowledge_graph_builder.py
+├── requirements.txt         # Python dependencies
+├── start.py                # Startup script
+├── env.example             # Environment variables example
+└── README.md               # This file
 ```
 
 ### Adding New Features
 
-1. **Models**: Add new SQLAlchemy models in `models.py`
-2. **Schemas**: Add Pydantic schemas in `schemas.py`
-3. **Routes**: Add API endpoints in `routes.py`
-4. **Services**: Add business logic in `services.py`
+1. **Models**: Add new SQLAlchemy models in `models/` directory
+2. **Schemas**: Add Pydantic schemas in `schemas/` directory
+3. **Controllers**: Add API endpoints in `controllers/` directory
+4. **Services**: Add business logic in `services/` directory
+
+For detailed information about the MVC structure, see `MVC_STRUCTURE.md`.
 
 ## Testing
 

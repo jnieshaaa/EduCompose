@@ -46,7 +46,7 @@ const EssayManagement: React.FC = () => {
           setStudents(dummyData.students);
           setLoading(false);
         }, 1000);
-      } catch (error) {
+  } catch (error) {
         console.error("Error loading data:", error);
         setLoading(false);
       }
@@ -287,8 +287,8 @@ const EssayManagement: React.FC = () => {
                 onAnalyze={() => handleAnalyzeEssay(essay)}
                 showStudent={true}
               />
-            </motion.div>
-          ))}
+          </motion.div>
+        ))}
         </AnimatePresence>
       </div>
 
@@ -367,8 +367,8 @@ const EssayManagement: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">
               Student
-            </label>
-            <select
+          </label>
+          <select
               value={newEssay.student_id}
               onChange={(e) =>
                 setNewEssay((prev) => ({
@@ -385,10 +385,10 @@ const EssayManagement: React.FC = () => {
                 .map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.full_name}
-                  </option>
-                ))}
-            </select>
-          </div>
+              </option>
+            ))}
+          </select>
+        </div>
 
           <Input
             label="Essay Content"

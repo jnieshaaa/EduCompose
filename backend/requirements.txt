@@ -9,10 +9,30 @@ alembic==1.13.1
 psycopg2-binary==2.9.9
 python-dotenv==1.0.0
 httpx==0.25.2
+
+# NLP and Text Processing Libraries
 nltk==3.8.1
 spacy==3.7.2
+textblob==0.17.1
+language-tool-python==2.7.1
+textstat==0.7.3
+
+# Machine Learning and Data Processing
 scikit-learn==1.3.2
 pandas==2.1.4
 numpy==1.25.2
+
+# Graph and Network Analysis
 networkx==3.2.1
-textstat==0.7.3
+
+# Additional utilities
+pyyaml==6.0.1
+
+# For argument mining and discourse analysis
+spacy-transformers==1.3.0
+
+# For semantic similarity and embeddings (optional, for advanced features)
+sentence-transformers==2.2.2
+
+# For knowledge graph visualization
+pyvis==0.3.2
