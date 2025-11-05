@@ -8,6 +8,7 @@ from typing import List
 
 from ..models import User
 from ..schemas import UserResponse
+from ..database import get_db
 from ..services import auth_service
 
 users_router = APIRouter()

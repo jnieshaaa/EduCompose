@@ -8,6 +8,7 @@ from datetime import datetime
 
 from ..models import User, Essay
 from ..schemas import AnalysisRequest, AnalysisResponse, BatchAnalysisRequest
+from ..database import get_db
 from ..services import auth_service, essay_analysis_service
 
 analysis_router = APIRouter()
@@ -61,6 +62,8 @@ async def analyze_essay(
         scores=analysis_result["scores"],
         detailed_analysis=analysis_result["detailed_analysis"],
         recommendations=analysis_result["recommendations"],
+        diagnostic_summary=analysis_result.get("diagnostic_summary"),
+        word_count=analysis_result.get("word_count"),
         generated_at=datetime.utcnow()
     )
 
