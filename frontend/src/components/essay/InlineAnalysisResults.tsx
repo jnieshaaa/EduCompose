@@ -75,7 +75,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto mt-8"
+        className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto"
       >
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
@@ -95,7 +95,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto mt-8"
+        className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto"
       >
         <Card className="bg-error-50 border border-error-200">
           <div className="flex items-start justify-between">
@@ -153,7 +153,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white rounded-2xl shadow-xl p-6 max-w-4xl mx-auto mt-8"
+      className="bg-white rounded-2xl shadow-xl p-6 max-w-4xl mx-auto"
     >
       <div className="flex items-start justify-between mb-5">
         <div>
@@ -555,7 +555,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
       {/* Recommendations Tab */}
       {activeTab === "recommendations" && (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-4">
           {recommendations.length > 0 ? (
             recommendations.map((recommendation, index) => {
               return (
