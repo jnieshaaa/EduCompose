@@ -188,6 +188,37 @@ export const analysisApi = {
   getDashboardStats: async () => {
     return apiRequest<DashboardStats>("/analysis/dashboard-stats");
   },
+
+  analyzeText: async (
+    text: string,
+    title: string = "Untitled Essay",
+    analysisType:
+      | "grammar"
+      | "readability"
+      | "coherence"
+      | "argument"
+      | "comprehensive" = "comprehensive"
+  ) => {
+    // This endpoint doesn't require authentication, so we make a direct fetch call
+    const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        text, 
+        title, 
+        analysis_type: analysisType 
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  },
 };
 
 // Dummy data for development - loaded from JSON file

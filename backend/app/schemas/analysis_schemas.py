@@ -11,6 +11,20 @@ class AnalysisRequest(BaseModel):
     essay_id: int
     analysis_type: str = "comprehensive"  # grammar, readability, coherence, argument, comprehensive
 
+class TextAnalysisRequest(BaseModel):
+    text: str
+    title: Optional[str] = "Untitled Essay"
+    analysis_type: str = "comprehensive"  # grammar, readability, coherence, argument, comprehensive
+
+class TextAnalysisResponse(BaseModel):
+    analysis_type: str
+    scores: Dict[str, float]
+    detailed_analysis: Dict[str, Any]
+    recommendations: List[Dict[str, Any]]
+    diagnostic_summary: Optional[Dict[str, Any]] = None
+    word_count: Optional[int] = None
+    generated_at: datetime
+
 class DiagnosticRecommendation(BaseModel):
     priority: str  # high, medium, low
     dimension: str

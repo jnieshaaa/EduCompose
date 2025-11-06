@@ -8,6 +8,7 @@ from typing import List
 
 from ..models import User, Class, Student
 from ..schemas import StudentCreate, StudentResponse
+from ..database import get_db
 from ..services import auth_service
 
 students_router = APIRouter()

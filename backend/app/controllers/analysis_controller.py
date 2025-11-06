@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from ..models import User, Essay
-from ..schemas import AnalysisRequest, AnalysisResponse, BatchAnalysisRequest
+from ..schemas import (
+    AnalysisRequest, AnalysisResponse, BatchAnalysisRequest,
+    TextAnalysisRequest, TextAnalysisResponse
+)
 from ..database import get_db
 from ..services import auth_service, essay_analysis_service
 
@@ -106,6 +109,38 @@ async def batch_analyze_essays(
         "total_analyzed": len(essays),
         "results": results
     }
+
+@analysis_router.post("/analyze-text", response_model=TextAnalysisResponse)
+async def analyze_text(
+    request: TextAnalysisRequest
+):
+    """
+    Analyze raw essay text directly without requiring authentication or database entry.
+    Useful for landing page and quick analysis.
+    """
+    # Perform analysis
+    analysis_result = await essay_analysis_service.analyze_text(
+        request.text, 
+        request.title, 
+        request.analysis_type
+    )
+    
+    # Check for errors
+    if "error" in analysis_result:
+        raise HTTPException(
+            status_code=400, 
+            detail=analysis_result.get("message", "Analysis failed")
+        )
+    
+    return TextAnalysisResponse(
+        analysis_type=request.analysis_type,
+        scores=analysis_result["scores"],
+        detailed_analysis=analysis_result["detailed_analysis"],
+        recommendations=analysis_result["recommendations"],
+        diagnostic_summary=analysis_result.get("diagnostic_summary"),
+        word_count=analysis_result.get("word_count"),
+        generated_at=datetime.utcnow()
+    )
 
 @analysis_router.get("/dashboard-stats")
 async def get_dashboard_stats(

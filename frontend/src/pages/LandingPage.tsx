@@ -1,21 +1,66 @@
 import React, { useState } from "react";
-import { Upload, FileText, Zap, Shield, Users, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Upload, FileText, Zap, Shield, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
+import InlineAnalysisResults from "../components/essay/InlineAnalysisResults";
+import { analysisApi } from "../api";
+import type { AnalysisResponse } from "../types/Essay";
 
 const LandingPage: React.FC = () => {
   const [text, setText] = useState("");
   const [showLogin, setShowLogin] = useState(false);
-  const navigate = useNavigate();
+  const [analysis, setAnalysis] = useState<Omit<AnalysisResponse, "essay_id"> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
   const charCount = text.length;
 
-  const handleAnalyze = () => {
-    if (!text.trim()) return;
-    navigate("/Dashboard", { state: { essayText: text } });
+  const handleAnalyze = async () => {
+    if (!text.trim()) {
+      setError("Please enter some text to analyze");
+      return;
+    }
+    
+    const currentWordCount = text.trim().split(/\s+/).length;
+    if (currentWordCount < 200) {
+      setError(`Your essay has ${currentWordCount} words. Please add at least ${200 - currentWordCount} more words for analysis.`);
+      return;
+    }
+    
+    // Reset previous results
+    setAnalysis(null);
+    setError(null);
+    setLoading(true);
+    
+    try {
+      const result = await analysisApi.analyzeText(text, "Essay Analysis", "comprehensive");
+      setAnalysis(result as any);
+      
+      // Scroll to results
+      setTimeout(() => {
+        const resultsElement = document.getElementById("analysis-results");
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to analyze essay";
+      setError(errorMessage);
+      console.error("Error analyzing essay:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    handleAnalyze();
+  };
+
+  const handleCloseResults = () => {
+    setAnalysis(null);
+    setError(null);
   };
 
   const features = [
@@ -75,25 +120,29 @@ const LandingPage: React.FC = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto mb-12"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl mx-auto mb-12"
           >
-            <div className="relative">
+            <div className="relative mb-4">
               <textarea
                 placeholder="Paste your essay here to get started..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full h-64 border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-none outline-none text-lg leading-relaxed"
+                className="w-full min-h-[200px] max-h-[600px] border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-y outline-none text-lg leading-relaxed px-2 py-3"
+                style={{ 
+                  resize: 'vertical',
+                  overflowY: 'auto'
+                }}
               />
             </div>
 
-            <div className="flex justify-between items-center">
-              <div className="text-gray-500 bg-white px-2 py-1 rounded">
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-neutral-100">
+              <div className="text-gray-500 px-3 py-2 rounded text-sm">
                 {wordCount} Words {charCount} Characters
               </div>
 
-              <div className="flex gap-4">
-                <label className="bg-neutral-300/30 hover:bg-neutral-300/60 text-gray-700 font-semibold px-8 py-3 rounded-full transition-all duration-300 cursor-pointer flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
+              <div className="flex gap-3">
+                <label className="bg-neutral-300/30 hover:bg-neutral-300/60 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all duration-300 cursor-pointer flex items-center gap-2 text-sm">
+                  <Upload className="w-4 h-4" />
                   Upload
                   <input
                     type="file"
@@ -115,21 +164,34 @@ const LandingPage: React.FC = () => {
 
                 <button
                   onClick={handleAnalyze}
-                  className="bg-primary text-white font-semibold px-8 py-3 rounded-full transition-all duration-300 transform hover:scale-80 hover:bg-primary-300 shadow-lg flex items-center gap-2"
+                  className="bg-primary text-white font-semibold px-6 py-2.5 rounded-full transition-all duration-300 transform hover:scale-105 hover:bg-primary-600 shadow-lg flex items-center gap-2 text-sm"
                 >
-                  <FileText className="w-5 h-5" />
+                  <FileText className="w-4 h-4" />
                   Analyze Essay
                 </button>
               </div>
             </div>
           </motion.div>
 
+          {/* Analysis Results */}
+          {(loading || analysis || error) && (
+            <div id="analysis-results" className="w-full mt-12 mb-16">
+              <InlineAnalysisResults
+                analysis={analysis}
+                loading={loading}
+                error={error}
+                onRetry={handleRetry}
+                onClose={handleCloseResults}
+              />
+            </div>
+          )}
+
           {/* Features Section */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            className={`grid md:grid-cols-3 gap-8 max-w-5xl mx-auto ${(loading || analysis || error) ? 'mt-0' : 'mt-12'}`}
           >
             {features.map((feature, index) => (
               <motion.div

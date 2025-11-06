@@ -3,31 +3,38 @@ Grammar and Syntactic Analysis Module
 Analyzes grammatical correctness, syntax patterns, and mechanical errors
 """
 import re
-import spacy
 from typing import Dict, List, Any, Optional
-from language_tool_python import LanguageTool
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Lazy import spaCy to avoid Python 3.12 compatibility issues at startup
+from .spacy_utils import get_spacy, load_spacy_model
 
 class GrammarAnalyzer:
     """Analyzes grammatical correctness and syntactic patterns in essays"""
     
     def __init__(self):
         """Initialize grammar analyzer with spaCy and LanguageTool"""
-        try:
-            # Load spaCy English model (en_core_web_sm)
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy English model not found. Please install: python -m spacy download en_core_web_sm")
-            self.nlp = None
-        
-        try:
-            # Initialize LanguageTool for grammar checking
-            self.language_tool = LanguageTool('en-US')
-        except Exception as e:
-            logger.warning(f"LanguageTool initialization failed: {e}")
-            self.language_tool = None
+        self.nlp = None
+        self.language_tool = None
+        # Don't initialize here - wait until first use to avoid import errors at startup
+    
+    def _ensure_nlp_loaded(self):
+        """Ensure spaCy is loaded (lazy loading)"""
+        if self.nlp is None:
+            self.nlp = load_spacy_model("en_core_web_sm")
+    
+    def _ensure_language_tool_loaded(self):
+        """Ensure LanguageTool is loaded (lazy loading)"""
+        if self.language_tool is None:
+            try:
+                from language_tool_python import LanguageTool
+                # Initialize LanguageTool for grammar checking
+                self.language_tool = LanguageTool('en-US')
+            except Exception as e:
+                logger.warning(f"LanguageTool initialization failed: {e}")
+                self.language_tool = None
     
     def analyze(self, text: str) -> Dict[str, Any]:
         """
@@ -63,13 +70,15 @@ class GrammarAnalyzer:
         total_words = sum(len(s.split()) for s in sentences)
         results["avg_sentence_length"] = total_words / results["sentence_count"]
         
-        # LanguageTool grammar checking
+        # LanguageTool grammar checking (lazy load)
+        self._ensure_language_tool_loaded()
         if self.language_tool:
             grammar_errors = self._check_with_languagetool(text)
             results["errors"].extend(grammar_errors)
             results["error_count"] = len(grammar_errors)
         
-        # spaCy-based syntactic analysis
+        # spaCy-based syntactic analysis (lazy load)
+        self._ensure_nlp_loaded()
         if self.nlp:
             syntax_analysis = self._analyze_syntax(text)
             results["syntax_patterns"] = syntax_analysis
@@ -93,6 +102,7 @@ class GrammarAnalyzer:
     
     def _segment_sentences(self, text: str) -> List[str]:
         """Segment text into sentences"""
+        self._ensure_nlp_loaded()
         if self.nlp:
             doc = self.nlp(text)
             return [sent.text.strip() for sent in doc.sents if sent.text.strip()]

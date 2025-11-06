@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.database import SessionLocal, engine
 from app import models
 from app.data_loader import load_dummy_data
+from app.services.auth_service import AuthService
 
 def init_database():
     """Initialize database with dummy data"""
@@ -32,8 +33,13 @@ def init_database():
         db.query(models.User).delete()
         db.commit()
         
-        # Add users
+        # Add users with proper password hashing
+        auth_service = AuthService()
+        default_password = "password123"  # Default password for test users
+        
         for user_data in data.get('users', []):
+            # Hash the password properly
+            password_hash = auth_service.get_password_hash(default_password)
             user = models.User(
                 id=user_data['id'],
                 email=user_data['email'],
@@ -41,9 +47,11 @@ def init_database():
                 full_name=user_data['full_name'],
                 role=user_data['role'],
                 is_active=user_data['is_active'],
-                password_hash="dummy_hash"  # In real app, this would be hashed
+                password_hash=password_hash
             )
             db.add(user)
+        
+        print(f"Created {len(data.get('users', []))} users with password: {default_password}")
         
         # Add classes
         for class_data in data.get('classes', []):

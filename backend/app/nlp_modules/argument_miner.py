@@ -3,23 +3,22 @@ Argument Mining Module
 Implements Toulmin's Model of Argumentation: Claims, Grounds, Warrants, Rebuttals
 """
 import re
-import spacy
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Lazy import helpers
+from .spacy_utils import load_spacy_model
+
 class ArgumentMiner:
     """Analyzes argumentative structure using Toulmin's model"""
     
     def __init__(self):
         """Initialize argument miner"""
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy English model not found. Please install: python -m spacy download en_core_web_sm")
-            self.nlp = None
+        self.nlp = None
+        # Don't initialize here - wait until first use to avoid import errors at startup
         
         # Claim indicators
         self.claim_indicators = [
@@ -50,6 +49,11 @@ class ArgumentMiner:
             "it could be argued", "critics claim", "opponents argue",
             "admittedly", "granted", "while it is true"
         ]
+    
+    def _ensure_nlp_loaded(self):
+        """Ensure spaCy is loaded (lazy loading)"""
+        if self.nlp is None:
+            self.nlp = load_spacy_model("en_core_web_sm")
     
     def analyze(self, text: str) -> Dict[str, Any]:
         """
@@ -133,6 +137,7 @@ class ArgumentMiner:
     
     def _segment_sentences(self, text: str) -> List[str]:
         """Segment text into sentences"""
+        self._ensure_nlp_loaded()
         if self.nlp:
             doc = self.nlp(text)
             return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
@@ -191,6 +196,7 @@ class ArgumentMiner:
                     break
         
         # If no explicit claims found, identify assertive statements
+        self._ensure_nlp_loaded()
         if not claims and self.nlp:
             for i, sentence in enumerate(sentences[:5]):  # Check first 5 sentences
                 doc = self.nlp(sentence)

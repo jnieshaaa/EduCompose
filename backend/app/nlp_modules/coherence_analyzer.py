@@ -3,32 +3,40 @@ Coherence Analysis Module
 Implements entity-grid model and semantic similarity analysis for discourse coherence
 """
 import re
-import spacy
 from typing import Dict, List, Any, Set, Tuple
 from collections import defaultdict, Counter
 import logging
-from sentence_transformers import SentenceTransformer
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# Lazy import helpers
+from .spacy_utils import load_spacy_model
 
 class CoherenceAnalyzer:
     """Analyzes textual coherence and organizational structure"""
     
     def __init__(self):
         """Initialize coherence analyzer"""
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy English model not found. Please install: python -m spacy download en_core_web_sm")
-            self.nlp = None
-        
-        try:
-            # Load sentence transformer for semantic similarity
-            self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
-        except Exception as e:
-            logger.warning(f"SentenceTransformer initialization failed: {e}")
-            self.sentence_model = None
+        self.nlp = None
+        self.sentence_model = None
+        # Don't initialize here - wait until first use to avoid import errors at startup
+    
+    def _ensure_nlp_loaded(self):
+        """Ensure spaCy is loaded (lazy loading)"""
+        if self.nlp is None:
+            self.nlp = load_spacy_model("en_core_web_sm")
+    
+    def _ensure_sentence_model_loaded(self):
+        """Ensure SentenceTransformer is loaded (lazy loading)"""
+        if self.sentence_model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                # Load sentence transformer for semantic similarity
+                self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
+            except Exception as e:
+                logger.warning(f"SentenceTransformer initialization failed: {e}")
+                self.sentence_model = None
     
     def analyze(self, text: str) -> Dict[str, Any]:
         """
@@ -73,7 +81,8 @@ class CoherenceAnalyzer:
         results["entity_grid_score"] = entity_grid_results["score"]
         results["entity_mentions"] = entity_grid_results["entities"]
         
-        # Semantic similarity analysis
+        # Semantic similarity analysis (lazy load)
+        self._ensure_sentence_model_loaded()
         if self.sentence_model:
             semantic_results = self._analyze_semantic_similarity(sentences)
             results["semantic_similarity_score"] = semantic_results["score"]

@@ -3,7 +3,6 @@ Knowledge Graph Builder Module
 Extracts key concepts and builds semantic networks from essay text
 """
 import re
-import spacy
 import networkx as nx
 from typing import Dict, List, Any, Set, Tuple, Optional
 from collections import defaultdict, Counter
@@ -11,16 +10,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Lazy import helpers
+from .spacy_utils import load_spacy_model
+
 class KnowledgeGraphBuilder:
     """Builds semantic networks (knowledge graphs) from essay text"""
     
     def __init__(self):
         """Initialize knowledge graph builder"""
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy English model not found. Please install: python -m spacy download en_core_web_sm")
-            self.nlp = None
+        self.nlp = None
+        # Don't initialize here - wait until first use to avoid import errors at startup
+    
+    def _ensure_nlp_loaded(self):
+        """Ensure spaCy is loaded (lazy loading)"""
+        if self.nlp is None:
+            self.nlp = load_spacy_model("en_core_web_sm")
     
     def build(self, text: str) -> Dict[str, Any]:
         """
@@ -45,6 +49,9 @@ class KnowledgeGraphBuilder:
         
         if not text or len(text.strip()) < 50:
             return results
+        
+        # Ensure spaCy is loaded
+        self._ensure_nlp_loaded()
         
         # Extract key concepts
         concepts = self._extract_concepts(text)
@@ -76,6 +83,7 @@ class KnowledgeGraphBuilder:
     def _extract_concepts(self, text: str) -> List[Dict[str, Any]]:
         """Extract key concepts from text using NLP"""
         concepts = []
+        self._ensure_nlp_loaded()
         
         if not self.nlp:
             # Fallback: extract noun phrases
@@ -140,6 +148,7 @@ class KnowledgeGraphBuilder:
     def _extract_relationships(self, text: str, concepts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Extract relationships between concepts"""
         relationships = []
+        self._ensure_nlp_loaded()
         
         if not self.nlp or not concepts:
             return relationships

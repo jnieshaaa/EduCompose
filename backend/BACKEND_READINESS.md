@@ -181,8 +181,13 @@ curl http://localhost:8000/api/users/me \
 - **Check**: `DATABASE_URL` environment variable is correct
 
 ### Issue: Import Errors
-- **Solution**: Ensure all dependencies are installed: `pip install -r requirements.txt`
-- **Check**: Python version is 3.8+ (recommended: 3.10+)
+- **Solution**: Ensure all dependencies are installed: `pip install -r requirements-py312.txt` (for Python 3.12)
+- **Check**: Python version is 3.8+ (recommended: 3.10+, tested with 3.12)
+- **Python 3.12 Note**: See `INSTALL_PY312.md` for Python 3.12 specific installation instructions
+
+### Issue: Build Errors on Python 3.12
+- **Solution**: Use `requirements-py312.txt` which has Python 3.12 compatible versions
+- **Check**: Ensure pip, setuptools, and wheel are up to date: `python -m pip install --upgrade pip setuptools wheel`
 
 ## 📝 Next Steps
 

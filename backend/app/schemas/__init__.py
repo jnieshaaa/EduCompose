@@ -7,7 +7,14 @@ from .user_schemas import UserBase, UserCreate, UserResponse
 from .class_schemas import ClassBase, ClassCreate, ClassResponse
 from .student_schemas import StudentBase, StudentCreate, StudentResponse
 from .essay_schemas import EssayBase, EssayCreate, EssayResponse
-from .analysis_schemas import AnalysisRequest, AnalysisResponse, BatchAnalysisRequest, DashboardStats
+from .analysis_schemas import (
+    AnalysisRequest, 
+    AnalysisResponse, 
+    BatchAnalysisRequest, 
+    DashboardStats,
+    TextAnalysisRequest,
+    TextAnalysisResponse
+)
 
 __all__ = [
     "LoginRequest",
@@ -27,6 +34,8 @@ __all__ = [
     "AnalysisRequest",
     "AnalysisResponse",
     "BatchAnalysisRequest",
-    "DashboardStats"
+    "DashboardStats",
+    "TextAnalysisRequest",
+    "TextAnalysisResponse"
 ]
 

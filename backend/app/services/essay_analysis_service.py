@@ -41,6 +41,21 @@ class EssayAnalysisService:
         self.argument_miner = ArgumentMiner()
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
     
+    async def analyze_text(self, text: str, title: str = "Untitled Essay", analysis_type: str = "comprehensive") -> Dict[str, Any]:
+        """
+        Analyze raw text directly without requiring an essay in the database
+        
+        Args:
+            text: Essay content as string
+            title: Optional essay title
+            analysis_type: Type of analysis (grammar, readability, coherence, argument, comprehensive)
+        
+        Returns:
+            Dictionary containing scores, detailed analysis, and recommendations
+        """
+        content = text
+        return await self._perform_analysis(content, analysis_type)
+    
     async def analyze_essay(self, essay: Essay, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """
         Comprehensive essay analysis across all dimensions
@@ -53,6 +68,12 @@ class EssayAnalysisService:
             Dictionary containing scores, detailed analysis, and recommendations
         """
         content = essay.content
+        return await self._perform_analysis(content, analysis_type)
+    
+    async def _perform_analysis(self, content: str, analysis_type: str = "comprehensive") -> Dict[str, Any]:
+        """
+        Internal method to perform the actual analysis on content
+        """
         
         # Validate essay length (200-1000 words as per scope)
         word_count = len(content.split())

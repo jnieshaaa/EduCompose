@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from ..models import User, Class, Essay
 from ..schemas import EssayCreate, EssayResponse
+from ..database import get_db
 from ..services import auth_service
 
 essays_router = APIRouter()

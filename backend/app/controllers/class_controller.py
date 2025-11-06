@@ -8,6 +8,7 @@ from typing import List
 
 from ..models import User, Class
 from ..schemas import ClassCreate, ClassResponse
+from ..database import get_db
 from ..services import auth_service
 
 classes_router = APIRouter()
