@@ -36,7 +36,7 @@ The landing page now has full NLP analysis functionality! Users can paste their 
 ### Updated Landing Page
 - Integrated `TextAnalysisModal` component
 - "Analyze Essay" button now opens analysis modal instead of navigating
-- Validates text length (minimum 200 words) before analysis
+- Validates text length (minimum 150 words) before analysis
 
 ## Testing Steps
 
@@ -59,7 +59,7 @@ npm run dev
 
 ### Step 3: Enter Essay Text
 
-Paste or type an essay (at least 200 words). Example:
+Paste or type an essay (at least 150 words). Example:
 
 ```
 The Impact of Technology on Education
@@ -115,7 +115,7 @@ Navigate through the 3 tabs:
 ### ✅ User-Friendly
 - Loading indicators
 - Error handling with helpful messages
-- Validates minimum word count (200 words)
+- Validates minimum word count (150 words)
 
 ### ✅ Comprehensive Results
 - Same analysis quality as authenticated endpoints
@@ -148,7 +148,7 @@ The modal handles various error cases:
 
 ## Word Count Validation
 
-- **Minimum**: 200 words (validated on frontend before API call)
+- **Minimum**: 150 words (validated on frontend before API call)
 - **Optimal**: 500-1000 words
 - **Maximum**: 1000+ words (will analyze but may be slower)
 

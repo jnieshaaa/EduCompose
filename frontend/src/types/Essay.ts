@@ -6,7 +6,7 @@ export interface Essay {
   title: string;
   content: string;
   submitted_at: string;
-  status: 'submitted' | 'analyzed' | 'reviewed';
+  status: "submitted" | "analyzed" | "reviewed";
   grammar_score?: number;
   readability_score?: number;
   coherence_score?: number;
@@ -40,13 +40,15 @@ export interface Essay {
       }>;
     };
   };
-  recommendations?: Array<{
-    priority: 'high' | 'medium' | 'low';
-    dimension: string;
-    message: string;
-    suggestion: string;
-    action_items: string[];
-  }> | string[]; // Support both old format (string[]) and new format
+  recommendations?:
+    | Array<{
+        priority: "high" | "medium" | "low";
+        dimension: string;
+        message: string;
+        suggestion: string;
+        action_items: string[];
+      }>
+    | string[]; // Support both old format (string[]) and new format
 }
 
 export interface GrammarError {
@@ -54,6 +56,67 @@ export interface GrammarError {
   sentence?: number;
   message: string;
   suggestion: string;
+  offset?: number;
+  errorLength?: number;
+  context?: string;
+}
+
+export interface GrammarSyntaxPatterns {
+  sentence_types: {
+    simple: number;
+    compound: number;
+    complex: number;
+    compound_complex: number;
+  };
+  dependency_tags: Record<string, number>;
+  pos_tags: Record<string, number>;
+  complexity_score: number;
+  avg_dependency_depth: number;
+}
+
+export interface ArgumentGraphNode {
+  id: string;
+  type: "thesis" | "claim" | "evidence" | "warrant" | "rebuttal";
+  text: string;
+  sentence_index?: number;
+  confidence?: string;
+  indicator?: string;
+}
+
+export interface ArgumentGraphEdge {
+  source: string;
+  target: string;
+  type: "supports" | "elaborates" | "rebuts";
+}
+
+export interface ArgumentGraphData {
+  nodes: ArgumentGraphNode[];
+  edges: ArgumentGraphEdge[];
+  legend?: Array<{
+    type: ArgumentGraphNode["type"];
+    label: string;
+  }>;
+}
+
+export interface ArgumentStrengthMetric {
+  claim_id: string;
+  claim: string;
+  evidence: number;
+  warrants: number;
+  rebuttals: number;
+  score: number;
+}
+
+export interface ArgumentVerificationEntry {
+  statement: string;
+  status: string;
+}
+
+export interface ArgumentMetrics {
+  argument_strength: ArgumentStrengthMetric[];
+  coherence: number;
+  verification: ArgumentVerificationEntry[];
+  overall_score: number;
 }
 
 export interface StyleIssue {
@@ -121,6 +184,8 @@ export interface ArgumentAnalysis {
     message: string;
     suggestion: string;
   }>;
+  graph?: ArgumentGraphData;
+  metrics?: ArgumentMetrics;
 }
 
 export interface Student {
@@ -147,14 +212,19 @@ export interface User {
   email: string;
   username: string;
   full_name: string;
-  role: 'teacher' | 'admin';
+  role: "teacher" | "admin";
   is_active: boolean;
   created_at: string;
 }
 
 export interface AnalysisRequest {
   essay_id: number;
-  analysis_type: 'grammar' | 'readability' | 'coherence' | 'argument' | 'comprehensive';
+  analysis_type:
+    | "grammar"
+    | "readability"
+    | "coherence"
+    | "argument"
+    | "comprehensive";
 }
 
 export interface DetailedAnalysis {
@@ -162,7 +232,7 @@ export interface DetailedAnalysis {
     score: number;
     errors: GrammarError[];
     error_count: number;
-    syntax_patterns: Record<string, any>;
+    syntax_patterns: GrammarSyntaxPatterns;
   };
   readability: {
     score: number;
@@ -231,7 +301,13 @@ export interface DetailedAnalysis {
     };
     concept_coverage: {
       coverage_score: number;
-      concept_distribution: Record<string, any>;
+      concept_distribution: Record<
+        string,
+        {
+          frequency: number;
+          coverage: number;
+        }
+      >;
     };
     conceptual_gaps: Array<{
       type: string;
@@ -246,7 +322,7 @@ export interface DetailedAnalysis {
 }
 
 export interface DiagnosticRecommendation {
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
   dimension: string;
   message: string;
   suggestion: string;
@@ -281,7 +357,12 @@ export interface AnalysisResponse {
 
 export interface BatchAnalysisRequest {
   essay_ids: number[];
-  analysis_type: 'grammar' | 'readability' | 'coherence' | 'argument' | 'comprehensive';
+  analysis_type:
+    | "grammar"
+    | "readability"
+    | "coherence"
+    | "argument"
+    | "comprehensive";
 }
 
 export interface DashboardStats {

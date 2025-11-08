@@ -20,6 +20,7 @@ import Modal from "../ui/Modal";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
+import ArgumentKnowledgeGraph from "./ArgumentKnowledgeGraph";
 import type {
   Essay,
   AnalysisResponse,
@@ -513,6 +514,12 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                     </p>
                   </div>
                 )}
+                <div className="mt-6">
+                  <ArgumentKnowledgeGraph
+                    graph={analysis.detailed_analysis.argumentation.graph}
+                    metrics={analysis.detailed_analysis.argumentation.metrics}
+                  />
+                </div>
               </Card>
             )}
 

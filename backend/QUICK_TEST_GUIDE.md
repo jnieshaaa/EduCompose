@@ -64,7 +64,7 @@ After logging in, you can create test data via the frontend:
 
 ### Step 5: Test Essay Content
 
-Use this sample essay (200+ words) to test NLP:
+Use this sample essay (150+ words) to test NLP:
 
 ```
 The Impact of Technology on Education
@@ -128,7 +128,7 @@ The analysis modal has **3 tabs**:
 2. **Check Browser Console**: Open DevTools (F12) → Console tab
 3. **Check Network Tab**: See if API calls are successful
 4. **Verify Authentication**: Make sure you're logged in
-5. **Check Essay Length**: Must be at least 200 words
+5. **Check Essay Length**: Must be at least 150 words
 
 ## 🧪 Testing Different Scenarios
 
@@ -184,7 +184,7 @@ climate change is bad. ice melting. animals die. we need fix. but some say no pr
 ### "Failed to analyze essay"
 - ✅ Backend running? (`http://localhost:8000/api/health`)
 - ✅ Logged in? (Check auth token in localStorage)
-- ✅ Essay has 200+ words?
+- ✅ Essay has 150+ words?
 - ✅ Check browser console for errors
 
 ### "Analysis takes forever"
@@ -208,7 +208,7 @@ climate change is bad. ice melting. animals die. we need fix. but some say no pr
 - [ ] Frontend server running
 - [ ] User logged in
 - [ ] At least one essay created
-- [ ] Essay has 200+ words
+- [ ] Essay has 150+ words
 - [ ] Analysis can be triggered
 - [ ] Results display correctly
 - [ ] All tabs show data

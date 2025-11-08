@@ -46,6 +46,44 @@ EduCompose integrates multiple AI layers for essay evaluation:
 
 > A full pipeline: _Essay → AI Analysis → Insightful Report → Teacher Decision._
 
+## 🚀 Installation & Setup
+
+### Prerequisites
+
+- Python 3.11+ (with `pip`)
+- Node.js 18+ (with `npm`)
+- Optional: `virtualenv` or another environment manager
+
+### Backend (API + NLP services)
+
+```bash
+cd backend
+python -m venv .venv
+# Activate the virtual environment
+#   Windows PowerShell
+.venv\Scripts\Activate.ps1
+#   macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+
+# copy env.example to .env and adjust settings as needed
+python start.py
+```
+
+The API starts on `http://localhost:8000` by default.
+
+### Frontend (Teacher dashboard)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The development server runs on `http://localhost:5173` (Vite default). Ensure the backend is running so the dashboard can reach the analysis endpoints.
+
 ## 🧩 Live Simulation: From Essay to Insight
 
 EduCompose demonstrates its process through a sample essay analysis:

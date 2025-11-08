@@ -4,7 +4,7 @@ Comprehensive multi-dimensional essay analysis service
 """
 import nltk
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple, Optional
 
 from ..models import Essay
 from ..nlp_modules import (
@@ -75,12 +75,12 @@ class EssayAnalysisService:
         Internal method to perform the actual analysis on content
         """
         
-        # Validate essay length (200-1000 words as per scope)
+        # Validate essay length (150-1000 words as per scope)
         word_count = len(content.split())
-        if word_count < 200:
+        if word_count < 150:
             return {
                 "error": "Essay too short",
-                "message": "Essays must be at least 200 words for meaningful analysis",
+                "message": "Essays must be at least 150 words for meaningful analysis",
                 "word_count": word_count
             }
         
@@ -110,6 +110,9 @@ class EssayAnalysisService:
         if analysis_type == "comprehensive":
             # Knowledge graph analysis only for comprehensive analysis
             knowledge_graph = self.knowledge_graph_builder.build(content)
+
+        argument_graph, argument_support_stats = self._build_argument_graph(argument_analysis)
+        argument_metrics = self._calculate_argument_metrics(argument_analysis, argument_support_stats)
         
         # Calculate dimension scores
         scores = {
@@ -179,7 +182,9 @@ class EssayAnalysisService:
                 "rebuttals": argument_analysis.get("rebuttals", []),
                 "argument_structure": argument_analysis.get("argument_structure", {}),
                 "toulmin_analysis": argument_analysis.get("toulmin_analysis", {}),
-                "argument_issues": argument_analysis.get("argument_issues", [])
+                "argument_issues": argument_analysis.get("argument_issues", []),
+                "graph": argument_graph,
+                "metrics": argument_metrics
             },
             "knowledge_graph": {
                 "score": knowledge_graph.get("score", 0.0),
@@ -205,6 +210,183 @@ class EssayAnalysisService:
             "analysis_type": analysis_type
         }
     
+    def _build_argument_graph(self, argument_analysis: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Construct argument knowledge graph from argument analysis results"""
+        graph = {
+            "nodes": [],
+            "edges": [],
+            "legend": [
+                {"type": "thesis", "label": "Thesis"},
+                {"type": "claim", "label": "Claim"},
+                {"type": "evidence", "label": "Evidence"},
+                {"type": "warrant", "label": "Warrant"},
+                {"type": "rebuttal", "label": "Rebuttal"}
+            ]
+        }
+        support_stats: Dict[str, Dict[str, Any]] = {}
+
+        if not argument_analysis:
+            return graph, support_stats
+
+        thesis = argument_analysis.get("thesis_statement")
+        if thesis and thesis.get("sentence"):
+            graph["nodes"].append({
+                "id": "thesis",
+                "type": "thesis",
+                "text": thesis.get("sentence", ""),
+                "confidence": thesis.get("confidence", "")
+            })
+
+        claims = sorted(
+            argument_analysis.get("claims", []),
+            key=lambda c: c.get("sentence_index", 0)
+        )
+
+        claim_nodes: List[Dict[str, Any]] = []
+        for idx, claim in enumerate(claims, start=1):
+            claim_id = f"claim_{idx}"
+            claim_node = {
+                "id": claim_id,
+                "type": "claim",
+                "text": claim.get("sentence", ""),
+                "sentence_index": claim.get("sentence_index", idx),
+                "indicator": claim.get("indicator")
+            }
+            graph["nodes"].append(claim_node)
+            claim_with_id = dict(claim)
+            claim_with_id["id"] = claim_id
+            claim_nodes.append(claim_with_id)
+            support_stats[claim_id] = {
+                "claim_id": claim_id,
+                "claim": claim.get("sentence", ""),
+                "evidence": 0,
+                "warrants": 0,
+                "rebuttals": 0
+            }
+            if thesis and thesis.get("sentence"):
+                graph["edges"].append({
+                    "source": "thesis",
+                    "target": claim_id,
+                    "type": "supports"
+                })
+
+        def find_supporting_claim(sentence_index: int) -> Optional[str]:
+            ordered = sorted(
+                claim_nodes,
+                key=lambda c: c.get("sentence_index", 0)
+            )
+            for claim in reversed(ordered):
+                if sentence_index >= claim.get("sentence_index", 0):
+                    return claim["id"]
+            return ordered[0]["id"] if ordered else None
+
+        def add_node_with_edge(items: List[Dict[str, Any]], node_type: str, edge_type: str) -> None:
+            ordered_items = sorted(items, key=lambda item: item.get("sentence_index", 0))
+            for idx, item in enumerate(ordered_items, start=1):
+                node_id = f"{node_type}_{idx}"
+                graph["nodes"].append({
+                    "id": node_id,
+                    "type": node_type,
+                    "text": item.get("sentence", ""),
+                    "sentence_index": item.get("sentence_index", idx)
+                })
+                claim_id = find_supporting_claim(item.get("sentence_index", 0))
+                if claim_id:
+                    graph["edges"].append({
+                        "source": claim_id,
+                        "target": node_id,
+                        "type": edge_type
+                    })
+                    if node_type == "evidence":
+                        support_stats[claim_id]["evidence"] += 1
+                    elif node_type == "warrant":
+                        support_stats[claim_id]["warrants"] += 1
+                elif thesis and thesis.get("sentence"):
+                    graph["edges"].append({
+                        "source": "thesis",
+                        "target": node_id,
+                        "type": edge_type
+                    })
+
+        add_node_with_edge(argument_analysis.get("grounds", []), "evidence", "supports")
+        add_node_with_edge(argument_analysis.get("warrants", []), "warrant", "elaborates")
+
+        rebuttals = sorted(
+            argument_analysis.get("rebuttals", []),
+            key=lambda r: r.get("sentence_index", 0)
+        )
+        for idx, rebuttal in enumerate(rebuttals, start=1):
+            node_id = f"rebuttal_{idx}"
+            graph["nodes"].append({
+                "id": node_id,
+                "type": "rebuttal",
+                "text": rebuttal.get("sentence", ""),
+                "sentence_index": rebuttal.get("sentence_index", idx)
+            })
+            claim_id = find_supporting_claim(rebuttal.get("sentence_index", 0))
+            if claim_id:
+                graph["edges"].append({
+                    "source": node_id,
+                    "target": claim_id,
+                    "type": "rebuts"
+                })
+                support_stats[claim_id]["rebuttals"] += 1
+            elif thesis and thesis.get("sentence"):
+                graph["edges"].append({
+                    "source": node_id,
+                    "target": "thesis",
+                    "type": "rebuts"
+                })
+
+        return graph, support_stats
+
+    def _calculate_argument_metrics(self, argument_analysis: Dict[str, Any], support_stats: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """Summarize argument strength and verification metrics for visualization"""
+        metrics = {
+            "argument_strength": [],
+            "coherence": 0.0,
+            "verification": [],
+            "overall_score": round(argument_analysis.get("score", 0.0), 2)
+        }
+
+        strength_entries = []
+        for claim_id, stats in support_stats.items():
+            raw_score = stats["evidence"] * 3 + stats["warrants"] * 2 - stats["rebuttals"]
+            score = max(0.0, min(10.0, raw_score))
+            strength_entries.append({
+                "claim_id": claim_id,
+                "claim": stats["claim"],
+                "evidence": stats["evidence"],
+                "warrants": stats["warrants"],
+                "rebuttals": stats["rebuttals"],
+                "score": round(score, 2)
+            })
+
+        metrics["argument_strength"] = sorted(
+            strength_entries,
+            key=lambda entry: entry["score"],
+            reverse=True
+        )
+
+        coherence_components = [
+            argument_analysis.get("claim_score"),
+            argument_analysis.get("evidence_score"),
+            argument_analysis.get("warrant_score")
+        ]
+        valid_components = [comp for comp in coherence_components if comp is not None]
+        if valid_components:
+            metrics["coherence"] = round(sum(valid_components) / len(valid_components), 2)
+
+        verification_entries = []
+        for ground in argument_analysis.get("grounds", [])[:5]:
+            verification_entries.append({
+                "statement": ground.get("sentence", ""),
+                "status": "Verified" if ground.get("indicator") else "Pending Review"
+            })
+        metrics["verification"] = verification_entries
+
+        return metrics
+
     def _generate_diagnostic_recommendations(
         self, grammar_analysis: Dict, readability_analysis: Dict,
         coherence_analysis: Dict, argument_analysis: Dict, knowledge_graph: Dict

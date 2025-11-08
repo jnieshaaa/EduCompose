@@ -117,7 +117,7 @@ Each analysis includes:
 
 ## Essay Length Requirements
 
-- **Minimum**: 200 words (for meaningful analysis)
+- **Minimum**: 150 words (for meaningful analysis)
 - **Optimal**: 500-1000 words
 - **Maximum**: 1000 words (processing may be slower)
 
@@ -165,7 +165,7 @@ python start.py
 ### Scope Compliance
 ✅ English-language essays only
 ✅ Expository and argumentative genres
-✅ 200-1000 word range
+✅ 150-1000 word range
 ✅ Teacher-oriented (not student-facing)
 ✅ Diagnostic support (not automated grading)
 

@@ -161,7 +161,7 @@ This creates:
    - **Title**: "Test Essay"
    - **Class**: Select a class
    - **Student**: Select a student
-   - **Content**: Enter at least 200 words of essay content
+   - **Content**: Enter at least 150 words of essay content
 3. Click **"Create Essay"**
 4. The new essay will appear in the list
 5. Click on it and select **"Run Analysis"**
@@ -258,7 +258,7 @@ You can test specific analysis dimensions:
 
 - **Check**: Is the backend server running?
 - **Check**: Is spaCy model downloaded? (`python -m spacy download en_core_web_sm`)
-- **Check**: Is the essay at least 200 words?
+- **Check**: Is the essay at least 150 words?
 - **Check**: Backend logs for errors
 
 ### Issue: Analysis takes too long
@@ -315,7 +315,7 @@ After testing basic functionality:
 
 2. **Test edge cases**:
 
-   - Very short essays (< 200 words)
+   - Very short essays (< 150 words)
    - Very long essays (> 1000 words)
    - Essays with many grammar errors
    - Essays with poor coherence

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  X,
   BookOpen,
   TrendingUp,
   Brain,
@@ -18,7 +17,12 @@ import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
 import Modal from "../ui/Modal";
-import type { AnalysisResponse, DiagnosticRecommendation } from "../../types/Essay";
+import ArgumentKnowledgeGraph from "./ArgumentKnowledgeGraph";
+import type {
+  AnalysisResponse,
+  DiagnosticRecommendation,
+  GrammarError,
+} from "../../types/Essay";
 import { analysisApi } from "../../api";
 
 interface TextAnalysisModalProps {
@@ -28,17 +32,27 @@ interface TextAnalysisModalProps {
   title?: string;
 }
 
+type HighlightError = GrammarError & {
+  offset: number;
+  errorLength: number;
+};
+
+const MIN_WORDS = 150;
+
 const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
   isOpen,
   onClose,
   text,
   title = "Essay Analysis",
 }) => {
-  const [analysis, setAnalysis] = useState<Omit<AnalysisResponse, "essay_id"> | null>(null);
+  const [analysis, setAnalysis] = useState<Omit<
+    AnalysisResponse,
+    "essay_id"
+  > | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "detailed" | "recommendations"
+    "overview" | "detailed" | "recommendations" | "highlights"
   >("overview");
 
   useEffect(() => {
@@ -56,8 +70,8 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
   }, [isOpen]);
 
   const handleAnalyze = async () => {
-    if (!text.trim() || text.trim().split(/\s+/).length < 200) {
-      setError("Essay must be at least 200 words for analysis");
+    if (!text.trim() || text.trim().split(/\s+/).length < MIN_WORDS) {
+      setError(`Essay must be at least ${MIN_WORDS} words for analysis`);
       return;
     }
 
@@ -66,8 +80,12 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
     setAnalysis(null);
 
     try {
-      const result = await analysisApi.analyzeText(text, title, "comprehensive");
-      setAnalysis(result as any);
+      const result = await analysisApi.analyzeText(
+        text,
+        title,
+        "comprehensive"
+      );
+      setAnalysis(result as Omit<AnalysisResponse, "essay_id">);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to analyze essay";
@@ -124,9 +142,69 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
 
   const diagnosticSummary = analysis?.diagnostic_summary;
 
+  const highlightData = useMemo(() => {
+    const grammarErrors = analysis?.detailed_analysis?.grammar?.errors ?? [];
+
+    if (!analysis || !text || grammarErrors.length === 0) {
+      return { html: null as string | null, errors: [] as HighlightError[] };
+    }
+
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const validErrors = [...grammarErrors]
+      .filter(
+        (error): error is HighlightError =>
+          typeof error.offset === "number" &&
+          typeof error.errorLength === "number" &&
+          error.errorLength > 0 &&
+          error.offset < text.length
+      )
+      .sort((a, b) => a.offset - b.offset);
+
+    if (validErrors.length === 0) {
+      return { html: null, errors: [] };
+    }
+
+    let html = "";
+    let cursor = 0;
+
+    validErrors.forEach((error) => {
+      const start = Math.max(error.offset, cursor);
+      const end = Math.min(error.offset + error.errorLength, text.length);
+
+      if (start > cursor) {
+        html += escapeHtml(text.slice(cursor, start));
+      }
+
+      const snippet = escapeHtml(text.slice(start, end));
+      const title = escapeHtml(error.message || "Grammar issue");
+      html += `<mark style="background: rgba(248, 113, 113, 0.35); color: #991b1b; padding: 0 2px; border-radius: 4px;" title="${title}">`;
+      html += snippet || "\u200B";
+      html += "</mark>";
+      cursor = end;
+    });
+
+    if (cursor < text.length) {
+      html += escapeHtml(text.slice(cursor));
+    }
+
+    return { html, errors: validErrors };
+  }, [analysis, text]);
+
   if (loading) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Analyzing Essay" size="xl">
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Analyzing Essay"
+        size="xl"
+      >
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
           <p className="text-lg font-medium text-neutral-700 mb-2">
@@ -151,10 +229,11 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                 Analysis Failed
               </h4>
               <p className="text-error-dark">{error}</p>
-              {text.trim().split(/\s+/).length < 200 && (
+              {text.trim().split(/\s+/).length < MIN_WORDS && (
                 <p className="text-sm text-error-default mt-2">
                   Your essay has {text.trim().split(/\s+/).length} words. Please
-                  add at least {200 - text.trim().split(/\s+/).length} more words.
+                  add at least {MIN_WORDS - text.trim().split(/\s+/).length}{" "}
+                  more words.
                 </p>
               )}
               <button
@@ -194,8 +273,7 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                   <span>Word Count: {analysis.word_count}</span>
                 )}
                 <span>
-                  Analyzed:{" "}
-                  {new Date(analysis.generated_at).toLocaleString()}
+                  Analyzed: {new Date(analysis.generated_at).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -207,9 +285,7 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
           <Card>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-neutral-600 mb-1">
-                  Overall Score
-                </p>
+                <p className="text-sm text-neutral-600 mb-1">Overall Score</p>
                 <p className="text-3xl font-bold text-primary">
                   {diagnosticSummary.overall_score.toFixed(1)}
                 </p>
@@ -250,7 +326,12 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
             {[
               { id: "overview", label: "Overview", icon: TrendingUp },
               { id: "detailed", label: "Detailed Analysis", icon: BookOpen },
-              { id: "recommendations", label: "Recommendations", icon: Lightbulb },
+              { id: "highlights", label: "Highlights", icon: AlertTriangle },
+              {
+                id: "recommendations",
+                label: "Recommendations",
+                icon: Lightbulb,
+              },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -258,7 +339,11 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                   key={tab.id}
                   onClick={() =>
                     setActiveTab(
-                      tab.id as "overview" | "detailed" | "recommendations"
+                      tab.id as
+                        | "overview"
+                        | "detailed"
+                        | "recommendations"
+                        | "highlights"
                     )
                   }
                   className={`flex items-center space-x-2 px-4 py-2 font-medium text-sm transition-colors ${
@@ -394,7 +479,7 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                       </p>
                       {analysis.detailed_analysis.grammar.errors
                         .slice(0, 5)
-                        .map((error: any, idx: number) => (
+                        .map((error, idx) => (
                           <div
                             key={idx}
                             className="bg-error-50 border border-error-200 rounded p-2"
@@ -521,6 +606,12 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                     </p>
                   </div>
                 )}
+                <div className="mt-6">
+                  <ArgumentKnowledgeGraph
+                    graph={analysis.detailed_analysis.argumentation.graph}
+                    metrics={analysis.detailed_analysis.argumentation.metrics}
+                  />
+                </div>
               </Card>
             )}
 
@@ -578,7 +669,7 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
                     <div className="flex flex-wrap gap-2">
                       {analysis.detailed_analysis.knowledge_graph.concepts
                         .slice(0, 10)
-                        .map((concept: any, idx: number) => (
+                        .map((concept, idx) => (
                           <Badge key={idx} variant="neutral" size="sm">
                             {concept.text} ({concept.frequency})
                           </Badge>
@@ -591,7 +682,33 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
           </div>
         )}
 
-        {/* Recommendations Tab */}
+        {activeTab === "highlights" && (
+          <div className="space-y-4">
+            <Card>
+              <h4 className="text-lg font-semibold text-neutral-900 mb-3">
+                Highlighted Essay
+              </h4>
+              {highlightData.html ? (
+                <div className="space-y-3">
+                  <div className="text-sm text-neutral-600">
+                    Hover over highlighted text to see issue details. (
+                    {highlightData.errors.length} issues)
+                  </div>
+                  <div
+                    className="whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-lg p-4"
+                    dangerouslySetInnerHTML={{ __html: highlightData.html }}
+                  />
+                </div>
+              ) : (
+                <p className="text-neutral-600">
+                  No grammar highlights available. Run an analysis to view
+                  issues mapped to your essay text.
+                </p>
+              )}
+            </Card>
+          </div>
+        )}
+
         {activeTab === "recommendations" && (
           <div className="space-y-4">
             {recommendations.length > 0 ? (
@@ -686,4 +803,3 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
 };
 
 export default TextAnalysisModal;
-
