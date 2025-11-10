@@ -93,8 +93,8 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div className="flex-1 min-w-[260px]">
+      <div className="flex flex-col gap-6">
+        <div className="w-full">
           <div
             ref={containerRef}
             className="w-full h-64 md:h-72 bg-neutral-50 border border-neutral-200 rounded-lg"
@@ -159,7 +159,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
           )}
         </div>
 
-        <div className="w-full md:w-80 space-y-4">
+        <div className="w-full space-y-4">
           <div>
             <h5 className="text-sm font-semibold text-neutral-800 mb-2">
               Argument Strength
