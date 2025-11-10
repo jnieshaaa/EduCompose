@@ -15,6 +15,8 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import type { DashboardStats, Essay, Class } from "../types/Essay";
 import { dummyData } from "../api";
+import CreateClassModal from "../components/dashboard/CreateClassModal";
+import CreateEssayModal from "../components/dashboard/CreateEssayModal";
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -22,6 +24,8 @@ const Dashboard: React.FC = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateClassModal, setShowCreateClassModal] = useState(false);
+  const [showCreateEssayModal, setShowCreateEssayModal] = useState(false);
 
   useEffect(() => {
     // Simulate API call
@@ -154,7 +158,11 @@ const Dashboard: React.FC = () => {
               Quick Actions
             </h3>
             <div className='space-y-3'>
-              <Button variant='primary' className='w-full justify-start'>
+              <Button
+                variant='primary'
+                className='w-full justify-start'
+                onClick={() => setShowCreateEssayModal(true)}
+              >
                 <Plus className='w-4 h-4 mr-2' />
                 Add New Essay
               </Button>
@@ -162,7 +170,11 @@ const Dashboard: React.FC = () => {
                 <Users className='w-4 h-4 mr-2' />
                 Manage Students
               </Button>
-              <Button variant='ghost' className='w-full justify-start'>
+              <Button
+                variant='ghost'
+                className='w-full justify-start'
+                onClick={() => setShowCreateClassModal(true)}
+              >
                 <GraduationCap className='w-4 h-4 mr-2' />
                 Create Class
               </Button>
@@ -232,6 +244,56 @@ const Dashboard: React.FC = () => {
         onClassClick={(classId) => {
           console.log("Class clicked:", classId);
           // Navigate to class detail
+        }}
+      />
+
+      <CreateClassModal
+        isOpen={showCreateClassModal}
+        onClose={() => setShowCreateClassModal(false)}
+        onCreated={(newClass) => {
+          setClasses((prev) => [newClass, ...prev]);
+          setStats((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  total_classes: prev.total_classes + 1,
+                  class_stats: [
+                    ...prev.class_stats,
+                    {
+                      id: newClass.id,
+                      name: newClass.name,
+                      essay_count: 0,
+                      student_count: 0,
+                    },
+                  ],
+                }
+              : prev
+          );
+        }}
+      />
+
+      <CreateEssayModal
+        isOpen={showCreateEssayModal}
+        onClose={() => setShowCreateEssayModal(false)}
+        onCreated={(newEssay) => {
+          setRecentEssays((prev) => [newEssay, ...prev]);
+          setStats((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  total_essays: prev.total_essays + 1,
+                  recent_essays: [newEssay, ...(prev.recent_essays || [])],
+                  class_stats: prev.class_stats.map((cls) =>
+                    cls.id === newEssay.class_id
+                      ? {
+                          ...cls,
+                          essay_count: cls.essay_count + 1,
+                        }
+                      : cls
+                  ),
+                }
+              : prev
+          );
         }}
       />
     </div>
