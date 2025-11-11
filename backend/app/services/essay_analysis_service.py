@@ -115,13 +115,23 @@ class EssayAnalysisService:
         argument_metrics = self._calculate_argument_metrics(argument_analysis, argument_support_stats)
         
         # Calculate dimension scores
+        argument_coherence = argument_metrics.get("coherence") if argument_metrics else 0.0
+        coherence_score = argument_coherence if argument_coherence else coherence_analysis.get("score", 0.0)
+
         scores = {
             "grammar": grammar_analysis.get("score", 0.0),
             "readability": readability_analysis.get("score", 0.0),
-            "coherence": coherence_analysis.get("score", 0.0),
+            "coherence": coherence_score,
             "argument_strength": argument_analysis.get("score", 0.0),
             "knowledge_graph": knowledge_graph.get("score", 0.0)
         }
+
+        if argument_metrics is not None:
+            argument_metrics["coherence"] = coherence_score
+
+        if coherence_analysis is None or not isinstance(coherence_analysis, dict):
+            coherence_analysis = {}
+        coherence_analysis["score"] = coherence_score
         
         # Calculate overall score (weighted average)
         weights = {
