@@ -16,8 +16,8 @@ if errorlevel 1 (
 )
 
 echo.
-echo Step 2: Installing Python 3.12 compatible dependencies...
-pip install -r requirements-py312.txt
+echo Step 2: Installing dependencies...
+pip install -r requirements.txt
 if errorlevel 1 (
     echo ERROR: Failed to install dependencies
     echo.
@@ -32,7 +32,7 @@ if errorlevel 1 (
     )
     echo.
     echo Installing remaining dependencies...
-    pip install -r requirements-py312.txt
+    pip install -r requirements.txt
     if errorlevel 1 (
         echo ERROR: Failed to install remaining dependencies
         pause

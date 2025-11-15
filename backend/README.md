@@ -2,6 +2,8 @@
 
 Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay Evaluation
 
+📚 **For complete documentation, see [DOCUMENTATION.md](DOCUMENTATION.md)**
+
 ## Features
 
 - **FastAPI** - Modern, fast web framework for building APIs
@@ -30,7 +32,7 @@ cp env.example .env
 Edit `.env` with your configuration:
 
 ```env
-DATABASE_URL=sqlite:///./edukompose.db
+DATABASE_URL=sqlite:///./educompose.db
 SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -103,7 +105,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 The application uses SQLite by default for development. For production, consider using PostgreSQL:
 
 ```env
-DATABASE_URL=postgresql://username:password@localhost/edukompose
+DATABASE_URL=postgresql://username:password@localhost/educompose
 ```
 
 ## Development
@@ -164,7 +166,7 @@ backend/
 3. **Controllers**: Add API endpoints in `controllers/` directory
 4. **Services**: Add business logic in `services/` directory
 
-For detailed information about the MVC structure, see `MVC_STRUCTURE.md`.
+For detailed information about the MVC structure and architecture, see [DOCUMENTATION.md](DOCUMENTATION.md).
 
 ## Testing
 

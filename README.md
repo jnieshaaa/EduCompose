@@ -52,23 +52,28 @@ EduCompose integrates multiple AI layers for essay evaluation:
 
 - Python 3.11+ (with `pip`)
 - Node.js 18+ (with `npm`)
-- Optional: `virtualenv` or another environment manager
+- Python's built-in `venv` module (recommended) or another environment manager
 
 ### Backend (API + NLP services)
 
 ```bash
 cd backend
 python -m venv .venv
+
 # Activate the virtual environment
-#   Windows PowerShell
+# Windows PowerShell:
 .venv\Scripts\Activate.ps1
-#   macOS/Linux
+# Windows Command Prompt:
+.venv\Scripts\activate.bat
+# macOS/Linux:
 source .venv/bin/activate
 
+# Install dependencies
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 
-# copy env.example to .env and adjust settings as needed
+# Configure environment (copy env.example to .env and adjust settings)
+# Then start the server:
 python start.py
 ```
 

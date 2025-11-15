@@ -5,17 +5,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database URL - using SQLite for development, can be changed to PostgreSQL for production
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./edukompose.db")
+# Database URL - supports both SQLite (development) and PostgreSQL (production)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./educompose.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
-)
+# Configure engine based on database type
+if DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgresql+psycopg2://"):
+    # PostgreSQL configuration
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_size=10,  # Connection pool size
+        max_overflow=20,  # Maximum overflow connections
+        echo=os.getenv("SQL_ECHO", "False").lower() == "true"  # Log SQL queries
+    )
+else:
+    # SQLite configuration (for development)
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        echo=os.getenv("SQL_ECHO", "False").lower() == "true"
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
+    """Dependency for getting database session"""
     db = SessionLocal()
     try:
         yield db

@@ -221,7 +221,7 @@
   "users": [
     {
       "id": 1,
-      "email": "teacher@edukompose.com",
+      "email": "teacher@educompose.com",
       "username": "teacher1",
       "full_name": "Dr. Jane Smith",
       "role": "teacher",
@@ -230,7 +230,7 @@
     },
     {
       "id": 2,
-      "email": "admin@edukompose.com",
+      "email": "admin@educompose.com",
       "username": "admin",
       "full_name": "Admin User",
       "role": "admin",
