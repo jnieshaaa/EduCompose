@@ -112,7 +112,7 @@ const LandingPage: React.FC = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="py-8 pb-20 mb-20"
       >
-        <div className="mx-auto px-6 lg:px-12 xl:px-16">
+        <div className="mx-auto px-4 lg:px-6 xl:px-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -137,14 +137,16 @@ const LandingPage: React.FC = () => {
           <div
             className={`flex flex-col ${
               analysis || loading || error ? "lg:flex-row" : ""
-            } items-start gap-6 lg:gap-6`}
+            } items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] mx-auto`}
           >
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className={`bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl ${
-                analysis || loading || error ? "lg:flex-[1.4]" : "mx-auto"
+              className={`bg-white rounded-2xl shadow-2xl p-6 w-full ${
+                analysis || loading || error
+                  ? "lg:flex-[1.4] lg:max-w-none"
+                  : "max-w-3xl mx-auto"
               } h-[70vh] flex flex-col`}
             >
               <div className="relative mb-4 flex-1">
@@ -200,7 +202,7 @@ const LandingPage: React.FC = () => {
             {(loading || analysis || error) && (
               <div
                 id="analysis-results"
-                className="w-full lg:flex-[1.2] flex-shrink-0 h-[70vh]"
+                className="w-full lg:flex-[1.2] lg:max-w-none flex-shrink-0 h-[70vh]"
               >
                 <InlineAnalysisResults
                   analysis={analysis}
