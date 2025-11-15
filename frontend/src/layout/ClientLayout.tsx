@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ClientSidebar from "../components/ClientSidebar";
 import Header from "../components/Header";
+import Breadcrumb from "../components/ui/Breadcrumb";
 
 const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
   children,
@@ -20,6 +21,7 @@ const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
 
       <div className="flex-1 flex flex-col">
         <Header onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
+        <Breadcrumb />
 
         <main className="flex-1 overflow-y-auto bg-neutral-300/10">
           {children}
