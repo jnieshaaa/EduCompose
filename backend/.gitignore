@@ -70,3 +70,16 @@ database/migrations/versions/__pycache__/
 .dmypy.json
 dmypy.json
 
+# Machine Learning Models (large files)
+# AES model files are too large for Git (>100MB)
+# Users should place models in app/models/aes_model/ locally
+app/models/aes_model/
+*.safetensors
+*.pt
+*.pth
+*.h5
+*.pkl
+*.pickle
+*.joblib
+model.safetensors
+

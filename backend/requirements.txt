@@ -52,6 +52,13 @@ pandas
 numpy
 
 # ============================================
+# Deep Learning / Transformers (for AES Model)
+# ============================================
+# For Automated Essay Scoring (AES) using BERT models
+transformers
+torch
+
+# ============================================
 # Graph and Network Analysis
 # ============================================
 networkx
