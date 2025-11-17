@@ -319,12 +319,6 @@ export interface DetailedAnalysis {
     connectivity_score: number;
     depth_score: number;
   };
-  aes?: {
-    score: number | null;
-    available: boolean;
-    model_type?: string;
-    error?: string;
-  };
 }
 
 export interface DiagnosticRecommendation {
@@ -352,7 +346,6 @@ export interface AnalysisResponse {
     coherence: number;
     argument_strength: number;
     knowledge_graph: number;
-    aes?: number; // Automated Essay Scoring model score (optional)
     overall: number;
   };
   detailed_analysis: DetailedAnalysis;

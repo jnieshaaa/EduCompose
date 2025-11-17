@@ -12,8 +12,7 @@ from ..nlp_modules import (
     ReadabilityAnalyzer,
     CoherenceAnalyzer,
     ArgumentMiner,
-    KnowledgeGraphBuilder,
-    AESScorer
+    KnowledgeGraphBuilder
 )
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,6 @@ class EssayAnalysisService:
         self.coherence_analyzer = CoherenceAnalyzer()
         self.argument_miner = ArgumentMiner()
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
-        self.aes_scorer = AESScorer()
     
     async def analyze_text(self, text: str, title: str = "Untitled Essay", analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """
@@ -112,11 +110,6 @@ class EssayAnalysisService:
         if analysis_type == "comprehensive":
             # Knowledge graph analysis only for comprehensive analysis
             knowledge_graph = self.knowledge_graph_builder.build(content)
-        
-        # AES (Automated Essay Scoring) - always run for comprehensive analysis
-        aes_result = {}
-        if analysis_type == "comprehensive" and self.aes_scorer.is_available():
-            aes_result = self.aes_scorer.score(content)
 
         argument_graph, argument_support_stats = self._build_argument_graph(argument_analysis)
         argument_metrics = self._calculate_argument_metrics(argument_analysis, argument_support_stats)
@@ -125,9 +118,6 @@ class EssayAnalysisService:
         argument_coherence = argument_metrics.get("coherence") if argument_metrics else 0.0
         coherence_score = argument_coherence if argument_coherence else coherence_analysis.get("score", 0.0)
 
-        # Get AES score if available
-        aes_score = aes_result.get("score") if aes_result.get("available") else None
-        
         scores = {
             "grammar": grammar_analysis.get("score", 0.0),
             "readability": readability_analysis.get("score", 0.0),
@@ -135,10 +125,6 @@ class EssayAnalysisService:
             "argument_strength": argument_analysis.get("score", 0.0),
             "knowledge_graph": knowledge_graph.get("score", 0.0)
         }
-        
-        # Add AES score if available
-        if aes_score is not None:
-            scores["aes"] = aes_score
 
         if argument_metrics is not None:
             argument_metrics["coherence"] = coherence_score
@@ -148,28 +134,15 @@ class EssayAnalysisService:
         coherence_analysis["score"] = coherence_score
         
         # Calculate overall score (weighted average)
-        # If AES is available, use it with higher weight; otherwise use traditional weights
-        if aes_score is not None:
-            # Use AES score as primary factor with traditional scores as validation
-            weights = {
-                "aes": 0.40,  # Primary scoring from trained model
-                "grammar": 0.15,
-                "readability": 0.10,
-                "coherence": 0.15,
-                "argument_strength": 0.15,
-                "knowledge_graph": 0.05
-            }
-        else:
-            # Traditional weights when AES is not available
-            weights = {
-                "grammar": 0.20,
-                "readability": 0.20,
-                "coherence": 0.25,
-                "argument_strength": 0.25,
-                "knowledge_graph": 0.10
-            }
+        weights = {
+            "grammar": 0.20,
+            "readability": 0.20,
+            "coherence": 0.25,
+            "argument_strength": 0.25,
+            "knowledge_graph": 0.10
+        }
         
-        overall_score = sum(scores[dim] * weights[dim] for dim in scores.keys() if dim in weights)
+        overall_score = sum(scores[dim] * weights[dim] for dim in scores.keys())
         scores["overall"] = round(overall_score, 2)
         
         # Generate teacher-centered diagnostic recommendations
@@ -234,20 +207,6 @@ class EssayAnalysisService:
                 "depth_score": knowledge_graph.get("depth_score", 0.0)
             }
         }
-        
-        # Add AES results if available
-        if aes_result.get("available"):
-            detailed_analysis["aes"] = {
-                "score": aes_result.get("score"),
-                "available": True,
-                "model_type": aes_result.get("model_info", "unknown")
-            }
-        else:
-            detailed_analysis["aes"] = {
-                "score": None,
-                "available": False,
-                "error": aes_result.get("error", "AES model not available")
-            }
         
         # Generate diagnostic summary for teachers
         diagnostic_summary = self._generate_diagnostic_summary(scores, detailed_analysis)
