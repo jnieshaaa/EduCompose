@@ -107,7 +107,11 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 backgroundColor="rgba(249,250,251,1)"
                 nodeCanvasObject={(node: ForceNode, ctx, globalScale) => {
                   const label = node.text ?? "";
-                  const fontSize = 12 / globalScale;
+                  // Scale text size with zoom: smaller when zoomed in, larger when zoomed out
+                  // globalScale < 1 = zoomed out, globalScale > 1 = zoomed in
+                  // Use inverse scaling so text shrinks when zoomed in
+                  const baseFontSize = 12;
+                  const fontSize = Math.max(8, Math.min(16, baseFontSize / Math.sqrt(globalScale)));
                   const color = NODE_COLORS[node.type] || "#0f172a";
                   const nodeX = typeof node.x === "number" ? node.x : 0;
                   const nodeY = typeof node.y === "number" ? node.y : 0;
@@ -121,8 +125,10 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   ctx.textAlign = "center";
                   ctx.textBaseline = "top";
                   ctx.fillStyle = "#1f2937";
+                  // Adjust text truncation based on zoom level (more text when zoomed in)
+                  const maxLength = globalScale > 1.5 ? 50 : globalScale > 1 ? 40 : 30;
                   const text =
-                    label.length > 40 ? `${label.slice(0, 37)}...` : label;
+                    label.length > maxLength ? `${label.slice(0, maxLength - 3)}...` : label;
                   ctx.fillText(text, nodeX, nodeY + 8);
                 }}
                 linkColor={(link: ForceLink) =>
