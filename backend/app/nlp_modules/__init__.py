@@ -24,6 +24,7 @@ from .kg_schema import (
 from .openie_extractor import OpenIEExtractor
 from .kg_metrics import KGMetricsCalculator
 from .enhanced_kg_builder import EnhancedKnowledgeGraphBuilder
+from .preprocessing import PreprocessingPipeline
 
 __all__ = [
     "GrammarAnalyzer",
@@ -43,6 +44,7 @@ __all__ = [
     "KGEdge",
     "OpenIEExtractor",
     "KGMetricsCalculator",
-    "EnhancedKnowledgeGraphBuilder"
+    "EnhancedKnowledgeGraphBuilder",
+    "PreprocessingPipeline"
 ]
 
