@@ -215,11 +215,19 @@ class GrammarAnalyzer:
         # Check capitalization
         for i, sentence in enumerate(sentences):
             if sentence and not sentence[0].isupper():
+                # Find the offset of this sentence in the original text
+                sentence_start = text.find(sentence)
+                if sentence_start == -1:
+                    # Fallback: approximate position
+                    sentence_start = sum(len(s) for s in sentences[:i])
+                
                 errors.append({
                     "type": "capitalization",
                     "sentence_index": i,
                     "message": "Sentence should start with a capital letter",
-                    "suggestion": sentence[0].upper() + sentence[1:] if len(sentence) > 1 else sentence.upper()
+                    "suggestion": sentence[0].upper() + sentence[1:] if len(sentence) > 1 else sentence.upper(),
+                    "offset": sentence_start,
+                    "errorLength": 1  # Just the first character
                 })
         
         # Check for common word errors
@@ -237,6 +245,7 @@ class GrammarAnalyzer:
                 errors.append({
                     "type": "word_choice",
                     "offset": match.start(),
+                    "errorLength": len(match.group()),  # Add errorLength for highlighting
                     "message": f"Consider using '{suggestion}' instead",
                     "context": text[max(0, match.start()-20):match.end()+20]
                 })

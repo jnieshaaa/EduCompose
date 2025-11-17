@@ -197,14 +197,14 @@ class EssayAnalysisService:
                 "metrics": argument_metrics
             },
             "knowledge_graph": {
-                "score": knowledge_graph.get("score", 0.0),
-                "concepts": knowledge_graph.get("concepts", [])[:10],  # Top 10 concepts
-                "relationships": knowledge_graph.get("relationships", [])[:15],  # Top 15 relationships
-                "graph_structure": knowledge_graph.get("graph_structure", {}),
-                "concept_coverage": knowledge_graph.get("concept_coverage", {}),
-                "conceptual_gaps": knowledge_graph.get("conceptual_gaps", []),
-                "connectivity_score": knowledge_graph.get("connectivity_score", 0.0),
-                "depth_score": knowledge_graph.get("depth_score", 0.0)
+                "score": knowledge_graph.get("score", 0.0) if knowledge_graph else 0.0,
+                "concepts": knowledge_graph.get("concepts", [])[:10] if knowledge_graph else [],  # Top 10 concepts
+                "relationships": knowledge_graph.get("relationships", [])[:15] if knowledge_graph else [],  # Top 15 relationships
+                "graph_structure": knowledge_graph.get("graph_structure", {}) if knowledge_graph else {},
+                "concept_coverage": knowledge_graph.get("concept_coverage", {}) if knowledge_graph else {},
+                "conceptual_gaps": knowledge_graph.get("conceptual_gaps", []) if knowledge_graph else [],
+                "connectivity_score": knowledge_graph.get("connectivity_score", 0.0) if knowledge_graph else 0.0,
+                "depth_score": knowledge_graph.get("depth_score", 0.0) if knowledge_graph else 0.0
             }
         }
         
