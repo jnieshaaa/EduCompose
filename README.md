@@ -72,8 +72,27 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 
-# Configure environment (copy env.example to .env and adjust settings)
-# Then start the server:
+# Configure environment variables
+# Step 1: Generate a secure SECRET_KEY
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Copy the generated key - you'll need it in the next step
+
+# Step 2: Create .env file from example
+# Windows:
+copy env.example .env
+# macOS/Linux:
+# cp env.example .env
+
+# Step 3: Edit .env file and replace SECRET_KEY with your generated key
+# Open backend/.env and change:
+# SECRET_KEY=your-secret-key-here
+# To:
+# SECRET_KEY=<paste-your-generated-key-here>
+#
+# Note: ALGORITHM=HS256 and ACCESS_TOKEN_EXPIRE_MINUTES=30 are configuration
+# values (not keys to generate) - you can leave them as-is or adjust if needed.
+
+# Step 4: Start the server
 python start.py
 ```
 
