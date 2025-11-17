@@ -1,0 +1,439 @@
+{
+  "summary": {
+    "overall_score": 62.51,
+    "dimension_scores": {
+      "Grammar": 36.6754617414248,
+      "Readability": 76.0,
+      "Coherence": 73.33,
+      "Argument Strength": 69.0,
+      "Knowledge Graph": 43.93
+    },
+    "strengths": [],
+    "weaknesses": [
+      "grammar",
+      "knowledge_graph"
+    ],
+    "critical_issues": [
+      "24 grammar errors detected",
+      "1 critical argumentation issues"
+    ],
+    "word_count": 379
+  },
+  "grammar_section": {
+    "score": 36.6754617414248,
+    "error_count": 24,
+    "top_errors": [
+      {
+        "type": "grammar",
+        "message": "Don’t put a space before the full stop.",
+        "suggestion": ".",
+        "context": "...ir phone more than 5 hours a day no stop .All they do is text back and forward and..."
+      },
+      {
+        "type": "grammar",
+        "message": "Add a space between sentences.",
+        "suggestion": " All",
+        "context": "... phone more than 5 hours a day no stop .All they do is text back and forward and ju..."
+      },
+      {
+        "type": "capitalization",
+        "message": "Sentence should start with a capital letter",
+        "suggestion": "",
+        "context": ""
+      },
+      {
+        "type": "grammar",
+        "message": "To strengthen your wording, consider using a synonym for ‘bad’.",
+        "suggestion": "terrible",
+        "context": "...even do it while driving. They are some really bad consequences when stuff happens when it..."
+      },
+      {
+        "type": "word_choice",
+        "message": "Consider using 'too' instead",
+        "suggestion": "",
+        "context": "ppens when it comes to a phone. Some certa"
+      }
+    ],
+    "syntax_complexity": 160.71428571428572
+  },
+  "style_section": {
+    "score": 76.0,
+    "flesch_reading_ease": 82.85337730870715,
+    "flesch_kincaid_grade": 4.949640615048676,
+    "avg_sentence_length": 0.0,
+    "lexical_diversity": 0.525065963060686,
+    "issues": [
+      {
+        "type": "readability",
+        "severity": "low",
+        "message": "Text may be too simple for academic writing (Flesch Reading Ease > 80)",
+        "suggestion": "Consider using more sophisticated vocabulary and complex sentence structures appropriate for academic level."
+      }
+    ]
+  },
+  "argumentation_section": {
+    "overall_score": 69.0,
+    "top_claim": {
+      "text": "Phones\n\nModern humans today are always on their phone.",
+      "confidence": ""
+    },
+    "claim_count": 5,
+    "evidence_count": 0,
+    "argument_strength_by_claim": [
+      {
+        "claim_id": "claim_5",
+        "claim": "They are some really bad consequences when stuff happens when it comes to a phone.",
+        "evidence": 0,
+        "warrants": 11,
+        "rebuttals": 1,
+        "score": 10.0
+      },
+      {
+        "claim_id": "claim_3",
+        "claim": "they do is text back and forward and just have group Chats on social media.",
+        "evidence": 0,
+        "warrants": 1,
+        "rebuttals": 0,
+        "score": 2
+      },
+      {
+        "claim_id": "claim_1",
+        "claim": "Phones\n\nModern humans today are always on their phone.",
+        "evidence": 0,
+        "warrants": 0,
+        "rebuttals": 0,
+        "score": 0.0
+      },
+      {
+        "claim_id": "claim_2",
+        "claim": "They are always on their phone more than 5 hours a day no stop .All",
+        "evidence": 0,
+        "warrants": 0,
+        "rebuttals": 0,
+        "score": 0.0
+      },
+      {
+        "claim_id": "claim_4",
+        "claim": "They even do it while driving.",
+        "evidence": 0,
+        "warrants": 0,
+        "rebuttals": 0,
+        "score": 0.0
+      }
+    ],
+    "coherence_score": 73.33,
+    "coherence_explanation": "Moderate coherence (score: 73.3). Main claim has 0 supporting evidence nodes. Consider strengthening connections between ideas.",
+    "structure_issues": [
+      {
+        "type": "evidence",
+        "severity": "high",
+        "message": "Insufficient supporting evidence for claims",
+        "suggestion": "Provide specific examples, statistics, research findings, or other evidence to support your claims."
+      },
+      {
+        "type": "evidence_ratio",
+        "severity": "medium",
+        "message": "Insufficient evidence per claim (0.0 evidence per claim)",
+        "suggestion": "Provide at least one piece of evidence for each main claim you make."
+      }
+    ]
+  },
+  "knowledge_graph_section": {
+    "score": 43.93,
+    "concept_count": 10,
+    "relationship_count": 15,
+    "coherence_metrics": {},
+    "central_concepts": [],
+    "conceptual_gaps": [
+      {
+        "type": "isolated_concepts",
+        "severity": "medium",
+        "message": "Found 3 isolated concept(s) with no connections",
+        "concepts": [
+          "contact",
+          "which",
+          "someone"
+        ],
+        "suggestion": "Connect these concepts to other ideas in your essay to improve coherence."
+      },
+      {
+        "type": "disconnected_clusters",
+        "severity": "medium",
+        "message": "Essay contains 4 disconnected concept clusters",
+        "suggestion": "Improve connections between different parts of your essay to create a more unified argument."
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "dimension": "grammar",
+      "message": "Multiple grammar errors detected (24 errors, score: 36.7)",
+      "suggestion": "Focus on grammatical correctness. Review common error patterns and provide targeted instruction.",
+      "action_items": [
+        "Review grammar errors with student",
+        "Provide examples of correct usage",
+        "Encourage proofreading practice"
+      ]
+    },
+    {
+      "priority": "high",
+      "dimension": "argumentation",
+      "message": "Argument structure needs strengthening (score: 69.0)",
+      "suggestion": "Help student develop stronger thesis, provide more evidence, and improve reasoning.",
+      "action_items": [
+        "Review thesis statement clarity",
+        "Discuss evidence selection and integration",
+        "Explain Toulmin model components (claims, evidence, warrants)"
+      ]
+    },
+    {
+      "priority": "medium",
+      "dimension": "conceptual_understanding",
+      "message": "Conceptual connections could be strengthened (score: 43.9)",
+      "suggestion": "Help student connect ideas more explicitly and develop conceptual relationships.",
+      "action_items": [
+        "Review how concepts relate to each other",
+        "Discuss connections between ideas",
+        "Encourage explicit linking of concepts"
+      ]
+    }
+  ],
+  "visualizations": {
+    "nodes": [
+      {
+        "id": "thesis",
+        "type": "thesis",
+        "text": "Phones",
+        "confidence": "medium"
+      },
+      {
+        "id": "claim_1",
+        "type": "claim",
+        "text": "Phones\n\nModern humans today are always on their phone.",
+        "sentence_index": 0,
+        "indicator": "implicit"
+      },
+      {
+        "id": "claim_2",
+        "type": "claim",
+        "text": "They are always on their phone more than 5 hours a day no stop .All",
+        "sentence_index": 1,
+        "indicator": "implicit"
+      },
+      {
+        "id": "claim_3",
+        "type": "claim",
+        "text": "they do is text back and forward and just have group Chats on social media.",
+        "sentence_index": 2,
+        "indicator": "implicit"
+      },
+      {
+        "id": "claim_4",
+        "type": "claim",
+        "text": "They even do it while driving.",
+        "sentence_index": 3,
+        "indicator": "implicit"
+      },
+      {
+        "id": "claim_5",
+        "type": "claim",
+        "text": "They are some really bad consequences when stuff happens when it comes to a phone.",
+        "sentence_index": 4,
+        "indicator": "implicit"
+      },
+      {
+        "id": "warrant_1",
+        "type": "warrant",
+        "text": "they do is text back and forward and just have group Chats on social media.",
+        "sentence_index": 2
+      },
+      {
+        "id": "warrant_2",
+        "type": "warrant",
+        "text": "They are some really bad consequences when stuff happens when it comes to a phone.",
+        "sentence_index": 4
+      },
+      {
+        "id": "warrant_3",
+        "type": "warrant",
+        "text": "Some certain areas in the United States ban phones from class rooms just because of it.",
+        "sentence_index": 5
+      },
+      {
+        "id": "warrant_4",
+        "type": "warrant",
+        "text": "So like if a friend moves away and you want to be in contact you can still be in contact by posting videos or text messages.",
+        "sentence_index": 7
+      },
+      {
+        "id": "warrant_5",
+        "type": "warrant",
+        "text": "Phones have changed due to our generation.",
+        "sentence_index": 9
+      },
+      {
+        "id": "warrant_6",
+        "type": "warrant",
+        "text": "Some people still do it because they think It's stupid.",
+        "sentence_index": 15
+      },
+      {
+        "id": "warrant_7",
+        "type": "warrant",
+        "text": "No matter what they do they still have to obey it because that's the only way how did he save.",
+        "sentence_index": 16
+      },
+      {
+        "id": "warrant_8",
+        "type": "warrant",
+        "text": "Sometimes on the news there is either an accident or a suicide.",
+        "sentence_index": 17
+      },
+      {
+        "id": "warrant_9",
+        "type": "warrant",
+        "text": "It might involve someone not looking where they're going or tweet that someone sent.",
+        "sentence_index": 18
+      },
+      {
+        "id": "warrant_10",
+        "type": "warrant",
+        "text": "If a mysterious number says I'm going to kill you and they know where you live but you don't know the person's contact ,It makes you puzzled and make you start to freak out.",
+        "sentence_index": 20
+      },
+      {
+        "id": "warrant_11",
+        "type": "warrant",
+        "text": "Phones are fine to use and it's also the best way to come over help.",
+        "sentence_index": 22
+      },
+      {
+        "id": "warrant_12",
+        "type": "warrant",
+        "text": "The news always updated when people do something stupid around that involves their phones.",
+        "sentence_index": 26
+      },
+      {
+        "id": "rebuttal_1",
+        "type": "rebuttal",
+        "text": "Even though phones are used almost every day as long as you're safe it would come into use if you get into trouble.",
+        "sentence_index": 24
+      }
+    ],
+    "edges": [
+      {
+        "source": "thesis",
+        "target": "claim_1",
+        "type": "supports"
+      },
+      {
+        "source": "thesis",
+        "target": "claim_2",
+        "type": "supports"
+      },
+      {
+        "source": "thesis",
+        "target": "claim_3",
+        "type": "supports"
+      },
+      {
+        "source": "thesis",
+        "target": "claim_4",
+        "type": "supports"
+      },
+      {
+        "source": "thesis",
+        "target": "claim_5",
+        "type": "supports"
+      },
+      {
+        "source": "claim_3",
+        "target": "warrant_1",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_2",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_3",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_4",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_5",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_6",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_7",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_8",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_9",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_10",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_11",
+        "type": "elaborates"
+      },
+      {
+        "source": "claim_5",
+        "target": "warrant_12",
+        "type": "elaborates"
+      },
+      {
+        "source": "rebuttal_1",
+        "target": "claim_5",
+        "type": "rebuts"
+      }
+    ],
+    "legend": [
+      {
+        "type": "thesis",
+        "label": "Thesis"
+      },
+      {
+        "type": "claim",
+        "label": "Claim"
+      },
+      {
+        "type": "evidence",
+        "label": "Evidence"
+      },
+      {
+        "type": "warrant",
+        "label": "Warrant"
+      },
+      {
+        "type": "rebuttal",
+        "label": "Rebuttal"
+      }
+    ]
+  }
+}
