@@ -87,3 +87,26 @@ input[type="password"],
 textarea {
   cursor: auto !important;
 }
+/* =================== Scrollbars =================== */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #0791b2;
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #10c9f6;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+---* {
+  scrollbar-width: thin;
+  scrollbar-color: #0791b2 transparent;
+}

@@ -9,6 +9,7 @@ interface ModalProps {
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  contentClassName?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -18,6 +19,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = "md",
   className = "",
+  contentClassName = "",
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +55,7 @@ const Modal: React.FC<ModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className={`relative bg-white rounded-xl shadow-xl w-full ${sizeClasses[size]} ${className}`}
+            className={`relative bg-white rounded-xl shadow-xl w-full ${sizeClasses[size]} ${className} flex flex-col`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -61,7 +63,7 @@ const Modal: React.FC<ModalProps> = ({
           >
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+              <div className="flex items-center justify-between p-6 border-b border-neutral-200 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-neutral-900">
                   {title}
                 </h2>
@@ -75,7 +77,7 @@ const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Content */}
-            <div className="p-6">{children}</div>
+            <div className={`p-6 ${contentClassName}`}>{children}</div>
           </motion.div>
         </div>
       )}
