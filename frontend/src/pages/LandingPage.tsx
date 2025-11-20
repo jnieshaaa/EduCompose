@@ -129,6 +129,8 @@ const LandingPage: React.FC = () => {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showTextAnalysisModal, setShowTextAnalysisModal] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToHeroRef = useRef(false);
 
   // --- About Page State Management ---
   const [activeTechStep, setActiveTechStep] = useState<
@@ -216,18 +218,18 @@ const LandingPage: React.FC = () => {
 
   const handleViewResult = () => {
     setShowResultsModal(true);
-    // Scroll to results after a brief delay to ensure modal is rendered
-    setTimeout(() => {
-      if (resultsRef.current) {
-        resultsRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, 100);
   };
 
   // --- About Page Functions ---
+
+  // Ensure hero section is positioned at the top when interacting with the textarea
+  const ensureHeroAtTop = useCallback(() => {
+    const threshold = 8; // px tolerance
+    if (window.scrollY > threshold) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    hasScrolledToHeroRef.current = true;
+  }, []);
 
   // Tech Details Interaction
   const handleTechStepClick = (step: "nlp" | "kg" | "llm") => {
@@ -775,7 +777,7 @@ const LandingPage: React.FC = () => {
       {showLogin && <AuthModal onClose={() => setShowLogin(false)} />}
 
       {/* Hero Section */}
-      <div id='hero'>
+      <div id='hero' ref={heroRef}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -793,7 +795,19 @@ const LandingPage: React.FC = () => {
                   <textarea
                     placeholder='Paste your essay here to get started...'
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onPointerDown={() => {
+                      hasScrolledToHeroRef.current = false;
+                      ensureHeroAtTop();
+                    }}
+                    onBlur={() => {
+                      hasScrolledToHeroRef.current = false;
+                    }}
+                    onChange={(e) => {
+                      if (!hasScrolledToHeroRef.current) {
+                        ensureHeroAtTop();
+                      }
+                      setText(e.target.value);
+                    }}
                     className='w-full h-full border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-none outline-none text-lg leading-relaxed px-2 py-3'
                     style={{
                       overflowY: "auto",
