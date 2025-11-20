@@ -226,30 +226,26 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
         size='xl'
         className='max-h-[90vh]'
       >
-        <Card className='bg-error-50 border border-error-200'>
-          <div className='flex items-start justify-between'>
-            <div className='flex items-start space-x-3 flex-1'>
-              <AlertTriangle className='w-6 h-6 text-error-default flex-shrink-0 mt-0.5' />
-              <div className='flex-1'>
-                <h4 className='text-lg font-semibold text-error-dark mb-1'>
-                  Analysis Failed
-                </h4>
-                <p className='text-error-dark'>{error}</p>
-                {text.trim().split(/\s+/).length < MIN_WORDS && (
-                  <p className='text-sm text-error-default mt-2'>
-                    Your essay has {text.trim().split(/\s+/).length} words.
-                    Please add at least{" "}
-                    {MIN_WORDS - text.trim().split(/\s+/).length} more words.
-                  </p>
-                )}
-                <button
-                  onClick={onClose}
-                  className='mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors'
-                >
-                  Try Again
-                </button>
-              </div>
-            </div>
+        <Card className='bg-error-50 border-0 p-0'>
+          <div className='flex flex-col items-center text-center'>
+            <AlertTriangle className='w-6 h-6 text-error-default my-3' />
+            <h4 className='text-lg font-semibold text-error-dark mb-1'>
+              Analysis Failed
+            </h4>
+            <p className='text-error-dark'>{error}</p>
+            {text.trim().split(/\s+/).length < MIN_WORDS && (
+              <p className='text-sm text-error-default mt-2'>
+                Your essay has {text.trim().split(/\s+/).length} words. Please
+                add at least {MIN_WORDS - text.trim().split(/\s+/).length} more
+                words.
+              </p>
+            )}
+            <button
+              onClick={onClose}
+              className='my-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors'
+            >
+              Try Again
+            </button>
           </div>
         </Card>
       </Modal>

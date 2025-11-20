@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import eduComposeLogo from "../assets/EduCompose.png";
 
@@ -9,8 +9,52 @@ interface HeaderPublicProps {
 
 const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
-  const isAboutPage = location.pathname === "/About";
+  const [activeSection, setActiveSection] = useState<"hero" | "about">("hero");
+
+  useEffect(() => {
+    const heroElement = document.getElementById("hero");
+    const challengeElement = document.getElementById("challenge");
+
+    if (!heroElement || !challengeElement) return;
+
+    const observerOptions = {
+      root: null,
+      rootMargin: "-20% 0px -50% 0px",
+      threshold: 0,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (entry.target.id === "hero") {
+            setActiveSection("hero");
+          } else if (entry.target.id === "challenge") {
+            setActiveSection("about");
+          }
+        }
+      });
+    }, observerOptions);
+
+    observer.observe(heroElement);
+    observer.observe(challengeElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    if (sectionId === "hero") {
+      // Scroll to the very top of the page
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+    setIsMenuOpen(false);
+  };
 
   return (
     <header className='bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b border-gray-100 pr-[calc(100vw-100%)]'>
@@ -44,20 +88,21 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
 
         {/* Desktop Navigation */}
         <nav className='hidden md:flex items-center space-x-8'>
-          {isAboutPage ? (
-            <Link
-              to='/'
+          {activeSection === "about" && (
+            <button
+              onClick={() => scrollToSection("hero")}
               className='text-neutral-500 hover:text-primary-100 transition-colors font-medium'
             >
               Home
-            </Link>
-          ) : (
-            <Link
-              to='/About'
+            </button>
+          )}
+          {activeSection === "hero" && (
+            <button
+              onClick={() => scrollToSection("challenge")}
               className='text-neutral-500 hover:text-primary-100 transition-colors font-medium'
             >
               About
-            </Link>
+            </button>
           )}
           <button
             type='button'
@@ -70,65 +115,62 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
 
         {/* Mobile Menu Button */}
         <button
-          className='md:hidden p-2'
+          className='md:hidden p-2 transition-transform duration-300 hover:scale-110'
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           {isMenuOpen ? (
-            <X className='w-6 h-6 text-gray-600' />
+            <X className='w-6 h-6 text-gray-600 transition-opacity duration-300' />
           ) : (
-            <Menu className='w-6 h-6 text-gray-600' />
+            <Menu className='w-6 h-6 text-gray-600 transition-opacity duration-300' />
           )}
         </button>
       </div>
 
       {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className='md:hidden bg-white border-t border-gray-100'>
-          <div className='px-4 py-4 space-y-4'>
-            {isAboutPage ? (
-              <Link
-                to='/'
-                className='block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2'
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </Link>
-            ) : (
-              <Link
-                to='/About'
-                className='block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2'
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-            )}
-            <Link
-              to='/features'
-              className='block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2'
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              to='/pricing'
-              className='block text-gray-600 hover:text-purple-600 transition-colors font-medium py-2'
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Pricing
-            </Link>
+      <div
+        className={`md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ease-in-out ${
+          isMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className='px-4 py-4 space-y-4'>
+          {activeSection === "about" && (
             <button
-              type='button'
-              onClick={(e) => {
-                onLoginClick?.(e);
-                setIsMenuOpen(false);
-              }}
-              className='w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-full transition-all duration-300'
+              onClick={() => scrollToSection("hero")}
+              className={`block w-full text-center text-gray-600 hover:text-primary transition-opacity duration-300 font-medium py-2 ${
+                isMenuOpen ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ transitionDelay: isMenuOpen ? "100ms" : "0ms" }}
             >
-              Get Started
+              Home
             </button>
-          </div>
+          )}
+          {activeSection === "hero" && (
+            <button
+              onClick={() => scrollToSection("challenge")}
+              className={`block w-full text-center text-gray-600 hover:text-primary transition-opacity duration-300 font-medium py-2 ${
+                isMenuOpen ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ transitionDelay: isMenuOpen ? "100ms" : "0ms" }}
+            >
+              About
+            </button>
+          )}
+
+          <button
+            type='button'
+            onClick={(e) => {
+              onLoginClick?.(e);
+              setIsMenuOpen(false);
+            }}
+            className={`w-full bg-primary-200 text-white font-semibold px-6 py-3 rounded-full transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
+              isMenuOpen ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}
+          >
+            Get Started
+          </button>
         </div>
-      )}
+      </div>
     </header>
   );
 };
