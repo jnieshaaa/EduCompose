@@ -46,7 +46,7 @@ const InputField: React.FC<InputFieldProps> = ({
         onChange={onChange}
         className={`w-full pl-11 ${
           showToggle ? "pr-12" : "pr-4"
-        } py-3 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all`}
+        } py-3 border border-neutral-300 rounded-rd bg-white text-neutral-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all`}
         placeholder={placeholder}
       />
       {showToggle && setShowPassword && (
@@ -137,7 +137,7 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
         {/* Login Button */}
         <button
           onClick={handleLogin}
-          className='w-full text-white py-3 rounded-lg font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all'
+          className='w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all'
         >
           Login
         </button>
@@ -275,7 +275,7 @@ const ForgotPasswordForm: React.FC<FormProps> = ({ onViewChange }) => {
         {/* Reset Button */}
         <button
           onClick={handleSubmit}
-          className='w-full text-white py-3 rounded-lg font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all'
+          className='w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all'
         >
           Send Reset Link
         </button>
@@ -320,7 +320,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       }}
     >
       {/* Modal Container */}
-      <div className='relative flex w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden'>
+      <div className='relative flex w-full max-w-4xl max-h-[90vh] bg-white rounded-rl shadow-2xl overflow-hidden'>
         {/* Close button inside the modal */}
         <button
           onClick={onClose}

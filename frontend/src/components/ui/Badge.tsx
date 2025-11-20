@@ -13,6 +13,7 @@ const Badge: React.FC<BadgeProps> = ({
   size = "md",
   className = "",
 }) => {
+  // Badges intentionally use rounded-full (pill shape) for design consistency
   const baseClasses = "inline-flex items-center font-medium rounded-full";
 
   const variantClasses = {

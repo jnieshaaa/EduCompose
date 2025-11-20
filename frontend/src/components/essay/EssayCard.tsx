@@ -140,7 +140,7 @@ const EssayCard: React.FC<EssayCardProps> = ({
                   e.stopPropagation();
                   onAnalyze();
                 }}
-                className="px-3 py-1 text-xs font-medium text-primary bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors duration-200"
+                className="px-3 py-1 text-xs font-medium text-primary bg-primary-50 rounded-rd hover:bg-primary-100 transition-colors duration-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

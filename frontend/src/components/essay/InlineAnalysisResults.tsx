@@ -133,7 +133,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
       const snippet = escapeHtml(originalText.slice(start, end));
       const title = escapeHtml(error.message || "Grammar issue");
-      html += `<mark style="background: rgba(248, 113, 113, 0.35); color: #991b1b; padding: 0 2px; border-radius: 4px;" title="${title}">`;
+      html += `<mark style="background: rgba(248, 113, 113, 0.35); color: #991b1b; padding: 0 2px; border-radius: 6px;" title="${title}">`;
       html += snippet || "\u200B";
       html += "</mark>";
       cursor = end;
@@ -192,7 +192,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 {onRetry && (
                   <button
                     onClick={onRetry}
-                    className='mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors'
+                    className='mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
                   >
                     Try Again
                   </button>
@@ -234,7 +234,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       {onClose && (
         <button
           onClick={onClose}
-          className='sticky top-0 z-20 float-right ml-auto p-2 rounded-lg shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0'
+          className='sticky top-0 z-20 float-right ml-auto p-2 rounded-rs shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0'
           aria-label='Close modal'
         >
           <X className='w-5 h-5 text-neutral-500' />
@@ -540,7 +540,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 Argument Structure (Toulmin's Model)
               </h4>
               <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
-                <div className='text-center p-3 bg-primary-50 rounded-lg'>
+                <div className='text-center p-3 bg-primary-50 rounded-rd'>
                   <p className='text-sm text-neutral-600'>Claims</p>
                   <p className='text-2xl font-bold text-primary'>
                     {
@@ -549,7 +549,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     }
                   </p>
                 </div>
-                <div className='text-center p-3 bg-success-50 rounded-lg'>
+                <div className='text-center p-3 bg-success-50 rounded-rd'>
                   <p className='text-sm text-neutral-600'>Evidence</p>
                   <p className='text-2xl font-bold text-success-default'>
                     {
@@ -558,7 +558,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     }
                   </p>
                 </div>
-                <div className='text-center p-3 bg-info-50 rounded-lg'>
+                <div className='text-center p-3 bg-info-50 rounded-rd'>
                   <p className='text-sm text-neutral-600'>Warrants</p>
                   <p className='text-2xl font-bold text-info-default'>
                     {
@@ -567,7 +567,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     }
                   </p>
                 </div>
-                <div className='text-center p-3 bg-warning-50 rounded-lg'>
+                <div className='text-center p-3 bg-warning-50 rounded-rd'>
                   <p className='text-sm text-neutral-600'>Rebuttals</p>
                   <p className='text-2xl font-bold text-warning-default'>
                     {
@@ -578,7 +578,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 </div>
               </div>
               {analysis.detailed_analysis.argumentation.thesis_statement && (
-                <div className='mt-4 p-3 bg-primary-50 rounded-lg'>
+                <div className='mt-4 p-3 bg-primary-50 rounded-rd'>
                   <p className='text-sm font-medium text-neutral-700 mb-1'>
                     Thesis Statement:
                   </p>
@@ -679,7 +679,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                   {highlightData.errors.length} issues)
                 </div>
                 <div
-                  className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-lg p-4'
+                  className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4'
                   dangerouslySetInnerHTML={{ __html: highlightData.html }}
                 />
               </div>

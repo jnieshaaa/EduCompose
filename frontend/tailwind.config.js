@@ -101,6 +101,11 @@ module.exports = {
         default: "url('/cursor-triangle.png') 4 4, auto",
         pointer: "url('/cursor-pointer.png') 4 4, pointer",
       },
+      borderRadius: {
+        "rs": "6px",  /* Small controls (icons, small buttons, inputs in dense lists) */
+        "rd": "8px",  /* Default radius for primary components */
+        "rl": "10px", /* Large containers (large modals, panels, cards used as layouts) */
+      },
     },
   },
   plugins: [],

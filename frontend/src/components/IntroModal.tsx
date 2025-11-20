@@ -24,7 +24,7 @@ const IntroModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className='group bg-white rounded-2xl shadow-lg p-8 border border-neutral-300/30 text-center w-[400px]'
+            className='group bg-white rounded-rl shadow-lg p-8 border border-neutral-300/30 text-center w-[400px]'
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
@@ -63,7 +63,7 @@ const IntroModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 
             <button
               onClick={onClose}
-              className='bg-primary text-white font-semibold py-2 px-6 rounded-xl mt-4 hover:bg-primary-300 transition'
+              className='bg-primary text-white font-semibold py-2 px-6 rounded-rd mt-4 hover:bg-primary-300 transition'
             >
               Let's Start
             </button>

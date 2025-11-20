@@ -34,7 +34,7 @@ const ClassOverview: React.FC<ClassOverviewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary-100 rounded-lg">
+            <div className="p-2 bg-primary-100 rounded-rs">
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
@@ -48,7 +48,7 @@ const ClassOverview: React.FC<ClassOverviewProps> = ({
 
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-success-100 rounded-lg">
+            <div className="p-2 bg-success-100 rounded-rs">
               <BookOpen className="w-6 h-6 text-success-default" />
             </div>
             <div>
@@ -62,7 +62,7 @@ const ClassOverview: React.FC<ClassOverviewProps> = ({
 
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-info-100 rounded-lg">
+            <div className="p-2 bg-info-100 rounded-rs">
               <TrendingUp className="w-6 h-6 text-info-default" />
             </div>
             <div>
@@ -93,7 +93,7 @@ const ClassOverview: React.FC<ClassOverviewProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-4 border border-neutral-200 rounded-lg hover:border-primary-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
+                className="p-4 border border-neutral-200 rounded-rd hover:border-primary-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
                 onClick={() => onClassClick?.(classItem.id)}
               >
                 <div className="flex items-center justify-between mb-3">

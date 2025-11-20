@@ -146,7 +146,7 @@ const BatchAnalysisButton: React.FC<BatchAnalysisButtonProps> = ({
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`p-3 rounded-lg border ${
+                    className={`p-3 rounded-rd border ${
                       result.error
                         ? "bg-error-50 border-error-200"
                         : "bg-success-50 border-success-200"

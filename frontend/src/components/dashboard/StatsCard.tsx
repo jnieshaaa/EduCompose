@@ -62,7 +62,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
               </div>
             )}
           </div>
-          <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
+          <div className={`p-3 rounded-rs ${colorClasses[color]}`}>
             <Icon className="w-6 h-6" />
           </div>
         </div>

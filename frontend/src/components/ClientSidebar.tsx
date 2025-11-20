@@ -189,7 +189,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-lg ${
+                      className={`btn-fade group w-full flex items-center rounded-rd ${
                         isActive
                           ? "bg-neutral-50 text-primary"
                           : "bg-primary text-white hover:text-support-superlight"
@@ -277,9 +277,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       >
         <div className="space-y-6">
           {/* Header Card */}
-          <div className="bg-gradient-to-r from-primary to-primary-500 rounded-lg p-6 text-white">
+          <div className="bg-gradient-to-r from-primary to-primary-500 rounded-rd p-6 text-white">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-rd flex items-center justify-center">
                 <img
                   src={eduComposeLogo}
                   alt="EduCompose Logo"
@@ -297,7 +297,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <BookOpen className="w-6 h-6 text-primary" />
                 <h4 className="font-semibold text-neutral-900">
@@ -310,7 +310,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               </p>
             </div>
 
-            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Target className="w-6 h-6 text-primary" />
                 <h4 className="font-semibold text-neutral-900">
@@ -323,7 +323,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               </p>
             </div>
 
-            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Zap className="w-6 h-6 text-primary" />
                 <h4 className="font-semibold text-neutral-900">
@@ -336,7 +336,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               </p>
             </div>
 
-            <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-300">
+            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
               <div className="flex items-center space-x-3 mb-2">
                 <Shield className="w-6 h-6 text-primary" />
                 <h4 className="font-semibold text-neutral-900">
@@ -351,7 +351,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           </div>
 
           {/* Version Info */}
-          <div className="bg-neutral-200 rounded-lg p-4 border border-neutral-300">
+          <div className="bg-neutral-200 rounded-rd p-4 border border-neutral-300">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm font-medium text-neutral-900">

@@ -80,11 +80,11 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-neutral-50 transition-colors duration-200 cursor-pointer"
+                className="flex items-center space-x-3 p-3 rounded-rd hover:bg-neutral-50 transition-colors duration-200 cursor-pointer"
                 onClick={() => onEssayClick?.(essay)}
               >
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-primary-100 rounded-rs flex items-center justify-center">
                     <ActivityIcon className="w-5 h-5 text-primary" />
                   </div>
                 </div>

@@ -66,7 +66,7 @@ const Dashboard: React.FC = () => {
           <div className='h-8 bg-primary-500 rounded w-1/4'></div>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             {[1, 2, 3].map((i) => (
-              <div key={i} className='h-24 bg-primary-500 rounded-lg'></div>
+              <div key={i} className='h-24 bg-primary-500 rounded-rd'></div>
             ))}
           </div>
         </div>

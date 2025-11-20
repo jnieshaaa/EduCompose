@@ -127,7 +127,7 @@ const Tooltip: React.FC<TooltipProps> = ({
                       : "translate(0, -50%)",
                 }}
               >
-                <div className="bg-neutral-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                <div className="bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap">
                   {content}
                 </div>
               </motion.div>,

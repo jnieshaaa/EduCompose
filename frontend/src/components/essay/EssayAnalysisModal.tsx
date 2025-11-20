@@ -44,7 +44,7 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Essay Analysis" size="xl">
       <div className="space-y-6">
         {/* Essay Header */}
-        <div className="bg-neutral-50 rounded-lg p-4">
+        <div className="bg-neutral-50 rounded-rd p-4">
           <h3 className="text-lg font-semibold text-neutral-900 mb-2">
             {essay.title}
           </h3>
@@ -166,7 +166,7 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-error-50 border border-error-200 rounded-lg p-3"
+                  className="bg-error-50 border border-error-200 rounded-rd p-3"
                 >
                   <div className="flex items-start space-x-2">
                     <Badge variant="error" size="sm">
@@ -203,7 +203,7 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-warning-50 border border-warning-200 rounded-lg p-3"
+                  className="bg-warning-50 border border-warning-200 rounded-rd p-3"
                 >
                   <div className="flex items-start space-x-2">
                     <Badge variant="warning" size="sm">
@@ -317,7 +317,7 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="flex items-start space-x-2 p-3 bg-primary-50 rounded-lg"
+                  className="flex items-start space-x-2 p-3 bg-primary-50 rounded-rd"
                 >
                   <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-sm text-neutral-700">{recommendation}</p>

@@ -26,7 +26,7 @@ const Input: React.FC<InputProps> = ({
   rows = 4,
 }) => {
   const baseClasses =
-    "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200";
+    "w-full px-3 py-2 border rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200";
   const errorClasses = error
     ? "border-error-default focus:ring-error-default focus:border-error-default"
     : "border-neutral-300";

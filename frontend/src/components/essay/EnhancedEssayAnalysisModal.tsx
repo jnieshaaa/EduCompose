@@ -160,7 +160,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
               <button
                 onClick={handleAnalyze}
                 disabled={loading}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50"
+                className="px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-dark disabled:opacity-50"
               >
                 {loading ? "Analyzing..." : "Run Analysis"}
               </button>
@@ -214,7 +214,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                   )}
                 </div>
                 {diagnosticSummary.critical_issues.length > 0 && (
-                  <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-lg">
+                  <div className="mt-4 p-3 bg-error-50 border border-error-200 rounded-rd">
                     <p className="text-sm font-semibold text-error-dark mb-2">
                       Critical Issues:
                     </p>
@@ -462,7 +462,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                   Toulmin's Model Analysis
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-3 bg-primary-50 rounded-lg">
+                  <div className="text-center p-3 bg-primary-50 rounded-rd">
                     <p className="text-sm text-neutral-600">Claims</p>
                     <p className="text-2xl font-bold text-primary">
                       {
@@ -471,7 +471,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-success-50 rounded-lg">
+                  <div className="text-center p-3 bg-success-50 rounded-rd">
                     <p className="text-sm text-neutral-600">Evidence</p>
                     <p className="text-2xl font-bold text-success-default">
                       {
@@ -480,7 +480,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-info-50 rounded-lg">
+                  <div className="text-center p-3 bg-info-50 rounded-rd">
                     <p className="text-sm text-neutral-600">Warrants</p>
                     <p className="text-2xl font-bold text-info-default">
                       {
@@ -489,7 +489,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-warning-50 rounded-lg">
+                  <div className="text-center p-3 bg-warning-50 rounded-rd">
                     <p className="text-sm text-neutral-600">Rebuttals</p>
                     <p className="text-2xl font-bold text-warning-default">
                       {
@@ -500,7 +500,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                   </div>
                 </div>
                 {analysis.detailed_analysis.argumentation.thesis_statement && (
-                  <div className="mt-4 p-3 bg-primary-50 rounded-lg">
+                  <div className="mt-4 p-3 bg-primary-50 rounded-rd">
                     <p className="text-sm font-medium text-neutral-700 mb-1">
                       Thesis Statement:
                     </p>
@@ -614,7 +614,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                     >
                       <div className="flex items-start space-x-3">
                         <div
-                          className={`p-2 rounded-lg ${
+                          className={`p-2 rounded-rs ${
                             recommendation.priority === "high"
                               ? "bg-error-100 text-error-default"
                               : recommendation.priority === "medium"

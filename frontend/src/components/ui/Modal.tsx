@@ -55,7 +55,7 @@ const Modal: React.FC<ModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className={`relative bg-white rounded-xl shadow-xl w-full ${sizeClasses[size]} ${className} flex flex-col`}
+            className={`relative bg-white rounded-rl shadow-xl w-full ${sizeClasses[size]} ${className} flex flex-col`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -69,7 +69,7 @@ const Modal: React.FC<ModalProps> = ({
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-1 rounded-lg hover:bg-neutral-100 transition-colors duration-200"
+                  className="p-1 rounded-rs hover:bg-neutral-100 transition-colors duration-200"
                 >
                   <X className="w-5 h-5 text-neutral-500" />
                 </button>

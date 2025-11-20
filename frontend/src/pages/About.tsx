@@ -623,7 +623,7 @@ const About: React.FC = () => {
                   </li>
                 </ul>
               </div>
-              <div className='bg-white p-6 rounded-lg shadow-lg'>
+              <div className='bg-white p-6 rounded-rd shadow-lg'>
                 <h3 className='text-xl font-semibold text-center mb-4'>
                   Typical Teacher Time Allocation per Essay Batch
                 </h3>
@@ -654,7 +654,7 @@ const About: React.FC = () => {
               streamline their workflow.
             </p>
             <div className='mt-12 grid md:grid-cols-3 gap-8'>
-              <div className='bg-gray-50 p-8 rounded-lg border border-gray-200'>
+              <div className='bg-gray-50 p-8 rounded-rd border border-gray-200'>
                 <div className='text-3xl text-cyan-600 mb-4'>🎯</div>
                 <h3 className='text-xl font-semibold mb-2'>
                   Augment, Not Automate
@@ -665,7 +665,7 @@ const About: React.FC = () => {
                   feedback and guidance always come from the teacher.
                 </p>
               </div>
-              <div className='bg-cyan-50 p-8 rounded-lg border border-cyan-200 ring-2 ring-cyan-500'>
+              <div className='bg-cyan-50 p-8 rounded-rd border border-cyan-200 ring-2 ring-cyan-500'>
                 <div className='text-3xl text-cyan-600 mb-4'>🚀</div>
                 <h3 className='text-xl font-semibold mb-2'>
                   Enhance Efficiency
@@ -676,7 +676,7 @@ const About: React.FC = () => {
                   time, freeing them to focus on mentoring.
                 </p>
               </div>
-              <div className='bg-gray-50 p-8 rounded-lg border border-gray-200'>
+              <div className='bg-gray-50 p-8 rounded-rd border border-gray-200'>
                 <div className='text-3xl text-cyan-600 mb-4'>🎓</div>
                 <h3 className='text-xl font-semibold mb-2'>
                   Preserve Educational Value
@@ -728,7 +728,7 @@ const About: React.FC = () => {
                 <div
                   key={step.id}
                   id={`step-${step.id}`}
-                  className={`process-step text-center p-4 border-2 rounded-lg bg-white w-full md:w-1/4 transition-all duration-300 ${
+                  className={`process-step text-center p-4 border-2 rounded-rd bg-white w-full md:w-1/4 transition-all duration-300 ${
                     activeTechStep === step.id
                       ? "active bg-cyan-100 border-cyan-600 transform scale-105"
                       : "border-gray-300 cursor-pointer"
@@ -742,7 +742,7 @@ const About: React.FC = () => {
               <div className='text-2xl text-gray-400 font-light hidden md:block'>
                 →
               </div>
-              <div className='text-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-100 w-full md:w-1/4'>
+              <div className='text-center p-4 border-2 border-dashed border-gray-300 rounded-rd bg-gray-100 w-full md:w-1/4'>
                 <h4 className='font-semibold'>4. Teacher Report</h4>
                 <p className='text-sm text-gray-500'>Actionable Insights</p>
               </div>
@@ -750,7 +750,7 @@ const About: React.FC = () => {
 
             <div
               id='tech-details'
-              className='mt-8 bg-white p-8 rounded-lg shadow-inner max-w-4xl mx-auto border border-gray-200'
+              className='mt-8 bg-white p-8 rounded-rl shadow-inner max-w-4xl mx-auto border border-gray-200'
             >
               {activeTechStep === "nlp" && (
                 <div>
@@ -865,7 +865,7 @@ const About: React.FC = () => {
               {/* Step 1: The Student Essay */}
               <section
                 id='sim-step1'
-                className='step-card visible bg-white p-6 rounded-xl shadow-md border border-gray-200'
+                className='step-card visible bg-white p-6 rounded-rd shadow-md border border-gray-200'
               >
                 <div className='flex items-center mb-4'>
                   <div className='bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg'>
@@ -883,7 +883,7 @@ const About: React.FC = () => {
                 </p>
                 <div
                   id='essayContainer'
-                  className='bg-gray-100 p-4 rounded-lg border border-gray-200 text-gray-700 space-y-3'
+                  className='bg-gray-100 p-4 rounded-rd border border-gray-200 text-gray-700 space-y-3'
                 >
                   <h4 className='font-bold text-center'>
                     The Urgency of Renewable Energy Adoption
@@ -913,7 +913,7 @@ const About: React.FC = () => {
                 <div className='text-center mt-6'>
                   <button
                     id='analyzeBtn'
-                    className='bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-cyan-700 transition-colors shadow disabled:bg-gray-400'
+                    className='bg-cyan-600 text-white font-bold py-2 px-6 rounded-rd hover:bg-cyan-700 transition-colors shadow disabled:bg-gray-400'
                     onClick={handleAnalyze}
                     disabled={
                       !isAnalysisComplete && graphIterations.current > 0
@@ -929,7 +929,7 @@ const About: React.FC = () => {
               {/* Step 2: Argument Knowledge Graph */}
               <section
                 id='sim-step2'
-                className={`step-card bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-opacity duration-500 ${
+                className={`step-card bg-white p-6 rounded-rd shadow-md border border-gray-200 transition-opacity duration-500 ${
                   isAnalysisComplete || graphIterations.current > 0
                     ? "visible opacity-100"
                     : "opacity-0 hidden"
@@ -951,7 +951,7 @@ const About: React.FC = () => {
                 </p>
                 <div
                   id='graph-container'
-                  className='w-full h-[500px] bg-gray-100 rounded-lg border border-gray-200 relative'
+                  className='w-full h-[500px] bg-gray-100 rounded-rd border border-gray-200 relative'
                 >
                   <canvas
                     id='knowledgeGraph'
@@ -962,7 +962,7 @@ const About: React.FC = () => {
                   {hoveredNode && (
                     <div
                       id='tooltip'
-                      className='absolute bg-black bg-opacity-75 text-white text-sm rounded-md p-2 pointer-events-none transition-opacity duration-300'
+                      className='absolute bg-black bg-opacity-75 text-white text-sm rounded-rs p-2 pointer-events-none transition-opacity duration-300'
                       style={{
                         left: `${hoveredNode.x + 15 || 0}px`,
                         top: `${hoveredNode.y + 15 || 0}px`,
@@ -992,7 +992,7 @@ const About: React.FC = () => {
               {/* Step 3: Generated Insights */}
               <section
                 id='sim-step3'
-                className={`step-card bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-opacity duration-500 ${
+                className={`step-card bg-white p-6 rounded-rd shadow-md border border-gray-200 transition-opacity duration-500 ${
                   isAnalysisComplete
                     ? "visible opacity-100"
                     : "opacity-0 hidden"
@@ -1109,7 +1109,7 @@ const About: React.FC = () => {
             </div>
             <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
               {/* Research Plan Cards */}
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>General Objective</h4>
                 <p>
                   To develop and evaluate an NLP-based essay evaluation system
@@ -1117,7 +1117,7 @@ const About: React.FC = () => {
                   writing weaknesses.
                 </p>
               </div>
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>Specific Objectives</h4>
                 <ul className='list-disc list-inside space-y-1 text-gray-700'>
                   <li>Collect & preprocess annotated essays.</li>
@@ -1126,7 +1126,7 @@ const About: React.FC = () => {
                   <li>Validate system outputs with teachers.</li>
                 </ul>
               </div>
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>Scope</h4>
                 <ul className='list-disc list-inside space-y-1 text-gray-700'>
                   <li>For teachers only, not students.</li>
@@ -1136,7 +1136,7 @@ const About: React.FC = () => {
                   </li>
                 </ul>
               </div>
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>Limitations</h4>
                 <ul className='list-disc list-inside space-y-1 text-gray-700'>
                   <li>Highlights weaknesses, does not assign grades.</li>
@@ -1144,7 +1144,7 @@ const About: React.FC = () => {
                   <li>Serves as a teacher aid, not a replacement.</li>
                 </ul>
               </div>
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>Research Locale</h4>
                 <p>
                   Partner schools or universities where English teachers
@@ -1152,7 +1152,7 @@ const About: React.FC = () => {
                   datasets and teacher expertise for validation.
                 </p>
               </div>
-              <div className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
+              <div className='card bg-gray-50 p-6 rounded-rd border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'>
                 <h4 className='font-bold text-xl mb-2'>Target Respondents</h4>
                 <p>
                   <strong>Primary:</strong> Senior high school and college
@@ -1174,7 +1174,7 @@ const About: React.FC = () => {
               bridging the gap between advanced AI and practical classroom
               needs.
             </p>
-            <div className='mt-12 max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg border'>
+            <div className='mt-12 max-w-4xl mx-auto bg-white p-8 rounded-rl shadow-lg border'>
               <p className='text-xl leading-relaxed text-gray-700'>
                 By empowering teachers with deeper insights into student
                 writing, we can foster a more efficient and effective

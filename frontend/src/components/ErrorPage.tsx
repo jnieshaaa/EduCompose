@@ -40,7 +40,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-2xl w-full">
-        <div className="rounded-2xl shadow-2xl p-8 md:p-12 text-center bg-white border border-neutral-300/30">
+        <div className="rounded-rl shadow-2xl p-8 md:p-12 text-center bg-white border border-neutral-300/30">
           <div className="flex justify-center mb-6">
             <div className="w-24 h-24 rounded-full flex items-center justify-center bg-primary-50/20">
               <AlertCircle className="w-12 h-12 text-primary-500" />
@@ -76,7 +76,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={handleGoBack}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-200 hover:text-primary-500 hover:border-primary transition-all"
+              className="flex items-center gap-2 px-6 py-3 rounded-rd font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-200 hover:text-primary-500 hover:border-primary transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
               Go Back
@@ -84,7 +84,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
 
             <button
               onClick={handleGoHome}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-primary shadow-lg hover:bg-primary-300 transition-all"
+              className="flex items-center gap-2 px-6 py-3 rounded-rd font-semibold text-white bg-primary shadow-lg hover:bg-primary-300 transition-all"
             >
               <Home className="w-5 h-5" />
               Go Home
@@ -93,7 +93,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
             {code === 500 && (
               <button
                 onClick={handleRefresh}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-100 hover:border-primary-500 transition-all"
+                className="flex items-center gap-2 px-6 py-3 rounded-rd font-semibold border border-neutral-300 text-primary bg-white hover:bg-neutral-100 hover:border-primary-500 transition-all"
               >
                 <RefreshCw className="w-5 h-5" />
                 Retry

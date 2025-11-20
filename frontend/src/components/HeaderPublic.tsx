@@ -107,7 +107,7 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           <button
             type='button'
             onClick={onLoginClick}
-            className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
+            className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-rd transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
           >
             Get Started
           </button>
@@ -162,7 +162,7 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
               onLoginClick?.(e);
               setIsMenuOpen(false);
             }}
-            className={`w-full bg-primary-200 text-white font-semibold px-6 py-3 rounded-full transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
+            className={`w-full bg-primary-200 text-white font-semibold px-6 py-3 rounded-rd transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
               isMenuOpen ? "opacity-100" : "opacity-0"
             }`}
             style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}

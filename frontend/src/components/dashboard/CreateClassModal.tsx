@@ -90,7 +90,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
         />
 
         {error && (
-          <p className="text-sm text-error-default bg-error-50 border border-error-default/20 rounded-md px-3 py-2">
+          <p className="text-sm text-error-default bg-error-50 border border-error-default/20 rounded-rd px-3 py-2">
             {error}
           </p>
         )}

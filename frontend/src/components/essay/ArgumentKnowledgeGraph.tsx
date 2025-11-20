@@ -97,7 +97,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         <div className="w-full">
           <div
             ref={containerRef}
-            className="w-full h-64 md:h-72 bg-neutral-50 border border-neutral-200 rounded-lg"
+            className="w-full h-64 md:h-72 bg-neutral-50 border border-neutral-200 rounded-rd"
           >
             {graphData.nodes.length > 0 ? (
               <ForceGraph2D

@@ -40,6 +40,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Border radius design tokens */
+  --radius-small: 6px;
+  --radius-default: 8px;
+  --radius-large: 10px;
 }
 
 html,

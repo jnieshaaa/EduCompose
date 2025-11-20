@@ -135,7 +135,7 @@ const EssayManagement: React.FC = () => {
           <div className="h-8 bg-neutral-200 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-neutral-200 rounded-lg"></div>
+              <div key={i} className="h-32 bg-neutral-200 rounded-rd"></div>
             ))}
           </div>
         </div>
@@ -184,7 +184,7 @@ const EssayManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary-100 rounded-lg">
+            <div className="p-2 bg-primary-100 rounded-rs">
               <BookOpen className="w-6 h-6 text-primary" />
             </div>
             <div>
@@ -198,7 +198,7 @@ const EssayManagement: React.FC = () => {
 
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-warning-100 rounded-lg">
+            <div className="p-2 bg-warning-100 rounded-rs">
               <Clock className="w-6 h-6 text-warning-default" />
             </div>
             <div>
@@ -212,7 +212,7 @@ const EssayManagement: React.FC = () => {
 
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-info-100 rounded-lg">
+            <div className="p-2 bg-info-100 rounded-rs">
               <TrendingUp className="w-6 h-6 text-info-default" />
             </div>
             <div>
@@ -226,7 +226,7 @@ const EssayManagement: React.FC = () => {
 
         <Card>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-success-100 rounded-lg">
+            <div className="p-2 bg-success-100 rounded-rs">
               <CheckCircle className="w-6 h-6 text-success-default" />
             </div>
             <div>
@@ -256,7 +256,7 @@ const EssayManagement: React.FC = () => {
               onChange={(e) =>
                 setSelectedClass(e.target.value ? Number(e.target.value) : null)
               }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">All Classes</option>
               {classes.map((cls) => (
@@ -270,7 +270,7 @@ const EssayManagement: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Status</option>
               <option value="submitted">Submitted</option>
@@ -381,7 +381,7 @@ const EssayManagement: React.FC = () => {
                   class_id: Number(e.target.value),
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             >
               <option value={0}>Select a class</option>
@@ -405,7 +405,7 @@ const EssayManagement: React.FC = () => {
                   student_id: Number(e.target.value),
                 }))
               }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             >
               <option value={0}>Select a student</option>

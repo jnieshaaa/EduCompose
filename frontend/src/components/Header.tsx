@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
       <div className="flex items-center space-x-2">
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-lg hover:bg-neutral-300/30"
+          className="p-2 rounded-rs hover:bg-neutral-300/30"
         >
           {isBurgerActive ? (
             <X className="w-6 h-6 text-neutral-900" />
@@ -128,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute right-0 top-12 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50"
+                className="absolute right-0 top-12 w-48 bg-white shadow-lg rounded-rd overflow-hidden z-50"
               >
                 <div className="px-4 py-3 border-b border-neutral-300/30">
                   <p className="font-semibold text-neutral-900">{user.name}</p>

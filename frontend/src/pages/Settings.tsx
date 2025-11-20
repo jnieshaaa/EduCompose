@@ -34,7 +34,7 @@ const Settings: React.FC = () => {
               type='text'
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className='w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
+              className='w-full rounded-rd border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
               placeholder='Enter your name'
             />
           </div>
@@ -51,7 +51,7 @@ const Settings: React.FC = () => {
             <select
               value={gradingScale}
               onChange={(e) => setGradingScale(e.target.value)}
-              className='w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
+              className='w-full rounded-rd border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
             >
               <option value="100">100 Point Scale</option>
               <option value="4">4.0 GPA Scale</option>
@@ -66,7 +66,7 @@ const Settings: React.FC = () => {
             <select
               value={defaultEssayLength}
               onChange={(e) => setDefaultEssayLength(e.target.value)}
-              className='w-full rounded-lg border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
+              className='w-full rounded-rd border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500'
             >
               <option value="250-500">Short (250-500 words)</option>
               <option value="500-750">Medium (500-750 words)</option>
@@ -95,7 +95,7 @@ const Settings: React.FC = () => {
       <Card className='space-y-4'>
         <h2 className='text-lg font-semibold text-neutral-900'>Notifications & Reminders</h2>
         <div className='space-y-3'>
-          <label className='flex items-center justify-between p-3 rounded-lg border border-neutral-200'>
+          <label className='flex items-center justify-between p-3 rounded-rd border border-neutral-200'>
             <div>
               <span className='text-neutral-800 font-medium'>Email notifications</span>
               <p className='text-sm text-neutral-500'>Get notified about new essays and deadlines</p>
@@ -108,7 +108,7 @@ const Settings: React.FC = () => {
             />
           </label>
 
-          <div className='p-3 rounded-lg border border-neutral-200'>
+          <div className='p-3 rounded-rd border border-neutral-200'>
             <label className='block text-sm font-medium text-neutral-600 mb-1'>
               Essay deadline reminder (hours before)
             </label>
@@ -128,7 +128,7 @@ const Settings: React.FC = () => {
       <Card className='space-y-4'>
         <h2 className='text-lg font-semibold text-neutral-900'>System Preferences</h2>
         <div className='space-y-3'>
-          <label className='flex items-center justify-between p-3 rounded-lg border border-neutral-200'>
+          <label className='flex items-center justify-between p-3 rounded-rd border border-neutral-200'>
             <div>
               <span className='text-neutral-800 font-medium'>Auto-save essays</span>
               <p className='text-sm text-neutral-500'>Automatically save essay progress every 30 seconds</p>
@@ -141,7 +141,7 @@ const Settings: React.FC = () => {
             />
           </label>
 
-          <label className='flex items-center justify-between p-3 rounded-lg border border-neutral-200'>
+          <label className='flex items-center justify-between p-3 rounded-rd border border-neutral-200'>
             <div>
               <span className='text-neutral-800 font-medium'>Enable plagiarism detection</span>
               <p className='text-sm text-neutral-500'>Automatically check essays for plagiarism</p>
