@@ -26,6 +26,21 @@ from .kg_metrics import KGMetricsCalculator
 from .enhanced_kg_builder import EnhancedKnowledgeGraphBuilder
 from .preprocessing import PreprocessingPipeline
 
+# Transformer-based claim classifier
+from .claim_classifier import (
+    TransformerClaimClassifier,
+    ArgumentComponent,
+    get_claim_classifier
+)
+
+# Neo4j integration (optional)
+try:
+    from .neo4j_exporter import Neo4jExporter, export_to_neo4j
+except ImportError:
+    # Neo4j not available, define dummy exports
+    Neo4jExporter = None
+    export_to_neo4j = None
+
 __all__ = [
     "GrammarAnalyzer",
     "ReadabilityAnalyzer",
@@ -45,6 +60,13 @@ __all__ = [
     "OpenIEExtractor",
     "KGMetricsCalculator",
     "EnhancedKnowledgeGraphBuilder",
-    "PreprocessingPipeline"
+    "PreprocessingPipeline",
+    # Transformer-based claim classifier
+    "TransformerClaimClassifier",
+    "ArgumentComponent",
+    "get_claim_classifier",
+    # Neo4j integration (optional)
+    "Neo4jExporter",
+    "export_to_neo4j"
 ]
 

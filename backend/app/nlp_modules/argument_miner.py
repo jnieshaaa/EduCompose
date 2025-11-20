@@ -15,10 +15,19 @@ from .spacy_utils import load_spacy_model
 class ArgumentMiner:
     """Analyzes argumentative structure using Toulmin's model"""
     
-    def __init__(self):
-        """Initialize argument miner"""
+    def __init__(self, use_transformer_classifier: bool = True):
+        """
+        Initialize argument miner
+        
+        Args:
+            use_transformer_classifier: If True, use transformer-based claim classifier
+                                       for enhanced accuracy (default: True).
+                                       Falls back to pattern-based if transformers unavailable.
+        """
         self.nlp = None
         # Don't initialize here - wait until first use to avoid import errors at startup
+        self.use_transformer_classifier = use_transformer_classifier
+        self.transformer_classifier = None
         
         # Claim indicators
         self.claim_indicators = [
@@ -54,6 +63,28 @@ class ArgumentMiner:
         """Ensure spaCy is loaded (lazy loading)"""
         if self.nlp is None:
             self.nlp = load_spacy_model("en_core_web_sm")
+    
+    def _ensure_transformer_classifier_loaded(self):
+        """Lazy load transformer-based claim classifier if requested and available"""
+        if not self.use_transformer_classifier:
+            return None
+        
+        if self.transformer_classifier is None:
+            try:
+                from .claim_classifier import TransformerClaimClassifier
+                self.transformer_classifier = TransformerClaimClassifier()
+                # Check if it's actually available
+                if not self.transformer_classifier.is_available():
+                    logger.info(
+                        "Transformer classifier not available. "
+                        "Using pattern-based classification."
+                    )
+                    self.transformer_classifier = False  # Mark as unavailable
+            except ImportError as e:
+                logger.debug(f"Transformer classifier import failed: {e}")
+                self.transformer_classifier = False  # Mark as unavailable
+        
+        return self.transformer_classifier if self.transformer_classifier is not False else None
     
     def analyze(self, text: str) -> Dict[str, Any]:
         """
@@ -179,8 +210,40 @@ class ArgumentMiner:
         return None
     
     def _extract_claims(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Extract claim statements"""
+        """Extract claim statements using pattern matching or transformer classifier"""
         claims = []
+        
+        # Try transformer-based classification first if available
+        transformer_classifier = self._ensure_transformer_classifier_loaded()
+        if transformer_classifier:
+            try:
+                # Classify all sentences with transformer
+                classifications = transformer_classifier.classify_sentences(sentences)
+                
+                # Extract sentences classified as claims
+                for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
+                    component = classification.get("component", "unknown")
+                    confidence = classification.get("confidence", 0.0)
+                    
+                    # Map transformer components to claims
+                    if component in ["claim", "premise"] and confidence > 0.5:
+                        claims.append({
+                            "sentence_index": i,
+                            "sentence": sentence,
+                            "indicator": f"transformer-{component}",
+                            "type": "claim",
+                            "confidence": confidence,
+                            "classification_method": "transformer"
+                        })
+                
+                # If transformer found claims, return them (optionally filter by confidence)
+                if claims:
+                    logger.debug(f"Found {len(claims)} claims using transformer classifier")
+                    return claims
+            except Exception as e:
+                logger.warning(f"Transformer classification failed: {e}. Falling back to pattern matching.")
+        
+        # Fallback to pattern-based extraction
         text_lower = text.lower()
         
         for i, sentence in enumerate(sentences):
@@ -191,7 +254,8 @@ class ArgumentMiner:
                         "sentence_index": i,
                         "sentence": sentence,
                         "indicator": indicator,
-                        "type": "claim"
+                        "type": "claim",
+                        "classification_method": "pattern"
                     })
                     break
         
@@ -200,6 +264,7 @@ class ArgumentMiner:
         if not claims and self.nlp:
             for i, sentence in enumerate(sentences[:5]):  # Check first 5 sentences
                 doc = self.nlp(sentence)
+                sentence_lower = sentence.lower()
                 # Check for modal verbs indicating claims
                 has_modal = any(token.tag_ in ["MD"] for token in doc)
                 if has_modal or any(word in sentence_lower for word in ["should", "must", "is", "are"]):
@@ -207,17 +272,51 @@ class ArgumentMiner:
                         "sentence_index": i,
                         "sentence": sentence,
                         "indicator": "implicit",
-                        "type": "claim"
+                        "type": "claim",
+                        "classification_method": "pattern"
                     })
         
         return claims
     
     def _extract_grounds(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Extract evidence/ground statements"""
+        """Extract evidence/ground statements using pattern matching or transformer classifier"""
         grounds = []
+        
+        # Try transformer-based classification first if available
+        transformer_classifier = self._ensure_transformer_classifier_loaded()
+        if transformer_classifier:
+            try:
+                classifications = transformer_classifier.classify_sentences(sentences)
+                
+                # Extract sentences classified as evidence
+                for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
+                    component = classification.get("component", "unknown")
+                    confidence = classification.get("confidence", 0.0)
+                    
+                    if component == "evidence" and confidence > 0.5:
+                        grounds.append({
+                            "sentence_index": i,
+                            "sentence": sentence,
+                            "indicator": f"transformer-{component}",
+                            "type": "evidence",
+                            "confidence": confidence,
+                            "classification_method": "transformer"
+                        })
+                
+                # If transformer found evidence, use it (but also check pattern-based for completeness)
+                if grounds:
+                    logger.debug(f"Found {len(grounds)} evidence statements using transformer classifier")
+            except Exception as e:
+                logger.debug(f"Transformer evidence classification issue: {e}. Using pattern matching.")
+        
+        # Also check pattern-based indicators (union with transformer results)
         text_lower = text.lower()
+        pattern_found_indices = {g["sentence_index"] for g in grounds}
         
         for i, sentence in enumerate(sentences):
+            if i in pattern_found_indices:
+                continue  # Already found by transformer
+            
             sentence_lower = sentence.lower()
             for indicator in self.evidence_indicators:
                 if indicator in sentence_lower:
@@ -225,7 +324,8 @@ class ArgumentMiner:
                         "sentence_index": i,
                         "sentence": sentence,
                         "indicator": indicator,
-                        "type": "evidence"
+                        "type": "evidence",
+                        "classification_method": "pattern"
                     })
                     break
         
@@ -251,11 +351,43 @@ class ArgumentMiner:
         return warrants
     
     def _extract_rebuttals(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Extract rebuttal/counterargument statements"""
+        """Extract rebuttal/counterargument statements using pattern matching or transformer classifier"""
         rebuttals = []
+        
+        # Try transformer-based classification first if available
+        transformer_classifier = self._ensure_transformer_classifier_loaded()
+        if transformer_classifier:
+            try:
+                classifications = transformer_classifier.classify_sentences(sentences)
+                
+                # Extract sentences classified as counterclaims
+                for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
+                    component = classification.get("component", "unknown")
+                    confidence = classification.get("confidence", 0.0)
+                    
+                    if component == "counterclaim" and confidence > 0.5:
+                        rebuttals.append({
+                            "sentence_index": i,
+                            "sentence": sentence,
+                            "indicator": f"transformer-{component}",
+                            "type": "rebuttal",
+                            "confidence": confidence,
+                            "classification_method": "transformer"
+                        })
+                
+                if rebuttals:
+                    logger.debug(f"Found {len(rebuttals)} rebuttals using transformer classifier")
+            except Exception as e:
+                logger.debug(f"Transformer rebuttal classification issue: {e}. Using pattern matching.")
+        
+        # Also check pattern-based indicators (union with transformer results)
         text_lower = text.lower()
+        pattern_found_indices = {r["sentence_index"] for r in rebuttals}
         
         for i, sentence in enumerate(sentences):
+            if i in pattern_found_indices:
+                continue  # Already found by transformer
+            
             sentence_lower = sentence.lower()
             for indicator in self.rebuttal_indicators:
                 if indicator in sentence_lower:
@@ -263,7 +395,8 @@ class ArgumentMiner:
                         "sentence_index": i,
                         "sentence": sentence,
                         "indicator": indicator,
-                        "type": "rebuttal"
+                        "type": "rebuttal",
+                        "classification_method": "pattern"
                     })
                     break
         

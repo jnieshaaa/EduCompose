@@ -114,6 +114,83 @@ class EnhancedKnowledgeGraphBuilder:
             }
         }
     
+    def export_to_neo4j(self,
+                        kg_result: Dict[str, Any],
+                        uri: str = None,
+                        user: str = None,
+                        password: str = None,
+                        database: str = None,
+                        clear_existing: bool = False) -> Dict[str, Any]:
+        """
+        Export knowledge graph to Neo4j database
+        
+        Args:
+            kg_result: Result dictionary from build() method
+            uri: Neo4j URI. If None, reads from NEO4J_URI env var.
+                 For Aura: neo4j+s://xxxxx.databases.neo4j.io
+                 For Desktop: bolt://localhost:7687
+            user: Neo4j username. If None, reads from NEO4J_USER env var
+            password: Neo4j password. If None, reads from NEO4J_PASSWORD env var
+            database: Database name. If None, reads from NEO4J_DATABASE env var
+            clear_existing: If True, clear existing data for this essay
+            
+        Returns:
+            Dictionary with export statistics
+        """
+        try:
+            from .neo4j_exporter import Neo4jExporter
+            
+            exporter = Neo4jExporter(uri=uri, user=user, password=password, database=database)
+            
+            if not exporter.is_available():
+                logger.warning(
+                    "Neo4j not available. Install with: pip install neo4j "
+                    "and ensure Neo4j server is running."
+                )
+                return {
+                    "status": "unavailable",
+                    "message": "Neo4j not available"
+                }
+            
+            graph = kg_result.get("graph")
+            if not graph:
+                return {
+                    "status": "error",
+                    "message": "No graph in kg_result"
+                }
+            
+            # Extract essay_id from nodes if available
+            essay_id = None
+            if kg_result.get("nodes"):
+                for node in kg_result["nodes"]:
+                    if node.get("type") == "Essay":
+                        essay_id = node.get("id")
+                        break
+            
+            result = exporter.export_graph(
+                graph=graph,
+                essay_id=essay_id,
+                clear_existing=clear_existing
+            )
+            
+            exporter.close()
+            return result
+            
+        except ImportError:
+            logger.warning(
+                "Neo4j exporter not available. Install with: pip install neo4j"
+            )
+            return {
+                "status": "unavailable",
+                "message": "Neo4j library not installed"
+            }
+        except Exception as e:
+            logger.error(f"Failed to export to Neo4j: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
     def _empty_result(self) -> Dict[str, Any]:
         """Return empty result structure"""
         return {

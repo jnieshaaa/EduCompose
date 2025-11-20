@@ -69,5 +69,20 @@ spacy-transformers
 # For Python 3.12+, pip will automatically select compatible versions with pre-built wheels
 sentence-transformers
 
+# For transformer-based claim classification
+# Note: transformers requires torch (PyTorch) which is a large dependency
+# For Python 3.12+, pip will automatically select compatible versions
+transformers
+torch
+
 # For knowledge graph visualization
 pyvis
+
+# ============================================
+# Neo4j Integration (Optional - for production)
+# ============================================
+# Neo4j driver for graph database integration
+# Note: Neo4j is optional for production deployment
+# Install Neo4j separately: https://neo4j.com/download/
+# Or use Neo4j Aura (cloud): https://neo4j.com/cloud/aura/
+neo4j
