@@ -1,9 +1,10 @@
 import React, { useState, useRef } from "react";
-import { Upload, FileText, Zap, Shield, Users, Eye } from "lucide-react";
+import { Upload, FileText, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
 import InlineAnalysisResults from "../components/essay/InlineAnalysisResults";
+import TextAnalysisModal from "../components/essay/TextAnalysisModal";
 import { analysisApi } from "../api";
 import type { AnalysisResponse } from "../types/Essay";
 
@@ -20,6 +21,7 @@ const LandingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [analyzedText, setAnalyzedText] = useState<string | null>(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [showTextAnalysisModal, setShowTextAnalysisModal] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
@@ -39,11 +41,8 @@ const LandingPage: React.FC = () => {
 
     const currentWordCount = text.trim().split(/\s+/).length;
     if (currentWordCount < MIN_WORDS) {
-      setError(
-        `Your essay has ${currentWordCount} words. Please add at least ${
-          MIN_WORDS - currentWordCount
-        } more words for analysis.`
-      );
+      // Open TextAnalysisModal to show the word requirement guide
+      setShowTextAnalysisModal(true);
       return;
     }
 
@@ -98,65 +97,25 @@ const LandingPage: React.FC = () => {
     }, 100);
   };
 
-  const features = [
-    {
-      icon: <Zap className='w-8 h-8 text-primary' />,
-      title: "AI-Powered Analysis",
-      description: "Advanced NLP algorithms analyze essays with precision",
-    },
-    {
-      icon: <Shield className='w-8 h-8 text-primary' />,
-      title: "Secure & Private",
-      description: "Your data is protected with enterprise-grade security",
-    },
-    {
-      icon: <Users className='w-8 h-8 text-primary' />,
-      title: "Teacher-Friendly",
-      description: "Designed specifically for educators and students",
-    },
-  ];
-
   return (
     <div className='min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100'>
       <HeaderPublic onLoginClick={() => setShowLogin(true)} />
       {showLogin && <AuthModal onClose={() => setShowLogin(false)} />}
 
       {/* Hero Section */}
-      <div className='pt-[73px]'>
+      <div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className='py-8 pb-20 mb-20'
         >
           <div className='mx-auto px-4 lg:px-6 xl:px-8'>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className='mb-8 text-center'
-            >
-              <h1 className='mb-5'>
-                <span className='text-5xl md:text-6xl font-bold bg-primary-200 bg-clip-text text-transparent mb-6'>
-                  Edu
-                </span>
-                <span className='text-5xl md:text-6xl font-bold bg-neutral-600 bg-clip-text text-transparent mb-6'>
-                  Compose
-                </span>
-              </h1>
-
-              <p className='text-xl md:text-2xl text-neutral-600 max-w-3xl mx-auto mb-5 leading-relaxed'>
-                Transform your writing with AI-powered essay analysis and
-                feedback. Perfect for educators and students.
-              </p>
-            </motion.div>
-
-            <div className='flex flex-col items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] mx-auto'>
+            <div className='flex flex-col items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] m-8 m-auto'>
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className='bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl mx-auto h-[70vh] flex flex-col'
+                className='bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl mx-auto h-[70vh] flex flex-col'
               >
                 <div className='relative flex-1'>
                   <textarea
@@ -171,12 +130,24 @@ const LandingPage: React.FC = () => {
                 </div>
 
                 <div className='flex justify-between items-center pt-2 border-t border-neutral-100'>
-                  <div className='text-gray-500 px-3 py-2 rounded text-sm'>
-                    {wordCount} Words {charCount} Characters
+                  <div className='px-3 py-2 rounded text-sm'>
+                    <span
+                      className={`font-semibold ${
+                        wordCount >= MIN_WORDS
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {wordCount}
+                    </span>
+                    <span className='text-gray-500'> Words </span>
+                    <span className='text-gray-500'>
+                      {charCount} Characters
+                    </span>
                   </div>
 
                   <div className='flex gap-3'>
-                    <label className='bg-neutral-300/30 hover:bg-neutral-300/60 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all duration-300 cursor-pointer flex items-center gap-2 text-sm'>
+                    <label className='hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm'>
                       <Upload className='w-4 h-4' />
                       Upload
                       <input
@@ -201,7 +172,11 @@ const LandingPage: React.FC = () => {
                       onClick={
                         showViewResult ? handleViewResult : handleAnalyze
                       }
-                      className='bg-primary text-white font-semibold px-6 py-2.5 rounded-full transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg flex items-center gap-2 text-sm'
+                      className={`font-semibold px-6 py-2.5 rounded-full transition-all duration-300 flex items-center gap-2 text-sm ${
+                        !showViewResult && wordCount < MIN_WORDS
+                          ? "bg-neutral-300/50"
+                          : "bg-primary text-white transform hover:bg-primary-100 hover:shadow-lg "
+                      }`}
                     >
                       {showViewResult ? (
                         <>
@@ -232,85 +207,17 @@ const LandingPage: React.FC = () => {
                   />
                 </div>
               )}
-            </div>
 
-            {/* Features Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className={`grid md:grid-cols-3 gap-8 mt-12`}
-            >
-              {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
-                  whileHover={{
-                    y: -12,
-                    transition: { type: "spring", stiffness: 400, damping: 20 },
-                  }}
-                  className='bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow'
-                >
-                  <div className='flex flex-col items-center text-center'>
-                    {feature.icon}
-                    <h3 className='text-xl font-semibold text-neutral-600 mt-4 mb-2'>
-                      {feature.title}
-                    </h3>
-                    <p className='text-neutral-600 leading-relaxed'>
-                      {feature.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
+              {/* Text Analysis Modal for word requirement guide */}
+              <TextAnalysisModal
+                isOpen={showTextAnalysisModal}
+                onClose={() => setShowTextAnalysisModal(false)}
+                text={text}
+                title='Essay Analysis'
+              />
+            </div>
           </div>
         </motion.div>
-
-        {/* Footer */}
-        <footer className='bg-neutral-900 text-white pt-8 pb-1'>
-          <div className='max-w-6xl mx-auto px-4'>
-            <div className='grid md:grid-cols-4 gap-8'>
-              <div>
-                <h3 className='text-xl font-bold mb-4'>EduCompose</h3>
-                <p className='text-neutral-400'>
-                  AI-powered essay analysis for educators and students.
-                </p>
-              </div>
-              <div>
-                <h4 className='font-semibold mb-4'>Features</h4>
-                <ul className='space-y-2 text-neutral-400'>
-                  <li>Essay Analysis</li>
-                  <li>Grammar Check</li>
-                  <li>Plagiarism Detection</li>
-                  <li>Feedback Generation</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className='font-semibold mb-4'>Support</h4>
-                <ul className='space-y-2 text-neutral-400'>
-                  <li>Help Center</li>
-                  <li>Contact Us</li>
-                  <li>Documentation</li>
-                  <li>API</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className='font-semibold mb-4'>Company</h4>
-                <ul className='space-y-2 text-neutral-400'>
-                  <li>About</li>
-                  <li>Privacy Policy</li>
-                  <li>Terms of Service</li>
-                  <li>Blog</li>
-                </ul>
-              </div>
-            </div>
-            <div className='border-t border-neutral-600 mt-8 pt-1 text-center text-neutral-400'>
-              <p>&copy; 2025 EduCompose | Team Nonchalant.</p>
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );

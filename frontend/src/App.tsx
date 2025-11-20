@@ -13,6 +13,7 @@ import ClickEffect from "./components/ClickEffect";
 import SectionsList from "./pages/SectionsList";
 import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
+import About from "./pages/About";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 
 const AppContent: React.FC = () => {
@@ -43,9 +44,10 @@ const AppContent: React.FC = () => {
       <IntroModal isOpen={showIntro} onClose={handleClose} />
 
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path='/' element={<LandingPage />} />
+        <Route path='/About' element={<About />} />
         <Route
-          path="/Dashboard"
+          path='/Dashboard'
           element={
             <ClientLayout>
               <Dashboard />
@@ -53,7 +55,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/EssayManagement"
+          path='/EssayManagement'
           element={
             <ClientLayout>
               <EssayManagement />
@@ -61,7 +63,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/ClassManagement"
+          path='/ClassManagement'
           element={
             <ClientLayout>
               <ClassManagement />
@@ -69,7 +71,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/AssignmentManagement"
+          path='/AssignmentManagement'
           element={
             <ClientLayout>
               <AssignmentManagement />
@@ -77,7 +79,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/Gradebook"
+          path='/Gradebook'
           element={
             <ClientLayout>
               <Gradebook />
@@ -93,7 +95,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/Students"
+          path='/Students'
           element={
             <ClientLayout>
               <Students />
@@ -101,14 +103,14 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/SectionsList"
+          path='/SectionsList'
           element={
             <ClientLayout>
               <SectionsList />
             </ClientLayout>
           }
         />
-        <Route path="*" element={<ErrorPage code={404} />} />
+        <Route path='*' element={<ErrorPage code={404} />} />
       </Routes>
     </>
   );

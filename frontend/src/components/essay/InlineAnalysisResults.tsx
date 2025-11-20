@@ -229,7 +229,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       onClose={onClose || (() => {})}
       size='xl'
       className='max-h-[90vh]'
-      contentClassName='flex-1 overflow-y-auto pr-4 min-h-0 relative'
+      contentClassName='flex-1 overflow-y-auto pr-5 min-h-0 relative'
     >
       {onClose && (
         <button
@@ -297,7 +297,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       )}
 
       {/* Tabs */}
-      <div className='border-b border-neutral-200 mb-5'>
+      <div className='border-b border-neutral-200 mb-6'>
         <div className='flex space-x-4'>
           {[
             { id: "overview", label: "Overview", icon: TrendingUp },
@@ -340,7 +340,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       {activeTab === "overview" && (
         <div className='space-y-6'>
           <Card>
-            <div className='flex items-center space-x-3 mb-4 justify-between'>
+            <div className='flex items-center space-x-6'>
               <div className='flex items-center space-x-3'>
                 {scores.overall >= 80 ? (
                   <CheckCircle className='w-6 h-6 text-success-default' />
@@ -349,21 +349,31 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 ) : (
                   <AlertTriangle className='w-6 h-6 text-error-default' />
                 )}
-                <h4 className='text-xl font-bold text-neutral-900'>
+                <h4 className='text-xl font-semibold text-neutral-900'>
                   Overall Score
                 </h4>
               </div>
-              <div className='text-4xl font-bold text-primary'>
+              <div className='flex-1'>
+                <ProgressBar
+                  value={scores.overall}
+                  color={getScoreColor(scores.overall)}
+                />
+              </div>
+              <div
+                className={`text-2xl font-bold ${
+                  scores.overall >= 80
+                    ? "text-success-default"
+                    : scores.overall >= 60
+                    ? "text-warning-default"
+                    : "text-error-default"
+                }`}
+              >
                 {scores.overall.toFixed(1)}
               </div>
             </div>
-            <ProgressBar
-              value={scores.overall}
-              color={getScoreColor(scores.overall)}
-            />
           </Card>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5'>
             {[
               {
                 key: "grammar",
@@ -399,19 +409,21 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
               const score = scores[key as keyof typeof scores] || 0;
               return (
                 <Card key={key}>
-                  <div className='text-center'>
-                    <Icon className={`w-8 h-8 text-${color} mx-auto mb-2`} />
-                    <h5 className='font-semibold text-neutral-900 mb-1'>
+                  <div className='text-center flex flex-col h-full'>
+                    <Icon className={`w-8 h-8 text-${color} mx-auto mb-1`} />
+                    <h5 className='font-semibold text-neutral-900 mb-10 mt-1'>
                       {label}
                     </h5>
-                    <div className={`text-2xl font-bold text-${color} mb-2`}>
-                      {Math.round(score)}
+                    <div className='mt-auto'>
+                      <div className={`text-xl font-bold text-${color} mb-1`}>
+                        {Math.round(score)}
+                      </div>
+                      <ProgressBar
+                        value={score}
+                        color={getScoreColor(score)}
+                        size='sm'
+                      />
                     </div>
-                    <ProgressBar
-                      value={score}
-                      color={getScoreColor(score)}
-                      size='sm'
-                    />
                   </div>
                 </Card>
               );
@@ -422,7 +434,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
       {/* Detailed Analysis Tab */}
       {activeTab === "detailed" && analysis.detailed_analysis && (
-        <div className='space-y-6 mt-4'>
+        <div className='space-y-4 mt-4'>
           {/* Grammar Analysis */}
           {analysis.detailed_analysis.grammar && (
             <Card>
