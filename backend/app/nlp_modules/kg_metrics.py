@@ -89,7 +89,11 @@ class KGMetricsCalculator:
             }
         
         # Find connected components
-        components = list(nx.connected_components(graph))
+        # Convert to undirected for connected_components (or use weakly_connected_components for directed)
+        if graph.is_directed():
+            components = list(nx.weakly_connected_components(graph))
+        else:
+            components = list(nx.connected_components(graph))
         num_components = len(components)
         is_connected = num_components == 1
         

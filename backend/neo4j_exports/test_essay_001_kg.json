@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {
+      "id": "essay",
+      "labels": [
+        "Essay"
+      ],
+      "properties": {
+        "id": "essay",
+        "essay_id": "test_essay_001",
+        "metadata": {}
+      }
+    }
+  ],
+  "relationships": []
+}

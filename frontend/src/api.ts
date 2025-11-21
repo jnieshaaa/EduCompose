@@ -141,6 +141,63 @@ export const essayApi = {
   },
 };
 
+// Knowledge Graph API
+export const kgApi = {
+  getKnowledgeGraph: async (essayId: number) => {
+    return apiRequest<{
+      essay_id: number;
+      nodes: Array<{
+        id: string;
+        label: string;
+        type?: string;
+        properties?: Record<string, any>;
+      }>;
+      edges: Array<{
+        source: string;
+        target: string;
+        type?: string;
+        properties?: Record<string, any>;
+      }>;
+      source: string;
+      stats?: {
+        node_count: number;
+        edge_count: number;
+      };
+    }>(`/kg/essay/${essayId}/knowledge-graph`);
+  },
+
+  buildAndExportGraph: async (essayId: number) => {
+    return apiRequest<{
+      essay_id: number;
+      nodes: Array<{
+        id: string;
+        label: string;
+        type?: string;
+        properties?: Record<string, any>;
+      }>;
+      edges: Array<{
+        source: string;
+        target: string;
+        type?: string;
+        properties?: Record<string, any>;
+      }>;
+      export_stats: {
+        nodes_created: number;
+        edges_created: number;
+        status: string;
+      };
+      stats: {
+        node_count: number;
+        edge_count: number;
+        nodes_exported: number;
+        edges_exported: number;
+      };
+    }>(`/kg/essay/${essayId}/build-and-export`, {
+      method: "POST",
+    });
+  },
+};
+
 // Analysis API
 export const analysisApi = {
   analyzeEssay: async (

@@ -13,6 +13,7 @@ from .controllers import (
     essays_router,
     analysis_router
 )
+from .controllers import kg_controller
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -44,6 +45,7 @@ app.include_router(classes_router, prefix="/api/classes", tags=["Classes"])
 app.include_router(students_router, prefix="/api/students", tags=["Students"])
 app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
 app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
+app.include_router(kg_controller.kg_router, prefix="/api/kg", tags=["Knowledge Graph"])
 
 @app.get("/")
 async def root():

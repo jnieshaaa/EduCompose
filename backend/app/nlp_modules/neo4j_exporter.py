@@ -11,6 +11,18 @@ import logging
 import os
 from typing import Dict, List, Any, Optional, Set
 from collections import defaultdict
+from pathlib import Path
+
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env from backend directory (override=False to not overwrite existing env vars)
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path, override=True)  # Use override=True to reload on each import
+except ImportError:
+    # python-dotenv not available, skip
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +76,9 @@ class Neo4jExporter:
             database: Database name. If None, reads from NEO4J_DATABASE env var (default: neo4j)
         """
         # Load from environment variables if not provided
+        # Support both NEO4J_USER and NEO4J_USERNAME for compatibility
         self.uri = uri or os.getenv("NEO4J_URI", "bolt://localhost:7687")
-        self.user = user or os.getenv("NEO4J_USER", "neo4j")
+        self.user = user or os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME", "neo4j")
         self.password = password or os.getenv("NEO4J_PASSWORD")
         self.database = database or os.getenv("NEO4J_DATABASE", "neo4j")
         
@@ -83,18 +96,36 @@ class Neo4jExporter:
         try:
             from neo4j import GraphDatabase
             
+            # Create driver (following Neo4j best practices)
             self.driver = GraphDatabase.driver(
                 self.uri,
-                auth=(self.user, self.password)
+                auth=(self.user, self.password),
+                max_connection_lifetime=3600,
+                max_connection_pool_size=50,
+                connection_acquisition_timeout=60
             )
-            # Test connection
-            with self.driver.session(database=self.database) as session:
-                result = session.run("RETURN 1 as test")
-                result.single()
+            # Verify connectivity (Neo4j recommended method)
+            self.driver.verify_connectivity()
             self._available = True
             logger.info(f"Connected to Neo4j at {self.uri}")
         except Exception as e:
-            logger.error(f"Failed to connect to Neo4j: {e}")
+            error_msg = str(e)
+            logger.error(f"Failed to connect to Neo4j: {error_msg}")
+            
+            # Provide more helpful error messages
+            if "password" in error_msg.lower() or "authentication" in error_msg.lower():
+                logger.error("Authentication failed. Check your NEO4J_PASSWORD in .env file.")
+            elif "routing information" in error_msg.lower() or "unable to retrieve" in error_msg.lower():
+                logger.error("Unable to retrieve routing information. This usually means:")
+                logger.error("  1. Your Neo4j Aura instance is PAUSED - resume it in the Aura dashboard")
+                logger.error("  2. The instance is still starting up - wait 1-2 minutes")
+                logger.error("  3. Network/firewall issue - check your internet connection")
+                logger.error(f"  4. Verify URI is correct: {self.uri}")
+            elif "resolve" in error_msg.lower() or "dns" in error_msg.lower():
+                logger.error(f"Could not resolve host. Check your NEO4J_URI: {self.uri}")
+            elif "refused" in error_msg.lower():
+                logger.error("Connection refused. Ensure your Neo4j Aura instance is RUNNING (not paused).")
+            
             self._available = False
             self.driver = None
     
@@ -202,11 +233,27 @@ class Neo4jExporter:
             # Extract node type (default to KGNode)
             node_type = node_data.get("type", "KGNode")
             
-            # Build properties
-            properties = {
-                "id": str(node_id),
-                **{k: v for k, v in node_data.items() if k != "type"}
-            }
+            # Build properties (filter out MAP types - Neo4j only allows primitives)
+            properties = {"id": str(node_id)}
+            for k, v in node_data.items():
+                if k == "type":
+                    continue
+                # Skip nested dictionaries/maps
+                if isinstance(v, dict):
+                    if len(v) == 0:
+                        continue  # Skip empty dicts
+                    # Convert nested dict to JSON string
+                    import json
+                    properties[k] = json.dumps(v)
+                # Skip lists containing dicts (convert to JSON string)
+                elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
+                    import json
+                    properties[k] = json.dumps(v)
+                # Allow primitive types and simple lists
+                elif v is None:
+                    continue  # Skip None values
+                else:
+                    properties[k] = v
             
             if essay_id:
                 properties["essay_id"] = essay_id
@@ -239,10 +286,27 @@ class Neo4jExporter:
             # Get relation type (default to RELATED_TO)
             relation_type = edge_data.get("type", "RELATED_TO")
             
-            # Build properties
-            properties = {
-                **{k: v for k, v in edge_data.items() if k != "type"}
-            }
+            # Build properties (filter out MAP types - Neo4j only allows primitives)
+            properties = {}
+            for k, v in edge_data.items():
+                if k == "type":
+                    continue
+                # Skip nested dictionaries/maps
+                if isinstance(v, dict):
+                    if len(v) == 0:
+                        continue  # Skip empty dicts
+                    # Convert nested dict to JSON string
+                    import json
+                    properties[k] = json.dumps(v)
+                # Skip lists containing dicts (convert to JSON string)
+                elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
+                    import json
+                    properties[k] = json.dumps(v)
+                # Allow primitive types and simple lists
+                elif v is None:
+                    continue  # Skip None values
+                else:
+                    properties[k] = v
             
             if essay_id:
                 properties["essay_id"] = essay_id
@@ -287,12 +351,14 @@ class Neo4jExporter:
         """
         Execute a Cypher query on Neo4j
         
+        Follows Neo4j 5.x best practices using driver.execute_query()
+        
         Args:
             cypher_query: Cypher query string
-            parameters: Query parameters
+            parameters: Query parameters (use placeholders like $param_name in query)
             
         Returns:
-            List of result records
+            List of result records as dictionaries
         """
         if not self.is_available():
             raise RuntimeError("Neo4j not available")
@@ -301,10 +367,27 @@ class Neo4jExporter:
         results = []
         
         try:
-            with self.driver.session(database=self.database) as session:
-                result = session.run(cypher_query, parameters)
-                for record in result:
-                    results.append(dict(record))
+            # Use modern execute_query API (Neo4j 5.x recommended)
+            # This automatically handles session management
+            records, summary, keys = self.driver.execute_query(
+                cypher_query,
+                parameters_=parameters,
+                database_=self.database
+            )
+            # Convert records to dictionaries (following Neo4j docs pattern)
+            for record in records:
+                results.append(record.data())
+        except AttributeError:
+            # Fallback to session-based API for older Neo4j drivers
+            logger.debug("execute_query not available, using session-based API")
+            try:
+                with self.driver.session(database=self.database) as session:
+                    result = session.run(cypher_query, parameters)
+                    for record in result:
+                        results.append(dict(record))
+            except Exception as e:
+                logger.error(f"Cypher query failed: {e}")
+                raise
         except Exception as e:
             logger.error(f"Cypher query failed: {e}")
             raise
@@ -385,8 +468,13 @@ class Neo4jExporter:
         """
         
         results = self.query(cypher, {"essay_id": essay_id})
-        return [{"claim": dict(r["claim"]), "evidence": [dict(e) for e in r["evidence"]]} 
-                for r in results]
+        # Convert Neo4j node objects to dictionaries
+        formatted_results = []
+        for r in results:
+            claim = r["claim"] if isinstance(r["claim"], dict) else dict(r["claim"])
+            evidence = [dict(e) if not isinstance(e, dict) else e for e in r["evidence"]]
+            formatted_results.append({"claim": claim, "evidence": evidence})
+        return formatted_results
     
     def close(self):
         """Close Neo4j driver connection"""

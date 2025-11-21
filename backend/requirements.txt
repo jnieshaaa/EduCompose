@@ -85,4 +85,5 @@ pyvis
 # Note: Neo4j is optional for production deployment
 # Install Neo4j separately: https://neo4j.com/download/
 # Or use Neo4j Aura (cloud): https://neo4j.com/cloud/aura/
-neo4j
+# Version pinned to match Neo4j Aura Developer Hub recommendations
+neo4j~=5.28.0
