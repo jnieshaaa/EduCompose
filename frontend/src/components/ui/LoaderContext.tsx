@@ -9,7 +9,7 @@ interface LoaderContextType {
 const LoaderContext = createContext<LoaderContextType>({
   loading: false,
   setLoading: () => {},
-});
+}); 
 
 export const useLoader = () => useContext(LoaderContext);
 
