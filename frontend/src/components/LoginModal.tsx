@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, UserPlus, ArrowLeft, X } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, UserPlus, ArrowLeft, X, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "../api";
 
 // --- Form Components ---
 
@@ -77,12 +78,56 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // Navigate to dashboard and close modal
-    navigate("/dashboard");
-    onClose();
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    // Clear previous errors
+    setError("");
+
+    // Validate inputs
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call backend API - will reject if credentials not in database
+      const response = await authApi.login(email.trim(), password);
+      
+      // Store token in localStorage
+      if (response.access_token) {
+        localStorage.setItem("auth_token", response.access_token);
+        // Store user info if available
+        if (response.user) {
+          localStorage.setItem("user", JSON.stringify(response.user));
+        }
+        
+        // Navigate to dashboard and close modal
+        navigate("/dashboard");
+        onClose();
+      }
+    } catch (err: any) {
+      // Handle API errors - backend will reject invalid credentials
+      if (err.status === 401) {
+        setError("Invalid credentials. User not found in database or password is incorrect.");
+      } else if (err.status === 403) {
+        setError("Account is inactive. Please contact administrator.");
+      } else if (err.status === 503) {
+        setError("Database connection failed. Please try again later.");
+      } else {
+        setError(err.message || "Login failed. Please check your credentials and try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -93,13 +138,23 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
         </h2>
         <p className='text-neutral-900'>Login to access your dashboard</p>
       </div>
-      <div className='space-y-5'>
+      <form onSubmit={handleLogin} className='space-y-5'>
+        {/* Error Message */}
+        {error && (
+          <div className='p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm'>
+            {error}
+          </div>
+        )}
+
         <InputField
           id='login-email'
           label='Email or Username'
           type='text'
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError(""); // Clear error when user types
+          }}
           placeholder='Enter your email'
           Icon={Mail}
         />
@@ -108,7 +163,10 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
           label='Password'
           type={showPassword ? "text" : "password"}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError(""); // Clear error when user types
+          }}
           placeholder='Enter your password'
           Icon={Lock}
           showToggle
@@ -136,12 +194,13 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
         {/* Login Button */}
         <button
-          onClick={handleLogin}
-          className='w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all'
+          type='submit'
+          disabled={isLoading}
+          className='w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          Login
+          {isLoading ? "Logging in..." : "Login"}
         </button>
-      </div>
+      </form>
 
       {/* Sign Up */}
       <p className='text-center text-neutral-900 text-sm mt-6'>
@@ -159,17 +218,82 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 };
 
 // --- Sign Up Form ---
-const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
+const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSignUp = () => {
-    console.log("Signing up with:", { email, password });
-    // Add sign up logic here
-    onViewChange("login"); // Send back to login after hypothetical sign up
+  const handleSignUp = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    // Clear previous messages
+    setError("");
+    setSuccess("");
+
+    // Validate inputs
+    if (!email.trim() || !username.trim() || !fullName.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // Validate password match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call backend API to register user in PostgreSQL database
+      const userData = await authApi.register({
+        email: email.trim(),
+        username: username.trim(),
+        full_name: fullName.trim(),
+        password: password,
+      });
+
+      setSuccess(`Account created successfully! Welcome, ${userData.full_name || userData.username}!`);
+      
+      // Wait a moment to show success message, then redirect to login
+      setTimeout(() => {
+        onViewChange("login");
+      }, 2000);
+    } catch (err: any) {
+      // Handle API errors
+      if (err.status === 400) {
+        setError(err.message || "Email already registered. Please use a different email.");
+      } else if (err.status === 503) {
+        setError("Database connection failed. Please try again later.");
+      } else {
+        setError(err.message || "Registration failed. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -186,13 +310,54 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
         </h2>
         <p className='text-neutral-900'>Join EduCompose today!</p>
       </div>
-      <div className='space-y-5'>
+      <form onSubmit={handleSignUp} className='space-y-5'>
+        {/* Success Message */}
+        {success && (
+          <div className='p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm'>
+            {success}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className='p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm'>
+            {error}
+          </div>
+        )}
+
+        <InputField
+          id='signup-full-name'
+          label='Full Name'
+          type='text'
+          value={fullName}
+          onChange={(e) => {
+            setFullName(e.target.value);
+            setError("");
+          }}
+          placeholder='Enter your full name'
+          Icon={User}
+        />
+        <InputField
+          id='signup-username'
+          label='Username'
+          type='text'
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setError("");
+          }}
+          placeholder='Choose a username'
+          Icon={UserPlus}
+        />
         <InputField
           id='signup-email'
           label='Email Address'
           type='email'
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError("");
+          }}
           placeholder='Enter your email'
           Icon={Mail}
         />
@@ -201,8 +366,11 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
           label='Password'
           type={showPassword ? "text" : "password"}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder='Create a password'
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError("");
+          }}
+          placeholder='Create a password (min 6 characters)'
           Icon={Lock}
           showToggle
           showPassword={showPassword}
@@ -213,7 +381,10 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
           label='Confirm Password'
           type={showConfirmPassword ? "text" : "password"}
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setError("");
+          }}
           placeholder='Confirm your password'
           Icon={Lock}
           showToggle
@@ -223,12 +394,13 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
 
         {/* Sign Up Button */}
         <button
-          onClick={handleSignUp}
-          className='w-full text-white py-3 rounded-lg font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all flex items-center justify-center'
+          type='submit'
+          disabled={isLoading}
+          className='w-full text-white py-3 rounded-lg font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          <UserPlus className='w-5 h-5 mr-2' /> Sign Up
+          <UserPlus className='w-5 h-5 mr-2' /> {isLoading ? "Creating Account..." : "Sign Up"}
         </button>
-      </div>
+      </form>
     </>
   );
 };
