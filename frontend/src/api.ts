@@ -78,8 +78,6 @@ export const authApi = {
 
   register: async (userData: {
     email: string;
-    username: string;
-    full_name: string;
     password: string;
   }) => {
     return apiRequest<User>("/auth/register", {

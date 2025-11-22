@@ -203,12 +203,34 @@ class AuthService:
             )
         
         # Create user with hashed password - must be saved to PostgreSQL
+        # Auto-generate username and full_name from email if not provided
         hashed_password = self.get_password_hash(user_data.password)
+        
+        # Extract username from email (part before @)
+        if not user_data.username:
+            username = user_data.email.split("@")[0]
+        else:
+            username = user_data.username
+        
+        # Use email as full_name if not provided
+        if not user_data.full_name:
+            full_name = user_data.email.split("@")[0].replace(".", " ").title()
+        else:
+            full_name = user_data.full_name
+        
+        # Check if username already exists, if so append number
+        existing_username = db.query(User).filter(User.username == username).first()
+        if existing_username:
+            counter = 1
+            while db.query(User).filter(User.username == f"{username}{counter}").first():
+                counter += 1
+            username = f"{username}{counter}"
+        
         db_user = User(
             email=user_data.email,
-            username=user_data.username,
-            full_name=user_data.full_name,
-            role=user_data.role,
+            username=username,
+            full_name=full_name,
+            role="teacher",  # Default role
             password_hash=hashed_password
         )
         

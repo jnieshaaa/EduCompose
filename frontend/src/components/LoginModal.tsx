@@ -148,8 +148,8 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
         <InputField
           id='login-email'
-          label='Email or Username'
-          type='text'
+          label='Email'
+          type='email'
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -220,8 +220,6 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 // --- Sign Up Form ---
 const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -241,7 +239,7 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
     setSuccess("");
 
     // Validate inputs
-    if (!email.trim() || !username.trim() || !fullName.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
       setError("Please fill in all fields");
       return;
     }
@@ -269,14 +267,13 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
     try {
       // Call backend API to register user in PostgreSQL database
+      // Backend will auto-generate username and full_name from email
       const userData = await authApi.register({
         email: email.trim(),
-        username: username.trim(),
-        full_name: fullName.trim(),
         password: password,
       });
 
-      setSuccess(`Account created successfully! Welcome, ${userData.full_name || userData.username}!`);
+      setSuccess(`Account created successfully! Welcome!`);
       
       // Wait a moment to show success message, then redirect to login
       setTimeout(() => {
@@ -325,30 +322,6 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
           </div>
         )}
 
-        <InputField
-          id='signup-full-name'
-          label='Full Name'
-          type='text'
-          value={fullName}
-          onChange={(e) => {
-            setFullName(e.target.value);
-            setError("");
-          }}
-          placeholder='Enter your full name'
-          Icon={User}
-        />
-        <InputField
-          id='signup-username'
-          label='Username'
-          type='text'
-          value={username}
-          onChange={(e) => {
-            setUsername(e.target.value);
-            setError("");
-          }}
-          placeholder='Choose a username'
-          Icon={UserPlus}
-        />
         <InputField
           id='signup-email'
           label='Email Address'

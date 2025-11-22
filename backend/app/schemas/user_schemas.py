@@ -4,6 +4,7 @@ Request/Response models for user management
 """
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class UserBase(BaseModel):
     email: str
@@ -11,8 +12,12 @@ class UserBase(BaseModel):
     full_name: str
     role: str = "teacher"
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    email: str
     password: str
+    # username and full_name will be auto-generated from email if not provided
+    username: Optional[str] = None
+    full_name: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int

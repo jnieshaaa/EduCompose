@@ -156,13 +156,13 @@ const Login: React.FC = () => {
                   htmlFor='email'
                   className='block text-sm font-medium text-neutral-600 mb-2'
                 >
-                  Email or Username
+                  Email
                 </label>
                 <div className='relative'>
                   <Mail className='absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5' />
                   <input
                     id='email'
-                    type='text'
+                    type='email'
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
