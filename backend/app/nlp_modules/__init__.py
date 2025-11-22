@@ -54,6 +54,12 @@ except ImportError:
     WordNetEnricher = None
     get_wordnet_enricher = None
 
+# Iteration and refinement (Step 10)
+from .feedback_collector import FeedbackCollector, FeedbackType, get_feedback_collector
+from .domain_config import DomainConfig, EssayDomain, get_domain_config
+from .ontology_loader import OntologyLoader, get_ontology_loader
+from .heuristic_refiner import HeuristicRefiner, get_heuristic_refiner
+
 __all__ = [
     "GrammarAnalyzer",
     "ReadabilityAnalyzer",
@@ -85,6 +91,17 @@ __all__ = [
     "ConceptNetEnricher",
     "get_conceptnet_enricher",
     "WordNetEnricher",
-    "get_wordnet_enricher"
+    "get_wordnet_enricher",
+    # Iteration and refinement (Step 10)
+    "FeedbackCollector",
+    "FeedbackType",
+    "get_feedback_collector",
+    "DomainConfig",
+    "EssayDomain",
+    "get_domain_config",
+    "OntologyLoader",
+    "get_ontology_loader",
+    "HeuristicRefiner",
+    "get_heuristic_refiner"
 ]
 
