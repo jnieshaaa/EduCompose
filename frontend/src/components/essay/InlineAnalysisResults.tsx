@@ -411,7 +411,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 <Card key={key}>
                   <div className='text-center flex flex-col h-full'>
                     <Icon className={`w-8 h-8 text-${color} mx-auto mb-1`} />
-                    <h5 className='font-semibold text-neutral-900 mb-10 mt-1'>
+                    <h5 className='font-semibold text-neutral-900 mb-4'>
                       {label}
                     </h5>
                     <div className='mt-auto'>
