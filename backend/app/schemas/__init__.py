@@ -2,7 +2,7 @@
 Schemas Package
 Pydantic models for request/response validation
 """
-from .auth_schemas import LoginRequest, Token
+from .auth_schemas import LoginRequest, Token, LoginResponse, UserInfo
 from .user_schemas import UserBase, UserCreate, UserResponse
 from .class_schemas import ClassBase, ClassCreate, ClassResponse
 from .student_schemas import StudentBase, StudentCreate, StudentResponse
@@ -19,6 +19,8 @@ from .analysis_schemas import (
 __all__ = [
     "LoginRequest",
     "Token",
+    "LoginResponse",
+    "UserInfo",
     "UserBase",
     "UserCreate",
     "UserResponse",

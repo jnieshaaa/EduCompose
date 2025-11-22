@@ -1,12 +1,54 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "../api";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    setError("");
+
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login(email.trim(), password);
+      
+      if (response.access_token) {
+        localStorage.setItem("auth_token", response.access_token);
+        if (response.user) {
+          localStorage.setItem("user", JSON.stringify(response.user));
+        }
+        navigate("/dashboard");
+      }
+    } catch (err: any) {
+      if (err.status === 401) {
+        setError("Invalid credentials. User not found in database or password is incorrect.");
+      } else if (err.status === 403) {
+        setError("Account is inactive. Please contact administrator.");
+      } else if (err.status === 503) {
+        setError("Database connection failed. Please try again later.");
+      } else {
+        setError(err.message || "Login failed. Please check your credentials and try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
@@ -100,22 +142,32 @@ const Login: React.FC = () => {
               <p className='text-neutral-900'>Login to access your dashboard</p>
             </div>
 
-            <div className='space-y-5'>
+            <form onSubmit={handleLogin} className='space-y-5'>
+              {/* Error Message */}
+              {error && (
+                <div className='p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm'>
+                  {error}
+                </div>
+              )}
+
               {/* Email Input */}
               <div>
                 <label
                   htmlFor='email'
                   className='block text-sm font-medium text-neutral-600 mb-2'
                 >
-                  Email or Username
+                  Email
                 </label>
                 <div className='relative'>
                   <Mail className='absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5' />
                   <input
                     id='email'
-                    type='text'
+                    type='email'
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
                     className='w-full pl-11 pr-4 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
                     placeholder='Enter your email'
                   />
@@ -136,7 +188,10 @@ const Login: React.FC = () => {
                     id='password'
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError("");
+                    }}
                     className='w-full pl-11 pr-12 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all'
                     placeholder='Enter your password'
                   />
@@ -160,19 +215,20 @@ const Login: React.FC = () => {
                   <input type='checkbox' className='w-4 h-4' />
                   <span className='ml-2 text-neutral-900'>Remember me</span>
                 </label>
-                <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
+                <button type='button' className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
                   Forgot password?
                 </button>
               </div>
 
               {/* Login Button */}
               <button
-                onClick={() => navigate("/dashboard")}
-                className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all'
+                type='submit'
+                disabled={isLoading}
+                className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                Login
+                {isLoading ? "Logging in..." : "Login"}
               </button>
-            </div>
+            </form>
 
             {/* Sign Up */}
             <p className='text-center text-neutral-900 text-sm mt-6'>

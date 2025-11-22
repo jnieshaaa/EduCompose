@@ -38,7 +38,16 @@ const apiRequest = async <T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
   if (!response.ok) {
-    throw new ApiError(response.status, `API Error: ${response.statusText}`);
+    // Try to get error message from response
+    let errorMessage = `API Error: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      // If response is not JSON, use status text
+    }
+    const error = new ApiError(response.status, errorMessage);
+    throw error;
   }
 
   return response.json();
@@ -47,7 +56,18 @@ const apiRequest = async <T>(
 // Auth API
 export const authApi = {
   login: async (email: string, password: string) => {
-    return apiRequest<{ access_token: string; token_type: string }>(
+    return apiRequest<{ 
+      access_token: string; 
+      token_type: string;
+      user?: {
+        id: number;
+        email: string;
+        username: string;
+        full_name: string;
+        role: string;
+        is_active: boolean;
+      };
+    }>(
       "/auth/login",
       {
         method: "POST",
@@ -58,8 +78,6 @@ export const authApi = {
 
   register: async (userData: {
     email: string;
-    username: string;
-    full_name: string;
     password: string;
   }) => {
     return apiRequest<User>("/auth/register", {

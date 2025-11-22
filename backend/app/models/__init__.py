@@ -8,6 +8,7 @@ from .class_model import Class
 from .student import Student
 from .essay import Essay
 from .analysis_report import AnalysisReport
+from .login_activity import LoginActivity
 
 __all__ = [
     "Base",
@@ -15,6 +16,7 @@ __all__ = [
     "Class",
     "Student",
     "Essay",
-    "AnalysisReport"
+    "AnalysisReport",
+    "LoginActivity"
 ]
 
