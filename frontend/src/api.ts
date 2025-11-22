@@ -35,22 +35,35 @@ const apiRequest = async <T>(
     ...options,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-  if (!response.ok) {
-    // Try to get error message from response
-    let errorMessage = `API Error: ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
-    } catch {
-      // If response is not JSON, use status text
+    if (!response.ok) {
+      // Try to get error message from response
+      let errorMessage = `API Error: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+      }
+      const error = new ApiError(response.status, errorMessage);
+      throw error;
     }
-    const error = new ApiError(response.status, errorMessage);
-    throw error;
-  }
 
-  return response.json();
+    return response.json();
+  } catch (err: any) {
+    // Handle network errors (backend not running, connection failed, etc.)
+    if (err instanceof TypeError || err.name === "TypeError" || err.message?.includes("fetch")) {
+      const networkError = new ApiError(
+        0,
+        "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000"
+      );
+      throw networkError;
+    }
+    // Re-throw other errors (ApiError instances, etc.)
+    throw err;
+  }
 };
 
 // Auth API

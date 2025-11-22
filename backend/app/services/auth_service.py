@@ -21,7 +21,12 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")  # In production, u
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure password hashing - use bcrypt with auto-deprecation
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__ident="2b"  # Use bcrypt 2b format
+)
 security = HTTPBearer()
 
 class AuthService:
@@ -33,6 +38,8 @@ class AuthService:
     
     def get_password_hash(self, password: str) -> str:
         """Hash a password"""
+        # Passlib handles string passwords automatically
+        # If password is too long (bcrypt 72 byte limit), passlib will handle it
         return pwd_context.hash(password)
     
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None):

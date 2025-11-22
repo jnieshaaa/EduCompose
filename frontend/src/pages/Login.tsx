@@ -36,7 +36,9 @@ const Login: React.FC = () => {
         navigate("/dashboard");
       }
     } catch (err: any) {
-      if (err.status === 401) {
+      if (err.status === 0 || err.message?.includes("Failed to connect")) {
+        setError("Cannot connect to server. Please make sure the backend server is running on http://localhost:8000");
+      } else if (err.status === 401) {
         setError("Invalid credentials. User not found in database or password is incorrect.");
       } else if (err.status === 403) {
         setError("Account is inactive. Please contact administrator.");
