@@ -52,9 +52,11 @@ This document summarizes what has been implemented and how to proceed with the r
 
 ### Step 6: Enrich KG with External Knowledge
 
-- ⚠️ **Not yet implemented** - Framework ready
-- 📝 **To implement**: `conceptnet_enricher.py` and `wordnet_enricher.py`
-- See `IMPLEMENTATION_GUIDE.md` for details
+- ✅ **Complete** - ConceptNet and WordNet enrichers implemented
+- ✅ `conceptnet_enricher.py` - Fetches semantic relationships from ConceptNet API
+- ✅ `wordnet_enricher.py` - Adds lexical relationships from NLTK WordNet
+- ✅ Integrated into `EnhancedKnowledgeGraphBuilder` (enabled by default)
+- See `EXTERNAL_KNOWLEDGE_ENRICHMENT.md` for usage details
 
 ### Step 7: Compute KG-Based Metrics
 
@@ -84,7 +86,7 @@ This document summarizes what has been implemented and how to proceed with the r
 | 3    | Concept Extraction            | ✅ Complete        | `enhanced_kg_builder.py`, `openie_extractor.py`       |
 | 4    | KG Schema                     | ✅ Complete        | `kg_schema.py`                                        |
 | 5    | KG Population                 | ✅ Complete        | `enhanced_kg_builder.py`                              |
-| 6    | External Enrichment           | ⚠️ Framework Ready | To implement                                          |
+| 6    | External Enrichment           | ✅ Complete        | `conceptnet_enricher.py`, `wordnet_enricher.py`       |
 | 7    | KG Metrics                    | ✅ Complete        | `kg_metrics.py`                                       |
 | 8    | Teacher Reports               | ✅ Complete        | `report_generator.py`                                 |
 | 9    | Validation                    | ⚠️ Framework Ready | To implement                                          |
@@ -327,8 +329,8 @@ if analysis_type == "comprehensive":
 
 ### Short-term (Medium Priority)
 
-4. **Implement ConceptNet enrichment** (`conceptnet_enricher.py`)
-5. **Implement WordNet enrichment** (`wordnet_enricher.py`)
+4. ✅ **ConceptNet enrichment** (`conceptnet_enricher.py`) - Implemented
+5. ✅ **WordNet enrichment** (`wordnet_enricher.py`) - Implemented
 6. ✅ **Neo4j integration** (`neo4j_exporter.py`) - Ready for production deployment
 
 ### Long-term (Research Phase)
@@ -396,7 +398,7 @@ if analysis_type == "comprehensive":
 
 2. **Coreference Resolution**: Not yet implemented. Can add NeuralCoref or HuggingFace models.
 
-3. **External Knowledge**: ConceptNet/WordNet enrichment not yet implemented (framework ready).
+3. **External Knowledge**: ✅ ConceptNet/WordNet enrichment implemented and integrated.
 
 4. **Neo4j**: Neo4j integration is available (`neo4j_exporter.py`) but optional. NetworkX is used by default for development.
 

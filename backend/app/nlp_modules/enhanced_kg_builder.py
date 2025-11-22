@@ -12,6 +12,8 @@ from .kg_schema import NodeType, EdgeType, KGSchema
 from .openie_extractor import OpenIEExtractor
 from .spacy_utils import load_spacy_model
 from .kg_metrics import KGMetricsCalculator
+from .conceptnet_enricher import ConceptNetEnricher, get_conceptnet_enricher
+from .wordnet_enricher import WordNetEnricher, get_wordnet_enricher
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +27,35 @@ class EnhancedKnowledgeGraphBuilder:
     4. Computes KG-based metrics
     """
     
-    def __init__(self):
-        """Initialize enhanced KG builder"""
+    def __init__(self, enable_conceptnet: bool = True, enable_wordnet: bool = True):
+        """
+        Initialize enhanced KG builder
+        
+        Args:
+            enable_conceptnet: Enable ConceptNet enrichment (default: True)
+            enable_wordnet: Enable WordNet enrichment (default: True)
+        """
         self.nlp = None
         self.openie_extractor = OpenIEExtractor()
         self.metrics_calculator = KGMetricsCalculator()
+        
+        # Initialize enrichers (lazy loading - only if available)
+        self.conceptnet_enricher = None
+        self.wordnet_enricher = None
+        
+        if enable_conceptnet:
+            self.conceptnet_enricher = get_conceptnet_enricher()
+            if self.conceptnet_enricher:
+                logger.info("ConceptNet enricher enabled")
+            else:
+                logger.debug("ConceptNet enricher not available")
+        
+        if enable_wordnet:
+            self.wordnet_enricher = get_wordnet_enricher()
+            if self.wordnet_enricher:
+                logger.info("WordNet enricher enabled")
+            else:
+                logger.debug("WordNet enricher not available")
     
     def _ensure_nlp_loaded(self):
         """Ensure spaCy is loaded (lazy loading)"""
@@ -39,7 +65,8 @@ class EnhancedKnowledgeGraphBuilder:
     def build(self, text: str, 
               essay_id: str = None,
               prompt_concepts: List[str] = None,
-              argument_analysis: Dict[str, Any] = None) -> Dict[str, Any]:
+              argument_analysis: Dict[str, Any] = None,
+              enable_enrichment: bool = True) -> Dict[str, Any]:
         """
         Build enhanced knowledge graph from essay text
         
@@ -48,6 +75,7 @@ class EnhancedKnowledgeGraphBuilder:
             essay_id: Optional essay ID
             prompt_concepts: Seed concepts from prompt (for drift detection)
             argument_analysis: Pre-computed argument analysis (optional)
+            enable_enrichment: Enable external knowledge enrichment (ConceptNet/WordNet) (default: True)
             
         Returns:
             Dictionary containing KG structure, nodes, edges, and metrics
@@ -91,6 +119,11 @@ class EnhancedKnowledgeGraphBuilder:
                     **edge.get("metadata", {})
                 )
         
+        # Enrich with external knowledge (ConceptNet and WordNet)
+        enrichment_stats = {}
+        if enable_enrichment:
+            enrichment_stats = self._enrich_graph(graph, nodes)
+        
         # Compute metrics
         claims = [n for n in nodes.values() if n["type"] == NodeType.CLAIM.value]
         concept_nodes = [n for n in nodes.values() if n["type"] == NodeType.CONCEPT.value]
@@ -106,6 +139,7 @@ class EnhancedKnowledgeGraphBuilder:
             "concepts": concepts,
             "triples": triples,
             "metrics": metrics,
+            "enrichment": enrichment_stats,
             "graph_structure": {
                 "nodes": graph.number_of_nodes(),
                 "edges": graph.number_of_edges(),
@@ -401,4 +435,57 @@ class EnhancedKnowledgeGraphBuilder:
                 edge_counter += 1
         
         return edges
+    
+    def _enrich_graph(self, graph: nx.MultiDiGraph, nodes: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enrich knowledge graph with external knowledge (ConceptNet and WordNet).
+        
+        Args:
+            graph: NetworkX graph to enrich
+            nodes: Dictionary of nodes in the graph
+            
+        Returns:
+            Dictionary with enrichment statistics
+        """
+        enrichment_stats = {
+            "conceptnet": {"status": "disabled", "edges_added": 0, "nodes_added": 0},
+            "wordnet": {"status": "disabled", "edges_added": 0, "nodes_added": 0}
+        }
+        
+        # Extract concept nodes
+        concept_nodes = [
+            {"id": node_id, "label": node_data.get("label", "")}
+            for node_id, node_data in nodes.items()
+            if node_data.get("type") == NodeType.CONCEPT.value
+        ]
+        
+        if not concept_nodes:
+            logger.debug("No concept nodes found for enrichment")
+            return enrichment_stats
+        
+        # Enrich with ConceptNet
+        if self.conceptnet_enricher:
+            try:
+                cn_stats = self.conceptnet_enricher.enrich_graph(graph, concept_nodes)
+                enrichment_stats["conceptnet"] = cn_stats
+                logger.info(f"ConceptNet enrichment: {cn_stats.get('edges_added', 0)} edges, {cn_stats.get('nodes_added', 0)} nodes")
+            except Exception as e:
+                logger.error(f"Error during ConceptNet enrichment: {e}")
+                enrichment_stats["conceptnet"] = {"status": "error", "error": str(e)}
+        else:
+            enrichment_stats["conceptnet"]["status"] = "unavailable"
+        
+        # Enrich with WordNet
+        if self.wordnet_enricher:
+            try:
+                wn_stats = self.wordnet_enricher.enrich_graph(graph, concept_nodes)
+                enrichment_stats["wordnet"] = wn_stats
+                logger.info(f"WordNet enrichment: {wn_stats.get('edges_added', 0)} edges, {wn_stats.get('nodes_added', 0)} nodes")
+            except Exception as e:
+                logger.error(f"Error during WordNet enrichment: {e}")
+                enrichment_stats["wordnet"] = {"status": "error", "error": str(e)}
+        else:
+            enrichment_stats["wordnet"]["status"] = "unavailable"
+        
+        return enrichment_stats
 

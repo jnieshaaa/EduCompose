@@ -41,6 +41,19 @@ except ImportError:
     Neo4jExporter = None
     export_to_neo4j = None
 
+# External knowledge enrichers (optional)
+try:
+    from .conceptnet_enricher import ConceptNetEnricher, get_conceptnet_enricher
+except ImportError:
+    ConceptNetEnricher = None
+    get_conceptnet_enricher = None
+
+try:
+    from .wordnet_enricher import WordNetEnricher, get_wordnet_enricher
+except ImportError:
+    WordNetEnricher = None
+    get_wordnet_enricher = None
+
 __all__ = [
     "GrammarAnalyzer",
     "ReadabilityAnalyzer",
@@ -67,6 +80,11 @@ __all__ = [
     "get_claim_classifier",
     # Neo4j integration (optional)
     "Neo4jExporter",
-    "export_to_neo4j"
+    "export_to_neo4j",
+    # External knowledge enrichers (optional)
+    "ConceptNetEnricher",
+    "get_conceptnet_enricher",
+    "WordNetEnricher",
+    "get_wordnet_enricher"
 ]
 
