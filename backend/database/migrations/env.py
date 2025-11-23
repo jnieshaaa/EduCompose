@@ -29,7 +29,13 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Get database URL from environment
-database_url = os.getenv("DATABASE_URL", "sqlite:///./educompose.db")
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise ValueError("DATABASE_URL environment variable is required. Please set it to a PostgreSQL connection string.")
+
+if not (database_url.startswith("postgresql://") or database_url.startswith("postgresql+psycopg2://")):
+    raise ValueError(f"Only PostgreSQL is supported. DATABASE_URL must start with 'postgresql://' or 'postgresql+psycopg2://'. Got: {database_url[:20]}...")
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here
