@@ -50,7 +50,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   isOpen: externalIsOpen,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "detailed" | "recommendations" | "highlights"
+    "overview" | "detailed" | "recommendations"
   >("overview");
 
   const getScoreColor = (score: number) => {
@@ -302,7 +302,6 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
           {[
             { id: "overview", label: "Overview", icon: TrendingUp },
             { id: "detailed", label: "Detailed Analysis", icon: BookOpen },
-            { id: "highlights", label: "Highlights", icon: AlertTriangle },
             {
               id: "recommendations",
               label: "Recommendations",
@@ -319,7 +318,6 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                       | "overview"
                       | "detailed"
                       | "recommendations"
-                      | "highlights"
                   )
                 }
                 className={`flex items-center space-x-2 px-4 py-2 font-medium text-sm transition-colors ${
@@ -429,6 +427,30 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
               );
             })}
           </div>
+
+          {/* Highlighted Essay */}
+          <Card>
+            <h4 className='text-lg font-semibold text-neutral-900 mb-3'>
+              Highlighted Essay
+            </h4>
+            {highlightData.html ? (
+              <div className='space-y-3'>
+                <div className='text-sm text-neutral-600'>
+                  Hover over highlighted text to see issue details. (
+                  {highlightData.errors.length} issues)
+                </div>
+                <div
+                  className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4'
+                  dangerouslySetInnerHTML={{ __html: highlightData.html }}
+                />
+              </div>
+            ) : (
+              <p className='text-neutral-600'>
+                No grammar highlights available. Run an analysis to view issues
+                mapped to your essay text.
+              </p>
+            )}
+          </Card>
         </div>
       )}
 
@@ -662,34 +684,6 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
               </div>
             </Card>
           )}
-        </div>
-      )}
-
-      {/* Highlights Tab */}
-      {activeTab === "highlights" && (
-        <div className='space-y-4 mt-4'>
-          <Card>
-            <h4 className='text-lg font-semibold text-neutral-900 mb-3'>
-              Highlighted Essay
-            </h4>
-            {highlightData.html ? (
-              <div className='space-y-3'>
-                <div className='text-sm text-neutral-600'>
-                  Hover over highlighted text to see issue details. (
-                  {highlightData.errors.length} issues)
-                </div>
-                <div
-                  className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4'
-                  dangerouslySetInnerHTML={{ __html: highlightData.html }}
-                />
-              </div>
-            ) : (
-              <p className='text-neutral-600'>
-                No grammar highlights available. Run an analysis to view issues
-                mapped to your essay text.
-              </p>
-            )}
-          </Card>
         </div>
       )}
 
