@@ -21,6 +21,7 @@ import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
 import ArgumentKnowledgeGraph from "./ArgumentKnowledgeGraph";
+import KnowledgeGraphViewer from "../knowledge-graph/KnowledgeGraphViewer";
 import type {
   Essay,
   AnalysisResponse,
@@ -350,6 +351,161 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
         {/* Detailed Analysis Tab */}
         {activeTab === "detailed" && analysis && (
           <div className="space-y-6">
+            {/* Argument Knowledge Graph (Toulmin) - first highlight */}
+            {analysis.detailed_analysis.argumentation && (
+              <Card>
+                <h4 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center">
+                  <FileText className="w-5 h-5 text-tertiary mr-2" />
+                  Toulmin's Model & Argument Knowledge Graph
+                </h4>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="lg:col-span-1 grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 bg-primary-50 rounded-rd">
+                      <p className="text-sm text-neutral-600">Claims</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure.total_claims
+                        }
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-success-50 rounded-rd">
+                      <p className="text-sm text-neutral-600">Evidence</p>
+                      <p className="text-2xl font-bold text-success-default">
+                        {
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure.total_grounds
+                        }
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-info-50 rounded-rd">
+                      <p className="text-sm text-neutral-600">Warrants</p>
+                      <p className="text-2xl font-bold text-info-default">
+                        {
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure.total_warrants
+                        }
+                      </p>
+                    </div>
+                    <div className="text-center p-3 bg-warning-50 rounded-rd">
+                      <p className="text-sm text-neutral-600">Rebuttals</p>
+                      <p className="text-2xl font-bold text-warning-default">
+                        {
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure.total_rebuttals
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-3">
+                    {analysis.detailed_analysis.argumentation.thesis_statement && (
+                      <div className="mb-4 p-3 bg-primary-50 rounded-rd">
+                        <p className="text-sm font-medium text-neutral-700 mb-1">
+                          Thesis Statement:
+                        </p>
+                        <p className="text-sm text-neutral-600 italic">
+                          "
+                          {
+                            analysis.detailed_analysis.argumentation
+                              .thesis_statement.sentence
+                          }
+                          "
+                        </p>
+                      </div>
+                    )}
+                    <div className="border border-neutral-200 rounded-rd overflow-hidden bg-neutral-50">
+                      <ArgumentKnowledgeGraph
+                        graph={analysis.detailed_analysis.argumentation.graph}
+                        metrics={analysis.detailed_analysis.argumentation.metrics}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Conceptual Knowledge Graph (if available) */}
+            {analysis.detailed_analysis.knowledge_graph && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                  <Network className="w-5 h-5 text-secondary" />
+                  Conceptual Knowledge Graph
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                  <div className="lg:col-span-2">
+                    <KnowledgeGraphViewer essayId={essay.id} height={460} />
+                  </div>
+                  <Card>
+                    <h4 className="text-md font-semibold text-neutral-900 mb-3">
+                      Conceptual Understanding Summary
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs text-neutral-600">
+                          Concepts Identified
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {
+                            analysis.detailed_analysis.knowledge_graph.concepts
+                              .length
+                          }
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-neutral-600">
+                          Relationships
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {
+                            analysis.detailed_analysis.knowledge_graph
+                              .relationships.length
+                          }
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-neutral-600">
+                          Connectivity
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {analysis.detailed_analysis.knowledge_graph.connectivity_score.toFixed(
+                            1
+                          )}
+                          %
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-neutral-600">
+                          Graph Density
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {analysis.detailed_analysis.knowledge_graph.graph_structure.density.toFixed(
+                            2
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {analysis.detailed_analysis.knowledge_graph.concepts.length >
+                      0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-neutral-700 mb-2">
+                          Key Concepts
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {analysis.detailed_analysis.knowledge_graph.concepts
+                            .slice(0, 10)
+                            .map((concept, idx) => (
+                              <Badge key={idx} variant="neutral" size="sm">
+                                {concept.text} ({concept.frequency})
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              </div>
+            )}
+
             {/* Grammar Analysis */}
             {analysis.detailed_analysis.grammar && (
               <Card>
@@ -454,140 +610,7 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
               </Card>
             )}
 
-            {/* Toulmin Argument Analysis */}
-            {analysis.detailed_analysis.argumentation && (
-              <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center">
-                  <FileText className="w-5 h-5 text-tertiary mr-2" />
-                  Toulmin's Model Analysis
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-3 bg-primary-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Claims</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_claims
-                      }
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-success-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Evidence</p>
-                    <p className="text-2xl font-bold text-success-default">
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_grounds
-                      }
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-info-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Warrants</p>
-                    <p className="text-2xl font-bold text-info-default">
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_warrants
-                      }
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-warning-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Rebuttals</p>
-                    <p className="text-2xl font-bold text-warning-default">
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_rebuttals
-                      }
-                    </p>
-                  </div>
-                </div>
-                {analysis.detailed_analysis.argumentation.thesis_statement && (
-                  <div className="mt-4 p-3 bg-primary-50 rounded-rd">
-                    <p className="text-sm font-medium text-neutral-700 mb-1">
-                      Thesis Statement:
-                    </p>
-                    <p className="text-sm text-neutral-600 italic">
-                      "
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .thesis_statement.sentence
-                      }
-                      "
-                    </p>
-                  </div>
-                )}
-                <div className="mt-6">
-                  <ArgumentKnowledgeGraph
-                    graph={analysis.detailed_analysis.argumentation.graph}
-                    metrics={analysis.detailed_analysis.argumentation.metrics}
-                  />
-                </div>
-              </Card>
-            )}
-
-            {/* Knowledge Graph */}
-            {analysis.detailed_analysis.knowledge_graph && (
-              <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center">
-                  <Network className="w-5 h-5 text-secondary mr-2" />
-                  Conceptual Understanding
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-neutral-600">
-                      Concepts Identified
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {
-                        analysis.detailed_analysis.knowledge_graph.concepts
-                          .length
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-600">Relationships</p>
-                    <p className="text-lg font-semibold">
-                      {
-                        analysis.detailed_analysis.knowledge_graph.relationships
-                          .length
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-600">Connectivity</p>
-                    <p className="text-lg font-semibold">
-                      {analysis.detailed_analysis.knowledge_graph.connectivity_score.toFixed(
-                        1
-                      )}
-                      %
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-600">Graph Density</p>
-                    <p className="text-lg font-semibold">
-                      {analysis.detailed_analysis.knowledge_graph.graph_structure.density.toFixed(
-                        2
-                      )}
-                    </p>
-                  </div>
-                </div>
-                {analysis.detailed_analysis.knowledge_graph.concepts.length >
-                  0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium text-neutral-700 mb-2">
-                      Key Concepts:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.detailed_analysis.knowledge_graph.concepts
-                        .slice(0, 10)
-                        .map((concept, idx) => (
-                          <Badge key={idx} variant="neutral" size="sm">
-                            {concept.text} ({concept.frequency})
-                          </Badge>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            )}
+            {/* (Knowledge graph sections are now at the top of the detailed view) */}
           </div>
         )}
 

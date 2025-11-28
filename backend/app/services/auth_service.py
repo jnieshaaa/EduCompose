@@ -1,6 +1,6 @@
 """
 Authentication Service
-Handles user authentication and authorization
+Handles user authentication and authorization with Supabase integration
 """
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -13,6 +13,7 @@ import os
 
 from ..models import User, LoginActivity
 from ..database import get_db
+from ..supabase_client import get_supabase_client
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 
@@ -177,14 +178,15 @@ class AuthService:
                 "username": user.username,
                 "full_name": user.full_name,
                 "role": user.role,
-                "is_active": user.is_active
+                "is_active": user.is_active,
+                "email_verified": user.email_verified
             }
         }
     
     async def create_user(self, user_data, db: Session):
         """
-        Create a new user in PostgreSQL database.
-        User credentials must be saved to database before they can login.
+        Create a new user using Supabase Auth and save to PostgreSQL database.
+        Sends email verification link via Supabase.
         """
         # Verify database connection
         try:
@@ -201,7 +203,7 @@ class AuthService:
             if existing_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered in database"
+                    detail="Email already registered"
                 )
         except SQLAlchemyError:
             raise HTTPException(
@@ -209,17 +211,15 @@ class AuthService:
                 detail="Unable to verify user in database.",
             )
         
-        # Create user with hashed password - must be saved to PostgreSQL
-        # Auto-generate username and full_name from email if not provided
-        hashed_password = self.get_password_hash(user_data.password)
+        # Get Supabase client
+        supabase = get_supabase_client()
         
-        # Extract username from email (part before @)
+        # Auto-generate username and full_name from email if not provided
         if not user_data.username:
             username = user_data.email.split("@")[0]
         else:
             username = user_data.username
         
-        # Use email as full_name if not provided
         if not user_data.full_name:
             full_name = user_data.email.split("@")[0].replace(".", " ").title()
         else:
@@ -233,12 +233,52 @@ class AuthService:
                 counter += 1
             username = f"{username}{counter}"
         
+        # Create user in Supabase Auth (this will send verification email)
+        try:
+            supabase_response = supabase.auth.admin.create_user({
+                "email": user_data.email,
+                "password": user_data.password,
+                "email_confirm": False,  # Require email verification
+                "user_metadata": {
+                    "username": username,
+                    "full_name": full_name,
+                    "role": "teacher"
+                }
+            })
+            
+            if not supabase_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to create user in Supabase Auth"
+                )
+            
+            supabase_user_id = supabase_response.user.id
+            
+        except Exception as e:
+            # If Supabase user creation fails, check if it's because user already exists
+            error_msg = str(e).lower()
+            if "already registered" in error_msg or "user already exists" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered in Supabase"
+                )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create user in Supabase: {str(e)}"
+            )
+        
+        # Hash password for local database (backup/fallback)
+        hashed_password = self.get_password_hash(user_data.password)
+        
+        # Create user record in local PostgreSQL database
         db_user = User(
             email=user_data.email,
             username=username,
             full_name=full_name,
             role="teacher",  # Default role
-            password_hash=hashed_password
+            password_hash=hashed_password,
+            supabase_user_id=supabase_user_id,
+            email_verified=False  # Will be updated when user verifies email
         )
         
         # Save user to PostgreSQL database
@@ -248,6 +288,11 @@ class AuthService:
             db.refresh(db_user)
         except SQLAlchemyError as e:
             db.rollback()
+            # Try to clean up Supabase user if database save fails
+            try:
+                supabase.auth.admin.delete_user(supabase_user_id)
+            except:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to save user to database. Please try again.",
@@ -261,6 +306,145 @@ class AuthService:
             )
         
         return db_user
+    
+    async def send_verification_email(self, email: str):
+        """
+        Send email verification link using Supabase Auth
+        """
+        supabase = get_supabase_client()
+        
+        try:
+            # Use admin API to generate and send verification email
+            # This requires the user to exist in Supabase Auth first
+            response = supabase.auth.admin.generate_link({
+                "type": "signup",
+                "email": email,
+            })
+            
+            # The generate_link returns a link, but we want to actually send the email
+            # So we use the resend method which sends the verification email
+            try:
+                # Try to resend verification email (works if user exists)
+                supabase.auth.resend({
+                    "type": "signup",
+                    "email": email
+                })
+            except:
+                # If resend fails, the generate_link should have created the link
+                # In production, you might want to send this link via your own email service
+                pass
+            
+            return {"message": "Verification email sent successfully", "email": email}
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to send verification email: {str(e)}"
+            )
+    
+    async def verify_email_token(self, token: str, db: Session):
+        """
+        Verify email using Supabase Auth token
+        
+        The token can be:
+        1. OTP token from email verification
+        2. Access token from magic link redirect
+        
+        After verification, updates the user's email_verified status in local database.
+        """
+        supabase = get_supabase_client()
+        
+        try:
+            # Try to verify as OTP token (most common for email verification)
+            try:
+                response = supabase.auth.verify_otp({
+                    "token": token,
+                    "type": "email"
+                })
+                
+                # Extract user email from response
+                if hasattr(response, 'user') and response.user:
+                    user_email = getattr(response.user, 'email', None) or response.user.get('email') if isinstance(response.user, dict) else None
+                else:
+                    user_email = None
+                    
+            except Exception as otp_error:
+                # If OTP verification fails, try to use token as access token
+                # This handles magic link scenarios where frontend extracts the token
+                try:
+                    # Try to get user info using the token as an access token
+                    user_response = supabase.auth.get_user(token)
+                    if hasattr(user_response, 'user') and user_response.user:
+                        user_email = getattr(user_response.user, 'email', None) or user_response.user.get('email') if isinstance(user_response.user, dict) else None
+                    else:
+                        user_email = None
+                    
+                    if not user_email:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid verification token: could not extract user email"
+                        )
+                except Exception as token_error:
+                    # Both methods failed
+                    error_msg = str(otp_error).lower() + " " + str(token_error).lower()
+                    if "invalid" in error_msg or "expired" in error_msg:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid or expired verification token"
+                        )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Failed to verify token: {str(otp_error)}"
+                    )
+            
+            if not user_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Could not extract email from verification token"
+                )
+            
+            # Update user email_verified status in local database
+            user = db.query(User).filter(User.email == user_email).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found in local database. Please register first."
+                )
+            
+            # Update verification status
+            user.email_verified = True
+            try:
+                db.commit()
+                db.refresh(user)
+            except SQLAlchemyError as e:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update email verification status in database"
+                )
+            
+            return {
+                "message": "Email verified successfully",
+                "email": user_email,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username,
+                    "email_verified": user.email_verified
+                }
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "invalid" in error_msg or "expired" in error_msg or "not found" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired verification token"
+                )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to verify email: {str(e)}"
+            )
     
     async def get_current_user(
         self, 

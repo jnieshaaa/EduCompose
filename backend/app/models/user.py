@@ -17,6 +17,8 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, default="teacher")  # teacher, admin
     is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, default=False)
+    supabase_user_id = Column(String, unique=True, index=True, nullable=True)  # Link to Supabase Auth user
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

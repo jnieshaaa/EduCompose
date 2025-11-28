@@ -20,9 +20,20 @@ class UserInfo(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    email_verified: bool
     
     class Config:
         from_attributes = True
+
+class EmailVerificationRequest(BaseModel):
+    email: str
+
+class EmailVerificationResponse(BaseModel):
+    message: str
+    email: str
+
+class VerifyEmailToken(BaseModel):
+    token: str
 
 class LoginResponse(BaseModel):
     access_token: str

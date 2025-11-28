@@ -1,12 +1,19 @@
 """
 Authentication Controller
-Handles authentication-related endpoints
+Handles authentication-related endpoints with Supabase integration
 """
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from ..schemas import LoginRequest, UserCreate, LoginResponse
+from ..schemas import (
+    LoginRequest, 
+    UserCreate, 
+    LoginResponse,
+    EmailVerificationRequest,
+    EmailVerificationResponse,
+    VerifyEmailToken
+)
 from ..database import get_db
 from ..services import auth_service
 
@@ -56,11 +63,50 @@ async def login(
 @auth_router.post("/register")
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """
-    User registration endpoint
+    User registration endpoint with Supabase Auth integration
     
-    **IMPORTANT**: Users must be registered in PostgreSQL database before they can login.
-    This endpoint saves user credentials to PostgreSQL, and only after successful registration
-    can the user login using the same credentials.
+    Creates a new user account in both Supabase Auth and local PostgreSQL database.
+    Sends email verification link automatically via Supabase.
+    
+    **IMPORTANT**: 
+    - User must verify their email before they can fully use the system
+    - Email verification link is sent automatically upon registration
     """
-    return await auth_service.create_user(user_data, db)
+    user = await auth_service.create_user(user_data, db)
+    return {
+        "message": "User registered successfully. Please check your email for verification link.",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "email_verified": user.email_verified
+        }
+    }
+
+@auth_router.post("/send-verification-email", response_model=EmailVerificationResponse)
+async def send_verification_email(
+    request: EmailVerificationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Resend email verification link
+    
+    Sends a new email verification link to the specified email address.
+    Useful if the user didn't receive the initial verification email.
+    """
+    return await auth_service.send_verification_email(request.email)
+
+@auth_router.post("/verify-email")
+async def verify_email(
+    token_data: VerifyEmailToken,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify email address using verification token
+    
+    Verifies the user's email address using the token sent via email.
+    Updates the user's email_verified status in the database.
+    """
+    return await auth_service.verify_email_token(token_data.token, db)
 

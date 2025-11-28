@@ -435,105 +435,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       {/* Detailed Analysis Tab */}
       {activeTab === "detailed" && analysis.detailed_analysis && (
         <div className='space-y-4 mt-4'>
-          {/* Grammar Analysis */}
-          {analysis.detailed_analysis.grammar && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Grammar Analysis
-              </h4>
-              <div className='space-y-3'>
-                <div className='flex items-center justify-between'>
-                  <span className='text-sm text-neutral-600'>Score</span>
-                  <span className='font-semibold'>
-                    {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
-                  </span>
-                </div>
-                <div className='flex items-center justify-between'>
-                  <span className='text-sm text-neutral-600'>Error Count</span>
-                  <Badge
-                    variant={
-                      analysis.detailed_analysis.grammar.error_count > 10
-                        ? "error"
-                        : "warning"
-                    }
-                  >
-                    {analysis.detailed_analysis.grammar.error_count} errors
-                  </Badge>
-                </div>
-                {analysis.detailed_analysis.grammar.errors.length > 0 && (
-                  <div className='mt-4 space-y-2'>
-                    <p className='text-sm font-medium text-neutral-700'>
-                      Top Issues:
-                    </p>
-                    {analysis.detailed_analysis.grammar.errors
-                      .slice(0, 5)
-                      .map((error, idx) => (
-                        <div
-                          key={idx}
-                          className='bg-error-50 border border-error-200 rounded p-2'
-                        >
-                          <Badge variant='error' size='sm' className='mb-1'>
-                            {error.type}
-                          </Badge>
-                          <p className='text-sm text-neutral-700'>
-                            {error.message}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {/* Readability Analysis */}
-          {analysis.detailed_analysis.readability && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Readability Analysis
-              </h4>
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                <div>
-                  <p className='text-sm text-neutral-600'>
-                    Flesch Reading Ease
-                  </p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Grade Level</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Lexical Diversity</p>
-                  <p className='text-lg font-semibold'>
-                    {(
-                      analysis.detailed_analysis.readability.lexical_diversity *
-                      100
-                    ).toFixed(1)}
-                    %
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>SMOG Index</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.smog_index.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Argument Analysis */}
+          {/* Argument Analysis (Toulmin + Knowledge Graph) - moved to top */}
           {analysis.detailed_analysis.argumentation && (
             <Card>
               <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
@@ -660,6 +562,104 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                   </div>
                 </div>
               )}
+            </Card>
+          )}
+
+          {/* Grammar Analysis */}
+          {analysis.detailed_analysis.grammar && (
+            <Card>
+              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
+                Grammar Analysis
+              </h4>
+              <div className='space-y-3'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-neutral-600'>Score</span>
+                  <span className='font-semibold'>
+                    {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
+                  </span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-neutral-600'>Error Count</span>
+                  <Badge
+                    variant={
+                      analysis.detailed_analysis.grammar.error_count > 10
+                        ? "error"
+                        : "warning"
+                    }
+                  >
+                    {analysis.detailed_analysis.grammar.error_count} errors
+                  </Badge>
+                </div>
+                {analysis.detailed_analysis.grammar.errors.length > 0 && (
+                  <div className='mt-4 space-y-2'>
+                    <p className='text-sm font-medium text-neutral-700'>
+                      Top Issues:
+                    </p>
+                    {analysis.detailed_analysis.grammar.errors
+                      .slice(0, 5)
+                      .map((error, idx) => (
+                        <div
+                          key={idx}
+                          className='bg-error-50 border border-error-200 rounded p-2'
+                        >
+                          <Badge variant='error' size='sm' className='mb-1'>
+                            {error.type}
+                          </Badge>
+                          <p className='text-sm text-neutral-700'>
+                            {error.message}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Readability Analysis */}
+          {analysis.detailed_analysis.readability && (
+            <Card>
+              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
+                Readability Analysis
+              </h4>
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                <div>
+                  <p className='text-sm text-neutral-600'>
+                    Flesch Reading Ease
+                  </p>
+                  <p className='text-lg font-semibold'>
+                    {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(
+                      1
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm text-neutral-600'>Grade Level</p>
+                  <p className='text-lg font-semibold'>
+                    {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(
+                      1
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm text-neutral-600'>Lexical Diversity</p>
+                  <p className='text-lg font-semibold'>
+                    {(
+                      analysis.detailed_analysis.readability.lexical_diversity *
+                      100
+                    ).toFixed(1)}
+                    %
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm text-neutral-600'>SMOG Index</p>
+                  <p className='text-lg font-semibold'>
+                    {analysis.detailed_analysis.readability.smog_index.toFixed(
+                      1
+                    )}
+                  </p>
+                </div>
+              </div>
             </Card>
           )}
         </div>

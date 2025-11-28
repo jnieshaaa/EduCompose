@@ -5,13 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database URL - PostgreSQL required
+# Database URL - Supabase PostgreSQL connection string
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is required. Please set it to a PostgreSQL connection string.")
+    raise ValueError("DATABASE_URL environment variable is required. Please set it to your Supabase PostgreSQL connection string.")
 
-if not (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgresql+psycopg2://")):
-    raise ValueError(f"Only PostgreSQL is supported. DATABASE_URL must start with 'postgresql://' or 'postgresql+psycopg2://'. Got: {DATABASE_URL[:20]}...")
+# Accept both standard PostgreSQL and Supabase connection strings
+if not (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgresql+psycopg2://") or DATABASE_URL.startswith("postgres://")):
+    raise ValueError(f"Only PostgreSQL is supported. DATABASE_URL must start with 'postgresql://', 'postgresql+psycopg2://', or 'postgres://'. Got: {DATABASE_URL[:20]}...")
 
 # PostgreSQL configuration
 engine = create_engine(
