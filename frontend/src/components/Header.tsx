@@ -9,7 +9,7 @@ interface HeaderProps {
   isBurgerActive: boolean;
 }
 
-const user = { name: "EduCompose", email: "EduCompose@gmail.com" };
+const user = { name: "Cursor", email: "cursor@gmail.com" };
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -55,20 +55,20 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const handleLogout = () => navigate("/");
 
   return (
-    <header className="relative flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center space-x-2">
+    <header className='relative flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
+      <div className='flex items-center space-x-2'>
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-rs hover:bg-neutral-300/30"
+          className='p-2 rounded-rs hover:bg-neutral-300/30'
         >
           {isBurgerActive ? (
-            <X className="w-6 h-6 text-neutral-900" />
+            <X className='w-6 h-6 text-neutral-900' />
           ) : (
-            <Menu className="w-6 h-6 text-neutral-900" />
+            <Menu className='w-6 h-6 text-neutral-900' />
           )}
         </button>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode='wait'>
           {!isBurgerActive && (
             <motion.div
               key={currentLabel}
@@ -76,9 +76,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center space-x-2"
+              className='flex items-center space-x-2'
             >
-              <span className="relative text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group">
+              <span className='relative text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group'>
                 {currentLabel}
                 <span
                   className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 ${
@@ -92,15 +92,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
         </AnimatePresence>
       </div>
 
-      <div className="flex items-center space-x-3 relative">
+      <div className='flex items-center space-x-3 relative'>
         <div
-          className="flex items-center cursor-pointer ml-3 relative"
+          className='flex items-center cursor-pointer ml-3 relative'
           onMouseEnter={() => setIsDropdownOpen(true)}
           onMouseLeave={() => setIsDropdownOpen(false)}
         >
           <div
-            className="w-8 h-8 rounded-full border border-primary flex items-center justify-center bg-primary/20 text-sm font-semibold"
-            title="User Profile"
+            className='w-8 h-8 rounded-full border border-primary flex items-center justify-center bg-primary/20 text-sm font-semibold'
+            title='User Profile'
           >
             {user.name[0]}
           </div>
@@ -109,15 +109,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
             className={`w-3 h-3 text-black ml-1 transition-transform ${
               isDropdownOpen ? "rotate-180" : ""
             }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            fill='none'
+            stroke='currentColor'
+            viewBox='0 0 24 24'
           >
             <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 9l-7 7-7-7"
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              strokeWidth='2'
+              d='M19 9l-7 7-7-7'
             />
           </svg>
 
@@ -128,22 +128,29 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute right-0 top-12 w-48 bg-white shadow-lg rounded-rd overflow-hidden z-50"
+                className='absolute right-0 top-full pt-2 w-48 z-50'
               >
-                <div className="px-4 py-3 border-b border-neutral-300/30">
-                  <p className="font-semibold text-neutral-900">{user.name}</p>
-                  <p className="text-sm text-neutral-400">{user.email}</p>
-                </div>
-                <div className="flex flex-col">
-                  <button className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full">
-                    <Settings size={18} /> Settings
-                  </button>
-                  <button
-                    className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={18} /> Logout
-                  </button>
+                <div className='bg-white shadow-lg rounded-rd overflow-hidden'>
+                  <div className='px-4 py-3 border-b border-neutral-300/30'>
+                    <p className='font-semibold text-neutral-900'>
+                      {user.name}
+                    </p>
+                    <p className='text-sm text-neutral-400'>{user.email}</p>
+                  </div>
+                  <div className='flex flex-col'>
+                    <button
+                      className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full'
+                      onClick={() => navigate("/Settings")}
+                    >
+                      <Settings size={18} /> Settings
+                    </button>
+                    <button
+                      className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-300/30 text-neutral-900 w-full'
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={18} /> Logout
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -152,9 +159,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
       </div>
 
       {/* Top progress bar */}
-      <div className="absolute bottom-0 left-0 w-full h-[2px] rounded-full overflow-hidden">
+      <div className='absolute bottom-0 left-0 w-full h-[2px] rounded-full overflow-hidden'>
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-50"
+          className='h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-50'
           style={{ width: `${progress}%` }}
           transition={{ ease: "linear", duration: 0.1 }}
         />

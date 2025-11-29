@@ -97,7 +97,7 @@ const Tooltip: React.FC<TooltipProps> = ({
   return (
     <div
       ref={triggerRef}
-      className="relative inline-block"
+      className='relative block w-full'
       onMouseEnter={showTooltip}
       onMouseLeave={hideTooltip}
       onFocus={showTooltip}
@@ -115,7 +115,7 @@ const Tooltip: React.FC<TooltipProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.12 }}
-                className="fixed z-[1000]"
+                className='fixed z-[1000]'
                 style={{
                   top: coords.top,
                   left: coords.left,
@@ -127,7 +127,7 @@ const Tooltip: React.FC<TooltipProps> = ({
                       : "translate(0, -50%)",
                 }}
               >
-                <div className="bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap">
+                <div className='bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap'>
                   {content}
                 </div>
               </motion.div>,

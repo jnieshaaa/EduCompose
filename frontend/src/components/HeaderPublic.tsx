@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import { motion } from "framer-motion";
 import eduComposeLogo from "../assets/EduCompose.png";
 
 interface HeaderPublicProps {
@@ -10,6 +11,31 @@ interface HeaderPublicProps {
 const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<"hero" | "about">("hero");
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [logoShine, setLogoShine] = useState(false);
+
+  // Trigger shine animation on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLogoShine(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Track scroll progress
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Initial call
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const heroElement = document.getElementById("hero");
@@ -44,6 +70,9 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
   }, []);
 
   const scrollToSection = (sectionId: string) => {
+    // Trigger shine animation
+    setLogoShine(true);
+
     if (sectionId === "hero") {
       // Scroll to the very top of the page
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -62,8 +91,14 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
         {/* Logo and Site Title */}
         <Link
           to='/'
-          className='flex items-center space-x-3 group cursor-default'
+          className='flex items-center space-x-3 group cursor-default relative overflow-hidden'
         >
+          <div
+            className={`absolute top-0 left-0 w-1/3 h-full bg-gradient-to-r from-transparent via-white/60 to-transparent transform -translate-x-full z-20 ${
+              logoShine ? "animate-shine" : ""
+            } group-hover:animate-shine`}
+            onAnimationEnd={() => setLogoShine(false)}
+          ></div>
           <div className='relative cursor-default'>
             <img
               src={eduComposeLogo}
@@ -104,13 +139,15 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
               About
             </button>
           )}
-          <button
+
+          {/* Get Started button comment muna sabi ni Junie Pogi/}
+          {/* <button
             type='button'
             onClick={onLoginClick}
             className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-rd transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
           >
             Get Started
-          </button>
+          </button> */}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -170,6 +207,15 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
             Get Started
           </button>
         </div>
+      </div>
+
+      {/* Scroll progress bar */}
+      <div className='absolute top-0 left-0 w-full h-[2px] bg-gray-100'>
+        <motion.div
+          className='h-full bg-gradient-to-r from-primary-200 to-primary-100'
+          style={{ width: `${scrollProgress}%` }}
+          transition={{ ease: "linear", duration: 0.1 }}
+        />
       </div>
     </header>
   );
