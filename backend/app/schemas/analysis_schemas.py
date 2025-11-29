@@ -24,6 +24,7 @@ class TextAnalysisResponse(BaseModel):
     diagnostic_summary: Optional[Dict[str, Any]] = None
     word_count: Optional[int] = None
     generated_at: datetime
+    processing_time_seconds: Optional[float] = None
 
 class DiagnosticRecommendation(BaseModel):
     priority: str  # high, medium, low

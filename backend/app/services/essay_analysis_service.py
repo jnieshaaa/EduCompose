@@ -4,6 +4,7 @@ Comprehensive multi-dimensional essay analysis service
 """
 import nltk
 import logging
+import time
 from typing import Dict, List, Any, Tuple, Optional
 
 from ..models import Essay
@@ -74,6 +75,7 @@ class EssayAnalysisService:
         """
         Internal method to perform the actual analysis on content
         """
+        analysis_start = time.time()
         
         # Validate essay length (150-1000 words as per scope)
         word_count = len(content.split())
@@ -94,22 +96,33 @@ class EssayAnalysisService:
         coherence_analysis = {}
         argument_analysis = {}
         knowledge_graph = {}
+        timing_info = {}
         
         if analysis_type in ["grammar", "comprehensive"]:
+            start = time.time()
             grammar_analysis = self.grammar_analyzer.analyze(content)
+            timing_info["grammar"] = round(time.time() - start, 2)
         
         if analysis_type in ["readability", "comprehensive"]:
+            start = time.time()
             readability_analysis = self.readability_analyzer.analyze(content)
+            timing_info["readability"] = round(time.time() - start, 2)
         
         if analysis_type in ["coherence", "comprehensive"]:
+            start = time.time()
             coherence_analysis = self.coherence_analyzer.analyze(content)
+            timing_info["coherence"] = round(time.time() - start, 2)
         
         if analysis_type in ["argument", "comprehensive"]:
+            start = time.time()
             argument_analysis = self.argument_miner.analyze(content)
+            timing_info["argument"] = round(time.time() - start, 2)
         
         if analysis_type == "comprehensive":
             # Knowledge graph analysis only for comprehensive analysis
+            start = time.time()
             knowledge_graph = self.knowledge_graph_builder.build(content)
+            timing_info["knowledge_graph"] = round(time.time() - start, 2)
 
         argument_graph, argument_support_stats = self._build_argument_graph(argument_analysis)
         argument_metrics = self._calculate_argument_metrics(argument_analysis, argument_support_stats)
@@ -211,12 +224,28 @@ class EssayAnalysisService:
         # Generate diagnostic summary for teachers
         diagnostic_summary = self._generate_diagnostic_summary(scores, detailed_analysis)
         
+        # Calculate total processing time
+        total_time = time.time() - analysis_start
+        timing_info["total"] = round(total_time, 2)
+        
+        # Log timing breakdown
+        logger.info(
+            f"Analysis timing breakdown - "
+            f"Total: {timing_info.get('total', 0):.2f}s, "
+            f"Grammar: {timing_info.get('grammar', 0):.2f}s, "
+            f"Readability: {timing_info.get('readability', 0):.2f}s, "
+            f"Coherence: {timing_info.get('coherence', 0):.2f}s, "
+            f"Argument: {timing_info.get('argument', 0):.2f}s, "
+            f"KG: {timing_info.get('knowledge_graph', 0):.2f}s"
+        )
+        
         return {
             "scores": scores,
             "detailed_analysis": detailed_analysis,
             "recommendations": recommendations,
             "diagnostic_summary": diagnostic_summary,
             "word_count": word_count,
+            "timing_info": timing_info,
             "analysis_type": analysis_type
         }
     

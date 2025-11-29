@@ -2,9 +2,11 @@
 Analysis Controller
 Handles essay analysis endpoints
 """
+import time
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
+import logging
 
 from ..models import User, Essay
 from ..schemas import (
@@ -15,6 +17,7 @@ from ..database import get_db
 from ..services import auth_service, essay_analysis_service
 
 analysis_router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @analysis_router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_essay(
@@ -118,12 +121,16 @@ async def analyze_text(
     Analyze raw essay text directly without requiring authentication or database entry.
     Useful for landing page and quick analysis.
     """
+    start_time = time.time()
+    
     # Perform analysis
     analysis_result = await essay_analysis_service.analyze_text(
         request.text, 
         request.title, 
         request.analysis_type
     )
+    
+    processing_time = time.time() - start_time
     
     # Check for errors
     if "error" in analysis_result:
@@ -132,14 +139,23 @@ async def analyze_text(
             detail=analysis_result.get("message", "Analysis failed")
         )
     
+    # Log processing time
+    word_count = analysis_result.get("word_count", 0)
+    logger.info(
+        f"Analysis completed - Type: {request.analysis_type}, "
+        f"Words: {word_count}, Time: {processing_time:.2f}s "
+        f"({processing_time/60:.2f} min)"
+    )
+    
     return TextAnalysisResponse(
         analysis_type=request.analysis_type,
         scores=analysis_result["scores"],
         detailed_analysis=analysis_result["detailed_analysis"],
         recommendations=analysis_result["recommendations"],
         diagnostic_summary=analysis_result.get("diagnostic_summary"),
-        word_count=analysis_result.get("word_count"),
-        generated_at=datetime.utcnow()
+        word_count=word_count,
+        generated_at=datetime.utcnow(),
+        processing_time_seconds=round(processing_time, 2)
     )
 
 @analysis_router.get("/dashboard-stats")

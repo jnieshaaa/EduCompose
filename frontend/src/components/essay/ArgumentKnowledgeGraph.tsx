@@ -49,8 +49,8 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
       }
       const { width, height } = entries[0].contentRect;
       setDimensions({
-        width: Math.max(320, width),
-        height: Math.max(400, height),
+        width: Math.max(600, width),
+        height: Math.max(600, height),
       });
     });
 
@@ -63,29 +63,96 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
       return { nodes: [], links: [] };
     }
 
-    const nodes = graph.nodes.map((node, idx) => ({
-      ...node,
-      x: idx,
-      y:
-        node.type === "thesis"
-          ? 0
-          : node.type === "claim"
-          ? 1
-          : node.type === "evidence"
-          ? 2
-          : node.type === "warrant"
-          ? 3
-          : 4,
-    })) as ForceNode[];
+    // Improved initial positioning using hierarchical layout
+    const centerX = dimensions.width / 2;
+    const centerY = dimensions.height / 2;
+    const layerDistance = 150; // Distance between layers
+    
+    // Group nodes by type for better layout
+    const nodesByType: Record<string, ArgumentGraphNode[]> = {
+      thesis: [],
+      claim: [],
+      evidence: [],
+      warrant: [],
+      rebuttal: [],
+    };
+    
+    graph.nodes.forEach((node) => {
+      if (nodesByType[node.type]) {
+        nodesByType[node.type].push(node);
+      }
+    });
 
-    const links = (graph.edges || []).map((edge) => ({
-      source: edge.source,
-      target: edge.target,
-      type: edge.type,
-    })) as ForceLink[];
+    // Position nodes in hierarchical layers
+    const nodes: ForceNode[] = graph.nodes.map((node, idx) => {
+      let x = 0, y = 0;
+      
+      if (node.type === "thesis") {
+        // Thesis at center
+        x = centerX;
+        y = centerY;
+      } else if (node.type === "claim") {
+        // Claims in a circle around thesis
+        const claimIndex = nodesByType.claim.findIndex((n) => n.id === node.id);
+        const totalClaims = nodesByType.claim.length;
+        const angle = (claimIndex / totalClaims) * Math.PI * 2;
+        const radius = layerDistance * 0.8;
+        x = centerX + Math.cos(angle) * radius;
+        y = centerY + Math.sin(angle) * radius;
+      } else if (node.type === "evidence") {
+        // Evidence below claims
+        const evidenceIndex = nodesByType.evidence.findIndex((n) => n.id === node.id);
+        const totalEvidence = nodesByType.evidence.length;
+        const spacing = dimensions.width / (totalEvidence + 1);
+        x = spacing * (evidenceIndex + 1);
+        y = centerY + layerDistance * 1.2;
+      } else if (node.type === "warrant") {
+        // Warrants to the sides
+        const warrantIndex = nodesByType.warrant.findIndex((n) => n.id === node.id);
+        const totalWarrants = nodesByType.warrant.length;
+        const angle = (warrantIndex / totalWarrants) * Math.PI * 2;
+        const radius = layerDistance * 1.2;
+        x = centerX + Math.cos(angle) * radius;
+        y = centerY + Math.sin(angle) * radius;
+      } else if (node.type === "rebuttal") {
+        // Rebuttals at top
+        const rebuttalIndex = nodesByType.rebuttal.findIndex((n) => n.id === node.id);
+        const totalRebuttals = nodesByType.rebuttal.length;
+        const spacing = dimensions.width / (totalRebuttals + 1);
+        x = spacing * (rebuttalIndex + 1);
+        y = centerY - layerDistance * 1.2;
+      } else {
+        // Default: random placement
+        x = centerX + (Math.random() - 0.5) * 200;
+        y = centerY + (Math.random() - 0.5) * 200;
+      }
+
+      return {
+        ...node,
+        x,
+        y,
+      } as ForceNode;
+    });
+
+    // Map edge sources/targets to actual node objects
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const links: ForceLink[] = (graph.edges || [])
+      .map((edge) => {
+        const sourceNode = nodeMap.get(edge.source);
+        const targetNode = nodeMap.get(edge.target);
+        if (sourceNode && targetNode) {
+          return {
+            source: sourceNode,
+            target: targetNode,
+            type: edge.type,
+          };
+        }
+        return null;
+      })
+      .filter((link): link is ForceLink => link !== null);
 
     return { nodes, links };
-  }, [graph]);
+  }, [graph, dimensions.width, dimensions.height]);
 
   const strengthMetrics: ArgumentStrengthMetric[] = useMemo(() => {
     return metrics?.argument_strength ?? [];
@@ -97,7 +164,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         <div className="w-full">
           <div
             ref={containerRef}
-            className="w-full h-96 md:h-[500px] bg-neutral-50 border border-neutral-200 rounded-rd"
+            className="w-full h-[600px] md:h-[700px] bg-neutral-50 border border-neutral-200 rounded-rd"
           >
             {graphData.nodes.length > 0 ? (
               <ForceGraph2D
@@ -105,31 +172,87 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 height={dimensions.height}
                 graphData={graphData}
                 backgroundColor="rgba(249,250,251,1)"
+                // Force simulation parameters for better spacing
+                cooldownTicks={100}
+                onEngineStop={() => {
+                  // Force simulation complete
+                }}
                 nodeCanvasObject={(node: ForceNode, ctx, globalScale) => {
                   const label = node.text ?? "";
-                  // Scale text size with zoom: smaller when zoomed in, larger when zoomed out
-                  // globalScale < 1 = zoomed out, globalScale > 1 = zoomed in
-                  // Use inverse scaling so text shrinks when zoomed in
-                  const baseFontSize = 12;
-                  const fontSize = Math.max(8, Math.min(16, baseFontSize / Math.sqrt(globalScale)));
                   const color = NODE_COLORS[node.type] || "#0f172a";
                   const nodeX = typeof node.x === "number" ? node.x : 0;
                   const nodeY = typeof node.y === "number" ? node.y : 0;
+                  
+                  // Larger nodes based on type
+                  const nodeRadius = node.type === "thesis" ? 12 : 
+                                    node.type === "claim" ? 10 : 8;
 
+                  // Draw node circle
                   ctx.beginPath();
                   ctx.fillStyle = color;
-                  ctx.arc(nodeX, nodeY, 6, 0, 2 * Math.PI, false);
+                  ctx.arc(nodeX, nodeY, nodeRadius, 0, 2 * Math.PI, false);
                   ctx.fill();
+                  
+                  // Add white border for contrast
+                  ctx.strokeStyle = "#ffffff";
+                  ctx.lineWidth = 2;
+                  ctx.stroke();
 
+                  // Improved text rendering with word wrapping
+                  const baseFontSize = 11;
+                  const fontSize = Math.max(9, Math.min(14, baseFontSize / Math.sqrt(globalScale)));
                   ctx.font = `${fontSize}px Inter, sans-serif`;
                   ctx.textAlign = "center";
-                  ctx.textBaseline = "top";
+                  ctx.textBaseline = "middle";
                   ctx.fillStyle = "#1f2937";
-                  // Adjust text truncation based on zoom level (more text when zoomed in)
-                  const maxLength = globalScale > 1.5 ? 50 : globalScale > 1 ? 40 : 30;
-                  const text =
-                    label.length > maxLength ? `${label.slice(0, maxLength - 3)}...` : label;
-                  ctx.fillText(text, nodeX, nodeY + 8);
+                  
+                  // Word wrap text for better readability
+                  const maxWidth = 120; // Maximum width for text
+                  const words = label.split(" ");
+                  const lines: string[] = [];
+                  let currentLine = "";
+                  
+                  words.forEach((word) => {
+                    const testLine = currentLine + (currentLine ? " " : "") + word;
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > maxWidth && currentLine) {
+                      lines.push(currentLine);
+                      currentLine = word;
+                    } else {
+                      currentLine = testLine;
+                    }
+                  });
+                  if (currentLine) lines.push(currentLine);
+                  
+                  // Limit to 3 lines max
+                  const displayLines = lines.slice(0, 3);
+                  if (lines.length > 3) {
+                    displayLines[2] = displayLines[2].slice(0, -3) + "...";
+                  }
+                  
+                  // Draw text with background for readability
+                  const lineHeight = fontSize * 1.3;
+                  const textHeight = displayLines.length * lineHeight;
+                  const textY = nodeY + nodeRadius + 8;
+                  
+                  // Add semi-transparent background behind text
+                  if (displayLines.length > 0) {
+                    const textWidth = Math.max(...displayLines.map(line => ctx.measureText(line).width));
+                    const padding = 4;
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+                    ctx.fillRect(
+                      nodeX - textWidth / 2 - padding,
+                      textY - lineHeight / 2 - padding,
+                      textWidth + padding * 2,
+                      textHeight + padding * 2
+                    );
+                  }
+                  
+                  // Draw each line of text
+                  ctx.fillStyle = "#1f2937";
+                  displayLines.forEach((line, idx) => {
+                    ctx.fillText(line, nodeX, textY + idx * lineHeight);
+                  });
                 }}
                 linkColor={(link: ForceLink) =>
                   LINK_COLORS[link.type ?? "supports"] || "#94a3b8"
@@ -137,9 +260,13 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 linkWidth={(link: ForceLink) =>
                   link.type === "rebuts" ? 2.5 : 1.5
                 }
-                linkDirectionalArrowLength={4}
+                linkDirectionalArrowLength={6}
                 linkDirectionalParticles={0}
-                nodeRelSize={6}
+                // Better force simulation parameters
+                nodeRelSize={10}
+                linkDistance={120}
+                linkStrength={0.3}
+                nodeRepulsion={1800}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-neutral-500">
