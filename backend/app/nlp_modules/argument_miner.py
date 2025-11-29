@@ -33,7 +33,10 @@ class ArgumentMiner:
         self.claim_indicators = [
             "i believe", "i think", "i argue", "i claim", "i propose",
             "thesis", "main point", "position", "viewpoint", "opinion",
-            "should", "must", "ought to", "need to", "is necessary"
+            "should", "must", "ought to", "need to", "is necessary",
+            "the primary", "the main", "the key", "the central",
+            "ultimately", "in conclusion", "requires", "defines",
+            "presents", "demonstrates that", "shows that"
         ]
         
         # Evidence/ground indicators
@@ -41,14 +44,20 @@ class ArgumentMiner:
             "for example", "for instance", "specifically", "according to",
             "research shows", "studies indicate", "evidence suggests",
             "data shows", "statistics", "findings", "demonstrates",
-            "proves", "illustrates", "supports", "indicates"
+            "proves", "illustrates", "supports", "indicates",
+            "today", "in", "when", "if one", "the user",
+            "streaming", "online", "platform", "services offer",
+            "can become", "leads to", "results in"
         ]
         
         # Warrant indicators (reasoning/justification)
         self.warrant_indicators = [
             "because", "since", "due to", "as a result of", "therefore",
             "thus", "consequently", "hence", "so", "this means",
-            "which implies", "suggests that", "indicates that"
+            "which implies", "suggests that", "indicates that",
+            "makes", "forces", "causes", "overwhelmed by",
+            "the brain", "defaults to", "attributed to",
+            "the promise of", "makes the reality", "leads to"
         ]
         
         # Rebuttal indicators
@@ -56,13 +65,14 @@ class ArgumentMiner:
             "however", "although", "even though", "despite", "nevertheless",
             "on the other hand", "in contrast", "some may argue",
             "it could be argued", "critics claim", "opponents argue",
-            "admittedly", "granted", "while it is true"
+            "admittedly", "granted", "while it is true",
+            "yet", "but", "rather", "instead"
         ]
     
     def _ensure_nlp_loaded(self):
         """Ensure spaCy is loaded (lazy loading)"""
         if self.nlp is None:
-            self.nlp = load_spacy_model("en_core_web_sm")
+            self.nlp = load_spacy_model("en_core_web_lg")
     
     def _ensure_transformer_classifier_loaded(self):
         """Lazy load transformer-based claim classifier if requested and available"""
@@ -181,14 +191,17 @@ class ArgumentMiner:
         if not paragraphs:
             return None
         
-        first_paragraph = paragraphs[0].lower()
-        text_lower = first_paragraph
+        first_paragraph = paragraphs[0]
+        text_lower = first_paragraph.lower()
+        sentences = self._segment_sentences(first_paragraph)
         
-        # Check for thesis indicators
+        if not sentences:
+            return None
+        
+        # Check for explicit thesis indicators
         for indicator in self.claim_indicators:
             if indicator in text_lower:
                 # Find sentence containing indicator
-                sentences = self._segment_sentences(paragraphs[0])
                 for sentence in sentences:
                     if indicator in sentence.lower():
                         return {
@@ -197,15 +210,45 @@ class ArgumentMiner:
                             "confidence": "high"
                         }
         
-        # If no clear indicator, return first sentence as potential thesis
-        if paragraphs[0]:
-            sentences = self._segment_sentences(paragraphs[0])
-            if sentences:
+        # Enhanced: Look for thesis patterns - often contains contrast/paradox language
+        thesis_patterns = [
+            "paradox", "yet", "however", "but", "although",
+            "while", "despite", "tension between", "conflict",
+            "challenge", "problem", "issue"
+        ]
+        
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+            # Thesis often contains contrasting ideas
+            has_contrast = any(pattern in sentence_lower for pattern in thesis_patterns)
+            # Thesis is usually substantial (not too short)
+            is_substantial = len(sentence.split()) >= 10
+            # Thesis often appears early in first paragraph
+            if has_contrast and is_substantial:
                 return {
-                    "sentence": sentences[0],
+                    "sentence": sentence,
+                    "paragraph": 0,
+                    "confidence": "high"
+                }
+        
+        # Look for the longest, most complex sentence in first paragraph (often the thesis)
+        if sentences:
+            longest_sentence = max(sentences, key=lambda s: len(s.split()))
+            # If it's substantial and appears in first half of paragraph
+            if len(longest_sentence.split()) >= 15 and sentences.index(longest_sentence) < len(sentences) / 2:
+                return {
+                    "sentence": longest_sentence,
                     "paragraph": 0,
                     "confidence": "medium"
                 }
+        
+        # Fallback: return first sentence as potential thesis
+        if sentences:
+            return {
+                "sentence": sentences[0],
+                "paragraph": 0,
+                "confidence": "medium"
+            }
         
         return None
     
@@ -245,7 +288,9 @@ class ArgumentMiner:
         
         # Fallback to pattern-based extraction
         text_lower = text.lower()
+        found_indices = set()
         
+        # Pattern-based extraction for explicit claims
         for i, sentence in enumerate(sentences):
             sentence_lower = sentence.lower()
             for indicator in self.claim_indicators:
@@ -257,24 +302,60 @@ class ArgumentMiner:
                         "type": "claim",
                         "classification_method": "pattern"
                     })
+                    found_indices.add(i)
                     break
         
-        # If no explicit claims found, identify assertive statements
+        # Enhanced: Identify topic sentences (first sentence of each paragraph) as potential claims
         self._ensure_nlp_loaded()
-        if not claims and self.nlp:
-            for i, sentence in enumerate(sentences[:5]):  # Check first 5 sentences
-                doc = self.nlp(sentence)
+        if self.nlp:
+            paragraphs = self._segment_paragraphs(text)
+            for para_idx, paragraph in enumerate(paragraphs):
+                para_sentences = self._segment_sentences(paragraph)
+                if para_sentences:
+                    # First sentence of paragraph is often a claim/topic sentence
+                    first_sent = para_sentences[0]
+                    # Find its index in full sentence list
+                    for i, sent in enumerate(sentences):
+                        if first_sent.strip() == sent.strip() and i not in found_indices:
+                            # Check if it's assertive (not a question, has subject-verb structure)
+                            doc = self.nlp(sent)
+                            if len(doc) > 5 and not sent.strip().endswith('?'):
+                                claims.append({
+                                    "sentence_index": i,
+                                    "sentence": sent,
+                                    "indicator": "topic_sentence",
+                                    "type": "claim",
+                                    "classification_method": "structural"
+                                })
+                                found_indices.add(i)
+                            break
+        
+        # Enhanced: Identify assertive statements with strong verbs
+        if self.nlp:
+            assertive_verbs = ["presents", "defines", "demonstrates", "shows", "reveals", 
+                              "requires", "necessitates", "establishes", "creates", "leads to",
+                              "results in", "causes", "amplifies", "manifests"]
+            for i, sentence in enumerate(sentences):
+                if i in found_indices:
+                    continue
                 sentence_lower = sentence.lower()
-                # Check for modal verbs indicating claims
-                has_modal = any(token.tag_ in ["MD"] for token in doc)
-                if has_modal or any(word in sentence_lower for word in ["should", "must", "is", "are"]):
+                doc = self.nlp(sentence)
+                # Check for assertive verbs
+                has_assertive = any(token.lemma_.lower() in assertive_verbs for token in doc)
+                # Check for declarative structure (not question)
+                is_declarative = not sentence.strip().endswith('?')
+                # Check length (claims are usually substantial)
+                is_substantial = len(doc) >= 8
+                
+                if has_assertive and is_declarative and is_substantial:
                     claims.append({
                         "sentence_index": i,
                         "sentence": sentence,
-                        "indicator": "implicit",
+                        "indicator": "assertive_statement",
                         "type": "claim",
-                        "classification_method": "pattern"
+                        "classification_method": "semantic"
                     })
+                    found_indices.add(i)
         
         return claims
     
@@ -318,6 +399,8 @@ class ArgumentMiner:
                 continue  # Already found by transformer
             
             sentence_lower = sentence.lower()
+            
+            # Pattern-based indicators
             for indicator in self.evidence_indicators:
                 if indicator in sentence_lower:
                     grounds.append({
@@ -327,7 +410,46 @@ class ArgumentMiner:
                         "type": "evidence",
                         "classification_method": "pattern"
                     })
+                    pattern_found_indices.add(i)
                     break
+        
+        # Enhanced: Detect examples and concrete instances as evidence
+        self._ensure_nlp_loaded()
+        if self.nlp:
+            example_markers = ["such as", "like", "including", "such as"]
+            concrete_nouns = ["platform", "service", "retailer", "application", "website",
+                            "movie", "product", "content", "option", "choice"]
+            
+            for i, sentence in enumerate(sentences):
+                if i in pattern_found_indices:
+                    continue
+                
+                sentence_lower = sentence.lower()
+                doc = self.nlp(sentence)
+                
+                # Check for example markers
+                has_example_marker = any(marker in sentence_lower for marker in example_markers)
+                
+                # Check for concrete nouns (specific instances)
+                has_concrete = any(token.text.lower() in concrete_nouns for token in doc)
+                
+                # Check for specific details (numbers, proper nouns, specific entities)
+                has_details = any(token.tag_ in ["CD", "NNP", "NNPS"] for token in doc)
+                
+                # Check for temporal indicators (specific time periods)
+                has_temporal = any(word in sentence_lower for word in ["today", "in", "when", "during", "today,"])
+                
+                # Evidence often describes specific scenarios or examples
+                if (has_example_marker or (has_concrete and has_details)) or \
+                   (has_temporal and len([t for t in doc if t.pos_ == "NOUN"]) >= 2):
+                    grounds.append({
+                        "sentence_index": i,
+                        "sentence": sentence,
+                        "indicator": "concrete_instance",
+                        "type": "evidence",
+                        "classification_method": "semantic"
+                    })
+                    pattern_found_indices.add(i)
         
         return grounds
     
@@ -335,7 +457,9 @@ class ArgumentMiner:
         """Extract warrant statements (reasoning/justification)"""
         warrants = []
         text_lower = text.lower()
+        found_indices = set()
         
+        # Pattern-based extraction
         for i, sentence in enumerate(sentences):
             sentence_lower = sentence.lower()
             for indicator in self.warrant_indicators:
@@ -344,9 +468,55 @@ class ArgumentMiner:
                         "sentence_index": i,
                         "sentence": sentence,
                         "indicator": indicator,
-                        "type": "warrant"
+                        "type": "warrant",
+                        "classification_method": "pattern"
                     })
+                    found_indices.add(i)
                     break
+        
+        # Enhanced: Detect explanatory/causal reasoning sentences
+        self._ensure_nlp_loaded()
+        if self.nlp:
+            causal_verbs = ["causes", "leads to", "results in", "creates", "produces",
+                           "generates", "triggers", "forces", "makes", "enables",
+                           "allows", "prevents", "blocks", "defaults to"]
+            explanatory_phrases = ["this means", "which means", "this suggests",
+                                  "this indicates", "this implies", "as a result",
+                                  "the result is", "the consequence"]
+            
+            for i, sentence in enumerate(sentences):
+                if i in found_indices:
+                    continue
+                
+                sentence_lower = sentence.lower()
+                doc = self.nlp(sentence)
+                
+                # Check for causal verbs
+                has_causal = any(verb in sentence_lower for verb in causal_verbs)
+                
+                # Check for explanatory phrases
+                has_explanatory = any(phrase in sentence_lower for phrase in explanatory_phrases)
+                
+                # Check for sentences that explain "why" (often contain "for" or "to" + verb)
+                has_reasoning = any(word in sentence_lower for word in ["due to", "because of", 
+                                                                       "attributed to", "the fault lies"])
+                
+                # Check for sentences explaining psychological/mental processes
+                mental_terms = ["brain", "mind", "cognitive", "psychological", "mental",
+                               "overwhelmed", "exhausting", "feel", "think", "perceive"]
+                has_mental = any(term in sentence_lower for term in mental_terms)
+                
+                # Warrants often explain consequences or mechanisms
+                if (has_causal or has_explanatory or has_reasoning) or \
+                   (has_mental and len(doc) >= 10):
+                    warrants.append({
+                        "sentence_index": i,
+                        "sentence": sentence,
+                        "indicator": "explanatory_reasoning",
+                        "type": "warrant",
+                        "classification_method": "semantic"
+                    })
+                    found_indices.add(i)
         
         return warrants
     

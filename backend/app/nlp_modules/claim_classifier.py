@@ -396,7 +396,7 @@ class TransformerClaimClassifier:
         from .spacy_utils import load_spacy_model
         
         # Segment into sentences
-        nlp = load_spacy_model("en_core_web_sm")
+        nlp = load_spacy_model("en_core_web_lg")
         if nlp:
             doc = nlp(text)
             sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]

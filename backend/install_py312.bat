@@ -41,11 +41,11 @@ if errorlevel 1 (
 )
 
 echo.
-echo Step 3: Downloading spaCy English model...
-python -m spacy download en_core_web_sm
+echo Step 3: Downloading spaCy English model (large)...
+python -m spacy download en_core_web_lg
 if errorlevel 1 (
     echo WARNING: Failed to download spaCy model. You may need to run this manually:
-    echo python -m spacy download en_core_web_sm
+    echo python -m spacy download en_core_web_lg
 )
 
 echo.
