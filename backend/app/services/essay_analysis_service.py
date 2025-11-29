@@ -235,11 +235,11 @@ class EssayAnalysisService:
         }
         support_stats: Dict[str, Dict[str, Any]] = {}
 
-        if not argument_analysis:
+        if not argument_analysis or not isinstance(argument_analysis, dict):
             return graph, support_stats
 
         thesis = argument_analysis.get("thesis_statement")
-        if thesis and thesis.get("sentence"):
+        if thesis and isinstance(thesis, dict) and thesis.get("sentence"):
             graph["nodes"].append({
                 "id": "thesis",
                 "type": "thesis",
@@ -247,18 +247,31 @@ class EssayAnalysisService:
                 "confidence": thesis.get("confidence", "")
             })
 
+        # Ensure claims is a list
+        claims_list = argument_analysis.get("claims", [])
+        if not isinstance(claims_list, list):
+            claims_list = []
+            
         claims = sorted(
-            argument_analysis.get("claims", []),
-            key=lambda c: c.get("sentence_index", 0)
+            claims_list,
+            key=lambda c: c.get("sentence_index", 0) if isinstance(c, dict) else 0
         )
 
         claim_nodes: List[Dict[str, Any]] = []
         for idx, claim in enumerate(claims, start=1):
+            if not isinstance(claim, dict):
+                continue
+                
+            # Get sentence text from multiple possible fields
+            sentence_text = claim.get("sentence", claim.get("text", ""))
+            if not sentence_text:
+                continue  # Skip claims without text
+                
             claim_id = f"claim_{idx}"
             claim_node = {
                 "id": claim_id,
                 "type": "claim",
-                "text": claim.get("sentence", ""),
+                "text": sentence_text,
                 "sentence_index": claim.get("sentence_index", idx),
                 "indicator": claim.get("indicator")
             }
@@ -268,12 +281,12 @@ class EssayAnalysisService:
             claim_nodes.append(claim_with_id)
             support_stats[claim_id] = {
                 "claim_id": claim_id,
-                "claim": claim.get("sentence", ""),
+                "claim": sentence_text,
                 "evidence": 0,
                 "warrants": 0,
                 "rebuttals": 0
             }
-            if thesis and thesis.get("sentence"):
+            if thesis and isinstance(thesis, dict) and thesis.get("sentence"):
                 graph["edges"].append({
                     "source": "thesis",
                     "target": claim_id,
@@ -291,46 +304,95 @@ class EssayAnalysisService:
             return ordered[0]["id"] if ordered else None
 
         def add_node_with_edge(items: List[Dict[str, Any]], node_type: str, edge_type: str) -> None:
-            ordered_items = sorted(items, key=lambda item: item.get("sentence_index", 0))
+            if not isinstance(items, list):
+                return
+            # Filter out invalid items
+            valid_items = [item for item in items if isinstance(item, dict)]
+            ordered_items = sorted(valid_items, key=lambda item: item.get("sentence_index", 0) if isinstance(item, dict) else 0)
             for idx, item in enumerate(ordered_items, start=1):
+                if not isinstance(item, dict):
+                    continue
                 node_id = f"{node_type}_{idx}"
+                # Ensure we have sentence text - check multiple possible fields
+                sentence_text = item.get("sentence", item.get("text", ""))
+                if not sentence_text or not isinstance(sentence_text, str):
+                    continue  # Skip if no text
+                    
                 graph["nodes"].append({
                     "id": node_id,
                     "type": node_type,
-                    "text": item.get("sentence", ""),
+                    "text": sentence_text,
                     "sentence_index": item.get("sentence_index", idx)
                 })
                 claim_id = find_supporting_claim(item.get("sentence_index", 0))
                 if claim_id:
-                    graph["edges"].append({
-                        "source": claim_id,
-                        "target": node_id,
-                        "type": edge_type
-                    })
+                    # Fix edge direction: evidence/warrant should point TO claim (evidence supports claim)
                     if node_type == "evidence":
+                        graph["edges"].append({
+                            "source": node_id,  # Evidence points to claim
+                            "target": claim_id,
+                            "type": edge_type
+                        })
                         support_stats[claim_id]["evidence"] += 1
                     elif node_type == "warrant":
+                        graph["edges"].append({
+                            "source": node_id,  # Warrant points to claim
+                            "target": claim_id,
+                            "type": edge_type
+                        })
                         support_stats[claim_id]["warrants"] += 1
+                    else:
+                        # For other types, use original direction
+                        graph["edges"].append({
+                            "source": claim_id,
+                            "target": node_id,
+                            "type": edge_type
+                        })
                 elif thesis and thesis.get("sentence"):
-                    graph["edges"].append({
-                        "source": "thesis",
-                        "target": node_id,
-                        "type": edge_type
-                    })
+                    # If no claim found, connect to thesis
+                    if node_type == "evidence":
+                        graph["edges"].append({
+                            "source": node_id,  # Evidence points to thesis
+                            "target": "thesis",
+                            "type": edge_type
+                        })
+                    else:
+                        graph["edges"].append({
+                            "source": "thesis",
+                            "target": node_id,
+                            "type": edge_type
+                        })
 
-        add_node_with_edge(argument_analysis.get("grounds", []), "evidence", "supports")
-        add_node_with_edge(argument_analysis.get("warrants", []), "warrant", "elaborates")
+        # Get grounds/evidence - check multiple possible field names
+        grounds = argument_analysis.get("grounds", argument_analysis.get("evidence", []))
+        if not isinstance(grounds, list):
+            grounds = []
+        add_node_with_edge(grounds, "evidence", "supports")
+        
+        warrants_list = argument_analysis.get("warrants", [])
+        if not isinstance(warrants_list, list):
+            warrants_list = []
+        add_node_with_edge(warrants_list, "warrant", "elaborates")
 
+        rebuttals_list = argument_analysis.get("rebuttals", [])
+        if not isinstance(rebuttals_list, list):
+            rebuttals_list = []
         rebuttals = sorted(
-            argument_analysis.get("rebuttals", []),
-            key=lambda r: r.get("sentence_index", 0)
+            rebuttals_list,
+            key=lambda r: r.get("sentence_index", 0) if isinstance(r, dict) else 0
         )
         for idx, rebuttal in enumerate(rebuttals, start=1):
+            if not isinstance(rebuttal, dict):
+                continue
+            sentence_text = rebuttal.get("sentence", rebuttal.get("text", ""))
+            if not sentence_text:
+                continue
+                
             node_id = f"rebuttal_{idx}"
             graph["nodes"].append({
                 "id": node_id,
                 "type": "rebuttal",
-                "text": rebuttal.get("sentence", ""),
+                "text": sentence_text,
                 "sentence_index": rebuttal.get("sentence_index", idx)
             })
             claim_id = find_supporting_claim(rebuttal.get("sentence_index", 0))
@@ -341,7 +403,7 @@ class EssayAnalysisService:
                     "type": "rebuts"
                 })
                 support_stats[claim_id]["rebuttals"] += 1
-            elif thesis and thesis.get("sentence"):
+            elif thesis and isinstance(thesis, dict) and thesis.get("sentence"):
                 graph["edges"].append({
                     "source": node_id,
                     "target": "thesis",

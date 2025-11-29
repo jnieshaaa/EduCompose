@@ -50,7 +50,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
       const { width, height } = entries[0].contentRect;
       setDimensions({
         width: Math.max(320, width),
-        height: Math.max(260, height),
+        height: Math.max(400, height),
       });
     });
 
@@ -97,7 +97,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         <div className="w-full">
           <div
             ref={containerRef}
-            className="w-full h-64 md:h-72 bg-neutral-50 border border-neutral-200 rounded-rd"
+            className="w-full h-96 md:h-[500px] bg-neutral-50 border border-neutral-200 rounded-rd"
           >
             {graphData.nodes.length > 0 ? (
               <ForceGraph2D

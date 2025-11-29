@@ -11,13 +11,13 @@ import {
   Target,
   ArrowRight,
   Award,
-  Loader2,
   X,
 } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
 import Modal from "../ui/Modal";
+import KnowledgeGraphLoader from "../ui/KnowledgeGraphLoader";
 import ArgumentKnowledgeGraph from "./ArgumentKnowledgeGraph";
 import type {
   AnalysisResponse,
@@ -50,8 +50,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   isOpen: externalIsOpen,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "detailed" | "recommendations"
-  >("overview");
+    "analysis" | "essay" | "recommendations"
+  >("analysis");
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "success";
@@ -75,15 +75,34 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "high":
-        return <AlertTriangle className='w-4 h-4' />;
+        return <AlertTriangle className="w-4 h-4" />;
       case "medium":
-        return <AlertCircle className='w-4 h-4' />;
+        return <AlertCircle className="w-4 h-4" />;
       case "low":
-        return <CheckCircle className='w-4 h-4' />;
+        return <CheckCircle className="w-4 h-4" />;
       default:
-        return <Lightbulb className='w-4 h-4' />;
+        return <Lightbulb className="w-4 h-4" />;
     }
   };
+
+  // Group grammar errors by category/type
+  const groupedGrammarErrors = useMemo(() => {
+    if (!analysis?.detailed_analysis?.grammar?.errors) return {};
+
+    const grouped: Record<
+      string,
+      typeof analysis.detailed_analysis.grammar.errors
+    > = {};
+    analysis.detailed_analysis.grammar.errors.forEach((error) => {
+      const category = error.type || "grammar";
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(error);
+    });
+
+    return grouped;
+  }, [analysis]);
 
   const highlightData = useMemo(() => {
     const grammarErrors = analysis?.detailed_analysis?.grammar?.errors ?? [];
@@ -157,16 +176,17 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose || (() => {})}
-        size='xl'
-        className='max-h-[90vh]'
-        contentClassName='flex flex-col items-center justify-center py-12'
+        size="xl"
+        className="max-h-[90vh]"
+        contentClassName="flex flex-col items-center justify-center py-12"
+        transparent={true}
       >
-        <Loader2 className='w-12 h-12 text-primary animate-spin mb-4' />
-        <p className='text-lg font-medium text-neutral-700 mb-2'>
+        <KnowledgeGraphLoader size="md" className="mb-6" />
+        <p className="text-lg font-medium text-white mb-2 drop-shadow-lg">
           Analyzing your essay...
         </p>
-        <p className='text-sm text-neutral-500'>
-          This may take a moment, Please wait.
+        <p className="text-sm text-neutral-200 drop-shadow-md">
+          Building knowledge graph connections...
         </p>
       </Modal>
     );
@@ -177,22 +197,22 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose || (() => {})}
-        size='xl'
-        className='max-h-[90vh]'
+        size="xl"
+        className="max-h-[90vh]"
       >
-        <Card className='bg-error-50 border border-error-200'>
-          <div className='flex items-start justify-between'>
-            <div className='flex items-start space-x-3 flex-1'>
-              <AlertTriangle className='w-6 h-6 text-error-default flex-shrink-0 mt-0.5' />
-              <div className='flex-1'>
-                <h4 className='text-lg font-semibold text-error-dark mb-1'>
+        <Card className="bg-error-50 border border-error-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3 flex-1">
+              <AlertTriangle className="w-6 h-6 text-error-default flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-error-dark mb-1">
                   Analysis Failed
                 </h4>
-                <p className='text-error-dark'>{error}</p>
+                <p className="text-error-dark">{error}</p>
                 {onRetry && (
                   <button
                     onClick={onRetry}
-                    className='mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
+                    className="mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors"
                   >
                     Try Again
                   </button>
@@ -221,31 +241,21 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   const recommendations: DiagnosticRecommendation[] =
     analysis.recommendations || [];
 
-  const diagnosticSummary = analysis.diagnostic_summary;
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose || (() => {})}
-      size='xl'
-      className='max-h-[90vh]'
-      contentClassName='flex-1 overflow-y-auto pr-5 min-h-0 relative'
+      size="xl"
+      className="max-h-[90vh]"
+      contentClassName="flex flex-col pr-5 min-h-0 relative"
     >
-      {onClose && (
-        <button
-          onClick={onClose}
-          className='sticky top-0 z-20 float-right ml-auto p-2 rounded-rs shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0'
-          aria-label='Close modal'
-        >
-          <X className='w-5 h-5 text-neutral-500' />
-        </button>
-      )}
-      <div className='flex items-start justify-between mb-5 clear-right'>
-        <div className='flex-1'>
-          <h2 className='text-2xl font-bold text-neutral-900 mb-2'>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-5 flex-shrink-0">
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">
             Analysis Results
           </h2>
-          <div className='flex flex-wrap gap-3 text-sm text-neutral-600'>
+          <div className="flex flex-wrap gap-3 text-sm text-neutral-600">
             {analysis.word_count && (
               <span>Word Count: {analysis.word_count}</span>
             )}
@@ -254,57 +264,26 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
             </span>
           </div>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-2 rounded-rs shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5 text-neutral-500" />
+          </button>
+        )}
       </div>
 
-      {/* Diagnostic Summary */}
-      {diagnosticSummary && (
-        <Card className='bg-gradient-to-r from-primary-50 to-secondary-50 mb-5'>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div>
-              <p className='text-sm text-neutral-600 mb-1'>Overall Score</p>
-              <p className='text-3xl font-bold text-white'>
-                {diagnosticSummary.overall_score.toFixed(1)}
-              </p>
-            </div>
-            {diagnosticSummary.strengths.length > 0 && (
-              <div>
-                <p className='text-sm text-neutral-600 mb-1'>Strengths</p>
-                <div className='flex flex-wrap gap-1'>
-                  {diagnosticSummary.strengths.slice(0, 3).map((s) => (
-                    <Badge key={s} variant='success' size='sm'>
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {diagnosticSummary.weaknesses.length > 0 && (
-              <div>
-                <p className='text-sm text-neutral-600 mb-1'>
-                  Areas to Improve
-                </p>
-                <div className='flex flex-wrap gap-1'>
-                  {diagnosticSummary.weaknesses.slice(0, 3).map((w) => (
-                    <Badge key={w} variant='warning' size='sm'>
-                      {w}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Tabs */}
-      <div className='border-b border-neutral-200 mb-6'>
-        <div className='flex space-x-4'>
+      {/* Sticky Tabs */}
+      <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 mb-6 -mx-5 px-5 flex-shrink-0">
+        <div className="flex space-x-4">
           {[
-            { id: "overview", label: "Overview", icon: TrendingUp },
-            { id: "detailed", label: "Detailed Analysis", icon: BookOpen },
+            { id: "analysis", label: "Analysis", icon: TrendingUp },
+            { id: "essay", label: "Essay", icon: BookOpen },
             {
               id: "recommendations",
-              label: "Recommendations",
+              label: "Recommendation",
               icon: Lightbulb,
             },
           ].map((tab) => {
@@ -314,19 +293,16 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 key={tab.id}
                 onClick={() =>
                   setActiveTab(
-                    tab.id as
-                      | "overview"
-                      | "detailed"
-                      | "recommendations"
+                    tab.id as "analysis" | "essay" | "recommendations"
                   )
                 }
-                className={`flex items-center space-x-2 px-4 py-2 font-medium text-sm transition-colors ${
+                className={`flex items-center space-x-2 px-4 py-3 font-medium text-sm transition-colors ${
                   activeTab === tab.id
                     ? "border-b-2 border-primary text-primary"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                <Icon className='w-4 h-4' />
+                <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -334,448 +310,506 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
         </div>
       </div>
 
-      {/* Overview Tab */}
-      {activeTab === "overview" && (
-        <div className='space-y-6'>
-          <Card>
-            <div className='flex items-center space-x-6'>
-              <div className='flex items-center space-x-3'>
-                {scores.overall >= 80 ? (
-                  <CheckCircle className='w-6 h-6 text-success-default' />
-                ) : scores.overall >= 60 ? (
-                  <AlertCircle className='w-6 h-6 text-warning-default' />
-                ) : (
-                  <AlertTriangle className='w-6 h-6 text-error-default' />
-                )}
-                <h4 className='text-xl font-semibold text-neutral-900'>
-                  Overall Score
+      {/* Tab Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Analysis Tab */}
+        {activeTab === "analysis" && analysis.detailed_analysis && (
+          <div className="space-y-6">
+            {/* 1. Argument Knowledge Graph (Toulmin's Model) */}
+            {analysis.detailed_analysis.argumentation && (
+              <Card>
+                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                  Argument Structure (Toulmin's Model)
                 </h4>
-              </div>
-              <div className='flex-1'>
-                <ProgressBar
-                  value={scores.overall}
-                  color={getScoreColor(scores.overall)}
-                />
-              </div>
-              <div
-                className={`text-2xl font-bold ${
-                  scores.overall >= 80
-                    ? "text-success-default"
-                    : scores.overall >= 60
-                    ? "text-warning-default"
-                    : "text-error-default"
-                }`}
-              >
-                {scores.overall.toFixed(1)}
-              </div>
-            </div>
-          </Card>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center p-3 bg-primary-50 rounded-rd">
+                    <p className="text-sm text-neutral-600">Claims</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .argument_structure.total_claims
+                      }
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-success-50 rounded-rd">
+                    <p className="text-sm text-neutral-600">Evidence</p>
+                    <p className="text-2xl font-bold text-success-default">
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .argument_structure.total_grounds
+                      }
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-info-50 rounded-rd">
+                    <p className="text-sm text-neutral-600">Warrants</p>
+                    <p className="text-2xl font-bold text-info-default">
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .argument_structure.total_warrants
+                      }
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-warning-50 rounded-rd">
+                    <p className="text-sm text-neutral-600">Rebuttals</p>
+                    <p className="text-2xl font-bold text-warning-default">
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .argument_structure.total_rebuttals
+                      }
+                    </p>
+                  </div>
+                </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5'>
-            {[
-              {
-                key: "grammar",
-                label: "Grammar",
-                icon: BookOpen,
-                color: "primary",
-              },
-              {
-                key: "readability",
-                label: "Readability",
-                icon: TrendingUp,
-                color: "success",
-              },
-              {
-                key: "coherence",
-                label: "Coherence",
-                icon: Brain,
-                color: "info",
-              },
-              {
-                key: "argument_strength",
-                label: "Argument",
-                icon: Target,
-                color: "warning",
-              },
-              {
-                key: "knowledge_graph",
-                label: "Knowledge Graph",
-                icon: Brain,
-                color: "secondary",
-              },
-            ].map(({ key, label, icon: Icon, color }) => {
-              const score = scores[key as keyof typeof scores] || 0;
-              return (
-                <Card key={key}>
-                  <div className='text-center flex flex-col h-full'>
-                    <Icon className={`w-8 h-8 text-${color} mx-auto mb-1`} />
-                    <h5 className='font-semibold text-neutral-900 mb-4'>
-                      {label}
-                    </h5>
-                    <div className='mt-auto'>
-                      <div className={`text-xl font-bold text-${color} mb-1`}>
-                        {Math.round(score)}
+                {/* Metrics - Coherence and Argument Strength */}
+                {analysis.detailed_analysis.argumentation.metrics && (
+                  <div className="mb-6 space-y-4">
+                    {analysis.detailed_analysis.argumentation.metrics
+                      .coherence !== undefined && (
+                      <div>
+                        <h5 className="text-sm font-semibold text-neutral-800 mb-2">
+                          Coherence
+                        </h5>
+                        <div className="w-full bg-neutral-200 rounded-full h-2">
+                          <div
+                            className="bg-emerald-500 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.round(
+                                  analysis.detailed_analysis.argumentation
+                                    .metrics.coherence ?? 0
+                                )
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-neutral-500 mt-1 inline-block">
+                          {Math.round(
+                            analysis.detailed_analysis.argumentation.metrics
+                              .coherence ?? 0
+                          )}
+                          %
+                        </span>
                       </div>
-                      <ProgressBar
-                        value={score}
-                        color={getScoreColor(score)}
-                        size='sm'
-                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Thesis Statement - moved below metrics */}
+                {analysis.detailed_analysis.argumentation.thesis_statement && (
+                  <div className="mb-6 p-3 bg-primary-50 rounded-rd">
+                    <p className="text-sm font-medium text-neutral-700 mb-1">
+                      Thesis Statement:
+                    </p>
+                    <p className="text-sm text-neutral-600 italic">
+                      "
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .thesis_statement.sentence
+                      }
+                      "
+                    </p>
+                  </div>
+                )}
+
+                {/* Knowledge Graph */}
+                <div className="mt-6">
+                  <ArgumentKnowledgeGraph
+                    graph={analysis.detailed_analysis.argumentation.graph}
+                    metrics={analysis.detailed_analysis.argumentation.metrics}
+                  />
+                </div>
+              </Card>
+            )}
+
+            {/* 2. Knowledge Graph Analysis */}
+            {analysis.detailed_analysis.knowledge_graph && (
+              <Card>
+                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                  Knowledge Graph Analysis
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-neutral-600">
+                      Concepts Identified
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {
+                        analysis.detailed_analysis.knowledge_graph.concepts
+                          .length
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Relationships</p>
+                    <p className="text-lg font-semibold">
+                      {
+                        analysis.detailed_analysis.knowledge_graph.relationships
+                          .length
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Connectivity</p>
+                    <p className="text-lg font-semibold">
+                      {analysis.detailed_analysis.knowledge_graph.connectivity_score.toFixed(
+                        1
+                      )}
+                      %
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Graph Density</p>
+                    <p className="text-lg font-semibold">
+                      {analysis.detailed_analysis.knowledge_graph.graph_structure.density.toFixed(
+                        2
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {analysis.detailed_analysis.knowledge_graph.concepts.length >
+                  0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-neutral-700 mb-2">
+                      Key Concepts:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.detailed_analysis.knowledge_graph.concepts
+                        .slice(0, 10)
+                        .map((concept, idx) => (
+                          <Badge key={idx} variant="neutral" size="sm">
+                            {concept.text} ({concept.frequency})
+                          </Badge>
+                        ))}
                     </div>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
+                )}
+              </Card>
+            )}
 
-          {/* Highlighted Essay */}
-          <Card>
-            <h4 className='text-lg font-semibold text-neutral-900 mb-3'>
-              Highlighted Essay
-            </h4>
-            {highlightData.html ? (
-              <div className='space-y-3'>
-                <div className='text-sm text-neutral-600'>
-                  Hover over highlighted text to see issue details. (
-                  {highlightData.errors.length} issues)
+            {/* 3. Grammar Analysis - grouped by category */}
+            {analysis.detailed_analysis.grammar && (
+              <Card>
+                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                  Grammar Analysis
+                </h4>
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-600">Score</span>
+                    <span className="font-semibold">
+                      {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-600">
+                      Error Count
+                    </span>
+                    <Badge
+                      variant={
+                        analysis.detailed_analysis.grammar.error_count > 10
+                          ? "error"
+                          : "warning"
+                      }
+                    >
+                      {analysis.detailed_analysis.grammar.error_count} errors
+                    </Badge>
+                  </div>
+                </div>
+
+                {Object.keys(groupedGrammarErrors).length > 0 && (
+                  <div className="mt-4 space-y-4">
+                    {Object.entries(groupedGrammarErrors).map(
+                      ([category, errors]) => (
+                        <div key={category}>
+                          <h5 className="text-sm font-semibold text-neutral-700 mb-2 flex items-center">
+                            <Badge variant="error" size="sm" className="mr-2">
+                              {category}
+                            </Badge>
+                            <span className="text-xs text-neutral-500">
+                              ({errors.length}{" "}
+                              {errors.length === 1 ? "issue" : "issues"})
+                            </span>
+                          </h5>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            {errors.map((error, idx) => (
+                              <li
+                                key={idx}
+                                className="text-sm text-neutral-700"
+                              >
+                                {error.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* 4. Readability Analysis */}
+            {analysis.detailed_analysis.readability && (
+              <Card>
+                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                  Readability Analysis
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-neutral-600">
+                      Flesch Reading Ease
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(
+                        1
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Grade Level</p>
+                    <p className="text-lg font-semibold">
+                      {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(
+                        1
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">
+                      Lexical Diversity
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {(
+                        analysis.detailed_analysis.readability
+                          .lexical_diversity * 100
+                      ).toFixed(1)}
+                      %
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">SMOG Index</p>
+                    <p className="text-lg font-semibold">
+                      {analysis.detailed_analysis.readability.smog_index.toFixed(
+                        1
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* 5. Overall Score - The 5 score cards */}
+            <Card>
+              <div className="flex items-center space-x-6 mb-6">
+                <div className="flex items-center space-x-3">
+                  {scores.overall >= 80 ? (
+                    <CheckCircle className="w-6 h-6 text-success-default" />
+                  ) : scores.overall >= 60 ? (
+                    <AlertCircle className="w-6 h-6 text-warning-default" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-error-default" />
+                  )}
+                  <h4 className="text-xl font-semibold text-neutral-900">
+                    Overall Score
+                  </h4>
+                </div>
+                <div className="flex-1">
+                  <ProgressBar
+                    value={scores.overall}
+                    color={getScoreColor(scores.overall)}
+                  />
                 </div>
                 <div
-                  className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4'
-                  dangerouslySetInnerHTML={{ __html: highlightData.html }}
-                />
-              </div>
-            ) : (
-              <p className='text-neutral-600'>
-                No grammar highlights available. Run an analysis to view issues
-                mapped to your essay text.
-              </p>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* Detailed Analysis Tab */}
-      {activeTab === "detailed" && analysis.detailed_analysis && (
-        <div className='space-y-4 mt-4'>
-          {/* Argument Analysis (Toulmin + Knowledge Graph) - moved to top */}
-          {analysis.detailed_analysis.argumentation && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Argument Structure (Toulmin's Model)
-              </h4>
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
-                <div className='text-center p-3 bg-primary-50 rounded-rd'>
-                  <p className='text-sm text-neutral-600'>Claims</p>
-                  <p className='text-2xl font-bold text-primary'>
-                    {
-                      analysis.detailed_analysis.argumentation
-                        .argument_structure.total_claims
-                    }
-                  </p>
-                </div>
-                <div className='text-center p-3 bg-success-50 rounded-rd'>
-                  <p className='text-sm text-neutral-600'>Evidence</p>
-                  <p className='text-2xl font-bold text-success-default'>
-                    {
-                      analysis.detailed_analysis.argumentation
-                        .argument_structure.total_grounds
-                    }
-                  </p>
-                </div>
-                <div className='text-center p-3 bg-info-50 rounded-rd'>
-                  <p className='text-sm text-neutral-600'>Warrants</p>
-                  <p className='text-2xl font-bold text-info-default'>
-                    {
-                      analysis.detailed_analysis.argumentation
-                        .argument_structure.total_warrants
-                    }
-                  </p>
-                </div>
-                <div className='text-center p-3 bg-warning-50 rounded-rd'>
-                  <p className='text-sm text-neutral-600'>Rebuttals</p>
-                  <p className='text-2xl font-bold text-warning-default'>
-                    {
-                      analysis.detailed_analysis.argumentation
-                        .argument_structure.total_rebuttals
-                    }
-                  </p>
-                </div>
-              </div>
-              {analysis.detailed_analysis.argumentation.thesis_statement && (
-                <div className='mt-4 p-3 bg-primary-50 rounded-rd'>
-                  <p className='text-sm font-medium text-neutral-700 mb-1'>
-                    Thesis Statement:
-                  </p>
-                  <p className='text-sm text-neutral-600 italic'>
-                    "
-                    {
-                      analysis.detailed_analysis.argumentation.thesis_statement
-                        .sentence
-                    }
-                    "
-                  </p>
-                </div>
-              )}
-              <div className='mt-6'>
-                <ArgumentKnowledgeGraph
-                  graph={analysis.detailed_analysis.argumentation.graph}
-                  metrics={analysis.detailed_analysis.argumentation.metrics}
-                />
-              </div>
-            </Card>
-          )}
-
-          {/* Knowledge Graph */}
-          {analysis.detailed_analysis.knowledge_graph && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Knowledge Graph Analysis
-              </h4>
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
-                <div>
-                  <p className='text-sm text-neutral-600'>
-                    Concepts Identified
-                  </p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.knowledge_graph.concepts.length}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Relationships</p>
-                  <p className='text-lg font-semibold'>
-                    {
-                      analysis.detailed_analysis.knowledge_graph.relationships
-                        .length
-                    }
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Connectivity</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.knowledge_graph.connectivity_score.toFixed(
-                      1
-                    )}
-                    %
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Graph Density</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.knowledge_graph.graph_structure.density.toFixed(
-                      2
-                    )}
-                  </p>
-                </div>
-              </div>
-              {analysis.detailed_analysis.knowledge_graph.concepts.length >
-                0 && (
-                <div className='mt-4'>
-                  <p className='text-sm font-medium text-neutral-700 mb-2'>
-                    Key Concepts:
-                  </p>
-                  <div className='flex flex-wrap gap-2'>
-                    {analysis.detailed_analysis.knowledge_graph.concepts
-                      .slice(0, 10)
-                      .map((concept, idx) => (
-                        <Badge key={idx} variant='neutral' size='sm'>
-                          {concept.text} ({concept.frequency})
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
-
-          {/* Grammar Analysis */}
-          {analysis.detailed_analysis.grammar && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Grammar Analysis
-              </h4>
-              <div className='space-y-3'>
-                <div className='flex items-center justify-between'>
-                  <span className='text-sm text-neutral-600'>Score</span>
-                  <span className='font-semibold'>
-                    {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
-                  </span>
-                </div>
-                <div className='flex items-center justify-between'>
-                  <span className='text-sm text-neutral-600'>Error Count</span>
-                  <Badge
-                    variant={
-                      analysis.detailed_analysis.grammar.error_count > 10
-                        ? "error"
-                        : "warning"
-                    }
-                  >
-                    {analysis.detailed_analysis.grammar.error_count} errors
-                  </Badge>
-                </div>
-                {analysis.detailed_analysis.grammar.errors.length > 0 && (
-                  <div className='mt-4 space-y-2'>
-                    <p className='text-sm font-medium text-neutral-700'>
-                      Top Issues:
-                    </p>
-                    {analysis.detailed_analysis.grammar.errors
-                      .slice(0, 5)
-                      .map((error, idx) => (
-                        <div
-                          key={idx}
-                          className='bg-error-50 border border-error-200 rounded p-2'
-                        >
-                          <Badge variant='error' size='sm' className='mb-1'>
-                            {error.type}
-                          </Badge>
-                          <p className='text-sm text-neutral-700'>
-                            {error.message}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {/* Readability Analysis */}
-          {analysis.detailed_analysis.readability && (
-            <Card>
-              <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
-                Readability Analysis
-              </h4>
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                <div>
-                  <p className='text-sm text-neutral-600'>
-                    Flesch Reading Ease
-                  </p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Grade Level</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>Lexical Diversity</p>
-                  <p className='text-lg font-semibold'>
-                    {(
-                      analysis.detailed_analysis.readability.lexical_diversity *
-                      100
-                    ).toFixed(1)}
-                    %
-                  </p>
-                </div>
-                <div>
-                  <p className='text-sm text-neutral-600'>SMOG Index</p>
-                  <p className='text-lg font-semibold'>
-                    {analysis.detailed_analysis.readability.smog_index.toFixed(
-                      1
-                    )}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Recommendations Tab */}
-      {activeTab === "recommendations" && (
-        <div className='space-y-4 mt-4'>
-          {recommendations.length > 0 ? (
-            recommendations.map((recommendation, index) => {
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  className={`text-2xl font-bold ${
+                    scores.overall >= 80
+                      ? "text-success-default"
+                      : scores.overall >= 60
+                      ? "text-warning-default"
+                      : "text-error-default"
+                  }`}
                 >
-                  <Card
-                    className={`border-l-4 ${
-                      recommendation.priority === "high"
-                        ? "border-l-error"
-                        : recommendation.priority === "medium"
-                        ? "border-l-warning"
-                        : "border-l-info"
-                    }`}
-                  >
-                    <div className='flex items-start space-x-3'>
-                      <div className='flex-shrink-0 mt-1'>
-                        {getPriorityIcon(recommendation.priority)}
-                      </div>
-                      <div className='flex-1'>
-                        <div className='flex items-center space-x-2 mb-2'>
-                          <Badge
-                            variant={
-                              getPriorityColor(recommendation.priority) as
-                                | "error"
-                                | "warning"
-                                | "info"
-                                | "neutral"
-                            }
-                            size='sm'
-                          >
-                            {recommendation.priority.toUpperCase()}
-                          </Badge>
-                          <Badge variant='neutral' size='sm'>
-                            {recommendation.dimension}
-                          </Badge>
-                        </div>
-                        <h5 className='font-semibold text-neutral-900 mb-1'>
-                          {recommendation.message}
+                  {scores.overall.toFixed(1)}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+                {[
+                  {
+                    key: "grammar",
+                    label: "Grammar",
+                    icon: BookOpen,
+                    color: "primary",
+                  },
+                  {
+                    key: "readability",
+                    label: "Readability",
+                    icon: TrendingUp,
+                    color: "success",
+                  },
+                  {
+                    key: "coherence",
+                    label: "Coherence",
+                    icon: Brain,
+                    color: "info",
+                  },
+                  {
+                    key: "argument_strength",
+                    label: "Argument",
+                    icon: Target,
+                    color: "warning",
+                  },
+                  {
+                    key: "knowledge_graph",
+                    label: "Knowledge Graph",
+                    icon: Brain,
+                    color: "secondary",
+                  },
+                ].map(({ key, label, icon: Icon, color }) => {
+                  const score = scores[key as keyof typeof scores] || 0;
+                  return (
+                    <Card key={key}>
+                      <div className="text-center flex flex-col h-full">
+                        <Icon
+                          className={`w-8 h-8 text-${color} mx-auto mb-1`}
+                        />
+                        <h5 className="font-semibold text-neutral-900 mb-4">
+                          {label}
                         </h5>
-                        {recommendation.suggestion && (
-                          <p className='text-sm text-neutral-600 mb-2'>
-                            {recommendation.suggestion}
-                          </p>
-                        )}
-                        {recommendation.action_items &&
-                          recommendation.action_items.length > 0 && (
-                            <div className='mt-3 pt-3 border-t border-neutral-200'>
-                              <p className='text-sm font-medium text-neutral-700 mb-2 flex items-center'>
-                                <Target className='w-4 h-4 mr-1' />
-                                Action Items:
-                              </p>
-                              <ul className='space-y-1'>
-                                {recommendation.action_items.map(
-                                  (item, itemIdx) => (
-                                    <li
-                                      key={itemIdx}
-                                      className='flex items-start text-sm text-neutral-600'
-                                    >
-                                      <ArrowRight className='w-4 h-4 mr-2 mt-0.5 text-primary flex-shrink-0' />
-                                      <span>{item}</span>
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-                          )}
+                        <div className="mt-auto">
+                          <div
+                            className={`text-xl font-bold text-${color} mb-1`}
+                          >
+                            {Math.round(score)}
+                          </div>
+                          <ProgressBar
+                            value={score}
+                            color={getScoreColor(score)}
+                            size="sm"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              );
-            })
-          ) : (
-            <Card className='text-center py-8'>
-              <Award className='w-12 h-12 text-success-default mx-auto mb-3' />
-              <p className='text-neutral-600'>
-                No specific recommendations. Overall writing quality is good!
-              </p>
+                    </Card>
+                  );
+                })}
+              </div>
             </Card>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Essay Tab */}
+        {activeTab === "essay" && (
+          <div className="space-y-6">
+            <Card>
+              {highlightData.html ? (
+                <div className="space-y-3">
+                  <div className="text-md text-neutral-600">
+                    Hover over highlighted text to see issue details. (
+                    {highlightData.errors.length} issues)
+                  </div>
+                  <div
+                    className="whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4"
+                    dangerouslySetInnerHTML={{ __html: highlightData.html }}
+                  />
+                </div>
+              ) : (
+                <p className="text-neutral-600">
+                  No grammar highlights available. Run an analysis to view
+                  issues mapped to your essay text.
+                </p>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* Recommendations Tab */}
+        {activeTab === "recommendations" && (
+          <div className="space-y-4 mt-4">
+            {recommendations.length > 0 ? (
+              recommendations.map((recommendation, index) => {
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card
+                      className={`border-l-4 ${
+                        recommendation.priority === "high"
+                          ? "border-l-error"
+                          : recommendation.priority === "medium"
+                          ? "border-l-warning"
+                          : "border-l-info"
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 mt-1">
+                          {getPriorityIcon(recommendation.priority)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Badge
+                              variant={
+                                getPriorityColor(recommendation.priority) as
+                                  | "error"
+                                  | "warning"
+                                  | "info"
+                                  | "neutral"
+                              }
+                              size="sm"
+                            >
+                              {recommendation.priority.toUpperCase()}
+                            </Badge>
+                            <Badge variant="neutral" size="sm">
+                              {recommendation.dimension}
+                            </Badge>
+                          </div>
+                          <h5 className="font-semibold text-neutral-900 mb-1">
+                            {recommendation.message}
+                          </h5>
+                          {recommendation.suggestion && (
+                            <p className="text-sm text-neutral-600 mb-2">
+                              {recommendation.suggestion}
+                            </p>
+                          )}
+                          {recommendation.action_items &&
+                            recommendation.action_items.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-neutral-200">
+                                <p className="text-sm font-medium text-neutral-700 mb-2 flex items-center">
+                                  <Target className="w-4 h-4 mr-1" />
+                                  Action Items:
+                                </p>
+                                <ul className="space-y-1">
+                                  {recommendation.action_items.map(
+                                    (item, itemIdx) => (
+                                      <li
+                                        key={itemIdx}
+                                        className="flex items-start text-sm text-neutral-600"
+                                      >
+                                        <ArrowRight className="w-4 h-4 mr-2 mt-0.5 text-primary flex-shrink-0" />
+                                        <span>{item}</span>
+                                      </li>
+                                    )
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <Card className="text-center py-8">
+                <Award className="w-12 h-12 text-success-default mx-auto mb-3" />
+                <p className="text-neutral-600">
+                  No specific recommendations. Overall writing quality is good!
+                </p>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
     </Modal>
   );
 };

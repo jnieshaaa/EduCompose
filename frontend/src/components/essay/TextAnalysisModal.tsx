@@ -11,13 +11,13 @@ import {
   Target,
   ArrowRight,
   Award,
-  Loader2,
   X,
 } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
 import Modal from "../ui/Modal";
+import KnowledgeGraphLoader from "../ui/KnowledgeGraphLoader";
 import ArgumentKnowledgeGraph from "./ArgumentKnowledgeGraph";
 import type {
   AnalysisResponse,
@@ -206,13 +206,14 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
         size='xl'
         className='max-h-[90vh]'
         contentClassName='flex flex-col items-center justify-center py-12'
+        transparent={true}
       >
-        <Loader2 className='w-12 h-12 text-primary animate-spin mb-4' />
-        <p className='text-lg font-medium text-neutral-700 mb-2'>
+        <KnowledgeGraphLoader size="md" className="mb-6" />
+        <p className='text-lg font-medium text-white mb-2 drop-shadow-lg'>
           Analyzing your essay...
         </p>
-        <p className='text-sm text-neutral-500'>
-          This may take a moment, Please wait.
+        <p className='text-sm text-neutral-200 drop-shadow-md'>
+          Building knowledge graph connections...
         </p>
       </Modal>
     );

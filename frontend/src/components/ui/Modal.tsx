@@ -10,6 +10,7 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   contentClassName?: string;
+  transparent?: boolean;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -20,6 +21,7 @@ const Modal: React.FC<ModalProps> = ({
   size = "md",
   className = "",
   contentClassName = "",
+  transparent = false,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +57,7 @@ const Modal: React.FC<ModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className={`relative bg-white rounded-rl shadow-xl w-full ${sizeClasses[size]} ${className} flex flex-col`}
+            className={`relative ${transparent ? "bg-transparent" : "bg-white"} rounded-rl ${transparent ? "" : "shadow-xl"} w-full ${sizeClasses[size]} ${className} flex flex-col`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
