@@ -35,7 +35,31 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   type ForceLink = LinkObject<ForceNode, { type?: string }>;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 320 });
+  const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
+  const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [linkTooltipPos, setLinkTooltipPos] = useState({ x: 0, y: 0 });
+  
+  // Track mouse position for link tooltips
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setTooltipPosition({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        });
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("mousemove", handleMouseMove);
+      return () => container.removeEventListener("mousemove", handleMouseMove);
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || typeof ResizeObserver === "undefined") {
@@ -168,6 +192,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
           >
             {graphData.nodes.length > 0 ? (
               <ForceGraph2D
+                ref={fgRef}
                 width={dimensions.width}
                 height={dimensions.height}
                 graphData={graphData}
@@ -177,82 +202,64 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 onEngineStop={() => {
                   // Force simulation complete
                 }}
+                onNodeHover={(node: ForceNode | null) => {
+                  setHoveredNode(node);
+                  setHoveredLink(null);
+                }}
+                onLinkHover={(link: ForceLink | null, prevLink: ForceLink | null) => {
+                  setHoveredLink(link);
+                  setHoveredNode(null);
+                  // Calculate midpoint of link for tooltip positioning
+                  if (link && link.source && link.target) {
+                    const source = link.source as ForceNode;
+                    const target = link.target as ForceNode;
+                    const midX = dimensions.width / 2 + ((source.x as number) + (target.x as number)) / 2;
+                    const midY = dimensions.height / 2 + ((source.y as number) + (target.y as number)) / 2;
+                    setLinkTooltipPos({ x: midX, y: midY });
+                  }
+                }}
+                onBackgroundClick={() => {
+                  setHoveredNode(null);
+                  setHoveredLink(null);
+                }}
                 nodeCanvasObject={(node: ForceNode, ctx, globalScale) => {
-                  const label = node.text ?? "";
                   const color = NODE_COLORS[node.type] || "#0f172a";
                   const nodeX = typeof node.x === "number" ? node.x : 0;
                   const nodeY = typeof node.y === "number" ? node.y : 0;
                   
                   // Larger nodes based on type
-                  const nodeRadius = node.type === "thesis" ? 12 : 
-                                    node.type === "claim" ? 10 : 8;
+                  const nodeRadius = node.type === "thesis" ? 14 : 
+                                    node.type === "claim" ? 12 : 10;
 
-                  // Draw node circle
+                  // Draw node circle with solid color and shadow effect
                   ctx.beginPath();
                   ctx.fillStyle = color;
                   ctx.arc(nodeX, nodeY, nodeRadius, 0, 2 * Math.PI, false);
                   ctx.fill();
                   
+                  // Add subtle inner highlight
+                  const highlightGradient = ctx.createRadialGradient(
+                    nodeX - nodeRadius * 0.4,
+                    nodeY - nodeRadius * 0.4,
+                    0,
+                    nodeX,
+                    nodeY,
+                    nodeRadius
+                  );
+                  highlightGradient.addColorStop(0, "rgba(255, 255, 255, 0.3)");
+                  highlightGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+                  ctx.fillStyle = highlightGradient;
+                  ctx.fill();
+                  
+                  // Reset fill style
+                  ctx.fillStyle = color;
+                  
                   // Add white border for contrast
                   ctx.strokeStyle = "#ffffff";
-                  ctx.lineWidth = 2;
+                  ctx.lineWidth = 2.5;
                   ctx.stroke();
-
-                  // Improved text rendering with word wrapping
-                  const baseFontSize = 11;
-                  const fontSize = Math.max(9, Math.min(14, baseFontSize / Math.sqrt(globalScale)));
-                  ctx.font = `${fontSize}px Inter, sans-serif`;
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillStyle = "#1f2937";
                   
-                  // Word wrap text for better readability
-                  const maxWidth = 120; // Maximum width for text
-                  const words = label.split(" ");
-                  const lines: string[] = [];
-                  let currentLine = "";
-                  
-                  words.forEach((word) => {
-                    const testLine = currentLine + (currentLine ? " " : "") + word;
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > maxWidth && currentLine) {
-                      lines.push(currentLine);
-                      currentLine = word;
-                    } else {
-                      currentLine = testLine;
-                    }
-                  });
-                  if (currentLine) lines.push(currentLine);
-                  
-                  // Limit to 3 lines max
-                  const displayLines = lines.slice(0, 3);
-                  if (lines.length > 3) {
-                    displayLines[2] = displayLines[2].slice(0, -3) + "...";
-                  }
-                  
-                  // Draw text with background for readability
-                  const lineHeight = fontSize * 1.3;
-                  const textHeight = displayLines.length * lineHeight;
-                  const textY = nodeY + nodeRadius + 8;
-                  
-                  // Add semi-transparent background behind text
-                  if (displayLines.length > 0) {
-                    const textWidth = Math.max(...displayLines.map(line => ctx.measureText(line).width));
-                    const padding = 4;
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-                    ctx.fillRect(
-                      nodeX - textWidth / 2 - padding,
-                      textY - lineHeight / 2 - padding,
-                      textWidth + padding * 2,
-                      textHeight + padding * 2
-                    );
-                  }
-                  
-                  // Draw each line of text
-                  ctx.fillStyle = "#1f2937";
-                  displayLines.forEach((line, idx) => {
-                    ctx.fillText(line, nodeX, textY + idx * lineHeight);
-                  });
+                  // No text rendered - tooltip will show on hover instead
                 }}
                 linkColor={(link: ForceLink) =>
                   LINK_COLORS[link.type ?? "supports"] || "#94a3b8"
@@ -267,10 +274,59 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 linkDistance={120}
                 linkStrength={0.3}
                 nodeRepulsion={1800}
+                nodeLabel={() => ""} // Hide node labels
+                linkLabel={() => ""} // Hide link labels
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-neutral-500">
                 Argument graph data will appear here after analysis.
+              </div>
+            )}
+            
+            {/* Tooltip for nodes - appears next to node */}
+            {hoveredNode && (
+              <div
+                className="absolute z-50 pointer-events-none transition-opacity duration-200"
+                style={{
+                  left: `${dimensions.width / 2 + (hoveredNode.x as number) + 20}px`,
+                  top: `${dimensions.height / 2 + (hoveredNode.y as number)}px`,
+                  transform: "translateY(-50%)",
+                }}
+              >
+                <div className="bg-neutral-900 text-white text-xs rounded-lg shadow-2xl p-3 max-w-xs border border-neutral-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{
+                        backgroundColor: NODE_COLORS[hoveredNode.type] || "#0f172a",
+                      }}
+                    ></span>
+                    <span className="font-semibold uppercase text-[10px] text-neutral-400 tracking-wide">
+                      {hoveredNode.type}
+                    </span>
+                  </div>
+                  <p className="text-white leading-relaxed text-sm">
+                    {hoveredNode.text || "No text available"}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Tooltip for links - appears at link midpoint */}
+            {hoveredLink && !hoveredNode && (
+              <div
+                className="absolute z-50 pointer-events-none transition-opacity duration-200"
+                style={{
+                  left: `${linkTooltipPos.x + 15}px`,
+                  top: `${linkTooltipPos.y}px`,
+                  transform: "translateY(-50%)",
+                }}
+              >
+                <div className="bg-neutral-800 text-white text-xs rounded-md shadow-xl px-3 py-2 border border-neutral-600">
+                  <span className="font-semibold uppercase text-[10px] text-neutral-300 tracking-wide whitespace-nowrap">
+                    {hoveredLink.type?.toUpperCase() || "CONNECTION"}
+                  </span>
+                </div>
               </div>
             )}
           </div>
