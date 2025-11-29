@@ -12,6 +12,7 @@ import {
   useInView,
   useAnimation,
 } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import Chart from "chart.js/auto";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
@@ -121,8 +122,16 @@ const COLORS: Record<Entity["type"], string> = {
 };
 
 const LandingPage: React.FC = () => {
+  const location = useLocation();
   const [text, setText] = useState("");
   const [showLogin, setShowLogin] = useState(false);
+  
+  // Show login modal if redirected from a protected route
+  useEffect(() => {
+    if (location.state?.from) {
+      setShowLogin(true);
+    }
+  }, [location.state]);
   const [analysis, setAnalysis] = useState<Omit<
     AnalysisResponse,
     "essay_id"

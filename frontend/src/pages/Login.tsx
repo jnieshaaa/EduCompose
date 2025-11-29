@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -10,6 +11,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) {
@@ -29,11 +31,9 @@ const Login: React.FC = () => {
       const response = await authApi.login(email.trim(), password);
       
       if (response.access_token) {
-        localStorage.setItem("auth_token", response.access_token);
-        if (response.user) {
-          localStorage.setItem("user", JSON.stringify(response.user));
-        }
-        navigate("/dashboard");
+        // Use AuthContext login method to update auth state
+        login(response.access_token, response.user || undefined);
+        navigate("/Dashboard");
       }
     } catch (err: any) {
       if (err.status === 0 || err.message?.includes("Failed to connect")) {

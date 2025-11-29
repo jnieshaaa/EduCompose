@@ -3,13 +3,12 @@ import { Menu, X, Settings, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "../components/ui/LoaderContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderProps {
   onMenuClick: () => void;
   isBurgerActive: boolean;
 }
-
-const user = { name: "Cursor", email: "cursor@gmail.com" };
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -18,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const routeLabels: Record<string, string> = {
     "/Dashboard": "Dashboard",
@@ -52,7 +52,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
     return () => clearTimeout(timer);
   }, [loading]);
 
-  const handleLogout = () => navigate("/");
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <header className='relative flex justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
@@ -102,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
             className='w-8 h-8 rounded-full border border-primary flex items-center justify-center bg-primary/20 text-sm font-semibold'
             title='User Profile'
           >
-            {user.name[0]}
+            {(user?.full_name || user?.username || "U")[0].toUpperCase()}
           </div>
 
           <svg
@@ -133,9 +136,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                 <div className='bg-white shadow-lg rounded-rd overflow-hidden'>
                   <div className='px-4 py-3 border-b border-neutral-300/30'>
                     <p className='font-semibold text-neutral-900'>
-                      {user.name}
+                      {user?.full_name || user?.username || "User"}
                     </p>
-                    <p className='text-sm text-neutral-400'>{user.email}</p>
+                    <p className='text-sm text-neutral-400'>{user?.email || ""}</p>
                   </div>
                   <div className='flex flex-col'>
                     <button

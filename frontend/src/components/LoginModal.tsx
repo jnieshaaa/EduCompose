@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, UserPlus, ArrowLeft, X, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 // --- Form Components ---
 
@@ -81,6 +82,7 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) {
@@ -102,16 +104,12 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
       // Call backend API - will reject if credentials not in database
       const response = await authApi.login(email.trim(), password);
       
-      // Store token in localStorage
+      // Use AuthContext login method to update auth state
       if (response.access_token) {
-        localStorage.setItem("auth_token", response.access_token);
-        // Store user info if available
-        if (response.user) {
-          localStorage.setItem("user", JSON.stringify(response.user));
-        }
+        login(response.access_token, response.user || undefined);
         
         // Navigate to dashboard and close modal
-        navigate("/dashboard");
+        navigate("/Dashboard");
         onClose();
       }
     } catch (err: any) {
