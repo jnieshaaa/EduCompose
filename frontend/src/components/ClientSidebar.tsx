@@ -12,7 +12,6 @@ import {
   Target,
   Zap,
   Shield,
-  Layers,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,11 +48,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       {
         icon: <Home className='w-5 h-5' />,
         label: "Dashboard",
-        path: "/Dashboard",
-      },
-      {
-        icon: <Layers className='w-5 h-5' />,
-        label: "Class Dashboard",
         path: "/Dashboard_v2",
       },
       {

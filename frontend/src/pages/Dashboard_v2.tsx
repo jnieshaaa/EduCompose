@@ -58,6 +58,15 @@ const Dashboard_v2: React.FC = () => {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentV2 | null>(null);
+  const [editingStudentProgramId, setEditingStudentProgramId] = useState("");
+
+  // Delete confirmation modals
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteType, setDeleteType] = useState<
+    "program" | "block" | "student" | null
+  >(null);
+  const [deleteId, setDeleteId] = useState<string>("");
+  const [deleteName, setDeleteName] = useState<string>("");
 
   // Form states
   const [newProgram, setNewProgram] = useState({ name: "", description: "" });
@@ -69,6 +78,7 @@ const Dashboard_v2: React.FC = () => {
     programId: "",
     blockId: "",
   });
+  const [studentError, setStudentError] = useState("");
 
   // Filtered blocks based on selected program
   const filteredBlocksForFilter = useMemo(() => {
@@ -81,6 +91,12 @@ const Dashboard_v2: React.FC = () => {
     if (!newStudent.programId) return [];
     return blocks.filter((b) => b.programId === newStudent.programId);
   }, [blocks, newStudent.programId]);
+
+  // Available blocks for editing student based on selected program
+  const availableBlocksForEditStudent = useMemo(() => {
+    if (!editingStudentProgramId) return [];
+    return blocks.filter((b) => b.programId === editingStudentProgramId);
+  }, [blocks, editingStudentProgramId]);
 
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
@@ -114,6 +130,22 @@ const Dashboard_v2: React.FC = () => {
   const handleAddProgram = () => {
     if (!newProgram.name.trim()) return;
 
+    // Validate: only uppercase letters, spaces, and dashes allowed
+    const validNamePattern = /^[A-Z\s-]+$/;
+    if (!validNamePattern.test(newProgram.name.trim())) {
+      setProgramError(
+        "Program name must contain only letters, spaces, and dashes (no numbers or symbols)"
+      );
+      return;
+    }
+
+    // Validate: maximum 10 letters
+    const letterCount = (newProgram.name.trim().match(/[A-Z]/g) || []).length;
+    if (letterCount > 10) {
+      setProgramError("Program name must have 10 letters or less");
+      return;
+    }
+
     const programExists = programs.some(
       (p) => p.name.toLowerCase() === newProgram.name.trim().toLowerCase()
     );
@@ -134,6 +166,13 @@ const Dashboard_v2: React.FC = () => {
     setShowAddProgramModal(false);
   };
 
+  const confirmDeleteProgram = (programId: string, programName: string) => {
+    setDeleteType("program");
+    setDeleteId(programId);
+    setDeleteName(programName);
+    setShowDeleteConfirm(true);
+  };
+
   const handleDeleteProgram = (programId: string) => {
     // Get all blocks in this program
     const programBlocks = blocks.filter((b) => b.programId === programId);
@@ -150,11 +189,21 @@ const Dashboard_v2: React.FC = () => {
   const handleAddBlock = () => {
     if (!newBlock.name.trim() || !newBlock.programId) return;
 
+    const blockName = newBlock.name.trim().toUpperCase();
+
+    // Validate: must be exactly 2 characters - number 1-4 first, then letter A-D (e.g., 1A, 4B)
+    const validBlockPattern = /^[1-4][A-D]$/;
+    if (!validBlockPattern.test(blockName)) {
+      setBlockError(
+        "Block must be number 1-4 followed by letter A-D (e.g., 1A, 2B, 3C, 4D)"
+      );
+      return;
+    }
+
     // Check if block name already exists in the same program
     const blockExists = blocks.some(
       (b) =>
-        b.programId === newBlock.programId &&
-        b.name.toLowerCase() === newBlock.name.trim().toLowerCase()
+        b.programId === newBlock.programId && b.name.toUpperCase() === blockName
     );
 
     if (blockExists) {
@@ -164,13 +213,20 @@ const Dashboard_v2: React.FC = () => {
 
     const block: Block = {
       id: `block-${Date.now()}`,
-      name: newBlock.name.trim(),
+      name: blockName,
       programId: newBlock.programId,
     };
     setBlocks((prev) => [...prev, block]);
     setNewBlock({ name: "", programId: "" });
     setBlockError("");
     setShowAddBlockModal(false);
+  };
+
+  const confirmDeleteBlock = (blockId: string, blockName: string) => {
+    setDeleteType("block");
+    setDeleteId(blockId);
+    setDeleteName(blockName);
+    setShowDeleteConfirm(true);
   };
 
   const handleDeleteBlock = (blockId: string) => {
@@ -180,6 +236,40 @@ const Dashboard_v2: React.FC = () => {
 
   const handleAddStudent = () => {
     if (!newStudent.name.trim() || !newStudent.blockId) return;
+
+    // Validate: must contain at least 3 letters
+    const letterCount = (newStudent.name.trim().match(/[a-zA-Z]/g) || [])
+      .length;
+    if (letterCount < 3) {
+      setStudentError("Name must contain at least 3 letters");
+      return;
+    }
+
+    // Validate: only letters, spaces, period, and comma allowed (no numbers or other symbols)
+    const validNamePattern = /^[a-zA-Z\s.,]+$/;
+    if (!validNamePattern.test(newStudent.name.trim())) {
+      setStudentError(
+        "Name must contain only letters and allowed symbols (. ,)"
+      );
+      return;
+    }
+
+    // Check for consecutive periods
+    if (/\.{2,}/.test(newStudent.name.trim())) {
+      setStudentError("Name cannot contain consecutive periods (..)");
+      return;
+    }
+
+    // Check if student name already exists (case-insensitive)
+    const studentExists = students.some(
+      (s) => s.name.toLowerCase() === newStudent.name.trim().toLowerCase()
+    );
+
+    if (studentExists) {
+      setStudentError("Student already exists!");
+      return;
+    }
+
     const student: StudentV2 = {
       id: `s-${Date.now()}`,
       name: newStudent.name.trim(),
@@ -187,29 +277,66 @@ const Dashboard_v2: React.FC = () => {
     };
     setStudents((prev) => [...prev, student]);
     setNewStudent({ name: "", programId: "", blockId: "" });
+    setStudentError("");
     setShowAddStudentModal(false);
+  };
+
+  const confirmDeleteStudent = (studentId: string, studentName: string) => {
+    setDeleteType("student");
+    setDeleteId(studentId);
+    setDeleteName(studentName);
+    setShowDeleteConfirm(true);
   };
 
   const handleDeleteStudent = (studentId: string) => {
     setStudents((prev) => prev.filter((s) => s.id !== studentId));
   };
 
+  const handleConfirmDelete = () => {
+    if (deleteType === "program") {
+      handleDeleteProgram(deleteId);
+    } else if (deleteType === "block") {
+      handleDeleteBlock(deleteId);
+    } else if (deleteType === "student") {
+      handleDeleteStudent(deleteId);
+      setShowEditStudentModal(false);
+      setEditingStudent(null);
+      setEditingStudentProgramId("");
+    }
+    setShowDeleteConfirm(false);
+    setDeleteType(null);
+    setDeleteId("");
+    setDeleteName("");
+  };
+
   const handleEditStudent = (student: StudentV2) => {
     setEditingStudent({ ...student });
+    const studentBlock = blocks.find((b) => b.id === student.blockId);
+    setEditingStudentProgramId(studentBlock?.programId || "");
     setShowEditStudentModal(true);
   };
 
   const handleSaveEditStudent = () => {
-    if (!editingStudent || !editingStudent.name.trim()) return;
+    if (
+      !editingStudent ||
+      !editingStudent.name.trim() ||
+      !editingStudent.blockId
+    )
+      return;
     setStudents((prev) =>
       prev.map((s) =>
         s.id === editingStudent.id
-          ? { ...s, name: editingStudent.name.trim() }
+          ? {
+              ...s,
+              name: editingStudent.name.trim(),
+              blockId: editingStudent.blockId,
+            }
           : s
       )
     );
     setShowEditStudentModal(false);
     setEditingStudent(null);
+    setEditingStudentProgramId("");
   };
 
   // Program overview data
@@ -238,7 +365,7 @@ const Dashboard_v2: React.FC = () => {
       <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
         <div>
           <h1 className='text-3xl font-bold text-neutral-900 tracking-tight'>
-            Class Dashboard
+            Dashboard
           </h1>
           <p className='text-neutral-600 mt-1'>
             Manage your programs, blocks, and students
@@ -330,7 +457,9 @@ const Dashboard_v2: React.FC = () => {
                       <Button
                         variant='ghost'
                         size='sm'
-                        onClick={() => handleDeleteProgram(program.id)}
+                        onClick={() =>
+                          confirmDeleteProgram(program.id, program.name)
+                        }
                         className='group text-neutral-400 hover:bg-support-superlight/30 border-none'
                       >
                         <Trash2 className='w-4 h-4 group-hover:text-error-default transition-colors' />
@@ -346,23 +475,50 @@ const Dashboard_v2: React.FC = () => {
                       {program.blocks.map((block) => (
                         <div
                           key={block.id}
-                          className='p-3 border border-neutral-200 rounded-rd bg-neutral-50 hover:border-primary-200 transition-colors'
+                          className={`p-3 border rounded-rd cursor-pointer transition-colors ${
+                            selectedBlock === block.id
+                              ? "border-primary bg-support-superlight/35"
+                              : "border-neutral-200 bg-neutral-50 hover:border-primary-50"
+                          }`}
+                          onClick={() => {
+                            if (selectedBlock === block.id) {
+                              // Deselect - show all
+                              setSelectedProgram("all");
+                              setSelectedBlock("all");
+                            } else {
+                              // Select this block
+                              setSelectedProgram(program.id);
+                              setSelectedBlock(block.id);
+                            }
+                          }}
                         >
                           <div className='flex items-center justify-between'>
                             <div className='flex items-center gap-2'>
-                              <Layers className='w-4 h-4 text-primary' />
+                              <Layers
+                                className={`w-4 h-4 ${
+                                  selectedBlock === block.id
+                                    ? "text-primary"
+                                    : "text-primary"
+                                }`}
+                              />
                               <span className='font-medium text-neutral-900'>
                                 {block.name}
                               </span>
                             </div>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => handleDeleteBlock(block.id)}
-                              className='group text-neutral-400 hover:bg-support-superlight/30 border-none -mr-1'
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDeleteBlock(block.id, block.name);
+                              }}
                             >
-                              <Trash2 className='w-3 h-3 group-hover:text-error-default transition-colors' />
-                            </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='group text-neutral-400 hover:bg-support-superlight/30 border-none -mr-1'
+                              >
+                                <Trash2 className='w-3 h-3 group-hover:text-error-default transition-colors' />
+                              </Button>
+                            </div>
                           </div>
                           <p className='text-xs text-neutral-500 mt-1 ml-6'>
                             {block.studentCount} students
@@ -481,8 +637,8 @@ const Dashboard_v2: React.FC = () => {
         <div className='hidden md:grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-neutral-500 border-b border-neutral-200 bg-neutral-50 rounded-t-rd'>
           <div className='col-span-4'>Name</div>
           <div className='col-span-3'>Program</div>
-          <div className='col-span-3'>Block</div>
-          <div className='col-span-2 text-right'>Actions</div>
+          <div className='col-span-2'>Block</div>
+          <div className='col-span-3'>Essay</div>
         </div>
 
         {/* Student Rows */}
@@ -495,12 +651,10 @@ const Dashboard_v2: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ delay: index * 0.05 }}
-                className='grid grid-cols-1 md:grid-cols-12 gap-2 items-center px-4 py-4 hover:bg-neutral-50/50 transition-colors'
+                className='grid grid-cols-1 md:grid-cols-12 gap-2 items-center px-4 py-4 hover:bg-neutral-50/50 transition-colors cursor-pointer'
+                onClick={() => handleEditStudent(student)}
               >
-                <div
-                  className='col-span-4 flex items-center gap-3 cursor-pointer group'
-                  onClick={() => handleEditStudent(student)}
-                >
+                <div className='col-span-4 flex items-center gap-3 group'>
                   <div className='flex items-center gap-2'>
                     <p className='font-medium text-neutral-900 group-hover:text-primary transition-colors'>
                       {student.name}
@@ -513,20 +667,13 @@ const Dashboard_v2: React.FC = () => {
                     {getProgramName(getBlockProgramId(student.blockId))}
                   </span>
                 </div>
-                <div className='col-span-3'>
+                <div className='col-span-2'>
                   <span className='text-sm text-neutral-700'>
                     {getBlockName(student.blockId)}
                   </span>
                 </div>
-                <div className='col-span-2 flex justify-end'>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => handleDeleteStudent(student.id)}
-                    className='group text-neutral-400 hover:bg-support-superlight/30 border-none'
-                  >
-                    <Trash2 className='w-4 h-4 group-hover:text-error-default transition-colors' />
-                  </Button>
+                <div className='col-span-3'>
+                  <span className='text-sm text-neutral-500'>No essay yet</span>
                 </div>
               </motion.div>
             ))}
@@ -574,7 +721,10 @@ const Dashboard_v2: React.FC = () => {
               label='Program Name'
               value={newProgram.name}
               onChange={(value) => {
-                setNewProgram((prev) => ({ ...prev, name: value }));
+                setNewProgram((prev) => ({
+                  ...prev,
+                  name: value.toUpperCase(),
+                }));
                 setProgramError("");
               }}
               placeholder='e.g., BSCS-DS, BSIT, BSCE'
@@ -651,13 +801,15 @@ const Dashboard_v2: React.FC = () => {
           </div>
           <div>
             <Input
-              label='Block Name'
+              label='Block'
               value={newBlock.name}
               onChange={(value) => {
-                setNewBlock((prev) => ({ ...prev, name: value }));
+                // Only allow max 2 characters
+                const trimmed = value.slice(0, 2).toUpperCase();
+                setNewBlock((prev) => ({ ...prev, name: trimmed }));
                 setBlockError("");
               }}
-              placeholder='e.g., 4A, 4B, 3A'
+              placeholder='e.g., 1A, 2B, 3C, 4D'
               required
             />
             {blockError && (
@@ -693,20 +845,37 @@ const Dashboard_v2: React.FC = () => {
         onClose={() => {
           setShowAddStudentModal(false);
           setNewStudent({ name: "", programId: "", blockId: "" });
+          setStudentError("");
         }}
         title='Add New Student'
         size='md'
       >
         <div className='space-y-4'>
-          <Input
-            label='Student Name'
-            value={newStudent.name}
-            onChange={(value) =>
-              setNewStudent((prev) => ({ ...prev, name: value }))
-            }
-            placeholder='Enter full name...'
-            required
-          />
+          <div>
+            <Input
+              label='Student Name'
+              value={newStudent.name}
+              onChange={(value) => {
+                // Capitalize first letter of each word (Title Case)
+                const capitalized = value
+                  .split(" ")
+                  .map((word) =>
+                    word.length > 0
+                      ? word.charAt(0).toUpperCase() +
+                        word.slice(1).toLowerCase()
+                      : ""
+                  )
+                  .join(" ");
+                setNewStudent((prev) => ({ ...prev, name: capitalized }));
+                setStudentError("");
+              }}
+              placeholder='Enter full name...'
+              required
+            />
+            {studentError && (
+              <p className='text-error-default text-sm mt-1'>{studentError}</p>
+            )}
+          </div>
           <div className='space-y-1'>
             <label className='block text-sm font-medium text-neutral-700'>
               Program <span className='text-error-default'>*</span>
@@ -763,6 +932,7 @@ const Dashboard_v2: React.FC = () => {
               onClick={() => {
                 setShowAddStudentModal(false);
                 setNewStudent({ name: "", programId: "", blockId: "" });
+                setStudentError("");
               }}
             >
               Cancel
@@ -785,6 +955,7 @@ const Dashboard_v2: React.FC = () => {
         onClose={() => {
           setShowEditStudentModal(false);
           setEditingStudent(null);
+          setEditingStudentProgramId("");
         }}
         title='Edit Student'
         size='md'
@@ -793,31 +964,155 @@ const Dashboard_v2: React.FC = () => {
           <Input
             label='Student Name'
             value={editingStudent?.name || ""}
-            onChange={(value) =>
+            onChange={(value) => {
+              // Capitalize first letter of each word (Title Case)
+              const capitalized = value
+                .split(" ")
+                .map((word) =>
+                  word.length > 0
+                    ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                    : ""
+                )
+                .join(" ");
               setEditingStudent((prev) =>
-                prev ? { ...prev, name: value } : null
-              )
-            }
+                prev ? { ...prev, name: capitalized } : null
+              );
+            }}
             placeholder='Enter full name...'
             required
           />
-          <div className='flex justify-end gap-3 pt-4'>
+          <div className='space-y-1'>
+            <label className='block text-sm font-medium text-neutral-700'>
+              Program <span className='text-error-default'>*</span>
+            </label>
+            <select
+              value={editingStudentProgramId}
+              onChange={(e) => {
+                setEditingStudentProgramId(e.target.value);
+                setEditingStudent((prev) =>
+                  prev ? { ...prev, blockId: "" } : null
+                );
+              }}
+              className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
+            >
+              <option value=''>Select a program...</option>
+              {programs.map((program) => (
+                <option key={program.id} value={program.id}>
+                  {program.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='space-y-1'>
+            <label className='block text-sm font-medium text-neutral-700'>
+              Block <span className='text-error-default'>*</span>
+            </label>
+            <select
+              value={editingStudent?.blockId || ""}
+              onChange={(e) =>
+                setEditingStudent((prev) =>
+                  prev ? { ...prev, blockId: e.target.value } : null
+                )
+              }
+              disabled={!editingStudentProgramId}
+              className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-neutral-100 disabled:cursor-not-allowed'
+            >
+              <option value=''>
+                {editingStudentProgramId
+                  ? "Select a block..."
+                  : "Select a program first"}
+              </option>
+              {availableBlocksForEditStudent.map((block) => (
+                <option key={block.id} value={block.id}>
+                  {block.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='flex justify-between pt-4'>
             <Button
               variant='ghost'
               onClick={() => {
-                setShowEditStudentModal(false);
-                setEditingStudent(null);
+                if (editingStudent) {
+                  confirmDeleteStudent(editingStudent.id, editingStudent.name);
+                }
+              }}
+              className='text-neutral-600 hover:text-error-default hover:bg-support-superlight/35 border-none'
+            >
+              <Trash2 className='w-4 h-4 mr-2 text-error-default' />
+              Remove Student
+            </Button>
+            <div className='flex gap-3'>
+              <Button
+                variant='ghost'
+                onClick={() => {
+                  setShowEditStudentModal(false);
+                  setEditingStudent(null);
+                  setEditingStudentProgramId("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant='primary'
+                onClick={handleSaveEditStudent}
+                disabled={
+                  !editingStudent?.name.trim() || !editingStudent?.blockId
+                }
+              >
+                <Pencil className='w-4 h-4 mr-2' />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setDeleteType(null);
+          setDeleteId("");
+          setDeleteName("");
+        }}
+        title='Confirm Removing'
+        size='sm'
+      >
+        <div className='space-y-4'>
+          <p className='text-neutral-700'>
+            Are you sure you want to remove{" "}
+            <span className='font-semibold'>{deleteName}</span>?
+            {deleteType === "program" && (
+              <span className='block text-sm text-error-default mt-2'>
+                This will also delete all blocks and students in this program.
+              </span>
+            )}
+            {deleteType === "block" && (
+              <span className='block text-sm text-error-default mt-2'>
+                This will also delete all students in this block.
+              </span>
+            )}
+          </p>
+          <div className='flex justify-end gap-3 pt-2'>
+            <Button
+              variant='ghost'
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteType(null);
+                setDeleteId("");
+                setDeleteName("");
               }}
             >
-              Cancel
+              No, Cancel
             </Button>
             <Button
               variant='primary'
-              onClick={handleSaveEditStudent}
-              disabled={!editingStudent?.name.trim()}
+              onClick={handleConfirmDelete}
+              className='bg-error-default hover:bg-error-dark'
             >
-              <Pencil className='w-4 h-4 mr-2' />
-              Save Changes
+              Yes, Remove
             </Button>
           </div>
         </div>
