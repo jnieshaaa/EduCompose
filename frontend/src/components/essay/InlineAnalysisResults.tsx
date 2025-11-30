@@ -75,13 +75,13 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "high":
-        return <AlertTriangle className="w-4 h-4" />;
+        return <AlertTriangle className='w-4 h-4' />;
       case "medium":
-        return <AlertCircle className="w-4 h-4" />;
+        return <AlertCircle className='w-4 h-4' />;
       case "low":
-        return <CheckCircle className="w-4 h-4" />;
+        return <CheckCircle className='w-4 h-4' />;
       default:
-        return <Lightbulb className="w-4 h-4" />;
+        return <Lightbulb className='w-4 h-4' />;
     }
   };
 
@@ -258,16 +258,16 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose || (() => {})}
-        size="xl"
-        className="max-h-[90vh]"
-        contentClassName="flex flex-col items-center justify-center py-12"
+        size='xl'
+        className='max-h-[90vh]'
+        contentClassName='flex flex-col items-center justify-center py-12'
         transparent={true}
       >
-        <KnowledgeGraphLoader size="md" className="mb-6" />
-        <p className="text-lg font-medium text-white mb-2 drop-shadow-lg">
+        <KnowledgeGraphLoader size='md' className='mb-6' />
+        <p className='text-lg font-medium text-white mb-2 drop-shadow-lg'>
           Analyzing your essay...
         </p>
-        <p className="text-sm text-neutral-200 drop-shadow-md">
+        <p className='text-sm text-neutral-200 drop-shadow-md'>
           Building knowledge graph connections...
         </p>
       </Modal>
@@ -279,22 +279,22 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose || (() => {})}
-        size="xl"
-        className="max-h-[90vh]"
+        size='xl'
+        className='max-h-[90vh]'
       >
-        <Card className="bg-error-50 border border-error-200">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-3 flex-1">
-              <AlertTriangle className="w-6 h-6 text-error-default flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="text-lg font-semibold text-error-dark mb-1">
+        <Card className='bg-error-50 border border-error-200'>
+          <div className='flex items-start justify-between'>
+            <div className='flex items-start space-x-3 flex-1'>
+              <AlertTriangle className='w-6 h-6 text-error-default flex-shrink-0 mt-0.5' />
+              <div className='flex-1'>
+                <h4 className='text-lg font-semibold text-error-dark mb-1'>
                   Analysis Failed
                 </h4>
-                <p className="text-error-dark">{error}</p>
+                <p className='text-error-dark'>{error}</p>
                 {onRetry && (
                   <button
                     onClick={onRetry}
-                    className="mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors"
+                    className='mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
                   >
                     Try Again
                   </button>
@@ -327,17 +327,17 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose || (() => {})}
-      size="xl"
-      className="max-h-[90vh]"
-      contentClassName="flex flex-col pr-5 min-h-0 relative"
+      size='xl'
+      className='max-h-[90vh]'
+      contentClassName='flex flex-col pr-5 min-h-0 relative'
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-5 flex-shrink-0">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">
+      <div className='flex items-start justify-between mb-5 flex-shrink-0'>
+        <div className='flex-1'>
+          <h2 className='text-2xl font-bold text-neutral-900 mb-2'>
             Analysis Results
           </h2>
-          <div className="flex flex-wrap gap-3 text-sm text-neutral-600">
+          <div className='flex flex-wrap gap-3 text-sm text-neutral-600'>
             {analysis.word_count && (
               <span>Word Count: {analysis.word_count}</span>
             )}
@@ -349,17 +349,17 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-2 rounded-rs shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0"
-            aria-label="Close modal"
+            className='p-2 rounded-rs shadow-md bg-white hover:bg-primary/10 transition-colors duration-200 w-fit flex-shrink-0'
+            aria-label='Close modal'
           >
-            <X className="w-5 h-5 text-neutral-500" />
+            <X className='w-5 h-5 text-neutral-500' />
           </button>
         )}
       </div>
 
       {/* Sticky Tabs */}
-      <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 mb-6 -mx-5 px-5 flex-shrink-0">
-        <div className="flex space-x-4">
+      <div className='sticky top-0 z-10 bg-white border-b border-neutral-200 mb-6 -mx-5 px-5 flex-shrink-0'>
+        <div className='flex space-x-4'>
           {[
             { id: "analysis", label: "Analysis", icon: TrendingUp },
             { id: "essay", label: "Essay", icon: BookOpen },
@@ -384,7 +384,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className='w-4 h-4' />
                 <span>{tab.label}</span>
               </button>
             );
@@ -393,47 +393,47 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       </div>
 
       {/* Tab Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
+      <div className='flex-1 overflow-y-auto'>
         {/* Analysis Tab */}
         {activeTab === "analysis" && analysis.detailed_analysis && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             {/* 1. Argument Knowledge Graph (Toulmin's Model) */}
             {analysis.detailed_analysis.argumentation && (
               <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
                   Argument Structure (Toulmin's Model)
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-3 bg-success-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Claims</p>
-                    <p className="text-2xl font-bold text-primary">
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
+                  <div className='text-center p-3 bg-success-50 rounded-rd'>
+                    <p className='text-sm text-neutral-600'>Claims</p>
+                    <p className='text-2xl font-bold text-primary'>
                       {
                         analysis.detailed_analysis.argumentation
                           .argument_structure.total_claims
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-success-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Evidence</p>
-                    <p className="text-2xl font-bold text-success-default">
+                  <div className='text-center p-3 bg-success-50 rounded-rd'>
+                    <p className='text-sm text-neutral-600'>Evidence</p>
+                    <p className='text-2xl font-bold text-success-default'>
                       {
                         analysis.detailed_analysis.argumentation
                           .argument_structure.total_grounds
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-info-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Warrants</p>
-                    <p className="text-2xl font-bold text-info-default">
+                  <div className='text-center p-3 bg-info-50 rounded-rd'>
+                    <p className='text-sm text-neutral-600'>Warrants</p>
+                    <p className='text-2xl font-bold text-info-default'>
                       {
                         analysis.detailed_analysis.argumentation
                           .argument_structure.total_warrants
                       }
                     </p>
                   </div>
-                  <div className="text-center p-3 bg-warning-50 rounded-rd">
-                    <p className="text-sm text-neutral-600">Rebuttals</p>
-                    <p className="text-2xl font-bold text-warning-default">
+                  <div className='text-center p-3 bg-warning-50 rounded-rd'>
+                    <p className='text-sm text-neutral-600'>Rebuttals</p>
+                    <p className='text-2xl font-bold text-warning-default'>
                       {
                         analysis.detailed_analysis.argumentation
                           .argument_structure.total_rebuttals
@@ -478,7 +478,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 )} */}
 
                 {/* Knowledge Graph */}
-                <div className="mt-6">
+                <div className='mt-6'>
                   <ArgumentKnowledgeGraph
                     graph={analysis.detailed_analysis.argumentation.graph}
                     metrics={analysis.detailed_analysis.argumentation.metrics}
@@ -490,15 +490,15 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
             {/* 2. Knowledge Graph Analysis */}
             {analysis.detailed_analysis.knowledge_graph && (
               <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
                   Knowledge Graph Analysis
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
                   <div>
-                    <p className="text-sm text-neutral-600">
+                    <p className='text-sm text-neutral-600'>
                       Concepts Identified
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-lg font-semibold'>
                       {
                         analysis.detailed_analysis.knowledge_graph.concepts
                           .length
@@ -506,8 +506,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">Relationships</p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-sm text-neutral-600'>Relationships</p>
+                    <p className='text-lg font-semibold'>
                       {
                         analysis.detailed_analysis.knowledge_graph.relationships
                           .length
@@ -515,8 +515,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">Connectivity</p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-sm text-neutral-600'>Connectivity</p>
+                    <p className='text-lg font-semibold'>
                       {analysis.detailed_analysis.knowledge_graph.connectivity_score.toFixed(
                         1
                       )}
@@ -524,8 +524,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">Graph Density</p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-sm text-neutral-600'>Graph Density</p>
+                    <p className='text-lg font-semibold'>
                       {analysis.detailed_analysis.knowledge_graph.graph_structure.density.toFixed(
                         2
                       )}
@@ -534,15 +534,15 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 </div>
                 {analysis.detailed_analysis.knowledge_graph.concepts.length >
                   0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium text-neutral-700 mb-2">
+                  <div className='mt-4'>
+                    <p className='text-sm font-medium text-neutral-700 mb-2'>
                       Key Concepts:
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className='flex flex-wrap gap-2'>
                       {analysis.detailed_analysis.knowledge_graph.concepts
                         .slice(0, 10)
                         .map((concept, idx) => (
-                          <Badge key={idx} variant="neutral" size="sm">
+                          <Badge key={idx} variant='neutral' size='sm'>
                             {concept.text} ({concept.frequency})
                           </Badge>
                         ))}
@@ -555,18 +555,18 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
             {/* 3. Grammar Analysis - grouped by category */}
             {analysis.detailed_analysis.grammar && (
               <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
                   Grammar Analysis
                 </h4>
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">Score</span>
-                    <span className="font-semibold">
+                <div className='space-y-3 mb-4'>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-neutral-600'>Score</span>
+                    <span className='font-semibold'>
                       {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-neutral-600'>
                       Error Count
                     </span>
                     <Badge
@@ -582,7 +582,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 </div>
 
                 {Object.keys(groupedGrammarErrors).length > 0 && (
-                  <div className="mt-4 space-y-4">
+                  <div className='mt-4 space-y-4'>
                     {Object.entries(groupedGrammarErrors).map(
                       ([category, errorGroups]) => {
                         const categoryColor = getCategoryColor(category);
@@ -592,26 +592,26 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                         );
                         return (
                           <div key={category}>
-                            <h5 className="text-sm font-semibold text-neutral-700 mb-2 flex items-center">
+                            <h5 className='text-sm font-semibold text-neutral-700 mb-2 flex items-center'>
                               <span
                                 className={`${categoryColor.bg} ${categoryColor.text} px-2 py-0.5 text-xs font-medium rounded-full mr-2`}
                               >
                                 {category}
                               </span>
-                              <span className="text-xs text-neutral-500">
+                              <span className='text-xs text-neutral-500'>
                                 ({totalCount}{" "}
                                 {totalCount === 1 ? "issue" : "issues"})
                               </span>
                             </h5>
-                            <ul className="list-disc list-inside space-y-1 ml-2">
+                            <ul className='list-disc list-inside space-y-1 ml-2'>
                               {errorGroups.map((errorGroup, idx) => (
                                 <li
                                   key={idx}
-                                  className="text-sm text-neutral-700"
+                                  className='text-sm text-neutral-700'
                                 >
                                   {errorGroup.message}
                                   {errorGroup.count > 1 && (
-                                    <span className="ml-1 text-neutral-500 font-medium">
+                                    <span className='ml-1 text-neutral-500 font-medium'>
                                       ({errorGroup.count})
                                     </span>
                                   )}
@@ -630,33 +630,33 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
             {/* 4. Readability Analysis */}
             {analysis.detailed_analysis.readability && (
               <Card>
-                <h4 className="text-lg font-semibold text-neutral-900 mb-4">
+                <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
                   Readability Analysis
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
                   <div>
-                    <p className="text-sm text-neutral-600">
+                    <p className='text-sm text-neutral-600'>
                       Flesch Reading Ease
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-lg font-semibold'>
                       {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(
                         1
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">Grade Level</p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-sm text-neutral-600'>Grade Level</p>
+                    <p className='text-lg font-semibold'>
                       {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(
                         1
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">
+                    <p className='text-sm text-neutral-600'>
                       Lexical Diversity
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-lg font-semibold'>
                       {(
                         analysis.detailed_analysis.readability
                           .lexical_diversity * 100
@@ -665,8 +665,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-neutral-600">SMOG Index</p>
-                    <p className="text-lg font-semibold">
+                    <p className='text-sm text-neutral-600'>SMOG Index</p>
+                    <p className='text-lg font-semibold'>
                       {analysis.detailed_analysis.readability.smog_index.toFixed(
                         1
                       )}
@@ -678,7 +678,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
             {/* 5. Overall Score - The 5 score cards */}
             <Card>
-              <div className="flex items-center space-x-6 mb-6">
+              {/* <div className="flex items-center space-x-6 mb-6">
                 <div className="flex items-center space-x-3">
                   {scores.overall >= 80 ? (
                     <CheckCircle className="w-6 h-6 text-success-default" />
@@ -708,9 +708,9 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 >
                   {scores.overall.toFixed(1)}
                 </div>
-              </div>
+              </div> */}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5'>
                 {[
                   {
                     key: "grammar",
@@ -746,14 +746,14 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                   const score = scores[key as keyof typeof scores] || 0;
                   return (
                     <Card key={key}>
-                      <div className="text-center flex flex-col h-full">
+                      <div className='text-center flex flex-col h-full'>
                         <Icon
                           className={`w-8 h-8 text-${color} mx-auto mb-1`}
                         />
-                        <h5 className="font-semibold text-neutral-900 mb-4">
+                        <h5 className='font-semibold text-neutral-900 mb-4'>
                           {label}
                         </h5>
-                        <div className="mt-auto">
+                        <div className='mt-auto'>
                           <div
                             className={`text-xl font-bold text-${color} mb-1`}
                           >
@@ -762,7 +762,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                           <ProgressBar
                             value={score}
                             color={getScoreColor(score)}
-                            size="sm"
+                            size='sm'
                           />
                         </div>
                       </div>
@@ -774,21 +774,21 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
             {/* Thesis Statement Summary Card */}
             {analysis.detailed_analysis.argumentation.thesis_statement && (
-              <Card className="border-l-4 border-l-info">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <Target className="w-5 h-5 text-info-default" />
+              <Card className='border-l-4 border-l-info'>
+                <div className='flex items-start space-x-3'>
+                  <div className='flex-shrink-0 mt-1'>
+                    <Target className='w-5 h-5 text-info-default' />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Badge variant="info" size="sm">
+                  <div className='flex-1'>
+                    <div className='flex items-center space-x-2 mb-2'>
+                      <Badge variant='info' size='sm'>
                         THESIS
                       </Badge>
-                      <Badge variant="neutral" size="sm">
+                      <Badge variant='neutral' size='sm'>
                         argumentation
                       </Badge>
                     </div>
-                    <h5 className="font-semibold text-neutral-900 mb-2">
+                    <h5 className='font-semibold text-neutral-900 mb-2'>
                       {(() => {
                         const claimsCount =
                           analysis.detailed_analysis.argumentation
@@ -804,8 +804,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                         return "Thesis statement identified";
                       })()}
                     </h5>
-                    <div className="mb-3 p-2 bg-neutral-50 rounded-rd border border-neutral-200">
-                      <p className="text-sm text-neutral-700 italic">
+                    <div className='mb-3 p-2 bg-neutral-50 rounded-rd border border-neutral-200'>
+                      <p className='text-sm text-neutral-700 italic'>
                         "
                         {
                           analysis.detailed_analysis.argumentation
@@ -814,7 +814,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                         "
                       </p>
                     </div>
-                    <p className="text-sm text-neutral-600 mb-2">
+                    <p className='text-sm text-neutral-600 mb-2'>
                       {(() => {
                         const thesis =
                           analysis.detailed_analysis.argumentation
@@ -880,21 +880,21 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
         {/* Essay Tab */}
         {activeTab === "essay" && (
-          <div className="space-y-6">
+          <div className='space-y-6'>
             <Card>
               {highlightData.html ? (
-                <div className="space-y-3">
-                  <div className="text-md text-neutral-600">
+                <div className='space-y-3'>
+                  <div className='text-md text-neutral-600'>
                     Hover over highlighted text to see issue details. (
                     {highlightData.errors.length} issues)
                   </div>
                   <div
-                    className="whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4"
+                    className='whitespace-pre-wrap leading-relaxed text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-rd p-4'
                     dangerouslySetInnerHTML={{ __html: highlightData.html }}
                   />
                 </div>
               ) : (
-                <p className="text-neutral-600">
+                <p className='text-neutral-600'>
                   No grammar highlights available. Run an analysis to view
                   issues mapped to your essay text.
                 </p>
@@ -905,7 +905,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
         {/* Recommendations Tab */}
         {activeTab === "recommendations" && (
-          <div className="space-y-4 mt-4">
+          <div className='space-y-4 mt-4'>
             {recommendations.length > 0 ? (
               recommendations.map((recommendation, index) => {
                 return (
@@ -924,12 +924,12 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                           : "border-l-info"
                       }`}
                     >
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 mt-1">
+                      <div className='flex items-start space-x-3'>
+                        <div className='flex-shrink-0 mt-1'>
                           {getPriorityIcon(recommendation.priority)}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
+                        <div className='flex-1'>
+                          <div className='flex items-center space-x-2 mb-2'>
                             <Badge
                               variant={
                                 getPriorityColor(recommendation.priority) as
@@ -938,37 +938,37 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                                   | "info"
                                   | "neutral"
                               }
-                              size="sm"
+                              size='sm'
                             >
                               {recommendation.priority.toUpperCase()}
                             </Badge>
-                            <Badge variant="neutral" size="sm">
+                            <Badge variant='neutral' size='sm'>
                               {recommendation.dimension}
                             </Badge>
                           </div>
-                          <h5 className="font-semibold text-neutral-900 mb-1">
+                          <h5 className='font-semibold text-neutral-900 mb-1'>
                             {recommendation.message}
                           </h5>
                           {recommendation.suggestion && (
-                            <p className="text-sm text-neutral-600 mb-2">
+                            <p className='text-sm text-neutral-600 mb-2'>
                               {recommendation.suggestion}
                             </p>
                           )}
                           {recommendation.action_items &&
                             recommendation.action_items.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-neutral-200">
-                                <p className="text-sm font-medium text-neutral-700 mb-2 flex items-center">
-                                  <Target className="w-4 h-4 mr-1" />
+                              <div className='mt-3 pt-3 border-t border-neutral-200'>
+                                <p className='text-sm font-medium text-neutral-700 mb-2 flex items-center'>
+                                  <Target className='w-4 h-4 mr-1' />
                                   Action Items:
                                 </p>
-                                <ul className="space-y-1">
+                                <ul className='space-y-1'>
                                   {recommendation.action_items.map(
                                     (item, itemIdx) => (
                                       <li
                                         key={itemIdx}
-                                        className="flex items-start text-sm text-neutral-600"
+                                        className='flex items-start text-sm text-neutral-600'
                                       >
-                                        <ArrowRight className="w-4 h-4 mr-2 mt-0.5 text-primary flex-shrink-0" />
+                                        <ArrowRight className='w-4 h-4 mr-2 mt-0.5 text-primary flex-shrink-0' />
                                         <span>{item}</span>
                                       </li>
                                     )
@@ -983,9 +983,9 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 );
               })
             ) : (
-              <Card className="text-center py-8">
-                <Award className="w-12 h-12 text-success-default mx-auto mb-3" />
-                <p className="text-neutral-600">
+              <Card className='text-center py-8'>
+                <Award className='w-12 h-12 text-success-default mx-auto mb-3' />
+                <p className='text-neutral-600'>
                   No specific recommendations. Overall writing quality is good!
                 </p>
               </Card>

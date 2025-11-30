@@ -293,5 +293,5 @@ class AuthService:
         return user
 
 
-# Singleton instance
+# Singleton instance    
 auth_service = AuthService()

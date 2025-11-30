@@ -446,26 +446,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
             )}
           </div>
 
-          <div className="border-t border-neutral-200 pt-3">
-            <h5 className="text-sm font-semibold text-neutral-800 mb-2">
-              Coherence
-            </h5>
-            <div className="w-full bg-neutral-200 rounded-full h-2">
-              <div
-                className="bg-emerald-500 h-2 rounded-full"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    Math.round(metrics?.coherence ?? 0)
-                  )}%`,
-                }}
-              ></div>
-            </div>
-            <span className="text-xs text-neutral-500 mt-1 inline-block">
-              {Math.round(metrics?.coherence ?? 0)}%
-            </span>
-          </div>
-
           {metrics && metrics.verification.length > 0 && (
             <div className="border-t border-neutral-200 pt-3">
               <h5 className="text-sm font-semibold text-neutral-800 mb-2">
