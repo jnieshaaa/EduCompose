@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 interface ButtonProps {
   children: React.ReactNode;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
   variant?:
     | "primary"
     | "secondary"

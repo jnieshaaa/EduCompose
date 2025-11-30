@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
-  GraduationCap,
   Plus,
   Search,
   Layers,
@@ -35,6 +34,131 @@ interface StudentV2 {
   name: string;
   blockId: string;
 }
+
+// Program suggestions for autocomplete
+const PROGRAM_SUGGESTIONS = [
+  // Business / Management / Finance
+  "BSA",
+  "BSBA",
+  "BSBA-FM",
+  "BSBA-MM",
+  "BSBA-HRDM",
+  "BSBA-MKT",
+  "BSBA-BA",
+  "BSAIS",
+  "BSMA",
+  "BSECON",
+  "BSEntrep",
+  "BSHM",
+  "BSTM",
+  "BSRE",
+  "BSCoEcon",
+  // Engineering / Technology
+  "BSCE",
+  "BSME",
+  "BSEE",
+  "BSCoE",
+  "BSECE",
+  "BSChE",
+  "BSIE",
+  "BSMatE",
+  "BSARE",
+  "BSGE",
+  "BSMetE",
+  "BSEnE",
+  "BSEM",
+  "BSEnTech",
+  // Computing / IT / Data
+  "BSCS",
+  "BSIT",
+  "BSIS",
+  "BSDA",
+  "BSDS",
+  "BSSE",
+  "BSAI",
+  "BSCpE",
+  // Health / Medical-Allied
+  "BSN",
+  "BSMT",
+  "BSPharma",
+  "BSRT",
+  "BSMedTech",
+  "BSND",
+  "BSSW",
+  "BSMLS",
+  "BSOT",
+  "BSPT",
+  // Science / Natural Science
+  "BSBio",
+  "BSCH",
+  "BSPhy",
+  "BSStat",
+  "BSAMath",
+  "BSMath",
+  "BSEnvSci",
+  "BSITech",
+  "BSFT",
+  "BSBiotech",
+  "BSMicro",
+  "BSGeol",
+  "BSMarBio",
+  "BSEnviEng",
+  // Arts / Humanities
+  "ABEng",
+  "ABFil",
+  "ABPolSci",
+  "ABPsy",
+  "ABComm",
+  "ABMMA",
+  "ABHist",
+  "ABPhilo",
+  "ABIS",
+  "BFA",
+  "BFA-ID",
+  "BFA-MC",
+  "BFA-PA",
+  "BFAMMA",
+  // Education
+  "BEEd",
+  "BSEd",
+  "BSEd-Eng",
+  "BSEd-Fil",
+  "BSEd-Math",
+  "BSEd-Sci",
+  "BPEd",
+  "BTVTEd",
+  "BTTE",
+  "BCAEd",
+  // Social Sciences
+  "ABSS",
+  "ABDevStud",
+  "ABAnthro",
+  "ABJourn",
+  // Media / Communications / Design
+  "BJourn",
+  "BFA-AD",
+  "BFA-VC",
+  "BFA-MMA",
+  "BSD",
+  // Law / Public Affairs / Governance
+  "BSPA",
+  "BSLGA",
+  "ABPH",
+  "ABILS",
+  // Criminology / Security / Public Safety
+  "BSCrim",
+  "BSSec",
+  "BSForenSci",
+  // Agriculture / Forestry / Environment
+  "BSAgri",
+  "BSFor",
+  "BSAB",
+  "BSAT",
+  // Maritime
+  "BSMarE",
+  "BSMarT",
+  "BSNav",
+];
 
 // Empty initial data - add your own items
 const initialPrograms: Program[] = [];
@@ -71,8 +195,14 @@ const Dashboard_v2: React.FC = () => {
   // Form states
   const [newProgram, setNewProgram] = useState({ name: "", description: "" });
   const [programError, setProgramError] = useState("");
+  const [showProgramSuggestions, setShowProgramSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [newBlock, setNewBlock] = useState({ name: "", programId: "" });
   const [blockError, setBlockError] = useState("");
+  const [showBlockSuggestions, setShowBlockSuggestions] = useState(false);
+  const [filteredBlockSuggestions, setFilteredBlockSuggestions] = useState<
+    string[]
+  >([]);
   const [newStudent, setNewStudent] = useState({
     name: "",
     programId: "",
@@ -127,6 +257,34 @@ const Dashboard_v2: React.FC = () => {
     blocks.find((b) => b.id === blockId)?.programId || "";
 
   // Handlers
+  const handleProgramNameChange = (value: string) => {
+    const upperValue = value.toUpperCase();
+    setNewProgram((prev) => ({ ...prev, name: upperValue }));
+    setProgramError("");
+
+    if (upperValue.length > 0) {
+      const filtered = PROGRAM_SUGGESTIONS.filter(
+        (suggestion) =>
+          suggestion.toUpperCase().includes(upperValue) &&
+          !programs.some(
+            (p) => p.name.toUpperCase() === suggestion.toUpperCase()
+          )
+      );
+      setFilteredSuggestions(filtered);
+      setShowProgramSuggestions(filtered.length > 0);
+    } else {
+      setFilteredSuggestions([]);
+      setShowProgramSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setNewProgram((prev) => ({ ...prev, name: suggestion }));
+    setShowProgramSuggestions(false);
+    setFilteredSuggestions([]);
+    setProgramError("");
+  };
+
   const handleAddProgram = () => {
     if (!newProgram.name.trim()) return;
 
@@ -166,13 +324,6 @@ const Dashboard_v2: React.FC = () => {
     setShowAddProgramModal(false);
   };
 
-  const confirmDeleteProgram = (programId: string, programName: string) => {
-    setDeleteType("program");
-    setDeleteId(programId);
-    setDeleteName(programName);
-    setShowDeleteConfirm(true);
-  };
-
   const handleDeleteProgram = (programId: string) => {
     // Get all blocks in this program
     const programBlocks = blocks.filter((b) => b.programId === programId);
@@ -184,6 +335,56 @@ const Dashboard_v2: React.FC = () => {
     setBlocks((prev) => prev.filter((b) => b.programId !== programId));
     // Remove all students in those blocks
     setStudents((prev) => prev.filter((s) => !blockIds.includes(s.blockId)));
+  };
+
+  // Block suggestions: 1A-1D, 2A-2D, 3A-3D, 4A-4D
+  const ALL_BLOCK_OPTIONS = [
+    "1A",
+    "1B",
+    "1C",
+    "1D",
+    "2A",
+    "2B",
+    "2C",
+    "2D",
+    "3A",
+    "3B",
+    "3C",
+    "3D",
+    "4A",
+    "4B",
+    "4C",
+    "4D",
+  ];
+
+  const handleBlockNameChange = (value: string) => {
+    const trimmed = value.slice(0, 2).toUpperCase();
+    setNewBlock((prev) => ({ ...prev, name: trimmed }));
+    setBlockError("");
+
+    if (trimmed.length > 0) {
+      // Get existing blocks for selected program
+      const existingBlocks = blocks
+        .filter((b) => b.programId === newBlock.programId)
+        .map((b) => b.name.toUpperCase());
+
+      const filtered = ALL_BLOCK_OPTIONS.filter(
+        (option) =>
+          option.startsWith(trimmed) && !existingBlocks.includes(option)
+      );
+      setFilteredBlockSuggestions(filtered);
+      setShowBlockSuggestions(filtered.length > 0);
+    } else {
+      setFilteredBlockSuggestions([]);
+      setShowBlockSuggestions(false);
+    }
+  };
+
+  const handleSelectBlockSuggestion = (suggestion: string) => {
+    setNewBlock((prev) => ({ ...prev, name: suggestion }));
+    setShowBlockSuggestions(false);
+    setFilteredBlockSuggestions([]);
+    setBlockError("");
   };
 
   const handleAddBlock = () => {
@@ -220,13 +421,6 @@ const Dashboard_v2: React.FC = () => {
     setNewBlock({ name: "", programId: "" });
     setBlockError("");
     setShowAddBlockModal(false);
-  };
-
-  const confirmDeleteBlock = (blockId: string, blockName: string) => {
-    setDeleteType("block");
-    setDeleteId(blockId);
-    setDeleteName(blockName);
-    setShowDeleteConfirm(true);
   };
 
   const handleDeleteBlock = (blockId: string) => {
@@ -339,28 +533,8 @@ const Dashboard_v2: React.FC = () => {
     setEditingStudentProgramId("");
   };
 
-  // Program overview data
-  const programOverview = useMemo(() => {
-    return programs.map((program) => {
-      const programBlocks = blocks.filter((b) => b.programId === program.id);
-      const blockIds = programBlocks.map((b) => b.id);
-      const programStudents = students.filter((s) =>
-        blockIds.includes(s.blockId)
-      );
-      return {
-        ...program,
-        blockCount: programBlocks.length,
-        studentCount: programStudents.length,
-        blocks: programBlocks.map((block) => ({
-          ...block,
-          studentCount: students.filter((s) => s.blockId === block.id).length,
-        })),
-      };
-    });
-  }, [programs, blocks, students]);
-
   return (
-    <div className='p-6 space-y-6 min-h-screen bg-gradient-to-br from-neutral-100 via-neutral-50 to-primary-50/30'>
+    <div className='p-6 space-y-6 min-h-screen bg-neutral-300/10'>
       {/* Header */}
       <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
         <div>
@@ -411,140 +585,6 @@ const Dashboard_v2: React.FC = () => {
           Total Blocks: <span className='font-semibold'>{totalBlocks}</span>
         </p>
       </div>
-
-      {/* Program & Block Overview */}
-      <Card>
-        <h3 className='text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2'>
-          <GraduationCap className='w-5 h-5 text-primary' />
-          Programs & Blocks Overview
-        </h3>
-        <div className='space-y-6'>
-          <AnimatePresence>
-            {programOverview.map((program, index) => (
-              <motion.div
-                key={program.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: index * 0.1 }}
-                className='border border-neutral-200 rounded-rd bg-white overflow-hidden'
-              >
-                {/* Program Header */}
-                <div className='p-4 bg-gradient-to-r from-primary-50 to-white border-b border-neutral-200'>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-3'>
-                      <div>
-                        <h4
-                          className='text-lg font-bold text-white'
-                          style={{ textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)" }}
-                        >
-                          {program.name}
-                        </h4>
-                        {program.description && (
-                          <p className='text-sm font-md'>
-                            {program.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className='flex items-center gap-4'>
-                      <div className='text-right'>
-                        <p className='text-sm font-md'>
-                          {program.blockCount} blocks • {program.studentCount}{" "}
-                          students
-                        </p>
-                      </div>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={() =>
-                          confirmDeleteProgram(program.id, program.name)
-                        }
-                        className='group text-neutral-400 hover:bg-support-superlight/30 border-none'
-                      >
-                        <Trash2 className='w-4 h-4 group-hover:text-error-default transition-colors' />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Blocks */}
-                <div className='p-4'>
-                  {program.blocks.length > 0 ? (
-                    <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
-                      {program.blocks.map((block) => (
-                        <div
-                          key={block.id}
-                          className={`p-3 border rounded-rd cursor-pointer transition-colors ${
-                            selectedBlock === block.id
-                              ? "border-primary bg-support-superlight/35"
-                              : "border-neutral-200 bg-neutral-50 hover:border-primary-50"
-                          }`}
-                          onClick={() => {
-                            if (selectedBlock === block.id) {
-                              // Deselect - show all
-                              setSelectedProgram("all");
-                              setSelectedBlock("all");
-                            } else {
-                              // Select this block
-                              setSelectedProgram(program.id);
-                              setSelectedBlock(block.id);
-                            }
-                          }}
-                        >
-                          <div className='flex items-center justify-between'>
-                            <div className='flex items-center gap-2'>
-                              <Layers
-                                className={`w-4 h-4 ${
-                                  selectedBlock === block.id
-                                    ? "text-primary"
-                                    : "text-primary"
-                                }`}
-                              />
-                              <span className='font-medium text-neutral-900'>
-                                {block.name}
-                              </span>
-                            </div>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                confirmDeleteBlock(block.id, block.name);
-                              }}
-                            >
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='group text-neutral-400 hover:bg-support-superlight/30 border-none -mr-1'
-                              >
-                                <Trash2 className='w-3 h-3 group-hover:text-error-default transition-colors' />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className='text-xs text-neutral-500 mt-1 ml-6'>
-                            {block.studentCount} students
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className='text-sm text-neutral-500 text-center py-4'>
-                      No blocks yet. Add a block to this program.
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-        {programs.length === 0 && (
-          <div className='text-center py-8'>
-            <BookOpen className='w-12 h-12 text-neutral-300 mx-auto mb-3' />
-            <p className='text-neutral-500'>
-              No programs created yet. Add your first program!
-            </p>
-          </div>
-        )}
-      </Card>
 
       {/* Filters and Search */}
       <Card>
@@ -711,25 +751,90 @@ const Dashboard_v2: React.FC = () => {
           setShowAddProgramModal(false);
           setProgramError("");
           setNewProgram({ name: "", description: "" });
+          setShowProgramSuggestions(false);
+          setFilteredSuggestions([]);
         }}
         title='Add New Program'
         size='md'
       >
         <div className='space-y-4'>
-          <div>
-            <Input
-              label='Program Name'
-              value={newProgram.name}
-              onChange={(value) => {
-                setNewProgram((prev) => ({
-                  ...prev,
-                  name: value.toUpperCase(),
-                }));
-                setProgramError("");
-              }}
-              placeholder='e.g., BSCS-DS, BSIT, BSCE'
-              required
-            />
+          <div className='relative'>
+            <label className='block text-sm font-medium text-neutral-700 mb-1'>
+              Program Name <span className='text-error-default'>*</span>
+            </label>
+            <div className='relative'>
+              <input
+                type='text'
+                value={newProgram.name}
+                onChange={(e) => handleProgramNameChange(e.target.value)}
+                onFocus={() => {
+                  if (
+                    newProgram.name.length > 0 &&
+                    filteredSuggestions.length > 0
+                  ) {
+                    setShowProgramSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Delay to allow click on suggestion
+                  setTimeout(() => setShowProgramSuggestions(false), 150);
+                }}
+                placeholder='e.g., BSCS, BSIT, BSCE'
+                className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
+              />
+              {/* Search icon */}
+              <Search className='w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2' />
+            </div>
+
+            {/* Suggestions Dropdown */}
+            <AnimatePresence>
+              {showProgramSuggestions && filteredSuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className='absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-rd shadow-lg max-h-48 overflow-y-auto'
+                >
+                  {filteredSuggestions.slice(0, 8).map((suggestion, index) => (
+                    <button
+                      key={suggestion}
+                      type='button'
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                      className={`w-full px-3 py-2 text-left hover:bg-support-superlight/35 transition-colors flex items-center gap-2 ${
+                        index === 0 ? "rounded-t-rd" : ""
+                      } ${
+                        index === Math.min(filteredSuggestions.length - 1, 7)
+                          ? "rounded-b-rd"
+                          : ""
+                      }`}
+                    >
+                      <BookOpen className='w-4 h-4 text-primary' />
+                      <span className='font-medium text-neutral-900'>
+                        {suggestion
+                          .split(new RegExp(`(${newProgram.name})`, "gi"))
+                          .map((part, i) =>
+                            part.toUpperCase() ===
+                            newProgram.name.toUpperCase() ? (
+                              <span key={i} className='text-primary font-bold'>
+                                {part}
+                              </span>
+                            ) : (
+                              <span key={i}>{part}</span>
+                            )
+                          )}
+                      </span>
+                    </button>
+                  ))}
+                  {filteredSuggestions.length > 8 && (
+                    <div className='px-3 py-2 text-xs text-neutral-500 border-t border-neutral-100'>
+                      +{filteredSuggestions.length - 8} more results...
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {programError && (
               <p className='text-error-default text-sm mt-1'>{programError}</p>
             )}
@@ -774,6 +879,8 @@ const Dashboard_v2: React.FC = () => {
           setShowAddBlockModal(false);
           setBlockError("");
           setNewBlock({ name: "", programId: "" });
+          setShowBlockSuggestions(false);
+          setFilteredBlockSuggestions([]);
         }}
         title='Add New Block'
         size='md'
@@ -786,8 +893,14 @@ const Dashboard_v2: React.FC = () => {
             <select
               value={newBlock.programId}
               onChange={(e) => {
-                setNewBlock((prev) => ({ ...prev, programId: e.target.value }));
+                setNewBlock((prev) => ({
+                  ...prev,
+                  programId: e.target.value,
+                  name: "",
+                }));
                 setBlockError("");
+                setShowBlockSuggestions(false);
+                setFilteredBlockSuggestions([]);
               }}
               className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
             >
@@ -799,19 +912,70 @@ const Dashboard_v2: React.FC = () => {
               ))}
             </select>
           </div>
-          <div>
-            <Input
-              label='Block'
+          <div className='relative'>
+            <label className='block text-sm font-medium text-neutral-700 mb-1'>
+              Block <span className='text-error-default'>*</span>
+            </label>
+            <input
+              type='text'
               value={newBlock.name}
-              onChange={(value) => {
-                // Only allow max 2 characters
-                const trimmed = value.slice(0, 2).toUpperCase();
-                setNewBlock((prev) => ({ ...prev, name: trimmed }));
-                setBlockError("");
+              onChange={(e) => handleBlockNameChange(e.target.value)}
+              onFocus={() => {
+                if (
+                  newBlock.name.length > 0 &&
+                  filteredBlockSuggestions.length > 0
+                ) {
+                  setShowBlockSuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowBlockSuggestions(false), 150);
               }}
               placeholder='e.g., 1A, 2B, 3C, 4D'
-              required
+              className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
             />
+
+            {/* Block Suggestions Dropdown */}
+            <AnimatePresence>
+              {showBlockSuggestions && filteredBlockSuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className='absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-rd shadow-lg'
+                >
+                  {filteredBlockSuggestions.map((suggestion, index) => (
+                    <button
+                      key={suggestion}
+                      type='button'
+                      onClick={() => handleSelectBlockSuggestion(suggestion)}
+                      className={`w-full px-3 py-2 text-left hover:bg-support-superlight/35 transition-colors flex items-center gap-2 ${
+                        index === 0 ? "rounded-t-rd" : ""
+                      } ${
+                        index === filteredBlockSuggestions.length - 1
+                          ? "rounded-b-rd"
+                          : ""
+                      }`}
+                    >
+                      <Layers className='w-4 h-4 text-primary' />
+                      <span className='font-medium text-neutral-900'>
+                        {suggestion.split("").map((char, i) =>
+                          newBlock.name.includes(char) ? (
+                            <span key={i} className='text-primary font-bold'>
+                              {char}
+                            </span>
+                          ) : (
+                            <span key={i}>{char}</span>
+                          )
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {blockError && (
               <p className='text-error-default text-sm mt-1'>{blockError}</p>
             )}
@@ -1037,10 +1201,9 @@ const Dashboard_v2: React.FC = () => {
                   confirmDeleteStudent(editingStudent.id, editingStudent.name);
                 }
               }}
-              className='text-neutral-600 hover:text-error-default hover:bg-support-superlight/35 border-none'
+              className='group hover:text-error-default hover:bg-support-superlight/35 border-none'
             >
-              <Trash2 className='w-4 h-4 mr-2 text-error-default' />
-              Remove Student
+              <Trash2 className='w-4 h-4 mr-2 group-hover:text-error-default transition-colors' />
             </Button>
             <div className='flex gap-3'>
               <Button
