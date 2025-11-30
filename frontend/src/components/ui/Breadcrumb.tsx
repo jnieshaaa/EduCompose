@@ -53,25 +53,17 @@ const Breadcrumb: React.FC = () => {
     const blockId = searchParams.get("blockId");
     const blockName = searchParams.get("blockName");
 
-    // Add program breadcrumb - explicitly exclude block parameters to unselect block
-    const programParams = new URLSearchParams();
-    programParams.set("programId", programId || "");
-    programParams.set("programName", programName);
+    // Add program breadcrumb
     items.push({
       label: programName,
-      path: `${pathname}?${programParams.toString()}`,
+      path: `${pathname}?programId=${programId}&programName=${programName}`,
     });
 
     // Add block breadcrumb if a specific block is selected
     if (blockId && blockName) {
-      const blockParams = new URLSearchParams();
-      blockParams.set("programId", programId || "");
-      blockParams.set("programName", programName);
-      blockParams.set("blockId", blockId);
-      blockParams.set("blockName", blockName);
       items.push({
         label: blockName,
-        path: `${pathname}?${blockParams.toString()}`,
+        path: `${pathname}?programId=${programId}&programName=${programName}&blockId=${blockId}&blockName=${blockName}`,
       });
     }
   }

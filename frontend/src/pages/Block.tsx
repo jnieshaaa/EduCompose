@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -71,49 +71,8 @@ export default function BlockPage({
   const [selectedBlock, setSelectedBlock] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Use ref to track if update is coming from URL to prevent loops
-  const isUpdatingFromUrl = React.useRef(false);
-  const previousBlockId = React.useRef<string | null>(null);
-
-  // Get current blockId from URL
-  const urlBlockId = searchParams.get("blockId");
-
-  // Initialize selectedBlock from URL params (read from URL) - only when blockId in URL actually changes
+  // Update URL when block is selected
   useEffect(() => {
-    // Only proceed if blockId actually changed
-    if (previousBlockId.current === urlBlockId) {
-      return;
-    }
-    previousBlockId.current = urlBlockId || null;
-
-    if (urlBlockId) {
-      // Check if the block exists and belongs to this program
-      const block = blocks.find(
-        (b) => b.id === urlBlockId && b.programId === programId
-      );
-      if (block) {
-        isUpdatingFromUrl.current = true;
-        setSelectedBlock(urlBlockId);
-      } else {
-        // Block doesn't exist, reset to "all"
-        isUpdatingFromUrl.current = true;
-        setSelectedBlock("all");
-      }
-    } else {
-      // No blockId in URL, select all blocks
-      isUpdatingFromUrl.current = true;
-      setSelectedBlock("all");
-    }
-  }, [urlBlockId, blocks, programId]);
-
-  // Update URL when block is selected (write to URL) - only when state changes from user interaction
-  useEffect(() => {
-    // Skip if this update is coming from URL change
-    if (isUpdatingFromUrl.current) {
-      isUpdatingFromUrl.current = false;
-      return;
-    }
-
     const block = blocks.find((b) => b.id === selectedBlock);
     const currentBlockId = searchParams.get("blockId");
     const currentBlockName = searchParams.get("blockName");
@@ -126,10 +85,7 @@ export default function BlockPage({
         newParams.set("blockName", block.name);
         setSearchParams(newParams, { replace: true });
       }
-    } else if (
-      selectedBlock === "all" &&
-      (currentBlockId || currentBlockName)
-    ) {
+    } else if (currentBlockId || currentBlockName) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("blockId");
       newParams.delete("blockName");
