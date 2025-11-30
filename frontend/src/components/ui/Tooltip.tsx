@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -52,7 +52,7 @@ const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [timeoutId]);
 
-  const computeCoords = () => {
+  const computeCoords = useCallback(() => {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -79,7 +79,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         break;
     }
     setCoords({ top, left });
-  };
+  }, [position]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -92,7 +92,7 @@ const Tooltip: React.FC<TooltipProps> = ({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
-  }, [isVisible, position]);
+  }, [isVisible, computeCoords]);
 
   return (
     <div

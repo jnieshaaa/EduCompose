@@ -60,6 +60,7 @@ module.exports = {
           default: "#EF4444",
           light: "#FCA5A5",
           dark: "#991B1B",
+          neon: "#FF1818",
         },
         info: {
           default: "#38BDF8",
@@ -102,9 +103,9 @@ module.exports = {
         pointer: "url('/cursor-pointer.png') 4 4, pointer",
       },
       borderRadius: {
-        "rs": "6px",  /* Small controls (icons, small buttons, inputs in dense lists) */
-        "rd": "8px",  /* Default radius for primary components */
-        "rl": "10px", /* Large containers (large modals, panels, cards used as layouts) */
+        rs: "6px" /* Small controls (icons, small buttons, inputs in dense lists) */,
+        rd: "8px" /* Default radius for primary components */,
+        rl: "10px" /* Large containers (large modals, panels, cards used as layouts) */,
       },
     },
   },

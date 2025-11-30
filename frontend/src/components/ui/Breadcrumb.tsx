@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
 
 interface BreadcrumbItem {
@@ -20,6 +20,7 @@ const routeMap: Record<string, string> = {
 
 const Breadcrumb: React.FC = () => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const pathname = location.pathname;
 
   // Don't show breadcrumb on landing page
@@ -43,6 +44,28 @@ const Breadcrumb: React.FC = () => {
   } else if (pathname === "/Dashboard") {
     // On Dashboard, show just "Home"
     items[0].label = "Dashboard";
+  }
+
+  // Check if we're viewing Block inside ClassManagement
+  if (pathname === "/ClassManagement" && searchParams.get("programId")) {
+    const programId = searchParams.get("programId");
+    const programName = searchParams.get("programName") || "Program";
+    const blockId = searchParams.get("blockId");
+    const blockName = searchParams.get("blockName");
+
+    // Add program breadcrumb
+    items.push({
+      label: programName,
+      path: `${pathname}?programId=${programId}&programName=${programName}`,
+    });
+
+    // Add block breadcrumb if a specific block is selected
+    if (blockId && blockName) {
+      items.push({
+        label: blockName,
+        path: `${pathname}?programId=${programId}&programName=${programName}&blockId=${blockId}&blockName=${blockName}`,
+      });
+    }
   }
 
   return (
