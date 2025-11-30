@@ -49,9 +49,15 @@ class AuthService:
 
         try:
             db.execute(text("SELECT 1"))
-        except SQLAlchemyError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                                detail="Database connection failed. Please ensure PostgreSQL is running.")
+        except SQLAlchemyError as e:
+            error_msg = str(e)
+            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
+                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
+            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
+                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
+            else:
+                detail = f"Database connection failed: {error_msg}"
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
         user = db.query(User).filter(User.email == credentials.email).first()
         if not user:
@@ -137,9 +143,15 @@ class AuthService:
         """Create a new user in Supabase Auth and local PostgreSQL"""
         try:
             db.execute(text("SELECT 1"))
-        except SQLAlchemyError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                                detail="Database connection failed. Cannot create user.")
+        except SQLAlchemyError as e:
+            error_msg = str(e)
+            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
+                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
+            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
+                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
+            else:
+                detail = f"Database connection failed: {error_msg}"
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
         existing_user = db.query(User).filter(User.email == user_data.email).first()
         if existing_user:
@@ -251,9 +263,15 @@ class AuthService:
 
         try:
             db.execute(text("SELECT 1"))
-        except SQLAlchemyError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                                detail="Database connection failed")
+        except SQLAlchemyError as e:
+            error_msg = str(e)
+            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
+                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
+            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
+                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
+            else:
+                detail = f"Database connection failed: {error_msg}"
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
         try:
             payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])

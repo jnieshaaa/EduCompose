@@ -286,7 +286,8 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
       } else if (err.status === 400) {
         setError(err.message || "Email already registered. Please use a different email.");
       } else if (err.status === 503) {
-        setError("Database connection failed. Please try again later.");
+        // Show the detailed error message from the backend
+        setError(err.message || "Database connection failed. Please check your database configuration.");
       } else {
         setError(err.message || "Registration failed. Please try again.");
       }
