@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
   FileText,
-  BarChart3,
-  Users,
+  // BarChart3,
+  // Users,
   GraduationCap,
-  ClipboardList,
-  Award,
+  // ClipboardList,
+  // Award,
   Info,
   BookOpen,
   Target,
@@ -48,7 +48,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       {
         icon: <Home className='w-5 h-5' />,
         label: "Dashboard",
-        path: "/Dashboard_v2",
+        path: "/Dashboard",
       },
       {
         icon: <FileText className='w-5 h-5' />,
@@ -60,26 +60,26 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         label: "Class Management",
         path: "/ClassManagement",
       },
-      {
-        icon: <ClipboardList className='w-5 h-5' />,
-        label: "Assignments",
-        path: "/AssignmentManagement",
-      },
-      {
-        icon: <Award className='w-5 h-5' />,
-        label: "Gradebook",
-        path: "/Gradebook",
-      },
-      {
-        icon: <BarChart3 className='w-5 h-5' />,
-        label: "Analytics",
-        path: "/Analytics",
-      },
-      {
-        icon: <Users className='w-5 h-5' />,
-        label: "Students",
-        path: "/Students",
-      },
+      // {
+      //   icon: <ClipboardList className='w-5 h-5' />,
+      //   label: "Assignments",
+      //   path: "/AssignmentManagement",
+      // },
+      // {
+      //   icon: <Award className='w-5 h-5' />,
+      //   label: "Gradebook",
+      //   path: "/Gradebook",
+      // },
+      // {
+      //   icon: <BarChart3 className='w-5 h-5' />,
+      //   label: "Analytics",
+      //   path: "/Analytics",
+      // },
+      // {
+      //   icon: <Users className='w-5 h-5' />,
+      //   label: "Students",
+      //   path: "/Students",
+      // },
     ],
     []
   );
