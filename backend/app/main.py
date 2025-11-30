@@ -15,9 +15,6 @@ from .controllers import (
 )
 from .controllers import kg_controller
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
     title="EduCompose API",
     description="Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay Evaluation",
@@ -46,6 +43,17 @@ app.include_router(students_router, prefix="/api/students", tags=["Students"])
 app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
 app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(kg_controller.kg_router, prefix="/api/kg", tags=["Knowledge Graph"])
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup"""
+    try:
+        models.Base.metadata.create_all(bind=engine)
+        print("✓ Database tables initialized successfully")
+    except Exception as e:
+        print(f"⚠ Warning: Could not initialize database tables: {e}")
+        print("  The app will continue, but database operations may fail.")
+        print("  Please check your DATABASE_URL in the .env file.")
 
 @app.get("/")
 async def root():

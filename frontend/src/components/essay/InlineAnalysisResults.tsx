@@ -85,24 +85,104 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
     }
   };
 
-  // Group grammar errors by category/type
+  // Category colors for grammar errors
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, { bg: string; text: string; border: string }> =
+      {
+        grammar: {
+          bg: "bg-red-50",
+          text: "text-red-700",
+          border: "border-red-200",
+        },
+        capitalization: {
+          bg: "bg-blue-50",
+          text: "text-blue-700",
+          border: "border-blue-200",
+        },
+        word_choice: {
+          bg: "bg-purple-50",
+          text: "text-purple-700",
+          border: "border-purple-200",
+        },
+        spelling: {
+          bg: "bg-orange-50",
+          text: "text-orange-700",
+          border: "border-orange-200",
+        },
+        punctuation: {
+          bg: "bg-yellow-50",
+          text: "text-yellow-700",
+          border: "border-yellow-200",
+        },
+      };
+    return colors[category.toLowerCase()] || colors.grammar;
+  };
+
+  // Group grammar errors by category/type and deduplicate by message
   const groupedGrammarErrors = useMemo(() => {
     if (!analysis?.detailed_analysis?.grammar?.errors) return {};
 
     const grouped: Record<
       string,
-      typeof analysis.detailed_analysis.grammar.errors
+      Array<{
+        message: string;
+        count: number;
+        errors: typeof analysis.detailed_analysis.grammar.errors;
+      }>
     > = {};
+
     analysis.detailed_analysis.grammar.errors.forEach((error) => {
       const category = error.type || "grammar";
       if (!grouped[category]) {
         grouped[category] = [];
       }
-      grouped[category].push(error);
+
+      // Find if this message already exists
+      const existing = grouped[category].find(
+        (item) => item.message.toLowerCase() === error.message.toLowerCase()
+      );
+
+      if (existing) {
+        existing.count++;
+        existing.errors.push(error);
+      } else {
+        grouped[category].push({
+          message: error.message,
+          count: 1,
+          errors: [error],
+        });
+      }
     });
 
     return grouped;
   }, [analysis]);
+
+  // Get highlight color for error type
+  const getHighlightColor = (category: string) => {
+    const colors: Record<string, { bg: string; text: string }> = {
+      grammar: {
+        bg: "rgba(239, 68, 68, 0.35)", // red
+        text: "#991b1b",
+      },
+      capitalization: {
+        bg: "rgba(59, 130, 246, 0.35)", // blue
+        text: "#1e40af",
+      },
+      word_choice: {
+        bg: "rgba(168, 85, 247, 0.35)", // purple
+        text: "#6b21a8",
+      },
+      spelling: {
+        bg: "rgba(249, 115, 22, 0.35)", // orange
+        text: "#9a3412",
+      },
+      punctuation: {
+        bg: "rgba(234, 179, 8, 0.35)", // yellow
+        text: "#854d0e",
+      },
+    };
+    return colors[category.toLowerCase()] || colors.grammar;
+  };
 
   const highlightData = useMemo(() => {
     const grammarErrors = analysis?.detailed_analysis?.grammar?.errors ?? [];
@@ -152,7 +232,9 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
 
       const snippet = escapeHtml(originalText.slice(start, end));
       const title = escapeHtml(error.message || "Grammar issue");
-      html += `<mark style="background: rgba(248, 113, 113, 0.35); color: #991b1b; padding: 0 2px; border-radius: 6px;" title="${title}">`;
+      const errorType = error.type || "grammar";
+      const color = getHighlightColor(errorType);
+      html += `<mark style="background: ${color.bg}; color: ${color.text}; padding: 0 2px; border-radius: 6px;" title="${title}">`;
       html += snippet || "\u200B";
       html += "</mark>";
       cursor = end;
@@ -322,7 +404,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                   Argument Structure (Toulmin's Model)
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-3 bg-primary-50 rounded-rd">
+                  <div className="text-center p-3 bg-success-50 rounded-rd">
                     <p className="text-sm text-neutral-600">Claims</p>
                     <p className="text-2xl font-bold text-primary">
                       {
@@ -361,7 +443,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 </div>
 
                 {/* Metrics - Coherence and Argument Strength */}
-                {analysis.detailed_analysis.argumentation.metrics && (
+                {/* {analysis.detailed_analysis.argumentation.metrics && (
                   <div className="mb-6 space-y-4">
                     {analysis.detailed_analysis.argumentation.metrics
                       .coherence !== undefined && (
@@ -393,24 +475,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                       </div>
                     )}
                   </div>
-                )}
-
-                {/* Thesis Statement - moved below metrics */}
-                {analysis.detailed_analysis.argumentation.thesis_statement && (
-                  <div className="mb-6 p-3 bg-primary-50 rounded-rd">
-                    <p className="text-sm font-medium text-neutral-700 mb-1">
-                      Thesis Statement:
-                    </p>
-                    <p className="text-sm text-neutral-600 italic">
-                      "
-                      {
-                        analysis.detailed_analysis.argumentation
-                          .thesis_statement.sentence
-                      }
-                      "
-                    </p>
-                  </div>
-                )}
+                )} */}
 
                 {/* Knowledge Graph */}
                 <div className="mt-6">
@@ -519,29 +584,43 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 {Object.keys(groupedGrammarErrors).length > 0 && (
                   <div className="mt-4 space-y-4">
                     {Object.entries(groupedGrammarErrors).map(
-                      ([category, errors]) => (
-                        <div key={category}>
-                          <h5 className="text-sm font-semibold text-neutral-700 mb-2 flex items-center">
-                            <Badge variant="error" size="sm" className="mr-2">
-                              {category}
-                            </Badge>
-                            <span className="text-xs text-neutral-500">
-                              ({errors.length}{" "}
-                              {errors.length === 1 ? "issue" : "issues"})
-                            </span>
-                          </h5>
-                          <ul className="list-disc list-inside space-y-1 ml-2">
-                            {errors.map((error, idx) => (
-                              <li
-                                key={idx}
-                                className="text-sm text-neutral-700"
+                      ([category, errorGroups]) => {
+                        const categoryColor = getCategoryColor(category);
+                        const totalCount = errorGroups.reduce(
+                          (sum, g) => sum + g.count,
+                          0
+                        );
+                        return (
+                          <div key={category}>
+                            <h5 className="text-sm font-semibold text-neutral-700 mb-2 flex items-center">
+                              <span
+                                className={`${categoryColor.bg} ${categoryColor.text} px-2 py-0.5 text-xs font-medium rounded-full mr-2`}
                               >
-                                {error.message}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )
+                                {category}
+                              </span>
+                              <span className="text-xs text-neutral-500">
+                                ({totalCount}{" "}
+                                {totalCount === 1 ? "issue" : "issues"})
+                              </span>
+                            </h5>
+                            <ul className="list-disc list-inside space-y-1 ml-2">
+                              {errorGroups.map((errorGroup, idx) => (
+                                <li
+                                  key={idx}
+                                  className="text-sm text-neutral-700"
+                                >
+                                  {errorGroup.message}
+                                  {errorGroup.count > 1 && (
+                                    <span className="ml-1 text-neutral-500 font-medium">
+                                      ({errorGroup.count})
+                                    </span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      }
                     )}
                   </div>
                 )}
@@ -692,6 +771,110 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 })}
               </div>
             </Card>
+
+            {/* Thesis Statement Summary Card */}
+            {analysis.detailed_analysis.argumentation.thesis_statement && (
+              <Card className="border-l-4 border-l-info">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <Target className="w-5 h-5 text-info-default" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Badge variant="info" size="sm">
+                        THESIS
+                      </Badge>
+                      <Badge variant="neutral" size="sm">
+                        argumentation
+                      </Badge>
+                    </div>
+                    <h5 className="font-semibold text-neutral-900 mb-2">
+                      {(() => {
+                        const claimsCount =
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure?.total_claims || 0;
+                        const evidenceCount =
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure?.total_grounds || 0;
+
+                        // Generate summary title
+                        if (claimsCount > 0 || evidenceCount > 0) {
+                          return `Thesis statement identified (${claimsCount} claims, ${evidenceCount} evidence pieces)`;
+                        }
+                        return "Thesis statement identified";
+                      })()}
+                    </h5>
+                    <div className="mb-3 p-2 bg-neutral-50 rounded-rd border border-neutral-200">
+                      <p className="text-sm text-neutral-700 italic">
+                        "
+                        {
+                          analysis.detailed_analysis.argumentation
+                            .thesis_statement.sentence
+                        }
+                        "
+                      </p>
+                    </div>
+                    <p className="text-sm text-neutral-600 mb-2">
+                      {(() => {
+                        const thesis =
+                          analysis.detailed_analysis.argumentation
+                            .thesis_statement;
+                        const confidence =
+                          thesis.confidence?.toLowerCase() || "";
+                        const claimsCount =
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure?.total_claims || 0;
+                        const evidenceCount =
+                          analysis.detailed_analysis.argumentation
+                            .argument_structure?.total_grounds || 0;
+                        const argumentScore =
+                          analysis.scores?.argument_strength || 0;
+
+                        // Generate brief explanation based on analysis
+                        let explanation = "";
+
+                        if (confidence.includes("high")) {
+                          explanation +=
+                            "The thesis statement is clearly identifiable and ";
+                        } else if (confidence.includes("medium")) {
+                          explanation +=
+                            "A thesis statement has been identified, though ";
+                        } else {
+                          explanation +=
+                            "A potential thesis statement was found, ";
+                        }
+
+                        if (claimsCount > 3 && evidenceCount > 3) {
+                          explanation +=
+                            "is well-supported with multiple claims and evidence. ";
+                        } else if (claimsCount > 0 || evidenceCount > 0) {
+                          explanation +=
+                            "has some supporting claims and evidence. ";
+                        } else {
+                          explanation += "may need more supporting elements. ";
+                        }
+
+                        if (argumentScore >= 80) {
+                          explanation +=
+                            "The argument structure is strong and well-developed.";
+                        } else if (argumentScore >= 60) {
+                          explanation +=
+                            "Consider strengthening the argument structure and supporting evidence.";
+                        } else {
+                          explanation +=
+                            "The argument structure could benefit from additional development and support.";
+                        }
+
+                        return (
+                          explanation ||
+                          "Review the thesis statement's clarity and supporting elements."
+                        );
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 

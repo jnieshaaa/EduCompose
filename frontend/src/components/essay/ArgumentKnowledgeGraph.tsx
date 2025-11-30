@@ -331,8 +331,10 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
             )}
           </div>
 
+          {/* Node Legend */}
           {graph?.legend && graph.legend.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 mt-4 text-xs text-neutral-600">
+              <span className="font-semibold text-neutral-700">Nodes:</span>
               {graph.legend.map((entry) => (
                 <div key={entry.type} className="flex items-center gap-2">
                   <span
@@ -346,6 +348,40 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               ))}
             </div>
           )}
+          
+          {/* Edge Legend */}
+          {graphData.links.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-neutral-600">
+              <span className="font-semibold text-neutral-700">Edges:</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-0.5 w-6"
+                  style={{
+                    backgroundColor: LINK_COLORS.supports || "#0ea5e9",
+                  }}
+                ></span>
+                <span>Supports</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-0.5 w-6"
+                  style={{
+                    backgroundColor: LINK_COLORS.elaborates || "#6366f1",
+                  }}
+                ></span>
+                <span>Elaborates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-0.5 w-6"
+                  style={{
+                    backgroundColor: LINK_COLORS.rebuts || "#ef4444",
+                  }}
+                ></span>
+                <span>Rebuts</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="w-full space-y-4">
@@ -355,32 +391,53 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
             </h5>
             {strengthMetrics.length > 0 ? (
               <div className="space-y-3">
-                {strengthMetrics.map((entry) => {
-                  const scorePercent = Math.min(
-                    100,
-                    Math.round((entry.score / 10) * 100)
-                  );
-                  return (
-                    <div key={entry.claim_id}>
-                      <p className="text-xs text-neutral-600 mb-1">
-                        Claim:{" "}
-                        {entry.claim.length > 64
-                          ? `${entry.claim.slice(0, 61)}...`
-                          : entry.claim}
-                      </p>
-                      <div className="h-2 bg-neutral-200 rounded-full">
-                        <div
-                          className="h-2 bg-emerald-500 rounded-full"
-                          style={{ width: `${scorePercent}%` }}
-                        ></div>
+                {(() => {
+                  // Group duplicate claims
+                  const claimGroups = new Map<string, typeof strengthMetrics>();
+                  strengthMetrics.forEach((entry) => {
+                    const normalizedClaim = entry.claim.trim().toLowerCase();
+                    if (!claimGroups.has(normalizedClaim)) {
+                      claimGroups.set(normalizedClaim, []);
+                    }
+                    claimGroups.get(normalizedClaim)!.push(entry);
+                  });
+
+                  return Array.from(claimGroups.entries()).map(([normalizedClaim, entries]) => {
+                    const firstEntry = entries[0];
+                    const count = entries.length;
+                    const totalEvidence = entries.reduce((sum, e) => sum + e.evidence, 0);
+                    const totalWarrants = entries.reduce((sum, e) => sum + e.warrants, 0);
+                    const totalRebuttals = entries.reduce((sum, e) => sum + e.rebuttals, 0);
+                    const avgScore = entries.reduce((sum, e) => sum + e.score, 0) / count;
+                    const scorePercent = Math.min(100, Math.round((avgScore / 10) * 100));
+                    
+                    return (
+                      <div key={`${normalizedClaim}-${firstEntry.claim_id}`}>
+                        <p className="text-xs text-neutral-600 mb-1">
+                          Claim:{" "}
+                          {firstEntry.claim.length > 64
+                            ? `${firstEntry.claim.slice(0, 61)}...`
+                            : firstEntry.claim}
+                          {count > 1 && (
+                            <span className="ml-1 text-neutral-400 font-medium">
+                              ({count})
+                            </span>
+                          )}
+                        </p>
+                        <div className="h-2 bg-neutral-200 rounded-full">
+                          <div
+                            className="h-2 bg-emerald-500 rounded-full"
+                            style={{ width: `${scorePercent}%` }}
+                          ></div>
+                        </div>
+                        <div className="mt-1 text-[11px] text-neutral-500">
+                          {totalEvidence} evidence | {totalWarrants} warrants |{" "}
+                          {totalRebuttals} rebuttals
+                        </div>
                       </div>
-                      <div className="mt-1 text-[11px] text-neutral-500">
-                        {entry.evidence} evidence | {entry.warrants} warrants |{" "}
-                        {entry.rebuttals} rebuttals
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             ) : (
               <p className="text-xs text-neutral-500">
