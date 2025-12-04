@@ -141,13 +141,13 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           )}
 
           {/* Get Started button comment muna sabi ni Junie Pogi */}
-          {/* <button
+          <button
             type='button'
             onClick={onLoginClick}
             className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-rd transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
           >
             Get Started
-          </button> */}
+          </button>
         </nav>
 
         {/* Mobile Menu Button */}

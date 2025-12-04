@@ -54,7 +54,11 @@ const apiRequest = async <T>(
     return response.json();
   } catch (err: any) {
     // Handle network errors (backend not running, connection failed, etc.)
-    if (err instanceof TypeError || err.name === "TypeError" || err.message?.includes("fetch")) {
+    if (
+      err instanceof TypeError ||
+      err.name === "TypeError" ||
+      err.message?.includes("fetch")
+    ) {
       const networkError = new ApiError(
         0,
         "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000"
@@ -68,9 +72,12 @@ const apiRequest = async <T>(
 
 // Auth API
 export const authApi = {
-  login: async (email: string, password: string) => {
-    return apiRequest<{ 
-      access_token: string; 
+  login: async (
+    identifier: { email?: string; username?: string },
+    password: string
+  ) => {
+    return apiRequest<{
+      access_token: string;
       token_type: string;
       user?: {
         id: number;
@@ -80,22 +87,48 @@ export const authApi = {
         role: string;
         is_active: boolean;
       };
-    }>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      }
-    );
+    }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: identifier.email,
+        username: identifier.username,
+        password,
+      }),
+    });
   },
 
   register: async (userData: {
     email: string;
     password: string;
+    username?: string;
+    full_name?: string;
   }) => {
     return apiRequest<User>("/auth/register", {
       method: "POST",
       body: JSON.stringify(userData),
+    });
+  },
+
+  updatePassword: async (currentPassword: string, newPassword: string) => {
+    return apiRequest<{ message: string }>("/auth/update-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+  },
+
+  requestDeleteCode: async () => {
+    return apiRequest<{ message: string }>("/auth/request-delete-code", {
+      method: "POST",
+    });
+  },
+
+  deleteAccount: async (verificationCode: string) => {
+    return apiRequest<{ message: string }>("/auth/delete-account", {
+      method: "POST",
+      body: JSON.stringify({ verification_code: verificationCode }),
     });
   },
 };
@@ -108,6 +141,13 @@ export const userApi = {
 
   getUsers: async () => {
     return apiRequest<User[]>("/users");
+  },
+
+  updateProfile: async (payload: { username?: string; email?: string }) => {
+    return apiRequest<User>("/users/me", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
   },
 };
 
@@ -293,15 +333,17 @@ export const analysisApi = {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
-        text, 
-        title, 
-        analysis_type: analysisType 
+      body: JSON.stringify({
+        text,
+        title,
+        analysis_type: analysisType,
       }),
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }));
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
 

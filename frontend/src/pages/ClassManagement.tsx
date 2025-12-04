@@ -190,9 +190,28 @@ const ClassManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // State
+  const [loading, setLoading] = useState(true);
   const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [students, setStudents] = useState<StudentV2[]>(initialStudents);
+
+  // Simulate initial loading
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call delay
+        setTimeout(() => {
+          setLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Selected program for Block view
   const [selectedProgram, setSelectedProgram] = useState<{
@@ -441,6 +460,21 @@ const ClassManagement: React.FC = () => {
         };
       });
   }, [programs, blocks, students, searchQuery]);
+
+  if (loading) {
+    return (
+      <div className='p-6 min-h-screen bg-neutral-300/10'>
+        <div className='animate-pulse space-y-6'>
+          <div className='h-8 bg-neutral-300 rounded w-1/4'></div>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className='h-32 bg-neutral-300 rounded-rd'></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If a program is selected, show Block view
   if (selectedProgram) {

@@ -13,6 +13,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
@@ -53,8 +54,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
   }, [loading]);
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
     navigate("/");
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -138,7 +148,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
                     <p className='font-semibold text-neutral-900'>
                       {user?.full_name || user?.username || "User"}
                     </p>
-                    <p className='text-sm text-neutral-400'>{user?.email || ""}</p>
+                    <p className='text-sm text-neutral-400'>
+                      {user?.email || ""}
+                    </p>
                   </div>
                   <div className='flex flex-col'>
                     <button
@@ -169,6 +181,33 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isBurgerActive }) => {
           transition={{ ease: "linear", duration: 0.1 }}
         />
       </div>
+
+      {showLogoutConfirm && (
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-rd shadow-xl p-6 w-full max-w-sm space-y-4'>
+            <h3 className='text-lg font-semibold text-neutral-900'>
+              Confirm Logout
+            </h3>
+            <p className='text-sm text-neutral-600'>
+              Are you sure you want to log out?
+            </p>
+            <div className='flex justify-end gap-3 pt-2'>
+              <button
+                className='px-4 py-2 rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-100 transition-colors'
+                onClick={cancelLogout}
+              >
+                Cancel
+              </button>
+              <button
+                className='px-4 py-2 rounded-md bg-error-default text-white hover:bg-error-dark transition-colors'
+                onClick={confirmLogout}
+              >
+                Yes, log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

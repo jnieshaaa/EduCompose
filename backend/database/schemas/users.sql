@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) UNIQUE NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NULL,  -- Deprecated: Using Supabase Auth only
     role VARCHAR(50) DEFAULT 'teacher' CHECK (role IN ('teacher', 'admin')),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -36,7 +36,7 @@ COMMENT ON TABLE users IS 'Stores teacher and admin user accounts';
 COMMENT ON COLUMN users.id IS 'Primary key, auto-incrementing';
 COMMENT ON COLUMN users.email IS 'Unique email address for login';
 COMMENT ON COLUMN users.username IS 'Unique username for display';
-COMMENT ON COLUMN users.password_hash IS 'Bcrypt hashed password';
+COMMENT ON COLUMN users.password_hash IS 'Deprecated: Password authentication now handled by Supabase Auth only. This field is kept for backward compatibility but is no longer used.';
 COMMENT ON COLUMN users.role IS 'User role: teacher or admin';
 COMMENT ON COLUMN users.is_active IS 'Whether the account is active';
 

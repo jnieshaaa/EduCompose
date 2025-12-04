@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, UserPlus, ArrowLeft, X, User } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  UserPlus,
+  ArrowLeft,
+  X,
+  User,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../api";
 import { useAuth } from "../contexts/AuthContext";
@@ -76,7 +85,7 @@ interface FormProps {
 
 // --- Login Form ---
 const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -93,8 +102,8 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
     setError("");
 
     // Validate inputs
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter both email and password");
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password");
       return;
     }
 
@@ -102,28 +111,42 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
     try {
       // Call backend API - will reject if credentials not in database
-      const response = await authApi.login(email.trim(), password);
-      
+      const response = await authApi.login(
+        { username: username.trim() },
+        password
+      );
+
       // Use AuthContext login method to update auth state
       if (response.access_token) {
         login(response.access_token, response.user || undefined);
-        
+
         // Navigate to dashboard and close modal
         navigate("/Dashboard");
         onClose();
       }
-    } catch (err: any) {
+    } catch (err) {
+      const apiError = err as { status?: number; message?: string };
       // Handle API errors - backend will reject invalid credentials
-      if (err.status === 0 || err.message?.includes("Failed to connect")) {
-        setError("Cannot connect to server. Please make sure the backend server is running on http://localhost:8000");
-      } else if (err.status === 401) {
-        setError("Invalid credentials. User not found in database or password is incorrect.");
-      } else if (err.status === 403) {
+      if (
+        apiError.status === 0 ||
+        apiError.message?.includes("Failed to connect")
+      ) {
+        setError(
+          "Cannot connect to server. Please make sure the backend server is running on http://localhost:8000"
+        );
+      } else if (apiError.status === 401) {
+        setError(
+          "Invalid credentials. User not found in database or password is incorrect."
+        );
+      } else if (apiError.status === 403) {
         setError("Account is inactive. Please contact administrator.");
-      } else if (err.status === 503) {
+      } else if (apiError.status === 503) {
         setError("Database connection failed. Please try again later.");
       } else {
-        setError(err.message || "Login failed. Please check your credentials and try again.");
+        setError(
+          apiError.message ||
+            "Login failed. Please check your credentials and try again."
+        );
       }
     } finally {
       setIsLoading(false);
@@ -147,16 +170,16 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
         )}
 
         <InputField
-          id='login-email'
-          label='Email'
-          type='email'
-          value={email}
+          id='login-username'
+          label='Username'
+          type='text'
+          value={username}
           onChange={(e) => {
-            setEmail(e.target.value);
+            setUsername(e.target.value);
             setError(""); // Clear error when user types
           }}
-          placeholder='Enter your email'
-          Icon={Mail}
+          placeholder='Enter your username'
+          Icon={User}
         />
         <InputField
           id='login-password'
@@ -218,7 +241,8 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 };
 
 // --- Sign Up Form ---
-const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
+const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -227,7 +251,6 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSignUp = async (e?: React.FormEvent) => {
     if (e) {
@@ -239,8 +262,21 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
     setSuccess("");
 
     // Validate inputs
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (
+      !username.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
       setError("Please fill in all fields");
+      return;
+    }
+
+    const usernameRegex = /^[a-zA-Z.,]{3,20}$/;
+    if (!usernameRegex.test(username.trim())) {
+      setError(
+        "Username must be 3-20 characters and include only letters, commas, or periods."
+      );
       return;
     }
 
@@ -268,28 +304,47 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
     try {
       // Call backend API to register user in PostgreSQL database
       // Backend will auto-generate username and full_name from email
-      const userData = await authApi.register({
+      await authApi.register({
         email: email.trim(),
         password: password,
+        username: username.trim(),
       });
 
-      setSuccess(`Account created successfully! Welcome!`);
-      
+      setSuccess(
+        `Account created successfully in Supabase! Please log in to continue.`
+      );
+      setUsername("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+
       // Wait a moment to show success message, then redirect to login
       setTimeout(() => {
         onViewChange("login");
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
+      const apiError = err as { status?: number; message?: string };
       // Handle API errors
-      if (err.status === 0 || err.message?.includes("Failed to connect")) {
-        setError("Cannot connect to server. Please make sure the backend server is running on http://localhost:8000");
-      } else if (err.status === 400) {
-        setError(err.message || "Email already registered. Please use a different email.");
-      } else if (err.status === 503) {
+      if (
+        apiError.status === 0 ||
+        apiError.message?.includes("Failed to connect")
+      ) {
+        setError(
+          "Cannot connect to server. Please make sure the backend server is running on http://localhost:8000"
+        );
+      } else if (apiError.status === 400) {
+        setError(
+          apiError.message ||
+            "Email already registered. Please use a different email."
+        );
+      } else if (apiError.status === 503) {
         // Show the detailed error message from the backend
-        setError(err.message || "Database connection failed. Please check your database configuration.");
+        setError(
+          apiError.message ||
+            "Database connection failed. Please check your database configuration."
+        );
       } else {
-        setError(err.message || "Registration failed. Please try again.");
+        setError(apiError.message || "Registration failed. Please try again.");
       }
     } finally {
       setIsLoading(false);
@@ -325,6 +380,18 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
           </div>
         )}
 
+        <InputField
+          id='signup-username'
+          label='Username'
+          type='text'
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setError("");
+          }}
+          placeholder='Choose a unique username'
+          Icon={User}
+        />
         <InputField
           id='signup-email'
           label='Email Address'
@@ -374,7 +441,8 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
           disabled={isLoading}
           className='w-full text-white py-3 rounded-lg font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed'
         >
-          <UserPlus className='w-5 h-5 mr-2' /> {isLoading ? "Creating Account..." : "Sign Up"}
+          <UserPlus className='w-5 h-5 mr-2' />{" "}
+          {isLoading ? "Creating Account..." : "Sign Up"}
         </button>
       </form>
     </>

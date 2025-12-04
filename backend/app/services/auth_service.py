@@ -1,40 +1,73 @@
-"""
-Authentication Service
-Handles user authentication and authorization with Supabase integration
-"""
+import os
+import re
+from datetime import datetime, timedelta
+from typing import Optional
+
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-from typing import Optional
-import os
-
-from ..models import User, LoginActivity
-from ..database import get_db
-from ..supabase_client import get_supabase_client
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
+from jose import JWTError, jwt
+from supabase import create_client, Client
 
-# Security setup
+# Local imports
+from ..database import get_db, supabase as supabase_anon
+from ..models import User, LoginActivity
+from ..schemas import UserUpdate
+
+# --- CONFIGURATION ---
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 security = HTTPBearer()
 
+# --- SUPABASE ADMIN CLIENT ---
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+USERNAME_PATTERN = re.compile(r"^[A-Za-z.,]{3,20}$")
+
+supabase_admin: Client = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+else:
+    print("⚠️ Warning: SUPABASE_SERVICE_ROLE_KEY missing. Admin functions will fail.")
 
 class AuthService:
-    """Service for authentication and authorization"""
+    """Authentication service with Supabase + local DB"""
 
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return pwd_context.verify(plain_password, hashed_password)
+    def _validate_username_format(self, username: str) -> str:
+        cleaned = (username or "").strip()
+        if not USERNAME_PATTERN.fullmatch(cleaned):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be 3-20 characters and include only letters, commas, or periods."
+            )
+        return cleaned
 
-    def get_password_hash(self, password: str) -> str:
-        return pwd_context.hash(password)
+    def _username_exists(self, db: Session, username: str, exclude_user_id: Optional[int] = None) -> bool:
+        query = db.query(User).filter(User.username == username)
+        if exclude_user_id:
+            query = query.filter(User.id != exclude_user_id)
+        return query.first() is not None
+
+    def _generate_username_from_email(self, email: str, db: Session) -> str:
+        local_part = (email or "").split("@")[0]
+        cleaned = re.sub(r"[^A-Za-z.,]", "", local_part)
+        cleaned = cleaned.strip(" .,")
+        if len(cleaned) < 3:
+            cleaned = "User"
+        cleaned = cleaned[:20]
+        candidate = cleaned
+        suffix = 0
+        while self._username_exists(db, candidate):
+            suffix += 1
+            candidate = (cleaned + ("x" * suffix))[:20]
+            if len(candidate) < 3:
+                candidate = (candidate + "xxx")[:3]
+        return candidate
 
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None):
         to_encode = data.copy()
@@ -42,88 +75,51 @@ class AuthService:
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-    async def authenticate_user(
-        self, credentials, db: Session, ip_address: Optional[str] = None, user_agent: Optional[str] = None
-    ):
-        """Authenticate user using PostgreSQL credentials and return access token"""
-
+    async def authenticate_user(self, credentials, db: Session, ip_address: Optional[str] = None, user_agent: Optional[str] = None):
+        """Authenticate user and return JWT"""
         try:
             db.execute(text("SELECT 1"))
         except SQLAlchemyError as e:
-            error_msg = str(e)
-            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
-                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
-            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
-                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
-            else:
-                detail = f"Database connection failed: {error_msg}"
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
+            self._handle_db_error(e)
 
-        user = db.query(User).filter(User.email == credentials.email).first()
+        login_email = credentials.email.strip() if credentials.email else None
+        login_username = credentials.username.strip() if credentials.username else None
+        if not login_email and not login_username:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username or email is required.")
+
+        user = None
+        if login_email:
+            user = db.query(User).filter(User.email == login_email).first()
+        elif login_username:
+            user = db.query(User).filter(User.username == login_username).first()
+            if user:
+                login_email = user.email
+
         if not user:
-            # Record failed login
-            try:
-                db.add(LoginActivity(
-                    user_id=None,
-                    email=credentials.email,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    login_success=False,
-                    failure_reason="User credentials not found in database",
-                    login_timestamp=datetime.utcnow()
-                ))
-                db.commit()
-            except SQLAlchemyError:
-                db.rollback()
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Invalid credentials. User not found in database.",
-                                headers={"WWW-Authenticate": "Bearer"})
+            self._log_login_activity(db, login_email or login_username, ip_address, user_agent, False, "User not found in DB")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
 
-        login_activity = LoginActivity(
-            user_id=user.id,
-            email=user.email,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            login_success=False,
-            login_timestamp=datetime.utcnow()
-        )
+        # Authenticate with Supabase
+        try:
+            supabase_resp = supabase_anon.auth.sign_in_with_password({"email": login_email, "password": credentials.password})
+            if not supabase_resp.user:
+                raise Exception("Supabase returned no user")
+        except Exception as e:
+            self._log_login_activity(db, login_email, ip_address, user_agent, False, str(e), user.id)
+            if "Email not confirmed" in str(e):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not verified.")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
 
         if not user.is_active:
-            login_activity.failure_reason = "User account is inactive"
-            try:
-                db.add(login_activity)
-                db.commit()
-            except SQLAlchemyError:
-                db.rollback()
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="User account is inactive. Please contact administrator.",
-                                headers={"WWW-Authenticate": "Bearer"})
+            self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account inactive.")
 
-        if not self.verify_password(credentials.password, user.password_hash):
-            login_activity.failure_reason = "Password does not match"
-            try:
-                db.add(login_activity)
-                db.commit()
-            except SQLAlchemyError:
-                db.rollback()
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Invalid credentials. Password does not match.",
-                                headers={"WWW-Authenticate": "Bearer"})
+        self._log_login_activity(db, user.email, ip_address, user_agent, True, "Success", user.id)
 
-        login_activity.login_success = True
-        try:
-            db.add(login_activity)
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = self.create_access_token(
-                data={"sub": user.email, "user_id": user.id}, expires_delta=access_token_expires
-            )
-            db.commit()
-        except SQLAlchemyError:
-            db.rollback()
-            access_token = self.create_access_token(
-                data={"sub": user.email, "user_id": user.id},
-                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            )
+        access_token = self.create_access_token(
+            data={"sub": user.email, "user_id": user.id}, 
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
 
         return {
             "access_token": access_token,
@@ -140,158 +136,306 @@ class AuthService:
         }
 
     async def create_user(self, user_data, db: Session):
-        """Create a new user in Supabase Auth and local PostgreSQL"""
-        try:
-            db.execute(text("SELECT 1"))
-        except SQLAlchemyError as e:
-            error_msg = str(e)
-            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
-                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
-            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
-                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
-            else:
-                detail = f"Database connection failed: {error_msg}"
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
+        """Create a new user in Supabase + local DB"""
+        if db.query(User).filter(User.email == user_data.email).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered.")
 
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
-        if existing_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        if user_data.username:
+            username = self._validate_username_format(user_data.username)
+            if self._username_exists(db, username):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already in use."
+                )
+        else:
+            username = self._generate_username_from_email(user_data.email, db)
 
-        supabase = get_supabase_client()
-
-        username = user_data.username or user_data.email.split("@")[0]
         full_name = user_data.full_name or username.replace(".", " ").title()
 
-        # Ensure unique username
-        counter = 1
-        base_username = username
-        while db.query(User).filter(User.username == username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-
+        supabase_user_id = None
+        email_confirmed = True
         try:
-            supabase_response = supabase.auth.admin.create_user({
+            attributes = {
                 "email": user_data.email,
                 "password": user_data.password,
-                "email_confirm": False,
+                "email_confirm": True,
                 "user_metadata": {"username": username, "full_name": full_name, "role": "teacher"}
-            })
-            if not supabase_response.user:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                    detail="Failed to create user in Supabase Auth")
-            supabase_user_id = supabase_response.user.id
+            }
+            response = supabase_admin.auth.admin.create_user(attributes)
+            if not response.user:
+                raise Exception("Supabase did not return a user object")
+            supabase_user_id = response.user.id
+            if hasattr(response.user, 'email_confirmed_at'):
+                email_confirmed = bool(response.user.email_confirmed_at) or True
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail=f"Failed to create user in Supabase: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create user in Supabase: {str(e)}")
 
-        hashed_password = self.get_password_hash(user_data.password)
         db_user = User(
             email=user_data.email,
             username=username,
             full_name=full_name,
             role="teacher",
-            password_hash=hashed_password,
+            password_hash="supabase_managed",
             supabase_user_id=supabase_user_id,
-            email_verified=False
+            email_verified=email_confirmed
         )
-
         try:
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
-        except SQLAlchemyError:
+        except Exception as db_err:
             db.rollback()
-            try:
-                supabase.auth.admin.delete_user(supabase_user_id)
-            except:
-                pass
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail="Failed to save user to database. Please try again.")
-
+            if supabase_user_id:
+                try:
+                    supabase_admin.auth.admin.delete_user(supabase_user_id)
+                except:
+                    pass
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error. User creation rolled back. Error: {str(db_err)}")
         return db_user
 
-    async def send_verification_email(self, email: str):
-        supabase = get_supabase_client()
+    async def request_delete_code(self, current_user: User):
+        """Send a one-time OTP to user's email"""
         try:
-            supabase.auth.admin.generate_link({"type": "signup", "email": email})
-            supabase.auth.resend({"type": "signup", "email": email})
-            return {"message": "Verification email sent successfully", "email": email}
+            supabase_anon.auth.sign_in_with_otp({"email": current_user.email, "create_user": False})
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail=f"Failed to send verification email: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to send verification code: {str(e)}")
+        return {"message": "Verification code sent to your email."}
 
-    async def verify_email_token(self, token: str, db: Session):
-        supabase = get_supabase_client()
-        try:
+    async def update_account(
+        self,
+        current_user: User,
+        update_data: UserUpdate,
+        db: Session
+    ):
+        email_changed = False
+        username_changed = False
+        old_email = current_user.email
+        old_username = current_user.username
+
+        if update_data.username is not None:
+            new_username = self._validate_username_format(update_data.username)
+            if new_username != current_user.username:
+                if self._username_exists(db, new_username, exclude_user_id=current_user.id):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Username already in use."
+                    )
+                current_user.username = new_username
+                username_changed = True
+
+        if update_data.email is not None:
+            new_email = update_data.email.strip()
+            if new_email != current_user.email:
+                existing = db.query(User).filter(User.email == new_email).first()
+                if existing and existing.id != current_user.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email already in use."
+                    )
+                current_user.email = new_email
+                email_changed = True
+
+        if not (email_changed or username_changed):
+            return current_user
+
+        if supabase_admin and current_user.supabase_user_id:
+            payload = {
+                "user_metadata": {
+                    "username": current_user.username,
+                    "full_name": current_user.full_name,
+                    "role": current_user.role,
+                }
+            }
+            if email_changed:
+                payload["email"] = current_user.email
             try:
-                response = supabase.auth.verify_otp({"token": token, "type": "email"})
-                user_email = response.user.email
-            except:
-                user_response = supabase.auth.get_user(token)
-                user_email = user_response.user.email
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"Failed to verify token: {str(e)}")
+                supabase_admin.auth.admin.update_user_by_id(
+                    current_user.supabase_user_id,
+                    payload
+                )
+            except Exception as e:
+                current_user.email = old_email
+                current_user.username = old_username
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to update Supabase account: {str(e)}"
+                )
 
-        user = db.query(User).filter(User.email == user_email).first()
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="User not found in local database. Please register first.")
-        user.email_verified = True
         try:
             db.commit()
-            db.refresh(user)
+            db.refresh(current_user)
         except SQLAlchemyError:
             db.rollback()
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail="Failed to update email verification status in database")
-        return {"message": "Email verified successfully", "email": user_email, "user": {
-            "id": user.id, "email": user.email, "username": user.username, "email_verified": user.email_verified
-        }}
+            current_user.email = old_email
+            current_user.username = old_username
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update account in database."
+            )
 
-    async def get_current_user(
+        return current_user
+
+    async def update_password(
         self,
-        credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: Session = Depends(get_db)
+        current_user: User,
+        current_password: str,
+        new_password: str,
+        db: Session,
     ):
-        """Get current authenticated user from JWT token. Verifies user exists in PostgreSQL."""
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        """Update Supabase password after validating the current one."""
+        if not current_password or not new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current and new passwords are required.",
+            )
+
+        if current_password == new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from current password.",
+            )
+
+        if len(new_password) < 8 or len(new_password) > 12:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be 8-12 characters long.",
+            )
+
+        uppercase = sum(1 for c in new_password if c.isupper())
+        digits = sum(1 for c in new_password if c.isdigit())
+        specials = sum(1 for c in new_password if c in "!@#$%^&*(),.?\":{}|<>")
+
+        if uppercase < 2 or digits < 2 or specials < 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must include at least 2 uppercase letters, 2 numbers, and 2 special characters.",
+            )
+
+        # Verify current password via Supabase sign-in
+        try:
+            auth_result = supabase_anon.auth.sign_in_with_password(
+                {"email": current_user.email, "password": current_password}
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect.",
+            )
+
+        supabase_user_id = current_user.supabase_user_id
+        if not supabase_user_id:
+            supabase_user_id = getattr(auth_result.user, "id", None)
+            if supabase_user_id:
+                current_user.supabase_user_id = supabase_user_id
+                try:
+                    db.commit()
+                    db.refresh(current_user)
+                except SQLAlchemyError:
+                    db.rollback()
+
+        if not supabase_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Supabase user identifier is missing. Please re-link your account.",
+            )
+
+        if not supabase_admin:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Supabase admin client is not configured on the server.",
+            )
 
         try:
-            db.execute(text("SELECT 1"))
-        except SQLAlchemyError as e:
-            error_msg = str(e)
-            if "could not translate host name" in error_msg.lower() or "no such host is known" in error_msg.lower():
-                detail = "Database connection failed: Cannot resolve database hostname. Please check your DATABASE_URL in the .env file."
-            elif "connection" in error_msg.lower() and "refused" in error_msg.lower():
-                detail = "Database connection failed: Database server is not reachable. Please ensure your database is running."
-            else:
-                detail = f"Database connection failed: {error_msg}"
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
+            supabase_admin.auth.admin.update_user_by_id(
+                supabase_user_id,
+                {"password": new_password},
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update password in Supabase: {str(e)}",
+            )
 
+        return {"message": "Password updated successfully."}
+
+    async def delete_account(self, current_user: User, verification_code: str, db: Session):
+        """Delete account after OTP verification"""
+        if not verification_code.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code required.")
+
+        # Verify OTP with Supabase
+        try:
+            supabase_anon.auth.verify_otp({
+                "email": current_user.email,
+                "token": verification_code.strip(),
+                "type": "email"
+            })
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
+
+        # Delete Supabase user
+        if supabase_admin and current_user.supabase_user_id:
+            try:
+                supabase_admin.auth.admin.delete_user(current_user.supabase_user_id)
+            except Exception:
+                pass
+
+        # Delete local DB user
+        try:
+            db.delete(current_user)
+            db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete account from database.")
+
+        return {"message": "Account deleted successfully."}
+
+    async def request_password_reset(self, email: str):
+        try:
+            supabase_anon.auth.reset_password_for_email(email)
+            return {"message": "Password reset email sent (if user exists)."}
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to send reset email: {str(e)}")
+
+    async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
         try:
             payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
             email: str = payload.get("sub")
             if email is None:
-                raise credentials_exception
+                raise HTTPException(status_code=401, detail="Invalid token")
         except JWTError:
-            raise credentials_exception
-
+            raise HTTPException(status_code=401, detail="Could not validate credentials")
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="User not found in database. Please login again.",
-                                headers={"WWW-Authenticate": "Bearer"})
-        if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="User account is inactive")
-
+            raise HTTPException(status_code=401, detail="User not found")
         return user
 
+    # --- HELPERS ---
+    def _handle_db_error(self, e):
+        msg = str(e)
+        if "could not translate host name" in msg.lower():
+            detail = "DB connection failed: Cannot resolve hostname."
+        elif "connection" in msg.lower() and "refused" in msg.lower():
+            detail = "DB connection failed: Server unreachable."
+        else:
+            detail = f"DB connection failed: {msg}"
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
-# Singleton instance    
+    def _log_login_activity(self, db, email, ip, ua, success, reason, user_id=None):
+        try:
+            activity = LoginActivity(
+                user_id=user_id,
+                email=email,
+                ip_address=ip,
+                user_agent=ua,
+                login_success=success,
+                failure_reason=reason if not success else None,
+                login_timestamp=datetime.utcnow()
+            )
+            db.add(activity)
+            db.commit()
+        except:
+            db.rollback()
+            pass
+
 auth_service = AuthService()

@@ -12,7 +12,9 @@ from ..schemas import (
     LoginResponse,
     EmailVerificationRequest,
     EmailVerificationResponse,
-    VerifyEmailToken
+    VerifyEmailToken,
+    PasswordUpdate,
+    DeleteAccountRequest,
 )
 from ..database import get_db
 from ..services import auth_service
@@ -109,4 +111,37 @@ async def verify_email(
     Updates the user's email_verified status in the database.
     """
     return await auth_service.verify_email_token(token_data.token, db)
+
+@auth_router.post("/request-delete-code")
+async def request_delete_code(
+    current_user = Depends(auth_service.get_current_user)
+):
+    return await auth_service.request_delete_code(current_user)
+
+@auth_router.post("/delete-account")
+async def delete_account(
+    payload: DeleteAccountRequest,
+    current_user = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return await auth_service.delete_account(current_user, payload.verification_code, db)
+
+@auth_router.post("/update-password")
+async def update_password(
+    password_data: PasswordUpdate,
+    current_user = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update user password
+    
+    Updates the password in both PostgreSQL database and Supabase Auth.
+    The old password will no longer work for login after this update.
+    """
+    return await auth_service.update_password(
+        current_user,
+        password_data.current_password,
+        password_data.new_password,
+        db
+    )
 
