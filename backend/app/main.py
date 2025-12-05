@@ -5,6 +5,7 @@ import uvicorn
 
 from . import models
 from .database import engine
+from sqlalchemy import text
 from .controllers import (
     auth_router,
     users_router,
@@ -50,6 +51,15 @@ async def startup_event():
     try:
         models.Base.metadata.create_all(bind=engine)
         print("✓ Database tables initialized successfully")
+
+        # Ensure legacy schemas have password_hash column nullable
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE IF EXISTS users "
+                    "ALTER COLUMN password_hash DROP NOT NULL"
+                )
+            )
     except Exception as e:
         print(f"⚠ Warning: Could not initialize database tables: {e}")
         print("  The app will continue, but database operations may fail.")

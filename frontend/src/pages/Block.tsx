@@ -105,6 +105,7 @@ export default function BlockPage({
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [blockError, setBlockError] = useState("");
   const [studentError, setStudentError] = useState("");
+  const [editStudentError, setEditStudentError] = useState("");
   const [showBlockSuggestions, setShowBlockSuggestions] = useState(false);
   const [filteredBlockSuggestions, setFilteredBlockSuggestions] = useState<
     string[]
@@ -140,6 +141,81 @@ export default function BlockPage({
   const getBlockName = (blockId: string) => {
     const block = blocks.find((b) => b.id === blockId);
     return block?.name || "Unknown";
+  };
+
+  const formatStudentNameToTitleCase = (value: string): string => {
+    if (!value) return value;
+
+    // Split by word boundaries (spaces, dots, commas)
+    // We want to capitalize the first letter of each word
+    const formatted = value
+      .split(/([\s.,]+)/) // Split but keep delimiters
+      .map((part) => {
+        // Skip delimiters (spaces, dots, commas)
+        if (/^[\s.,]+$/.test(part)) {
+          return part;
+        }
+
+        // Format words: capitalize first letter, lowercase rest
+        if (part.length === 0) return part;
+        return part[0].toUpperCase() + part.slice(1).toLowerCase();
+      })
+      .join("");
+
+    return formatted;
+  };
+
+  const validateStudentName = (name: string): string | null => {
+    const trimmed = name.trim();
+
+    // Check minimum length (must be at least 3 characters)
+    if (trimmed.length < 3) {
+      return "Student name must be at least 3 characters long";
+    }
+
+    // Check if name contains at least one letter
+    const hasLetter = /[a-zA-Z]/.test(trimmed);
+    if (!hasLetter) {
+      return "Student name must contain at least one letter";
+    }
+
+    // Only allow letters, spaces, dots, and commas
+    const allowedPattern = /^[a-zA-Z\s.,]+$/;
+    if (!allowedPattern.test(trimmed)) {
+      return "Student name can only contain letters, spaces, dots (.), and commas (,)";
+    }
+
+    // Check for consecutive dots or commas (any sequence of 2+ consecutive)
+    if (/\.{2,}/.test(trimmed) || /,{2,}/.test(trimmed)) {
+      return "Student name cannot have consecutive dots or commas";
+    }
+
+    // Check for proper capitalization (camel case / title case)
+    // Must have at least one uppercase and one lowercase letter
+    const hasUpperCase = /[A-Z]/.test(trimmed);
+    const hasLowerCase = /[a-z]/.test(trimmed);
+
+    if (!hasUpperCase) {
+      return "Student name must have at least one capital letter (e.g., John Smith)";
+    }
+
+    if (!hasLowerCase) {
+      return "Student name cannot be all capital letters (e.g., use John Smith not JOHN SMITH)";
+    }
+
+    // Check that name follows title case pattern (first letter of each word should be uppercase)
+    // Split by spaces, dots, and commas to check each word
+    const words = trimmed.split(/[\s.,]+/).filter((word) => word.length > 0);
+    const allWordsStartWithCapital = words.every((word) => {
+      const firstChar = word[0];
+      return /[A-Z]/.test(firstChar);
+    });
+
+    if (!allWordsStartWithCapital) {
+      return "Each word in the student name must start with a capital letter (e.g., John Smith)";
+    }
+
+    return null; // Valid name
   };
 
   // Handlers
@@ -209,9 +285,28 @@ export default function BlockPage({
       return;
     }
 
+    const trimmedName = newStudent.name.trim();
+
+    // Validate student name format
+    const nameValidationError = validateStudentName(trimmedName);
+    if (nameValidationError) {
+      setStudentError(nameValidationError);
+      return;
+    }
+
+    // Check for duplicate student name (case-insensitive)
+    const duplicateExists = students.some(
+      (s) => s.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicateExists) {
+      setStudentError("A student with this name already exists!");
+      return;
+    }
+
     const student: Student = {
       id: `student-${Date.now()}`,
-      name: newStudent.name.trim(),
+      name: trimmedName,
       blockId: newStudent.blockId,
     };
     setStudents((prev) => [...prev, student]);
@@ -222,15 +317,44 @@ export default function BlockPage({
 
   const handleEditStudent = (student: Student) => {
     setEditingStudent(student);
+    setEditStudentError("");
     setShowEditStudentModal(true);
   };
 
   const handleUpdateStudent = () => {
     if (!editingStudent) return;
+
+    if (!editingStudent.name.trim()) {
+      setEditStudentError("Student name cannot be empty");
+      return;
+    }
+
+    const trimmedName = editingStudent.name.trim();
+
+    // Validate student name format
+    const nameValidationError = validateStudentName(trimmedName);
+    if (nameValidationError) {
+      setEditStudentError(nameValidationError);
+      return;
+    }
+
+    // Check for duplicate student name (case-insensitive), excluding current student
+    const duplicateExists = students.some(
+      (s) =>
+        s.id !== editingStudent.id &&
+        s.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicateExists) {
+      setEditStudentError("A student with this name already exists!");
+      return;
+    }
+
     setStudents((prev) =>
       prev.map((s) => (s.id === editingStudent.id ? editingStudent : s))
     );
     setEditingStudent(null);
+    setEditStudentError("");
     setShowEditStudentModal(false);
   };
 
@@ -345,16 +469,6 @@ export default function BlockPage({
               {filteredStudents.length === 1 ? "student" : "students"})
             </span>
           </h3>
-
-          <Button
-            variant='primary'
-            size='sm'
-            onClick={() => setShowAddStudentModal(true)}
-            disabled={programBlocks.length === 0}
-          >
-            <Plus className='w-4 h-4 mr-1' />
-            Add Student
-          </Button>
         </div>
 
         {/* Table Header */}
@@ -554,9 +668,11 @@ export default function BlockPage({
             <input
               type='text'
               value={newStudent.name}
-              onChange={(e) =>
-                setNewStudent({ ...newStudent, name: e.target.value })
-              }
+              onChange={(e) => {
+                const formatted = formatStudentNameToTitleCase(e.target.value);
+                setNewStudent({ ...newStudent, name: formatted });
+                setStudentError("");
+              }}
               placeholder='Enter student name'
               className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
             />
@@ -612,6 +728,7 @@ export default function BlockPage({
         onClose={() => {
           setShowEditStudentModal(false);
           setEditingStudent(null);
+          setEditStudentError("");
         }}
         title='Edit Student'
       >
@@ -624,11 +741,23 @@ export default function BlockPage({
               <input
                 type='text'
                 value={editingStudent.name}
-                onChange={(e) =>
-                  setEditingStudent({ ...editingStudent, name: e.target.value })
-                }
+                onChange={(e) => {
+                  const formatted = formatStudentNameToTitleCase(
+                    e.target.value
+                  );
+                  setEditingStudent({
+                    ...editingStudent,
+                    name: formatted,
+                  });
+                  setEditStudentError("");
+                }}
                 className='w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary'
               />
+              {editStudentError && (
+                <p className='text-error-default text-sm mt-1'>
+                  {editStudentError}
+                </p>
+              )}
             </div>
             <div>
               <label className='block text-sm font-medium text-neutral-700 mb-1'>
@@ -661,10 +790,9 @@ export default function BlockPage({
                     editingStudent.name
                   )
                 }
-                className='text-error-default hover:bg-error-default/10'
+                className='group hover:bg-support-superlight/50 border-none'
               >
-                <Trash2 className='w-4 h-4 mr-2' />
-                Delete
+                <Trash2 className='w-4 h-4 mr-2 group-hover:text-error-default' />
               </Button>
               <div className='flex gap-3'>
                 <Button
@@ -672,6 +800,7 @@ export default function BlockPage({
                   onClick={() => {
                     setShowEditStudentModal(false);
                     setEditingStudent(null);
+                    setEditStudentError("");
                   }}
                 >
                   Cancel
@@ -699,11 +828,11 @@ export default function BlockPage({
       >
         <div className='space-y-4'>
           <p className='text-neutral-700'>
-            Are you sure you want to delete{" "}
+            Are you sure you want to remove{" "}
             <span className='font-semibold'>{deleteName}</span>?
             {deleteType === "block" && (
               <span className='block text-sm text-error-default mt-2'>
-                This will also delete all students in this block.
+                This will also remove all students in this block.
               </span>
             )}
           </p>
@@ -717,14 +846,14 @@ export default function BlockPage({
                 setDeleteName("");
               }}
             >
-              Cancel
+              No, Cancel
             </Button>
             <Button
               variant='primary'
               onClick={handleConfirmDelete}
               className='bg-error-default hover:bg-error-dark'
             >
-              Yes, Delete
+              Yes, Remove
             </Button>
           </div>
         </div>

@@ -10,6 +10,7 @@ from app.database import SessionLocal, engine
 from app import models
 from app.data_loader import load_dummy_data
 from app.services.auth_service import AuthService
+from sqlalchemy import text
 
 def init_database():
     """Initialize database with dummy data"""
@@ -33,13 +34,11 @@ def init_database():
         db.query(models.User).delete()
         db.commit()
         
-        # Add users with proper password hashing
-        auth_service = AuthService()
-        default_password = "password123"  # Default password for test users
+        # Add users (passwords stored in Supabase Auth only, not in PostgreSQL)
+        # Note: Users should be created through the registration endpoint which creates them in Supabase Auth
+        # This script only creates the PostgreSQL user records for existing Supabase Auth users
         
         for user_data in data.get('users', []):
-            # Hash the password properly
-            password_hash = auth_service.get_password_hash(default_password)
             user = models.User(
                 id=user_data['id'],
                 email=user_data['email'],
@@ -47,11 +46,25 @@ def init_database():
                 full_name=user_data['full_name'],
                 role=user_data['role'],
                 is_active=user_data['is_active'],
-                password_hash=password_hash
+                password_hash=None,  # Using Supabase Auth only - password not stored in PostgreSQL
+                supabase_user_id=user_data.get('supabase_user_id')  # Link to Supabase Auth user if available
             )
             db.add(user)
         
-        print(f"Created {len(data.get('users', []))} users with password: {default_password}")
+        print(f"Created {len(data.get('users', []))} user records (passwords managed by Supabase Auth)")
+
+        # Reset the users table sequence to avoid duplicate key errors
+        try:
+            db.execute(
+                text(
+                    "SELECT setval(pg_get_serial_sequence('users','id'), "
+                    "(SELECT COALESCE(MAX(id), 0) + 1 FROM users))"
+                )
+            )
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Warning: Failed to reset users sequence: {e}")
         
         # Add classes
         for class_data in data.get('classes', []):

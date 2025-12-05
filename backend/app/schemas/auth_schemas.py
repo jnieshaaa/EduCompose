@@ -2,12 +2,16 @@
 Authentication Schemas
 Request/Response models for authentication
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 class LoginRequest(BaseModel):
-    email: str
+    email: Optional[str] = Field(default=None, description="User email")
+    username: Optional[str] = Field(default=None, description="Username (alternative to email)")
     password: str
+
+class DeleteAccountRequest(BaseModel):
+    verification_code: str = Field(..., min_length=4, max_length=10)
 
 class Token(BaseModel):
     access_token: str

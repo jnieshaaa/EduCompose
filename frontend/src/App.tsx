@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
+// import Dashboard from "./pages/Dashboard"; // Hidden for future purposes
 import Dashboard_v2 from "./pages/Dashboard_v2";
 import EssayManagement from "./pages/EssayManagement";
 import ClassManagement from "./pages/ClassManagement";
@@ -54,7 +54,7 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <ClientLayout>
-                <Dashboard />
+                <Dashboard_v2 />
               </ClientLayout>
             </ProtectedRoute>
           }

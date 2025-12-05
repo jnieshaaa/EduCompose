@@ -14,7 +14,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)  # Deprecated: Using Supabase Auth only
     role = Column(String, default="teacher")  # teacher, admin
     is_active = Column(Boolean, default=True)
     email_verified = Column(Boolean, default=False)

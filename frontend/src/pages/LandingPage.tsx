@@ -23,6 +23,52 @@ import type { AnalysisResponse } from "../types/Essay";
 
 const MIN_WORDS = 150;
 
+const detectLowQualityText = (input: string): string | null => {
+  const tokens = input.split(/\s+/).filter(Boolean);
+  const alphaTokens = tokens.filter((token) => /[a-zA-Z]/.test(token));
+  const cleanedAlphaTokens = alphaTokens.map((token) =>
+    token.replace(/[^a-zA-Z]/g, "")
+  );
+  const alphaWordCount = alphaTokens.length;
+  const uniqueWords = new Set(
+    cleanedAlphaTokens.map((token) => token.toLowerCase())
+  );
+
+  const lexicalDiversity =
+    alphaWordCount > 0 ? uniqueWords.size / alphaWordCount : 0;
+  const avgWordLength =
+    alphaWordCount > 0
+      ? cleanedAlphaTokens.reduce(
+          (sum, token) => sum + token.length,
+          0
+        ) / alphaWordCount
+      : 0;
+
+  const sentenceCount = input
+    .split(/[.!?]+|\n+/)
+    .map((segment) => segment.trim())
+    .filter((segment) => /[a-zA-Z]{3,}/.test(segment)).length;
+
+  const distinctLetters = new Set(
+    cleanedAlphaTokens.join("").toLowerCase().split("")
+  ).size;
+
+  if (sentenceCount < 2) {
+    return "Please include at least two complete sentences with proper punctuation before running the analysis.";
+  }
+  if (lexicalDiversity < 0.15) {
+    return "The text repeats the same word too many times. Please provide a real paragraph with varied vocabulary.";
+  }
+  if (avgWordLength < 2.5) {
+    return "The text is mostly made of extremely short fragments. Use full words and sentences so we can score the writing.";
+  }
+  if (distinctLetters < 5) {
+    return "The text does not include enough unique letters to be considered meaningful writing.";
+  }
+
+  return null;
+};
+
 // --- About Page Interfaces and Constants ---
 interface Entity {
   id: number;
@@ -315,6 +361,15 @@ const LandingPage: React.FC = () => {
     if (currentWordCount < MIN_WORDS) {
       // Open TextAnalysisModal to show the word requirement guide
       setShowTextAnalysisModal(true);
+      return;
+    }
+
+    const qualityIssue = detectLowQualityText(text);
+    if (qualityIssue) {
+      setAnalysis(null);
+      setError(qualityIssue);
+      setShowResultsModal(true);
+      setAnalyzedText(null);
       return;
     }
 

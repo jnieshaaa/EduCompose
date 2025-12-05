@@ -5,6 +5,7 @@ Comprehensive multi-dimensional essay analysis service
 import nltk
 import logging
 import time
+import re
 from typing import Dict, List, Any, Tuple, Optional
 
 from ..models import Essay
@@ -84,6 +85,16 @@ class EssayAnalysisService:
                 "error": "Essay too short",
                 "message": "Essays must be at least 150 words for meaningful analysis",
                 "word_count": word_count
+            }
+
+        quality_metrics = self._compute_content_quality_metrics(content)
+        quality_issue = self._validate_content_quality(quality_metrics)
+        if quality_issue:
+            return {
+                "error": "low_quality_content",
+                "message": quality_issue,
+                "word_count": word_count,
+                "quality_metrics": quality_metrics
             }
         
         if word_count > 1000:
@@ -248,7 +259,60 @@ class EssayAnalysisService:
             "timing_info": timing_info,
             "analysis_type": analysis_type
         }
-    
+
+    def _compute_content_quality_metrics(self, content: str) -> Dict[str, Any]:
+        """Generate lightweight heuristics to detect nonsensical submissions."""
+        tokens = content.split()
+        alpha_tokens = [tok for tok in tokens if any(ch.isalpha() for ch in tok)]
+        alpha_word_count = len(alpha_tokens)
+        unique_words = set(tok.lower() for tok in alpha_tokens if tok.strip())
+        total_alpha_chars = sum(len(tok) for tok in alpha_tokens)
+
+        raw_segments = re.split(r"[.!?]+|\n+", content)
+        sentences = [
+            seg.strip()
+            for seg in raw_segments
+            if len(re.sub(r"[^a-zA-Z]", "", seg)) >= 3
+        ]
+
+        distinct_alpha_chars = len(
+            {
+                ch.lower()
+                for tok in alpha_tokens
+                for ch in tok
+                if ch.isalpha()
+            }
+        )
+
+        return {
+            "token_count": len(tokens),
+            "alpha_token_ratio": (alpha_word_count / len(tokens)) if tokens else 0.0,
+            "lexical_diversity": (len(unique_words) / alpha_word_count) if alpha_word_count else 0.0,
+            "avg_word_length": (total_alpha_chars / alpha_word_count) if alpha_word_count else 0.0,
+            "sentence_count": len(sentences),
+            "distinct_alpha_chars": distinct_alpha_chars,
+        }
+
+    def _validate_content_quality(self, metrics: Dict[str, Any]) -> Optional[str]:
+        """Return error text when we detect gibberish content instead of an essay."""
+        if metrics["sentence_count"] < 2:
+            return (
+                "Essay content should contain at least two complete sentences with standard punctuation before it can be analyzed."
+            )
+        if metrics["lexical_diversity"] < 0.15:
+            return (
+                "Essay content appears to repeat the same word(s). Please provide a complete paragraph with varied vocabulary."
+            )
+        if metrics["avg_word_length"] < 2.5:
+            return (
+                "Essay content is mostly made of extremely short fragments. Use full words and sentences so we can score the writing."
+            )
+        if metrics["distinct_alpha_chars"] < 5:
+            return (
+                "Essay content does not include enough unique letters to be considered meaningful text."
+            )
+        return None
+
     def _build_argument_graph(self, argument_analysis: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Construct argument knowledge graph from argument analysis results"""
         graph = {

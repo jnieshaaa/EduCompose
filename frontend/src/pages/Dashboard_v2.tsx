@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -167,9 +167,28 @@ const initialStudents: StudentV2[] = [];
 
 const Dashboard_v2: React.FC = () => {
   // State
+  const [loading, setLoading] = useState(true);
   const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [students, setStudents] = useState<StudentV2[]>(initialStudents);
+
+  // Simulate initial loading
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call delay
+        setTimeout(() => {
+          setLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Filters
   const [selectedProgram, setSelectedProgram] = useState<string>("all");
@@ -532,6 +551,21 @@ const Dashboard_v2: React.FC = () => {
     setEditingStudent(null);
     setEditingStudentProgramId("");
   };
+
+  if (loading) {
+    return (
+      <div className='p-6 min-h-screen bg-neutral-300/10'>
+        <div className='animate-pulse space-y-6'>
+          <div className='h-8 bg-neutral-300 rounded w-1/4'></div>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className='h-32 bg-neutral-300 rounded-rd'></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='p-6 space-y-6 min-h-screen bg-neutral-300/10'>
