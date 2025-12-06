@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, BookOpen, Trash2, Layers, Search, Users } from "lucide-react";
+import { Plus, BookOpen, Layers, Search, Users, Check } from "lucide-react";
 import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import BlockPage from "./Block";
+import StudentPage from "./Student";
+import EssayActivity from "./EssayActivity";
 
 // Types
 interface Program {
@@ -22,6 +24,7 @@ interface StudentV2 {
   id: string;
   name: string;
   blockId: string;
+  activityId?: string | null;
 }
 
 // Program suggestions for autocomplete
@@ -61,13 +64,49 @@ const PROGRAM_SUGGESTIONS = [
 
   // Computing / IT / Data
   "BSCS",
+  "BSCS-AI",
+  "BSCS-ML",
+  "BSCS-DS",
+  "BSCS-SE",
+  "BSCS-SD",
+  "BSCS-GD",
+  "BSCS-CY",
+  "BSCS-NS",
+  "BSCS-NET",
+  "BSCS-CC",
+  "BSCS-ROBO",
+  "BSCS-IOT",
+  "BSCS-ARVR",
+  "BSCS-Graphics",
+  "BSCS-CompEng",
+  "BSCS-BDA",
+  "BSCS-IS",
+  "BSCS-THEO",
   "BSIT",
+  "BSIT-NET",
+  "BSIT-NS",
+  "BSIT-CY",
+  "BSIT-WMAD",
+  "BSIT-SD",
+  "BSIT-SE",
+  "BSIT-DB",
+  "BSIT-DA",
+  "BSIT-CC",
+  "BSIT-IMA",
+  "BSIT-MMA",
+  "BSIT-SYS",
+  "BSIT-SA",
+  "BSIT-IOT",
+  "BSIT-ERP",
+  "BSIT-ITSM",
+  "BSIT-GD",
   "BSIS",
   "BSDA",
   "BSDS",
   "BSSE",
   "BSAI",
   "BSCpE",
+  "BSIT-ML",
 
   // Health / Medical-Allied
   "BSN",
@@ -188,6 +227,7 @@ const initialStudents: StudentV2[] = [];
 
 const ClassManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("view");
 
   // State
   const [loading, setLoading] = useState(true);
@@ -230,9 +270,71 @@ const ClassManagement: React.FC = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    setSelectedProgramIds((prev) =>
+      prev.filter((id) => programs.some((program) => program.id === id))
+    );
+  }, [programs]);
+
   // Handler to select a program and update URL
   const handleSelectProgram = (program: { id: string; name: string }) => {
     setSearchParams({ programId: program.id, programName: program.name });
+  };
+
+  const toggleProgramSelection = (programId: string) => {
+    setSelectedProgramIds((prev) =>
+      prev.includes(programId)
+        ? prev.filter((id) => id !== programId)
+        : [...prev, programId]
+    );
+  };
+
+  const exitDeleteMode = () => {
+    setIsDeleteMode(false);
+    setSelectedProgramIds([]);
+    setPendingDeleteProgramIds([]);
+  };
+
+  const handleSelectAllVisiblePrograms = (visibleIds: string[]) => {
+    if (visibleIds.length === 0) {
+      setSelectedProgramIds([]);
+      return;
+    }
+
+    const alreadySelected = visibleIds.every((id) =>
+      selectedProgramIds.includes(id)
+    );
+
+    setSelectedProgramIds(alreadySelected ? [] : visibleIds);
+  };
+
+  const handleRemoveProgramAction = () => {
+    if (totalPrograms === 0) {
+      return;
+    }
+
+    if (!isDeleteMode) {
+      setIsDeleteMode(true);
+      return;
+    }
+
+    if (selectedProgramIds.length === 0) {
+      exitDeleteMode();
+      return;
+    }
+
+    const selectedNames = programs
+      .filter((program) => selectedProgramIds.includes(program.id))
+      .map((program) => program.name);
+
+    setPendingDeleteProgramIds(selectedProgramIds);
+    setDeleteType("program");
+    setDeleteName(
+      selectedNames.length === 1
+        ? selectedNames[0]
+        : `${selectedNames.length} selected programs`
+    );
+    setShowDeleteConfirm(true);
   };
 
   // Modals
@@ -246,6 +348,11 @@ const ClassManagement: React.FC = () => {
   );
   const [deleteId, setDeleteId] = useState<string>("");
   const [deleteName, setDeleteName] = useState<string>("");
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [pendingDeleteProgramIds, setPendingDeleteProgramIds] = useState<
+    string[]
+  >([]);
 
   // Form states
   const [newProgram, setNewProgram] = useState({ name: "" });
@@ -334,23 +441,16 @@ const ClassManagement: React.FC = () => {
     setShowAddProgramModal(false);
   };
 
-  const confirmDeleteProgram = (programId: string, programName: string) => {
-    setDeleteType("program");
-    setDeleteId(programId);
-    setDeleteName(programName);
-    setShowDeleteConfirm(true);
-  };
+  const handleDeletePrograms = (programIds: string[]) => {
+    if (programIds.length === 0) return;
 
-  const handleDeleteProgram = (programId: string) => {
-    // Get all blocks in this program
-    const programBlocks = blocks.filter((b) => b.programId === programId);
+    const programBlocks = blocks.filter((b) =>
+      programIds.includes(b.programId)
+    );
     const blockIds = programBlocks.map((b) => b.id);
 
-    // Remove the program
-    setPrograms((prev) => prev.filter((p) => p.id !== programId));
-    // Remove all blocks in this program
-    setBlocks((prev) => prev.filter((b) => b.programId !== programId));
-    // Remove all students in those blocks
+    setPrograms((prev) => prev.filter((p) => !programIds.includes(p.id)));
+    setBlocks((prev) => prev.filter((b) => !programIds.includes(b.programId)));
     setStudents((prev) => prev.filter((s) => !blockIds.includes(s.blockId)));
   };
 
@@ -427,7 +527,15 @@ const ClassManagement: React.FC = () => {
 
   const handleConfirmDelete = () => {
     if (deleteType === "program") {
-      handleDeleteProgram(deleteId);
+      const idsToDelete =
+        pendingDeleteProgramIds.length > 0
+          ? pendingDeleteProgramIds
+          : deleteId
+          ? [deleteId]
+          : [];
+      handleDeletePrograms(idsToDelete);
+      setPendingDeleteProgramIds([]);
+      exitDeleteMode();
     } else if (deleteType === "block") {
       handleDeleteBlock(deleteId);
     }
@@ -460,6 +568,13 @@ const ClassManagement: React.FC = () => {
         };
       });
   }, [programs, blocks, students, searchQuery]);
+  const visibleProgramIds = useMemo(
+    () => programOverview.map((program) => program.id),
+    [programOverview]
+  );
+  const areAllVisibleSelected =
+    visibleProgramIds.length > 0 &&
+    visibleProgramIds.every((id) => selectedProgramIds.includes(id));
 
   if (loading) {
     return (
@@ -476,6 +591,30 @@ const ClassManagement: React.FC = () => {
     );
   }
 
+  // If a program is selected, show Activity view
+  if (selectedProgram && view === "activities") {
+    return (
+      <div className='p-6 min-h-screen bg-neutral-300/10'>
+        <EssayActivity students={students} />
+      </div>
+    );
+  }
+
+  // If a program is selected, show Student view
+  if (selectedProgram && view === "students") {
+    return (
+      <div className='p-6 min-h-screen bg-neutral-300/10'>
+        <StudentPage
+          programId={selectedProgram.id}
+          programName={selectedProgram.name}
+          blocks={blocks}
+          students={students}
+          setStudents={setStudents}
+        />
+      </div>
+    );
+  }
+
   // If a program is selected, show Block view
   if (selectedProgram) {
     return (
@@ -487,7 +626,6 @@ const ClassManagement: React.FC = () => {
           setBlocks={setBlocks}
           students={students}
           setStudents={setStudents}
-          onBack={() => setSearchParams({})}
         />
       </div>
     );
@@ -501,27 +639,58 @@ const ClassManagement: React.FC = () => {
           <h1 className='text-3xl font-bold text-neutral-900 tracking-tight'>
             Class Management
           </h1>
-          <p className='text-neutral-600 mt-1'>
-            Manage your programs and blocks
-          </p>
         </div>
         <div className='flex flex-wrap gap-3'>
           <Button
             variant='ghost'
             size='sm'
             onClick={() => setShowAddProgramModal(true)}
+            disabled={isDeleteMode}
+            className={isDeleteMode ? "opacity-50 cursor-not-allowed" : ""}
           >
             <BookOpen className='w-4 h-4 mr-2' />
             Add Program
           </Button>
           <Button
-            variant='secondary'
+            variant='ghost'
             size='sm'
-            onClick={() => setShowAddBlockModal(true)}
+            onClick={handleRemoveProgramAction}
+            className={`text-error-default ${
+              isDeleteMode
+                ? "border border-error-default/40 bg-error-default/10"
+                : ""
+            } ${totalPrograms === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={totalPrograms === 0}
           >
-            <Layers className='w-4 h-4 mr-2' />
-            Add Block
+            Remove Program
+            {isDeleteMode && selectedProgramIds.length > 0
+              ? ` (${selectedProgramIds.length})`
+              : ""}
           </Button>
+          {isDeleteMode && (
+            <>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() =>
+                  handleSelectAllVisiblePrograms(visibleProgramIds)
+                }
+                disabled={visibleProgramIds.length === 0}
+                className='border border-primary/30 bg-primary/5 text-primary'
+                aria-pressed={areAllVisibleSelected}
+              >
+                Select All
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={exitDeleteMode}
+                className='text-neutral-600'
+              >
+                Cancel
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -551,61 +720,80 @@ const ClassManagement: React.FC = () => {
         </div>
       </div>
 
+      {isDeleteMode && (
+        <p className='text-sm text-error-default'>
+          Select the programs you want to remove, then press Remove Program
+          again to confirm.
+        </p>
+      )}
+
       {/* Program & Block Overview */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         <AnimatePresence>
-          {programOverview.map((program, index) => (
-            <motion.div
-              key={program.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ delay: index * 0.1 }}
-              className='border border-neutral-200 rounded-rd bg-white overflow-hidden cursor-pointer hover:shadow-md transition-shadow'
-              onClick={() =>
-                handleSelectProgram({ id: program.id, name: program.name })
-              }
-            >
-              <div className='p-4 shadow-lg bg-white'>
-                <div className='flex items-center justify-between mb-3'>
-                  <h4 className='text-lg font-bold text-neutral-900'>
-                    {program.name}
-                  </h4>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
-                      e?.stopPropagation();
-                      confirmDeleteProgram(program.id, program.name);
-                    }}
-                    className='group text-neutral-400 hover:bg-support-superlight/30 border-none'
-                  >
-                    <Trash2 className='w-5 h-5 group-hover:text-error-default transition-colors' />
-                  </Button>
-                </div>
-                <div className='flex gap-4'>
-                  <div className='flex-1 p-3 bg-neutral-100 rounded-rd text-center'>
-                    <div className='flex items-center justify-center gap-2'>
-                      <Layers className='w-5 h-5 text-primary' />
-                      <p className='text-2xl font-bold text-neutral-900'>
-                        {program.blockCount}
-                      </p>
-                    </div>
-                    <p className='text-xs text-neutral-500 mt-1'>Blocks</p>
+          {programOverview.map((program, index) => {
+            const isSelected = selectedProgramIds.includes(program.id);
+            return (
+              <motion.div
+                key={program.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: index * 0.1 }}
+                className={`border border-neutral-200 rounded-rd bg-white overflow-hidden cursor-pointer transition-shadow ${
+                  isSelected
+                    ? "ring-2 ring-primary shadow-lg bg-primary/5"
+                    : "hover:shadow-md"
+                }`}
+                onClick={() =>
+                  isDeleteMode
+                    ? toggleProgramSelection(program.id)
+                    : handleSelectProgram({
+                        id: program.id,
+                        name: program.name,
+                      })
+                }
+              >
+                <div className='p-4 shadow-lg bg-white'>
+                  <div className='flex items-center justify-between mb-3'>
+                    <h4 className='text-lg font-bold text-neutral-900'>
+                      {program.name}
+                    </h4>
+                    {isDeleteMode && (
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          isSelected
+                            ? "border-primary bg-primary text-white"
+                            : "border-neutral-300 bg-white"
+                        }`}
+                      >
+                        {isSelected && <Check className='w-3 h-3' />}
+                      </div>
+                    )}
                   </div>
-                  <div className='flex-1 p-3 bg-neutral-100 rounded-rd text-center'>
-                    <div className='flex items-center justify-center gap-2'>
-                      <Users className='w-5 h-5 text-primary' />
-                      <p className='text-2xl font-bold text-neutral-900'>
-                        {program.studentCount}
-                      </p>
+                  <div className='flex gap-4'>
+                    <div className='flex-1 p-3 bg-neutral-100 rounded-rd text-center'>
+                      <div className='flex items-center justify-center gap-2'>
+                        <Layers className='w-5 h-5 text-primary' />
+                        <p className='text-2xl font-bold text-neutral-900'>
+                          {program.blockCount}
+                        </p>
+                      </div>
+                      <p className='text-xs text-neutral-500 mt-1'>Blocks</p>
                     </div>
-                    <p className='text-xs text-neutral-500 mt-1'>Students</p>
+                    <div className='flex-1 p-3 bg-neutral-100 rounded-rd text-center'>
+                      <div className='flex items-center justify-center gap-2'>
+                        <Users className='w-5 h-5 text-primary' />
+                        <p className='text-2xl font-bold text-neutral-900'>
+                          {program.studentCount}
+                        </p>
+                      </div>
+                      <p className='text-xs text-neutral-500 mt-1'>Students</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
         {programs.length === 0 && (
           <div className='text-center py-8 col-span-full'>
@@ -874,25 +1062,40 @@ const ClassManagement: React.FC = () => {
           setDeleteType(null);
           setDeleteId("");
           setDeleteName("");
+          setPendingDeleteProgramIds([]);
         }}
         title='Confirm Removing'
         size='sm'
       >
         <div className='space-y-4'>
-          <p className='text-neutral-700'>
-            Are you sure you want to remove{" "}
-            <span className='font-semibold'>{deleteName}</span>?
+          <div className='text-neutral-700 space-y-2'>
+            <p>
+              Are you sure you want to remove{" "}
+              <span className='font-semibold'>{deleteName}</span>?
+            </p>
+            {deleteType === "program" && pendingDeleteProgramIds.length > 1 && (
+              <ul className='list-disc list-inside text-sm text-neutral-600'>
+                {programs
+                  .filter((program) =>
+                    pendingDeleteProgramIds.includes(program.id)
+                  )
+                  .map((program) => (
+                    <li key={program.id}>{program.name}</li>
+                  ))}
+              </ul>
+            )}
             {deleteType === "program" && (
-              <span className='block text-sm text-error-default mt-2'>
-                This will also delete all blocks and students in this program.
+              <span className='block text-sm text-error-default'>
+                This will also delete all blocks and students in the selected
+                programs.
               </span>
             )}
             {deleteType === "block" && (
-              <span className='block text-sm text-error-default mt-2'>
+              <span className='block text-sm text-error-default'>
                 This will also delete all students in this block.
               </span>
             )}
-          </p>
+          </div>
           <div className='flex justify-end gap-3 pt-2'>
             <Button
               variant='ghost'
@@ -901,6 +1104,7 @@ const ClassManagement: React.FC = () => {
                 setDeleteType(null);
                 setDeleteId("");
                 setDeleteName("");
+                setPendingDeleteProgramIds([]);
               }}
             >
               No, Cancel

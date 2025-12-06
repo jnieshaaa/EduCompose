@@ -1,3 +1,5 @@
+// Dashboard_v2.tsx
+
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -575,9 +577,6 @@ const Dashboard_v2: React.FC = () => {
           <h1 className='text-3xl font-bold text-neutral-900 tracking-tight'>
             Dashboard
           </h1>
-          <p className='text-neutral-600 mt-1'>
-            Manage your programs, blocks, and students
-          </p>
         </div>
         <div className='flex flex-wrap gap-3'>
           <Button

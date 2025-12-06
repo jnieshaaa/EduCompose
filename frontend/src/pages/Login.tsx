@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../api";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth, DESIGN_MODE_ENABLED, DESIGN_MODE_TOKEN, DESIGN_MODE_USER } from "../contexts/AuthContext";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -28,7 +28,16 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await authApi.login(email.trim(), password);
+      if (DESIGN_MODE_ENABLED) {
+        login(DESIGN_MODE_TOKEN, DESIGN_MODE_USER);
+        navigate("/Dashboard");
+        return;
+      }
+
+      const response = await authApi.login(
+        { email: email.trim() },
+        password
+      );
       
       if (response.access_token) {
         // Use AuthContext login method to update auth state

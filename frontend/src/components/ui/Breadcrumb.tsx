@@ -52,47 +52,79 @@ const Breadcrumb: React.FC = () => {
     const programName = searchParams.get("programName") || "Program";
     const blockId = searchParams.get("blockId");
     const blockName = searchParams.get("blockName");
+    const view = searchParams.get("view");
+    const activityTitle = searchParams.get("activityTitle") || "Essay Activity";
+    const basePath = `${pathname}?programId=${programId}&programName=${programName}`;
 
     // Add program breadcrumb
     items.push({
       label: programName,
-      path: `${pathname}?programId=${programId}&programName=${programName}`,
+      path: basePath,
     });
 
-    // Add block breadcrumb if a specific block is selected
-    if (blockId && blockName) {
+    const blockViewPath = `${basePath}&view=blocks`;
+    const blockPath = `${basePath}${
+      blockId && blockName ? `&blockId=${blockId}&blockName=${blockName}` : ""
+    }`;
+    const blockLabel = blockName ?? "Block";
+    const blockBreadcrumbPath =
+      blockId && blockName ? blockPath : blockViewPath;
+
+    if (view === "activities") {
+      items.push({
+        label: blockLabel,
+        path: blockBreadcrumbPath,
+      });
+      items.push({
+        label: activityTitle,
+        path: `${blockPath}&view=activities`,
+      });
+    } else if (view === "students") {
+      items.push({
+        label: blockLabel,
+        path: blockBreadcrumbPath,
+      });
+      items.push({
+        label: activityTitle,
+        path: `${blockPath}&view=activities`,
+      });
+      items.push({
+        label: "Students",
+        path: `${blockPath}&view=students`,
+      });
+    } else if (blockId && blockName) {
       items.push({
         label: blockName,
-        path: `${pathname}?programId=${programId}&programName=${programName}&blockId=${blockId}&blockName=${blockName}`,
+        path: blockPath,
       });
     }
   }
 
   return (
     <nav
-      className="flex items-center space-x-2 px-4 py-3 bg-white border-b border-neutral-200 text-sm"
-      aria-label="Breadcrumb"
+      className='flex items-center space-x-2 px-4 py-3 bg-white border-b border-neutral-200 text-sm'
+      aria-label='Breadcrumb'
     >
-      <ol className="flex items-center space-x-2">
+      <ol className='flex items-center space-x-2'>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
           return (
-            <li key={item.path} className="flex items-center">
+            <li key={item.path} className='flex items-center'>
               {index > 0 && (
-                <ChevronRight className="w-4 h-4 text-neutral-400 mx-2" />
+                <ChevronRight className='w-4 h-4 text-neutral-400 mx-2' />
               )}
               {isLast ? (
-                <span className="text-neutral-900 font-medium flex items-center">
-                  {index === 0 && <Home className="w-4 h-4 mr-1.5" />}
+                <span className='text-neutral-900 font-medium flex items-center'>
+                  {index === 0 && <Home className='w-4 h-4 mr-1.5' />}
                   {item.label}
                 </span>
               ) : (
                 <Link
                   to={item.path}
-                  className="text-neutral-600 hover:text-primary transition-colors flex items-center"
+                  className='text-neutral-600 hover:text-primary transition-colors flex items-center'
                 >
-                  {index === 0 && <Home className="w-4 h-4 mr-1.5" />}
+                  {index === 0 && <Home className='w-4 h-4 mr-1.5' />}
                   {item.label}
                 </Link>
               )}

@@ -1,3 +1,5 @@
+// App.tsx
+
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 // import Dashboard from "./pages/Dashboard"; // Hidden for future purposes
@@ -14,8 +16,8 @@ import ClickEffect from "./components/ClickEffect";
 import SectionsList from "./pages/SectionsList";
 import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
-import About from "./pages/About";
-import AnalysisResults from "./pages/AnalysisResults";
+import About from "./pages/About.tsx";
+import EssayActivity from "./pages/EssayActivity.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -38,7 +40,7 @@ const AppContent: React.FC = () => {
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 800); // simulate page load
     return () => clearTimeout(timer);
-  }, [location.pathname]);
+  }, [location.pathname, setLoading]);
 
   const handleClose = () => setShowIntro(false);
 
@@ -50,7 +52,6 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path='/' element={<LandingPage />} />
         <Route path='/About' element={<About />} />
-        <Route path='/AnalysisResults' element={<AnalysisResults />} />
         <Route
           path='/Dashboard'
           element={
@@ -87,6 +88,16 @@ const AppContent: React.FC = () => {
             <ProtectedRoute>
               <ClientLayout>
                 <ClassManagement />
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/EssayActivity'
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <EssayActivity />
               </ClientLayout>
             </ProtectedRoute>
           }
