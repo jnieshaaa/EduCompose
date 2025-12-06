@@ -40,7 +40,12 @@ class EssayAnalysisService:
         self.grammar_analyzer = GrammarAnalyzer()
         self.readability_analyzer = ReadabilityAnalyzer()
         self.coherence_analyzer = CoherenceAnalyzer()
-        self.argument_miner = ArgumentMiner()
+        # Use fine-tuned model for argument mining
+        self.argument_miner = ArgumentMiner(
+            use_transformer_classifier=True,
+            use_fine_tuned=True,
+            device="cpu"  # Use "cuda" if GPU available
+        )
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
     
     async def analyze_text(self, text: str, title: str = "Untitled Essay", analysis_type: str = "comprehensive") -> Dict[str, Any]:

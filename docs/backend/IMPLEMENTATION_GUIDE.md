@@ -122,7 +122,7 @@ Create a standardized format for essay data with teacher annotations:
 **Enhancements needed**:
 
 - Sentence-level classifier for: claim, premise, evidence, counterclaim, background
-- Use transformer-based models (BERT/RoBERTa fine-tuned on argumentation datasets)
+- Use transformer-based models (BERT/DistilBERT fine-tuned on argumentation datasets)
 
 ### 3.4 Coreference Resolution
 
@@ -131,7 +131,7 @@ Create a standardized format for essay data with teacher annotations:
 **Tools**:
 
 - NeuralCoref (spaCy extension)
-- HuggingFace coreference models (e.g., `coref-roberta-large`)
+- HuggingFace coreference models (e.g., `coref-bert-large`)
 
 ---
 

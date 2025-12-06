@@ -23,7 +23,7 @@ def get_spacy():
             _spacy_module = False
     return _spacy_module if _spacy_module is not False else None
 
-def load_spacy_model(model_name: str = "en_core_web_lg"):
+def load_spacy_model(model_name: str = "en_core_web_md"):
     """
     Load a spaCy model with lazy loading and error handling.
     

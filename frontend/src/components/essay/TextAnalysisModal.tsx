@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -40,12 +41,57 @@ type HighlightError = GrammarError & {
 
 const MIN_WORDS = 150;
 
+const detectLowQualityText = (input: string): string | null => {
+  const tokens = input.split(/\s+/).filter(Boolean);
+  const alphaTokens = tokens.filter((token) => /[a-zA-Z]/.test(token));
+  const cleanedAlphaTokens = alphaTokens.map((token) =>
+    token.replace(/[^a-zA-Z]/g, "")
+  );
+  const alphaWordCount = alphaTokens.length;
+  const uniqueWords = new Set(
+    cleanedAlphaTokens.map((token) => token.toLowerCase())
+  );
+
+  const lexicalDiversity =
+    alphaWordCount > 0 ? uniqueWords.size / alphaWordCount : 0;
+  const avgWordLength =
+    alphaWordCount > 0
+      ? cleanedAlphaTokens.reduce((sum, token) => sum + token.length, 0) /
+        alphaWordCount
+      : 0;
+
+  const sentenceCount = input
+    .split(/[.!?]+|\n+/)
+    .map((segment) => segment.trim())
+    .filter((segment) => /[a-zA-Z]{3,}/.test(segment)).length;
+
+  const distinctLetters = new Set(
+    cleanedAlphaTokens.join("").toLowerCase().split("")
+  ).size;
+
+  if (sentenceCount < 2) {
+    return "Please include at least two complete sentences with proper punctuation before running the analysis.";
+  }
+  if (lexicalDiversity < 0.15) {
+    return "The text repeats the same word too many times. Please provide a real paragraph with varied vocabulary.";
+  }
+  if (avgWordLength < 2.5) {
+    return "The text is mostly made of extremely short fragments. Use full words and sentences so we can score the writing.";
+  }
+  if (distinctLetters < 5) {
+    return "The text does not include enough unique letters to be considered meaningful writing.";
+  }
+
+  return null;
+};
+
 const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
   isOpen,
   onClose,
   text,
   title = "Essay Analysis",
 }) => {
+  const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<Omit<
     AnalysisResponse,
     "essay_id"
@@ -76,6 +122,13 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
       return;
     }
 
+    // Check for quality issues
+    const qualityIssue = detectLowQualityText(text);
+    if (qualityIssue) {
+      setError(qualityIssue);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setAnalysis(null);
@@ -86,13 +139,21 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
         title,
         "comprehensive"
       );
-      setAnalysis(result as Omit<AnalysisResponse, "essay_id">);
+      // Navigate to AnalysisResults page with the analysis data
+      navigate("/AnalysisResults", {
+        state: {
+          analysis: result as Omit<AnalysisResponse, "essay_id">,
+          text: text,
+          title: title,
+        },
+      });
+      // Close the modal
+      onClose();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to analyze essay";
       setError(errorMessage);
       console.error("Error analyzing essay:", err);
-    } finally {
       setLoading(false);
     }
   };
@@ -206,7 +267,8 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
         size='xl'
         className='max-h-[90vh]'
         contentClassName='flex flex-col items-center justify-center py-12'
-        transparent={true}
+        blackBackground={true}
+        closeOnBackdropClick={false}
       >
         <KnowledgeGraphLoader size="md" className="mb-6" />
         <p className='text-lg font-medium text-white mb-2 drop-shadow-lg'>
@@ -224,42 +286,41 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        size='xl'
+        size='md'
         className='max-h-[90vh]'
+        closeOnBackdropClick={true}
       >
-        <Card className='bg-error-50 border-0 p-0'>
-          <div className='flex flex-col items-center text-center'>
-            <AlertTriangle className='w-6 h-6 text-error-default my-3' />
-            <h4 className='text-lg font-semibold text-error-dark mb-1'>
-              Analysis Failed
-            </h4>
-            <p className='text-error-dark'>{error}</p>
-            {text.trim().split(/\s+/).length < MIN_WORDS && (
-              <p className='text-sm text-error-default mt-2'>
-                Your essay has {text.trim().split(/\s+/).length} words. Please
-                add at least {MIN_WORDS - text.trim().split(/\s+/).length} more
-                words.
-              </p>
-            )}
-            <button
-              onClick={onClose}
-              className='my-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
-            >
-              Try Again
-            </button>
+        <div className='flex flex-col items-center text-center p-8'>
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+            <AlertTriangle className='w-6 h-6 text-red-600' />
           </div>
-        </Card>
+          <h4 className='text-xl font-semibold text-neutral-900 mb-3'>
+            Analysis Error
+          </h4>
+          <p className='text-neutral-600'>{error}</p>
+          {text.trim().split(/\s+/).length < MIN_WORDS && (
+            <p className='text-sm text-neutral-500 mt-2'>
+              Your essay has {text.trim().split(/\s+/).length} words. Please
+              add at least {MIN_WORDS - text.trim().split(/\s+/).length} more
+              words.
+            </p>
+          )}
+          <button
+            onClick={onClose}
+            className='mt-6 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors'
+          >
+            Close
+          </button>
+        </div>
       </Modal>
     );
   }
 
-  if (!analysis) {
-    return null;
-  }
+  // Only show loading state, results will be on AnalysisResults page
+  return null;
+};
 
-  return (
-    <Modal
-      isOpen={isOpen}
+export default TextAnalysisModal;
       onClose={onClose}
       size='xl'
       className='max-h-[90vh]'

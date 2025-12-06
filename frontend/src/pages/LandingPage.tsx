@@ -12,62 +12,13 @@ import {
   useInView,
   useAnimation,
 } from "framer-motion";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
-import InlineAnalysisResults from "../components/essay/InlineAnalysisResults";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
-import { analysisApi } from "../api";
-import type { AnalysisResponse } from "../types/Essay";
 
 const MIN_WORDS = 150;
-
-const detectLowQualityText = (input: string): string | null => {
-  const tokens = input.split(/\s+/).filter(Boolean);
-  const alphaTokens = tokens.filter((token) => /[a-zA-Z]/.test(token));
-  const cleanedAlphaTokens = alphaTokens.map((token) =>
-    token.replace(/[^a-zA-Z]/g, "")
-  );
-  const alphaWordCount = alphaTokens.length;
-  const uniqueWords = new Set(
-    cleanedAlphaTokens.map((token) => token.toLowerCase())
-  );
-
-  const lexicalDiversity =
-    alphaWordCount > 0 ? uniqueWords.size / alphaWordCount : 0;
-  const avgWordLength =
-    alphaWordCount > 0
-      ? cleanedAlphaTokens.reduce(
-          (sum, token) => sum + token.length,
-          0
-        ) / alphaWordCount
-      : 0;
-
-  const sentenceCount = input
-    .split(/[.!?]+|\n+/)
-    .map((segment) => segment.trim())
-    .filter((segment) => /[a-zA-Z]{3,}/.test(segment)).length;
-
-  const distinctLetters = new Set(
-    cleanedAlphaTokens.join("").toLowerCase().split("")
-  ).size;
-
-  if (sentenceCount < 2) {
-    return "Please include at least two complete sentences with proper punctuation before running the analysis.";
-  }
-  if (lexicalDiversity < 0.15) {
-    return "The text repeats the same word too many times. Please provide a real paragraph with varied vocabulary.";
-  }
-  if (avgWordLength < 2.5) {
-    return "The text is mostly made of extremely short fragments. Use full words and sentences so we can score the writing.";
-  }
-  if (distinctLetters < 5) {
-    return "The text does not include enough unique letters to be considered meaningful writing.";
-  }
-
-  return null;
-};
 
 // --- About Page Interfaces and Constants ---
 interface Entity {
@@ -169,25 +120,21 @@ const COLORS: Record<Entity["type"], string> = {
 
 const LandingPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [text, setText] = useState("");
   const [showLogin, setShowLogin] = useState(false);
-  
+
   // Show login modal if redirected from a protected route
   useEffect(() => {
     if (location.state?.from) {
       setShowLogin(true);
     }
+    // Restore text if navigating back from AnalysisResults
+    if (location.state?.text) {
+      setText(location.state.text);
+    }
   }, [location.state]);
-  const [analysis, setAnalysis] = useState<Omit<
-    AnalysisResponse,
-    "essay_id"
-  > | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [analyzedText, setAnalyzedText] = useState<string | null>(null);
-  const [showResultsModal, setShowResultsModal] = useState(false);
   const [showTextAnalysisModal, setShowTextAnalysisModal] = useState(false);
-  const resultsRef = useRef<HTMLDivElement>(null);
 
   // --- About Page State Management ---
   const [activeTechStep, setActiveTechStep] = useState<
@@ -345,74 +292,30 @@ const LandingPage: React.FC = () => {
   const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
   const charCount = text.length;
 
-  // Check if text has changed since last analysis
-  const hasTextChanged = analyzedText !== null && text !== analyzedText;
-
   // Determine button text and behavior
-  const showViewResult = analysis && !hasTextChanged && !loading;
+  const showViewResult = false; // Always show analyze button
 
   const handleAnalyze = async () => {
     if (!text.trim()) {
-      setError("Please enter some text to analyze");
+      // Show error in a simple way or just return
       return;
     }
 
-    const currentWordCount = text.trim().split(/\s+/).length;
-    if (currentWordCount < MIN_WORDS) {
-      // Open TextAnalysisModal to show the word requirement guide
-      setShowTextAnalysisModal(true);
-      return;
-    }
-
-    const qualityIssue = detectLowQualityText(text);
-    if (qualityIssue) {
-      setAnalysis(null);
-      setError(qualityIssue);
-      setShowResultsModal(true);
-      setAnalyzedText(null);
-      return;
-    }
-
-    // Reset previous results
-    setAnalysis(null);
-    setError(null);
-    setLoading(true);
-    setShowResultsModal(true);
-
-    try {
-      const currentText = text;
-      const result = await analysisApi.analyzeText(
-        text,
-        "Essay Analysis",
-        "comprehensive"
-      );
-      setAnalysis(result as Omit<AnalysisResponse, "essay_id">);
-      setAnalyzedText(currentText);
-      setShowResultsModal(true);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to analyze essay";
-      setError(errorMessage);
-      console.error("Error analyzing essay:", err);
-      setAnalyzedText(null);
-      setShowResultsModal(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRetry = () => {
-    handleAnalyze();
-  };
-
-  const handleCloseResults = () => {
-    // Only hide the modal, keep the analysis data
-    setShowResultsModal(false);
-    setError(null); // Clear error when closing
+    // Navigate to AnalysisResults page with text in state
+    // The loading will happen on the AnalysisResults page
+    navigate("/AnalysisResults", {
+      state: {
+        text: text,
+        title: "Essay Analysis",
+      },
+    });
   };
 
   const handleViewResult = () => {
-    setShowResultsModal(true);
+    // Open the modal to view results
+    if (text.trim()) {
+      setShowTextAnalysisModal(true);
+    }
   };
 
   // --- About Page Functions ---
@@ -926,39 +829,39 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100'>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <HeaderPublic onLoginClick={() => setShowLogin(true)} />
       {showLogin && <AuthModal onClose={() => setShowLogin(false)} />}
 
       {/* Hero Section */}
-      <div id='hero'>
+      <div id="hero">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <div className='mx-auto px-4 lg:px-6 xl:px-8'>
-            <div className='flex flex-col items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] my-10 m-auto'>
+          <div className="mx-auto px-4 lg:px-6 xl:px-8">
+            <div className="flex flex-col items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] my-10 m-auto">
               <motion.div
                 ref={essayBoxRef}
                 initial={{ opacity: 0, y: 30 }}
                 animate={essayBoxControls}
-                className='bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl mx-auto h-[70vh] mb-5 flex flex-col'
+                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl mx-auto h-[70vh] mb-5 flex flex-col"
               >
-                <div className='relative flex-1'>
+                <div className="relative flex-1">
                   <textarea
-                    placeholder='Paste your essay here to get started...'
+                    placeholder="Paste your essay here to get started..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className='w-full h-full border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-none outline-none text-lg leading-relaxed px-2 py-3'
+                    className="w-full h-full border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-none outline-none text-lg leading-relaxed px-2 py-3"
                     style={{
                       overflowY: "auto",
                     }}
                   />
                 </div>
 
-                <div className='flex justify-between items-center pt-2 border-t border-neutral-100'>
-                  <div className='px-3 py-2 rounded text-sm'>
+                <div className="flex justify-between items-center pt-2 border-t border-neutral-100">
+                  <div className="px-3 py-2 rounded text-sm">
                     <span
                       className={`font-semibold ${
                         wordCount >= MIN_WORDS
@@ -968,20 +871,20 @@ const LandingPage: React.FC = () => {
                     >
                       {wordCount}
                     </span>
-                    <span className='text-gray-500'> Words </span>
-                    <span className='text-gray-500'>
+                    <span className="text-gray-500"> Words </span>
+                    <span className="text-gray-500">
                       {charCount} Characters
                     </span>
                   </div>
 
-                  <div className='flex gap-3'>
-                    <label className='hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm'>
-                      <Upload className='w-4 h-4' />
+                  <div className="flex gap-3">
+                    <label className="hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm">
+                      <Upload className="w-4 h-4" />
                       Upload
                       <input
-                        type='file'
-                        accept='.txt,.doc,.docx'
-                        className='hidden'
+                        type="file"
+                        accept=".txt,.doc,.docx"
+                        className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
@@ -1008,12 +911,12 @@ const LandingPage: React.FC = () => {
                     >
                       {showViewResult ? (
                         <>
-                          <Eye className='w-4 h-4' />
+                          <Eye className="w-4 h-4" />
                           View Result
                         </>
                       ) : (
                         <>
-                          <FileText className='w-4 h-4' />
+                          <FileText className="w-4 h-4" />
                           Analyze Essay
                         </>
                       )}
@@ -1022,40 +925,26 @@ const LandingPage: React.FC = () => {
                 </div>
               </motion.div>
 
-              {(loading || showResultsModal) && (
-                <div ref={resultsRef}>
-                  <InlineAnalysisResults
-                    analysis={analysis}
-                    loading={loading}
-                    error={error}
-                    onRetry={handleRetry}
-                    onClose={handleCloseResults}
-                    originalText={analyzedText || undefined}
-                    isOpen={showResultsModal || loading}
-                  />
-                </div>
-              )}
-
               {/* Text Analysis Modal for word requirement guide */}
               <TextAnalysisModal
                 isOpen={showTextAnalysisModal}
                 onClose={() => setShowTextAnalysisModal(false)}
                 text={text}
-                title='Essay Analysis'
+                title="Essay Analysis"
               />
 
               {/* Hero Section Description */}
               <motion.div
-                id='hero-bottom'
-                className='container mx-auto px-6 text-center mt-6'
+                id="hero-bottom"
+                className="container mx-auto px-6 text-center mt-6"
                 initial={{ opacity: 0 }}
                 animate={essayBoxControls}
               >
-                <p className='text-xl md:text-2xl'>
+                <p className="text-xl md:text-2xl">
                   Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay
                   Evaluation
                 </p>
-                <p className='mt-4 max-w-3xl mx-auto text-lg'>
+                <p className="mt-4 max-w-3xl mx-auto text-lg">
                   Empowering educators with AI-driven insights to provide
                   deeper, more effective feedback on student writing, without
                   replacing the human touch.
@@ -1069,48 +958,48 @@ const LandingPage: React.FC = () => {
       {/* About Page Sections */}
       <main>
         {/* Challenge Section */}
-        <section id='challenge' className='py-16 md:py-24 bg-gray-50'>
+        <section id="challenge" className="py-16 md:py-24 bg-gray-50">
           <motion.div
-            className='container mx-auto px-6'
+            className="container mx-auto px-6"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: 1, ease: "easeInOut" }}
           >
             <motion.div
-              className='text-center mb-12'
+              className="text-center mb-12"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>
+              <h2 className="text-3xl md:text-4xl font-bold">
                 The Challenge: An Unsustainable Workload
               </h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 Essay evaluation is crucial for learning but places an immense
                 burden on teachers, making personalized and consistent feedback
                 a significant challenge.
               </p>
             </motion.div>
-            <div className='grid md:grid-cols-2 gap-12 items-center'>
+            <div className="grid md:grid-cols-2 gap-12 items-center">
               <div ref={gapSectionRef}>
                 <motion.h3
-                  className='text-2xl font-semibold mb-4'
+                  className="text-2xl font-semibold mb-4"
                   initial={{ opacity: 0, x: -50 }}
                   animate={gapTitleControls}
                 >
                   The Gap in Current Tools
                 </motion.h3>
-                <ul className='space-y-4 text-gray-700'>
+                <ul className="space-y-4 text-gray-700">
                   <motion.li
-                    className='flex items-start'
+                    className="flex items-start"
                     initial={{ opacity: 0, x: -30 }}
                     animate={gapItem1Controls}
                   >
-                    <span className='text-cyan-500 font-bold mr-3 mt-1'>✓</span>
+                    <span className="text-cyan-500 font-bold mr-3 mt-1">✓</span>
                     <div>
-                      <strong className='text-gray-800'>
+                      <strong className="text-gray-800">
                         Student-Facing Focus:
                       </strong>{" "}
                       Tools like Grammarly are designed for students, risking AI
@@ -1119,13 +1008,13 @@ const LandingPage: React.FC = () => {
                     </div>
                   </motion.li>
                   <motion.li
-                    className='flex items-start'
+                    className="flex items-start"
                     initial={{ opacity: 0, x: -30 }}
                     animate={gapItem2Controls}
                   >
-                    <span className='text-cyan-500 font-bold mr-3 mt-1'>✓</span>
+                    <span className="text-cyan-500 font-bold mr-3 mt-1">✓</span>
                     <div>
-                      <strong className='text-gray-800'>
+                      <strong className="text-gray-800">
                         Surface-Level Feedback:
                       </strong>{" "}
                       Most tools excel at grammar and spelling but fail to
@@ -1134,13 +1023,13 @@ const LandingPage: React.FC = () => {
                     </div>
                   </motion.li>
                   <motion.li
-                    className='flex items-start'
+                    className="flex items-start"
                     initial={{ opacity: 0, x: -30 }}
                     animate={gapItem3Controls}
                   >
-                    <span className='text-cyan-500 font-bold mr-3 mt-1'>✓</span>
+                    <span className="text-cyan-500 font-bold mr-3 mt-1">✓</span>
                     <div>
-                      <strong className='text-gray-800'>
+                      <strong className="text-gray-800">
                         Lack of Instructional Insight:
                       </strong>{" "}
                       Existing software doesn't provide teachers with analytics
@@ -1156,19 +1045,19 @@ const LandingPage: React.FC = () => {
                 animate={chartScaleControls}
               >
                 <div
-                  id='chart-container'
-                  className='bg-white p-6 rounded-lg shadow-lg'
+                  id="chart-container"
+                  className="bg-white p-6 rounded-lg shadow-lg"
                 >
-                  <h3 className='text-xl font-semibold text-center mb-4'>
+                  <h3 className="text-xl font-semibold text-center mb-4">
                     Typical Teacher Time Allocation per Essay Batch
                   </h3>
-                  <div className='relative w-full max-w-[400px] h-[300px] md:h-[350px] mx-auto'>
+                  <div className="relative w-full max-w-[400px] h-[300px] md:h-[350px] mx-auto">
                     <canvas
-                      id='teacherWorkloadChart'
+                      id="teacherWorkloadChart"
                       ref={teacherWorkloadChartRef}
                     ></canvas>
                   </div>
-                  <p className='text-center text-sm text-gray-500 mt-4'>
+                  <p className="text-center text-sm text-gray-500 mt-4">
                     Automating the initial analysis allows teachers to shift
                     their focus from repetitive error-checking to high-impact
                     mentoring.
@@ -1180,9 +1069,9 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Solution Section */}
-        <section id='solution' className='bg-white py-16 md:py-24'>
+        <section id="solution" className="bg-white py-16 md:py-24">
           <motion.div
-            className='container mx-auto px-6 text-center'
+            className="container mx-auto px-6 text-center"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.2 }}
@@ -1194,62 +1083,62 @@ const LandingPage: React.FC = () => {
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>
+              <h2 className="text-3xl md:text-4xl font-bold">
                 Our Solution: A Teacher-Centered Approach
               </h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 EduCompose is not another grammar checker. It's an analytical
                 partner for educators, designed to enhance their expertise and
                 streamline their workflow.
               </p>
             </motion.div>
-            <div className='mt-12 grid md:grid-cols-3 gap-8'>
+            <div className="mt-12 grid md:grid-cols-3 gap-8">
               <motion.div
-                className='bg-gray-50 p-8 rounded-lg border border-gray-200'
+                className="bg-gray-50 p-8 rounded-lg border border-gray-200"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
               >
-                <div className='text-3xl text-cyan-600 mb-4'>🎯</div>
-                <h3 className='text-xl font-semibold mb-2'>
+                <div className="text-3xl text-cyan-600 mb-4">🎯</div>
+                <h3 className="text-xl font-semibold mb-2">
                   Augment, Not Automate
                 </h3>
-                <p className='text-gray-600'>
+                <p className="text-gray-600">
                   The system generates analytical reports on student writing,
                   highlighting potential areas for improvement. The final
                   feedback and guidance always come from the teacher.
                 </p>
               </motion.div>
               <motion.div
-                className='bg-cyan-50 p-8 rounded-lg border border-cyan-200 ring-2 ring-cyan-500'
+                className="bg-cyan-50 p-8 rounded-lg border border-cyan-200 ring-2 ring-cyan-500"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.3, delay: 0.15, ease: "easeOut" }}
               >
-                <div className='text-3xl text-cyan-600 mb-4'>🚀</div>
-                <h3 className='text-xl font-semibold mb-2'>
+                <div className="text-3xl text-cyan-600 mb-4">🚀</div>
+                <h3 className="text-xl font-semibold mb-2">
                   Enhance Efficiency
                 </h3>
-                <p className='text-gray-600'>
+                <p className="text-gray-600">
                   By automating the first-pass analysis of grammar, readability,
                   and logical flow, EduCompose saves teachers hours of grading
                   time, freeing them to focus on mentoring.
                 </p>
               </motion.div>
               <motion.div
-                className='bg-gray-50 p-8 rounded-lg border border-gray-200'
+                className="bg-gray-50 p-8 rounded-lg border border-gray-200"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.3, delay: 0.3, ease: "easeOut" }}
               >
-                <div className='text-3xl text-cyan-600 mb-4'>🎓</div>
-                <h3 className='text-xl font-semibold mb-2'>
+                <div className="text-3xl text-cyan-600 mb-4">🎓</div>
+                <h3 className="text-xl font-semibold mb-2">
                   Preserve Educational Value
                 </h3>
-                <p className='text-gray-600'>
+                <p className="text-gray-600">
                   We ensure students receive authentic, human feedback. The tool
                   supports the teacher-student relationship rather than
                   inserting AI between them.
@@ -1260,25 +1149,25 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* How It Works Section */}
-        <section id='tech' className='py-16 md:py-24'>
+        <section id="tech" className="py-16 md:py-24">
           <motion.div
-            className='container mx-auto px-6'
+            className="container mx-auto px-6"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
             <motion.div
-              className='text-center mb-12'
+              className="text-center mb-12"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>
+              <h2 className="text-3xl md:text-4xl font-bold">
                 How It Works: The Technology Stack
               </h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 EduCompose integrates multiple AI technologies to perform a
                 multi-layered analysis of student essays. Click on each step
                 below to learn more about the tools and processes involved.
@@ -1287,10 +1176,10 @@ const LandingPage: React.FC = () => {
 
             <div
               ref={techStepsRef}
-              className='flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8'
+              className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8"
             >
               <motion.div
-                id='step-nlp'
+                id="step-nlp"
                 className={`process-step text-center p-4 border-2 rounded-lg bg-white w-full md:w-1/4 transition-all duration-300 ${
                   activeTechStep === "nlp"
                     ? "active bg-support-superlight/35 border-primary-100 transform scale-105"
@@ -1300,14 +1189,14 @@ const LandingPage: React.FC = () => {
                 initial={{ scale: 1.15, opacity: 0 }}
                 animate={techStep1Controls}
               >
-                <h4 className='font-semibold'>1. NLP Analysis</h4>
-                <p className='text-sm text-gray-500'>Grammar & Readability</p>
+                <h4 className="font-semibold">1. NLP Analysis</h4>
+                <p className="text-sm text-gray-500">Grammar & Readability</p>
               </motion.div>
-              <div className='text-2xl text-gray-400 font-light hidden md:block'>
+              <div className="text-2xl text-gray-400 font-light hidden md:block">
                 →
               </div>
               <motion.div
-                id='step-kg'
+                id="step-kg"
                 className={`process-step text-center p-4 border-2 rounded-lg bg-white w-full md:w-1/4 transition-all duration-300 ${
                   activeTechStep === "kg"
                     ? "active bg-support-superlight/35 border-primary-100 transform scale-105"
@@ -1317,14 +1206,14 @@ const LandingPage: React.FC = () => {
                 initial={{ scale: 1.15, opacity: 0 }}
                 animate={techStep2Controls}
               >
-                <h4 className='font-semibold'>2. Knowledge Graph</h4>
-                <p className='text-sm text-gray-500'>Coherence & Argument</p>
+                <h4 className="font-semibold">2. Knowledge Graph</h4>
+                <p className="text-sm text-gray-500">Coherence & Argument</p>
               </motion.div>
-              <div className='text-2xl text-gray-400 font-light hidden md:block'>
+              <div className="text-2xl text-gray-400 font-light hidden md:block">
                 →
               </div>
               <motion.div
-                id='step-llm'
+                id="step-llm"
                 className={`process-step text-center p-4 border-2 rounded-lg bg-white w-full md:w-1/4 transition-all duration-300 ${
                   activeTechStep === "llm"
                     ? "active bg-support-superlight/35 border-primary-100 transform scale-105"
@@ -1334,48 +1223,48 @@ const LandingPage: React.FC = () => {
                 initial={{ scale: 1.15, opacity: 0 }}
                 animate={techStep3Controls}
               >
-                <h4 className='font-semibold'>3. Insight Generation</h4>
-                <p className='text-sm text-gray-500'>Synthesis with LLMs</p>
+                <h4 className="font-semibold">3. Insight Generation</h4>
+                <p className="text-sm text-gray-500">Synthesis with LLMs</p>
               </motion.div>
-              <div className='text-2xl text-gray-400 font-light hidden md:block'>
+              <div className="text-2xl text-gray-400 font-light hidden md:block">
                 →
               </div>
               <motion.div
-                className='text-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-100 w-full md:w-1/4'
+                className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-100 w-full md:w-1/4"
                 initial={{ scale: 1.15, opacity: 0 }}
                 animate={techStep4Controls}
               >
-                <h4 className='font-semibold'>4. Teacher Report</h4>
-                <p className='text-sm text-gray-500'>Actionable Insights</p>
+                <h4 className="font-semibold">4. Teacher Report</h4>
+                <p className="text-sm text-gray-500">Actionable Insights</p>
               </motion.div>
             </div>
 
             <motion.div
-              id='tech-details'
-              className='mt-8 bg-white p-8 rounded-lg shadow-inner max-w-4xl mx-auto border border-gray-200'
+              id="tech-details"
+              className="mt-8 bg-white p-8 rounded-lg shadow-inner max-w-4xl mx-auto border border-gray-200"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.2 }}
               transition={{ duration: 0.5, delay: 0.8, ease: "easeOut" }}
             >
-              <AnimatePresence mode='wait'>
+              <AnimatePresence mode="wait">
                 {activeTechStep === "nlp" && (
                   <motion.div
-                    key='nlp'
+                    key="nlp"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h3 className='text-2xl font-semibold mb-3'>
+                    <h3 className="text-2xl font-semibold mb-3">
                       Natural Language Processing (NLP) Modules
                     </h3>
-                    <p className='mb-4'>
+                    <p className="mb-4">
                       This is the foundational layer. We use established NLP
                       libraries to perform a "surface-level" check, identifying
                       objective issues in writing mechanics.
                     </p>
-                    <ul className='list-disc list-inside space-y-2'>
+                    <ul className="list-disc list-inside space-y-2">
                       <li>
                         <strong>Grammar & Syntax Analysis:</strong> Using
                         libraries like spaCy, the system identifies grammatical
@@ -1396,21 +1285,21 @@ const LandingPage: React.FC = () => {
                 )}
                 {activeTechStep === "kg" && (
                   <motion.div
-                    key='kg'
+                    key="kg"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h3 className='text-2xl font-semibold mb-3'>
+                    <h3 className="text-2xl font-semibold mb-3">
                       Knowledge Graph (KG) Integration
                     </h3>
-                    <p className='mb-4'>
+                    <p className="mb-4">
                       This is our key innovation. KGs help us analyze the
                       *meaning* and *connections* between concepts, which is
                       vital for evaluating argument strength.
                     </p>
-                    <ul className='list-disc list-inside space-y-2'>
+                    <ul className="list-disc list-inside space-y-2">
                       <li>
                         <strong>Conceptual Coherence:</strong> We map essay
                         terms to a KG (like ConceptNet) to measure logical
@@ -1428,20 +1317,20 @@ const LandingPage: React.FC = () => {
                 )}
                 {activeTechStep === "llm" && (
                   <motion.div
-                    key='llm'
+                    key="llm"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h3 className='text-2xl font-semibold mb-3'>
+                    <h3 className="text-2xl font-semibold mb-3">
                       Insight Generation with Large Language Models (LLMs)
                     </h3>
-                    <p className='mb-4'>
+                    <p className="mb-4">
                       An LLM synthesizes the structured data from the NLP and KG
                       modules into a human-readable summary for the teacher.
                     </p>
-                    <ul className='list-disc list-inside space-y-2'>
+                    <ul className="list-disc list-inside space-y-2">
                       <li>
                         <strong>Synthesizing Findings:</strong> The LLM
                         translates raw data (e.g., "5 passive voice instances")
@@ -1463,9 +1352,9 @@ const LandingPage: React.FC = () => {
                 )}
                 {activeTechStep === null && (
                   <motion.div
-                    key='placeholder'
-                    id='desc-placeholder'
-                    className='text-center text-gray-500'
+                    key="placeholder"
+                    id="desc-placeholder"
+                    className="text-center text-gray-500"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -1482,60 +1371,60 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Simulation Section */}
-        <section id='simulation' className='bg-white py-16 md:py-24'>
+        <section id="simulation" className="bg-white py-16 md:py-24">
           <motion.div
-            className='container mx-auto px-6'
+            className="container mx-auto px-6"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.1 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
             <motion.header
-              className='text-center mb-12'
+              className="text-center mb-12"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>
+              <h2 className="text-3xl md:text-4xl font-bold">
                 Live Simulation: From Essay to Insight
               </h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 This simulation demonstrates how EduCompose deconstructs an
                 essay to analyze its argumentative structure using a Knowledge
                 Graph.
               </p>
             </motion.header>
 
-            <main className='space-y-12'>
+            <main className="space-y-12">
               {/* Step 1: The Student Essay */}
               <motion.section
-                id='sim-step1'
-                className='step-card visible bg-white p-6 rounded-xl shadow-md border border-gray-200'
+                id="sim-step1"
+                className="step-card visible bg-white p-6 rounded-xl shadow-md border border-gray-200"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 1, ease: "easeOut" }}
               >
-                <div className='flex items-center mb-4'>
-                  <div className='bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg'>
+                <div className="flex items-center mb-4">
+                  <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
                     1
                   </div>
-                  <h3 className='text-2xl font-bold ml-4 text-gray-700'>
+                  <h3 className="text-2xl font-bold ml-4 text-gray-700">
                     The Student Essay
                   </h3>
                 </div>
-                <p className='mb-4 text-gray-600'>
+                <p className="mb-4 text-gray-600">
                   This section contains the sample essay to be analyzed. The
                   system will deconstruct this text to identify the core claims,
                   supporting evidence, and the main thesis. Click the button
                   below to begin the analysis.
                 </p>
                 <div
-                  id='essayContainer'
-                  className='bg-gray-100 p-4 rounded-lg border border-gray-200 text-gray-700 space-y-3'
+                  id="essayContainer"
+                  className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-gray-700 space-y-3"
                 >
-                  <h4 className='font-bold text-center'>
+                  <h4 className="font-bold text-center">
                     The Urgency of Renewable Energy Adoption
                   </h4>
                   {SIMULATION_DATA.entities.map((entity) => (
@@ -1560,10 +1449,10 @@ const LandingPage: React.FC = () => {
                     </p>
                   ))}
                 </div>
-                <div className='text-center mt-6'>
+                <div className="text-center mt-6">
                   <button
-                    id='analyzeBtn'
-                    className='bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-cyan-700 transition-colors shadow disabled:bg-gray-400'
+                    id="analyzeBtn"
+                    className="bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-cyan-700 transition-colors shadow disabled:bg-gray-400"
                     onClick={handleSimulationAnalyze}
                     disabled={isAnalyzing}
                   >
@@ -1573,45 +1462,45 @@ const LandingPage: React.FC = () => {
               </motion.section>
 
               {/* Step 2: Argument Knowledge Graph */}
-              <AnimatePresence mode='wait'>
+              <AnimatePresence mode="wait">
                 {(isAnalyzing || isAnalysisComplete) && (
                   <motion.section
-                    key='sim-step2'
-                    id='sim-step2'
-                    className='step-card bg-white p-6 rounded-xl shadow-md border border-gray-200'
+                    key="sim-step2"
+                    id="sim-step2"
+                    className="step-card bg-white p-6 rounded-xl shadow-md border border-gray-200"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
-                    <div className='flex items-center mb-4'>
-                      <div className='bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg'>
+                    <div className="flex items-center mb-4">
+                      <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
                         2
                       </div>
-                      <h3 className='text-2xl font-bold ml-4 text-gray-700'>
+                      <h3 className="text-2xl font-bold ml-4 text-gray-700">
                         Argument Knowledge Graph
                       </h3>
                     </div>
-                    <p className='mb-4 text-gray-600'>
+                    <p className="mb-4 text-gray-600">
                       The system constructs a Knowledge Graph to map the essay's
                       structure. Nodes represent concepts, and edges show their
                       logical relationships. Hover over a node to see its text
                       and highlight connections.
                     </p>
                     <div
-                      id='graph-container'
-                      className='w-full h-[500px] bg-gray-100 rounded-lg border border-gray-200 relative'
+                      id="graph-container"
+                      className="w-full h-[500px] bg-gray-100 rounded-lg border border-gray-200 relative"
                     >
                       <canvas
-                        id='knowledgeGraph'
+                        id="knowledgeGraph"
                         ref={knowledgeGraphCanvasRef}
                         onMouseMove={handleMouseMove}
                         onMouseOut={handleMouseOut}
                       ></canvas>
                       {hoveredNode && (
                         <div
-                          id='tooltip'
-                          className='absolute bg-black bg-opacity-75 text-white text-sm rounded-md p-2 pointer-events-none transition-opacity duration-300'
+                          id="tooltip"
+                          className="absolute bg-black bg-opacity-75 text-white text-sm rounded-md p-2 pointer-events-none transition-opacity duration-300"
                           style={{
                             left: `${hoveredNode.x + 15 || 0}px`,
                             top: `${hoveredNode.y + 15 || 0}px`,
@@ -1623,13 +1512,13 @@ const LandingPage: React.FC = () => {
                       )}
                     </div>
                     <div
-                      id='legend'
-                      className='flex justify-center items-center space-x-4 mt-4 text-sm text-gray-600 flex-wrap'
+                      id="legend"
+                      className="flex justify-center items-center space-x-4 mt-4 text-sm text-gray-600 flex-wrap"
                     >
                       {Object.entries(COLORS).map(([type, color]) => (
-                        <div key={type} className='flex items-center'>
+                        <div key={type} className="flex items-center">
                           <span
-                            className='w-3 h-3 rounded-full mr-2'
+                            className="w-3 h-3 rounded-full mr-2"
                             style={{ backgroundColor: color }}
                           ></span>
                           {type}
@@ -1642,7 +1531,7 @@ const LandingPage: React.FC = () => {
 
               {/* Step 3: Generated Insights */}
               <motion.section
-                id='sim-step3'
+                id="sim-step3"
                 className={`step-card bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-opacity duration-500 ${
                   isAnalysisComplete
                     ? "visible opacity-100"
@@ -1653,50 +1542,50 @@ const LandingPage: React.FC = () => {
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 1, ease: "easeOut" }}
               >
-                <div className='flex items-center mb-4'>
-                  <div className='bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg'>
+                <div className="flex items-center mb-4">
+                  <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
                     3
                   </div>
-                  <h3 className='text-2xl font-bold ml-4 text-gray-700'>
+                  <h3 className="text-2xl font-bold ml-4 text-gray-700">
                     Generated Insights
                   </h3>
                 </div>
-                <p className='mb-6 text-gray-600'>
+                <p className="mb-6 text-gray-600">
                   By analyzing the Knowledge Graph, the system provides scores
                   for key writing attributes. This goes beyond grammar to assess
                   the quality of the argumentation itself, providing specific,
                   actionable feedback for the teacher.
                 </p>
-                <div className='grid md:grid-cols-2 gap-8 items-start'>
+                <div className="grid md:grid-cols-2 gap-8 items-start">
                   <div>
-                    <h4 className='text-xl font-semibold mb-3 text-center text-gray-700'>
+                    <h4 className="text-xl font-semibold mb-3 text-center text-gray-700">
                       Argument Strength
                     </h4>
-                    <p className='text-sm text-gray-600 mb-4 text-center'>
+                    <p className="text-sm text-gray-600 mb-4 text-center">
                       Measures how well each claim is supported by evidence. A
                       higher bar indicates stronger support.
                     </p>
-                    <div className='relative w-full max-w-[600px] h-[350px] md:h-[400px] mx-auto'>
+                    <div className="relative w-full max-w-[600px] h-[350px] md:h-[400px] mx-auto">
                       <canvas
-                        id='strengthChart'
+                        id="strengthChart"
                         ref={strengthChartRef}
                       ></canvas>
                     </div>
                   </div>
-                  <div className='space-y-8'>
+                  <div className="space-y-8">
                     <div>
-                      <h4 className='text-xl font-semibold mb-3 text-gray-700'>
+                      <h4 className="text-xl font-semibold mb-3 text-gray-700">
                         Coherence Score
                       </h4>
-                      <p className='text-sm text-gray-600 mb-2'>
+                      <p className="text-sm text-gray-600 mb-2">
                         Measures how well all parts of the essay connect to the
                         central thesis. A higher score indicates a more unified
                         argument.
                       </p>
-                      <div className='w-full bg-gray-200 rounded-full h-6'>
+                      <div className="w-full bg-gray-200 rounded-full h-6">
                         <div
-                          id='coherenceBar'
-                          className='bg-teal-500 h-6 rounded-full text-center text-white font-medium flex items-center justify-center transition-all duration-1000'
+                          id="coherenceBar"
+                          className="bg-teal-500 h-6 rounded-full text-center text-white font-medium flex items-center justify-center transition-all duration-1000"
                           style={{ width: `${coherenceScore}%` }}
                         >
                           {coherenceScore}%
@@ -1704,32 +1593,32 @@ const LandingPage: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <h4 className='text-xl font-semibold mb-3 text-gray-700'>
+                      <h4 className="text-xl font-semibold mb-3 text-gray-700">
                         Evidence Verification
                       </h4>
-                      <p className='text-sm text-gray-600 mb-2'>
+                      <p className="text-sm text-gray-600 mb-2">
                         Checks provided evidence against an external knowledge
                         base to assess its validity.
                       </p>
-                      <div className='overflow-x-auto'>
+                      <div className="overflow-x-auto">
                         <table
-                          id='evidenceTable'
-                          className='w-full text-sm text-left text-gray-600'
+                          id="evidenceTable"
+                          className="w-full text-sm text-left text-gray-600"
                         >
-                          <thead className='text-xs text-gray-700 uppercase bg-gray-100'>
+                          <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
-                              <th scope='col' className='px-4 py-2'>
+                              <th scope="col" className="px-4 py-2">
                                 Evidence Statement
                               </th>
-                              <th scope='col' className='px-4 py-2'>
+                              <th scope="col" className="px-4 py-2">
                                 Status
                               </th>
                             </tr>
                           </thead>
                           <tbody>
                             {evidenceTableData.map((row, index) => (
-                              <tr key={index} className='bg-white border-b'>
-                                <td className='px-4 py-3'>
+                              <tr key={index} className="bg-white border-b">
+                                <td className="px-4 py-3">
                                   {row.text.substring(0, 40)}...
                                 </td>
                                 <td
@@ -1751,39 +1640,39 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Research Plan Section */}
-        <section id='research' className='py-16 md:py-24'>
+        <section id="research" className="py-16 md:py-24">
           <motion.div
-            className='container mx-auto px-6'
+            className="container mx-auto px-6"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
             <motion.div
-              className='text-center mb-12'
+              className="text-center mb-12"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>
+              <h2 className="text-3xl md:text-4xl font-bold">
                 The Research Plan
               </h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 Our study is structured to develop a robust tool and validate
                 its effectiveness in a real-world educational context.
               </p>
             </motion.div>
-            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Research Plan Cards */}
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>General Objective</h4>
+                <h4 className="font-bold text-xl mb-2">General Objective</h4>
                 <p>
                   To develop and evaluate an NLP-based essay evaluation system
                   that supports teachers in identifying and addressing student
@@ -1791,14 +1680,14 @@ const LandingPage: React.FC = () => {
                 </p>
               </motion.div>
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>Specific Objectives</h4>
-                <ul className='list-disc list-inside space-y-1 text-gray-700'>
+                <h4 className="font-bold text-xl mb-2">Specific Objectives</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>Collect & preprocess annotated essays.</li>
                   <li>Implement NLP & KG modules.</li>
                   <li>Generate automated evaluation reports.</li>
@@ -1806,14 +1695,14 @@ const LandingPage: React.FC = () => {
                 </ul>
               </motion.div>
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>Scope</h4>
-                <ul className='list-disc list-inside space-y-1 text-gray-700'>
+                <h4 className="font-bold text-xl mb-2">Scope</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>For teachers only, not students.</li>
                   <li>Focus on English expository essays.</li>
                   <li>
@@ -1822,27 +1711,27 @@ const LandingPage: React.FC = () => {
                 </ul>
               </motion.div>
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>Limitations</h4>
-                <ul className='list-disc list-inside space-y-1 text-gray-700'>
+                <h4 className="font-bold text-xl mb-2">Limitations</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>Highlights weaknesses, does not assign grades.</li>
                   <li>KG coverage is finite.</li>
                   <li>Serves as a teacher aid, not a replacement.</li>
                 </ul>
               </motion.div>
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>Research Locale</h4>
+                <h4 className="font-bold text-xl mb-2">Research Locale</h4>
                 <p>
                   Partner schools or universities where English teachers
                   regularly evaluate student essays, providing both essay
@@ -1850,13 +1739,13 @@ const LandingPage: React.FC = () => {
                 </p>
               </motion.div>
               <motion.div
-                className='card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg'
+                className="card bg-gray-50 p-6 rounded-lg border transition duration-300 hover:transform hover:translate-y-[-5px] hover:shadow-lg"
                 initial={{ scale: 0.8, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
               >
-                <h4 className='font-bold text-xl mb-2'>Target Respondents</h4>
+                <h4 className="font-bold text-xl mb-2">Target Respondents</h4>
                 <p>
                   <strong>Primary:</strong> Senior high school and college
                   English teachers. <br />
@@ -1869,9 +1758,9 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Impact Section */}
-        <section id='impact' className='bg-white py-16 md:py-24'>
+        <section id="impact" className="bg-white py-16 md:py-24">
           <motion.div
-            className='container mx-auto px-6 text-center'
+            className="container mx-auto px-6 text-center"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.3 }}
@@ -1883,21 +1772,21 @@ const LandingPage: React.FC = () => {
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <h2 className='text-3xl md:text-4xl font-bold'>Overall Impact</h2>
-              <p className='mt-4 text-lg text-gray-600 max-w-3xl mx-auto'>
+              <h2 className="text-3xl md:text-4xl font-bold">Overall Impact</h2>
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                 EduCompose aims to make a meaningful contribution to education
                 by bridging the gap between advanced AI and practical classroom
                 needs.
               </p>
             </motion.div>
             <motion.div
-              className='mt-12 max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg border'
+              className="mt-12 max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg border"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: false, amount: 0.5 }}
               transition={{ duration: 0.8, delay: 0.3, ease: "easeInOut" }}
             >
-              <p className='text-xl leading-relaxed text-gray-700'>
+              <p className="text-xl leading-relaxed text-gray-700">
                 By empowering teachers with deeper insights into student
                 writing, we can foster a more efficient and effective
                 educational environment. This research supports a future where
@@ -1910,15 +1799,15 @@ const LandingPage: React.FC = () => {
           </motion.div>
         </section>
 
-        <footer className='bg-neutral-900 text-white py-2'>
+        <footer className="bg-neutral-900 text-white py-2">
           <motion.div
-            className='container mx-auto px-6 text-center font-semibold'
+            className="container mx-auto px-6 text-center font-semibold"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: false }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
-            <p className='text-white animate-pulse'>
+            <p className="text-white animate-pulse">
               &copy; 2025 EduCompose | Team Nonchalant.
             </p>
           </motion.div>

@@ -59,6 +59,7 @@ export interface GrammarError {
   offset?: number;
   errorLength?: number;
   context?: string;
+  category?: string;
 }
 
 export interface GrammarSyntaxPatterns {

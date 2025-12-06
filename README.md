@@ -70,7 +70,7 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-python -m spacy download en_core_web_lg
+python -m spacy download en_core_web_md
 
 # Configure environment variables
 # Step 1: Generate a secure SECRET_KEY

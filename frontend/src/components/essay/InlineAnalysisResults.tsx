@@ -262,6 +262,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
         className='max-h-[90vh]'
         contentClassName='flex flex-col items-center justify-center py-12'
         transparent={true}
+        closeOnBackdropClick={false}
       >
         <KnowledgeGraphLoader size='md' className='mb-6' />
         <p className='text-lg font-medium text-white mb-2 drop-shadow-lg'>
@@ -279,30 +280,26 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose || (() => {})}
-        size='xl'
+        size='md'
         className='max-h-[90vh]'
       >
-        <Card className='bg-error-50 border border-error-200'>
-          <div className='flex items-start justify-between'>
-            <div className='flex items-start space-x-3 flex-1'>
-              <AlertTriangle className='w-6 h-6 text-error-default flex-shrink-0 mt-0.5' />
-              <div className='flex-1'>
-                <h4 className='text-lg font-semibold text-error-dark mb-1'>
-                  Analysis Failed
-                </h4>
-                <p className='text-error-dark'>{error}</p>
-                {onRetry && (
-                  <button
-                    onClick={onRetry}
-                    className='mt-4 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
-                  >
-                    Try Again
-                  </button>
-                )}
-              </div>
-            </div>
+        <div className='flex flex-col items-center text-center p-8'>
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+            <AlertTriangle className='w-6 h-6 text-red-600' />
           </div>
-        </Card>
+          <h4 className='text-xl font-semibold text-neutral-900 mb-3'>
+            Analysis Error
+          </h4>
+          <p className='text-neutral-600'>{error}</p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className='mt-6 px-4 py-2 bg-primary text-white rounded-rd hover:bg-primary-600 transition-colors'
+            >
+              Try Again
+            </button>
+          )}
+        </div>
       </Modal>
     );
   }

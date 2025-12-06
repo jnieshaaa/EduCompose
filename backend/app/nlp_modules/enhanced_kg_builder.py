@@ -60,7 +60,7 @@ class EnhancedKnowledgeGraphBuilder:
     def _ensure_nlp_loaded(self):
         """Ensure spaCy is loaded (lazy loading)"""
         if self.nlp is None:
-            self.nlp = load_spacy_model("en_core_web_lg")
+            self.nlp = load_spacy_model("en_core_web_md")
     
     def build(self, text: str, 
               essay_id: str = None,

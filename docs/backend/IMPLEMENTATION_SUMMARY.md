@@ -34,7 +34,7 @@ This document summarizes what has been implemented and how to proceed with the r
 - ✅ Enhanced concept extraction (`enhanced_kg_builder.py`)
 - ✅ OpenIE extractor (`openie_extractor.py`) - spaCy-based, extensible to Stanford OpenIE
 - ✅ Claim/evidence detection (`argument_miner.py`)
-- ✅ Transformer-based claim classifier (`claim_classifier.py`) - Zero-shot RoBERTa-based classification
+- ✅ Transformer-based claim classifier (`claim_classifier.py`) - Fine-tuned DistilBERT-based classification
 
 ### Step 4: Design KG Schema
 
@@ -130,7 +130,7 @@ This document summarizes what has been implemented and how to proceed with the r
 
 ### Using Transformer-Based Claim Classifier
 
-The transformer-based claim classifier is **automatically enabled** by default in `ArgumentMiner`. It uses zero-shot classification with RoBERTa to identify argumentation components (claims, evidence, counterclaims, etc.) with higher accuracy than pattern-based methods.
+The transformer-based claim classifier is **automatically enabled** by default in `ArgumentMiner`. It uses a fine-tuned DistilBERT model to identify argumentation components (claims, evidence, counterclaims, etc.) with higher accuracy than pattern-based methods.
 
 **Installation:**
 

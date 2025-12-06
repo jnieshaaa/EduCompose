@@ -15,6 +15,7 @@ import SectionsList from "./pages/SectionsList";
 import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
 import About from "./pages/About";
+import AnalysisResults from "./pages/AnalysisResults";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,6 +50,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path='/' element={<LandingPage />} />
         <Route path='/About' element={<About />} />
+        <Route path='/AnalysisResults' element={<AnalysisResults />} />
         <Route
           path='/Dashboard'
           element={

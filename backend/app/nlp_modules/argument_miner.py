@@ -15,7 +15,13 @@ from .spacy_utils import load_spacy_model
 class ArgumentMiner:
     """Analyzes argumentative structure using Toulmin's model"""
     
-    def __init__(self, use_transformer_classifier: bool = True):
+    def __init__(
+        self, 
+        use_transformer_classifier: bool = True,
+        use_fine_tuned: bool = True,
+        fine_tuned_model_path: Optional[str] = None,
+        device: str = "cpu"
+    ):
         """
         Initialize argument miner
         
@@ -23,10 +29,16 @@ class ArgumentMiner:
             use_transformer_classifier: If True, use transformer-based claim classifier
                                        for enhanced accuracy (default: True).
                                        Falls back to pattern-based if transformers unavailable.
+            use_fine_tuned: If True, use fine-tuned model (default: True)
+            fine_tuned_model_path: Path to fine-tuned model (defaults to backend/my_finetuned_distilbert)
+            device: "cuda" or "cpu" (default: "cpu")
         """
         self.nlp = None
         # Don't initialize here - wait until first use to avoid import errors at startup
         self.use_transformer_classifier = use_transformer_classifier
+        self.use_fine_tuned = use_fine_tuned
+        self.fine_tuned_model_path = fine_tuned_model_path
+        self.device = device
         self.transformer_classifier = None
         
         # Claim indicators
@@ -72,7 +84,7 @@ class ArgumentMiner:
     def _ensure_nlp_loaded(self):
         """Ensure spaCy is loaded (lazy loading)"""
         if self.nlp is None:
-            self.nlp = load_spacy_model("en_core_web_lg")
+            self.nlp = load_spacy_model("en_core_web_md")
     
     def _ensure_transformer_classifier_loaded(self):
         """Lazy load transformer-based claim classifier if requested and available"""
@@ -82,7 +94,24 @@ class ArgumentMiner:
         if self.transformer_classifier is None:
             try:
                 from .claim_classifier import TransformerClaimClassifier
-                self.transformer_classifier = TransformerClaimClassifier()
+                from pathlib import Path
+                
+                # Get default model path if not provided
+                if self.use_fine_tuned and self.fine_tuned_model_path is None:
+                    # Get backend root (parent of app/)
+                    backend_root = Path(__file__).parent.parent.parent
+                    self.fine_tuned_model_path = str(backend_root / "my_finetuned_distilbert")
+                
+                # Initialize classifier with fine-tuned model if requested
+                if self.use_fine_tuned and self.fine_tuned_model_path:
+                    self.transformer_classifier = TransformerClaimClassifier(
+                        use_fine_tuned=True,
+                        fine_tuned_model_path=self.fine_tuned_model_path,
+                        device=self.device
+                    )
+                else:
+                    self.transformer_classifier = TransformerClaimClassifier(device=self.device)
+                
                 # Check if it's actually available
                 if not self.transformer_classifier.is_available():
                     logger.info(
@@ -92,6 +121,9 @@ class ArgumentMiner:
                     self.transformer_classifier = False  # Mark as unavailable
             except ImportError as e:
                 logger.debug(f"Transformer classifier import failed: {e}")
+                self.transformer_classifier = False  # Mark as unavailable
+            except Exception as e:
+                logger.warning(f"Failed to load transformer classifier: {e}. Using pattern-based classification.")
                 self.transformer_classifier = False  # Mark as unavailable
         
         return self.transformer_classifier if self.transformer_classifier is not False else None

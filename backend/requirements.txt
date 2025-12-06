@@ -81,3 +81,12 @@ torch
 
 # For knowledge graph visualization
 pyvis
+
+# ============================================
+# LLM Support (Optional - for enhanced grammar checking)
+# ============================================
+# OpenAI API for grammar checking (optional)
+# openai
+
+# Google Gemini API for grammar checking (optional)
+google-generativeai

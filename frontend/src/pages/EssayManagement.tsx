@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -16,9 +17,10 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
 import type { Essay, Class, Student } from "../types/Essay";
-import { dummyData } from "../api";
+import { dummyData, analysisApi } from "../api";
 
 const EssayManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [essays, setEssays] = useState<Essay[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -87,9 +89,41 @@ const EssayManagement: React.FC = () => {
     }
   };
 
-  const handleViewAnalysis = (essay: Essay) => {
-    setSelectedEssay(essay);
-    setShowAnalysisModal(true);
+  const handleViewAnalysis = async (essay: Essay) => {
+    // Navigate to results page with essay data
+    // If essay is already analyzed, we can pass the analysis
+    // Otherwise, the results page will analyze it
+    try {
+      if (essay.status === "analyzed") {
+        // Try to get existing analysis or analyze it
+        const result = await analysisApi.analyzeEssay(essay.id, "comprehensive");
+        navigate("/AnalysisResults", {
+          state: {
+            analysis: result,
+            text: essay.content,
+            title: essay.title,
+          },
+        });
+      } else {
+        // Navigate with essay content - results page will analyze
+        navigate("/AnalysisResults", {
+          state: {
+            text: essay.content,
+            title: essay.title,
+            essayId: essay.id,
+          },
+        });
+      }
+    } catch (error) {
+      // If analysis fails, still navigate with text to analyze
+      navigate("/AnalysisResults", {
+        state: {
+          text: essay.content,
+          title: essay.title,
+          essayId: essay.id,
+        },
+      });
+    }
   };
 
   const handleCreateEssay = async () => {

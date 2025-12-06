@@ -151,7 +151,46 @@ class ThesisSummarizer:
                 return self.generate_summary(thesis_statement, argument_analysis, scores)
             
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            
+            # Get model name from environment variable, or use fallback list
+            env_model_name = os.getenv("GEMINI_MODEL_NAME")
+            if env_model_name:
+                # Use the model name from environment variable
+                try:
+                    model = genai.GenerativeModel(env_model_name)
+                    logger.info(f"Using Gemini model from env: {env_model_name}")
+                except Exception as model_error:
+                    logger.warning(f"Failed to initialize Gemini model '{env_model_name}' from env: {model_error}")
+                    logger.info("Falling back to default model list...")
+                    env_model_name = None  # Trigger fallback
+            
+            if not env_model_name:
+                # Try different model names in order of preference
+                # Updated for Gemini 2.5 models (newer API versions)
+                model_names = [
+                    'models/gemini-2.5-flash',   # Latest 2.5 flash (fastest)
+                    'gemini-2.5-flash',          # Without models/ prefix
+                    'models/gemini-flash-latest', # Latest flash (fallback)
+                    'gemini-flash-latest',        # Without models/ prefix
+                    'models/gemini-2.5-pro',     # Pro version (more capable)
+                    'gemini-2.5-pro',            # Without models/ prefix
+                    'models/gemini-pro-latest',  # Legacy latest
+                    'gemini-pro-latest',         # Without models/ prefix
+                ]
+                
+                model = None
+                last_error = None
+                for model_name in model_names:
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        logger.info(f"Using Gemini model: {model_name}")
+                        break
+                    except Exception as e:
+                        last_error = e
+                        continue
+                
+                if not model:
+                    raise Exception(f"No working Gemini model found. Last error: {last_error}")
             
             # Build prompt
             prompt = self._build_gemini_prompt(

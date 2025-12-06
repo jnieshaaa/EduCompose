@@ -11,6 +11,8 @@ interface ModalProps {
   className?: string;
   contentClassName?: string;
   transparent?: boolean;
+  blackBackground?: boolean;
+  closeOnBackdropClick?: boolean;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -22,6 +24,8 @@ const Modal: React.FC<ModalProps> = ({
   className = "",
   contentClassName = "",
   transparent = false,
+  blackBackground = false,
+  closeOnBackdropClick = true,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -42,22 +46,35 @@ const Modal: React.FC<ModalProps> = ({
     xl: "max-w-4xl",
   };
 
+  // Determine backdrop background class
+  let backdropClass = "bg-black/50";
+  if (blackBackground) {
+    backdropClass = "bg-black/30 backdrop-blur-md";
+  } else if (transparent) {
+    backdropClass = "bg-black/30 backdrop-blur-md";
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className={`absolute inset-0 ${backdropClass}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={closeOnBackdropClick ? onClose : undefined}
+            style={{ pointerEvents: transparent ? "none" : "auto" }}
           />
 
           {/* Modal */}
           <motion.div
-            className={`relative ${transparent ? "bg-transparent" : "bg-white"} rounded-rl ${transparent ? "" : "shadow-xl"} w-full ${sizeClasses[size]} ${className} flex flex-col`}
+            className={`relative ${
+              transparent ? "bg-transparent" : "bg-white"
+            } rounded-rl ${transparent ? "" : "shadow-xl"} w-full ${
+              sizeClasses[size]
+            } ${className} flex flex-col`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}

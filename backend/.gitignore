@@ -70,3 +70,12 @@ database/migrations/versions/__pycache__/
 .dmypy.json
 dmypy.json
 
+# ML Models (fine-tuned models - too large for git)
+my_finetuned_distilbert/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.h5
+*.ckpt
+
