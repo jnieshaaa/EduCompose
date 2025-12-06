@@ -35,31 +35,12 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   type ForceLink = LinkObject<ForceNode, { type?: string }>;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 320 });
   const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
   const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [linkTooltipPos, setLinkTooltipPos] = useState({ x: 0, y: 0 });
-  
-  // Track mouse position for link tooltips
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setTooltipPosition({
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top,
-        });
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener("mousemove", handleMouseMove);
-      return () => container.removeEventListener("mousemove", handleMouseMove);
-    }
-  }, []);
 
   useEffect(() => {
     if (!containerRef.current || typeof ResizeObserver === "undefined") {
@@ -91,7 +72,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     const layerDistance = 150; // Distance between layers
-    
+
     // Group nodes by type for better layout
     const nodesByType: Record<string, ArgumentGraphNode[]> = {
       thesis: [],
@@ -100,7 +81,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
       warrant: [],
       rebuttal: [],
     };
-    
+
     graph.nodes.forEach((node) => {
       if (nodesByType[node.type]) {
         nodesByType[node.type].push(node);
@@ -108,9 +89,10 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
     });
 
     // Position nodes in hierarchical layers
-    const nodes: ForceNode[] = graph.nodes.map((node, idx) => {
-      let x = 0, y = 0;
-      
+    const nodes: ForceNode[] = graph.nodes.map((node) => {
+      let x = 0,
+        y = 0;
+
       if (node.type === "thesis") {
         // Thesis at center
         x = centerX;
@@ -125,14 +107,18 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         y = centerY + Math.sin(angle) * radius;
       } else if (node.type === "evidence") {
         // Evidence below claims
-        const evidenceIndex = nodesByType.evidence.findIndex((n) => n.id === node.id);
+        const evidenceIndex = nodesByType.evidence.findIndex(
+          (n) => n.id === node.id
+        );
         const totalEvidence = nodesByType.evidence.length;
         const spacing = dimensions.width / (totalEvidence + 1);
         x = spacing * (evidenceIndex + 1);
         y = centerY + layerDistance * 1.2;
       } else if (node.type === "warrant") {
         // Warrants to the sides
-        const warrantIndex = nodesByType.warrant.findIndex((n) => n.id === node.id);
+        const warrantIndex = nodesByType.warrant.findIndex(
+          (n) => n.id === node.id
+        );
         const totalWarrants = nodesByType.warrant.length;
         const angle = (warrantIndex / totalWarrants) * Math.PI * 2;
         const radius = layerDistance * 1.2;
@@ -140,7 +126,9 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         y = centerY + Math.sin(angle) * radius;
       } else if (node.type === "rebuttal") {
         // Rebuttals at top
-        const rebuttalIndex = nodesByType.rebuttal.findIndex((n) => n.id === node.id);
+        const rebuttalIndex = nodesByType.rebuttal.findIndex(
+          (n) => n.id === node.id
+        );
         const totalRebuttals = nodesByType.rebuttal.length;
         const spacing = dimensions.width / (totalRebuttals + 1);
         x = spacing * (rebuttalIndex + 1);
@@ -160,7 +148,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
 
     // Map edge sources/targets to actual node objects
     const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-    const links: ForceLink[] = (graph.edges || [])
+    const links = (graph.edges || [])
       .map((edge) => {
         const sourceNode = nodeMap.get(edge.source);
         const targetNode = nodeMap.get(edge.target);
@@ -169,7 +157,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
             source: sourceNode,
             target: targetNode,
             type: edge.type,
-          };
+          } as ForceLink;
         }
         return null;
       })
@@ -206,15 +194,19 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   setHoveredNode(node);
                   setHoveredLink(null);
                 }}
-                onLinkHover={(link: ForceLink | null, prevLink: ForceLink | null) => {
+                onLinkHover={(link: ForceLink | null) => {
                   setHoveredLink(link);
                   setHoveredNode(null);
                   // Calculate midpoint of link for tooltip positioning
                   if (link && link.source && link.target) {
                     const source = link.source as ForceNode;
                     const target = link.target as ForceNode;
-                    const midX = dimensions.width / 2 + ((source.x as number) + (target.x as number)) / 2;
-                    const midY = dimensions.height / 2 + ((source.y as number) + (target.y as number)) / 2;
+                    const midX =
+                      dimensions.width / 2 +
+                      ((source.x as number) + (target.x as number)) / 2;
+                    const midY =
+                      dimensions.height / 2 +
+                      ((source.y as number) + (target.y as number)) / 2;
                     setLinkTooltipPos({ x: midX, y: midY });
                   }
                 }}
@@ -222,21 +214,25 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   setHoveredNode(null);
                   setHoveredLink(null);
                 }}
-                nodeCanvasObject={(node: ForceNode, ctx, globalScale) => {
+                nodeCanvasObject={(node: ForceNode, ctx) => {
                   const color = NODE_COLORS[node.type] || "#0f172a";
                   const nodeX = typeof node.x === "number" ? node.x : 0;
                   const nodeY = typeof node.y === "number" ? node.y : 0;
-                  
+
                   // Larger nodes based on type
-                  const nodeRadius = node.type === "thesis" ? 14 : 
-                                    node.type === "claim" ? 12 : 10;
+                  const nodeRadius =
+                    node.type === "thesis"
+                      ? 14
+                      : node.type === "claim"
+                      ? 12
+                      : 10;
 
                   // Draw node circle with solid color and shadow effect
                   ctx.beginPath();
                   ctx.fillStyle = color;
                   ctx.arc(nodeX, nodeY, nodeRadius, 0, 2 * Math.PI, false);
                   ctx.fill();
-                  
+
                   // Add subtle inner highlight
                   const highlightGradient = ctx.createRadialGradient(
                     nodeX - nodeRadius * 0.4,
@@ -250,15 +246,15 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   highlightGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
                   ctx.fillStyle = highlightGradient;
                   ctx.fill();
-                  
+
                   // Reset fill style
                   ctx.fillStyle = color;
-                  
+
                   // Add white border for contrast
                   ctx.strokeStyle = "#ffffff";
                   ctx.lineWidth = 2.5;
                   ctx.stroke();
-                  
+
                   // No text rendered - tooltip will show on hover instead
                 }}
                 linkColor={(link: ForceLink) =>
@@ -271,9 +267,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 linkDirectionalParticles={0}
                 // Better force simulation parameters
                 nodeRelSize={10}
-                linkDistance={120}
-                linkStrength={0.3}
-                nodeRepulsion={1800}
                 nodeLabel={() => ""} // Hide node labels
                 linkLabel={() => ""} // Hide link labels
               />
@@ -282,13 +275,15 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 Argument graph data will appear here after analysis.
               </div>
             )}
-            
+
             {/* Tooltip for nodes - appears next to node */}
             {hoveredNode && (
               <div
                 className="absolute z-50 pointer-events-none transition-opacity duration-200"
                 style={{
-                  left: `${dimensions.width / 2 + (hoveredNode.x as number) + 20}px`,
+                  left: `${
+                    dimensions.width / 2 + (hoveredNode.x as number) + 20
+                  }px`,
                   top: `${dimensions.height / 2 + (hoveredNode.y as number)}px`,
                   transform: "translateY(-50%)",
                 }}
@@ -298,7 +293,8 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                     <span
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{
-                        backgroundColor: NODE_COLORS[hoveredNode.type] || "#0f172a",
+                        backgroundColor:
+                          NODE_COLORS[hoveredNode.type] || "#0f172a",
                       }}
                     ></span>
                     <span className="font-semibold uppercase text-[10px] text-neutral-400 tracking-wide">
@@ -311,7 +307,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 </div>
               </div>
             )}
-            
+
             {/* Tooltip for links - appears at link midpoint */}
             {hoveredLink && !hoveredNode && (
               <div
@@ -348,7 +344,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               ))}
             </div>
           )}
-          
+
           {/* Edge Legend */}
           {graphData.links.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-neutral-600">
@@ -402,41 +398,56 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                     claimGroups.get(normalizedClaim)!.push(entry);
                   });
 
-                  return Array.from(claimGroups.entries()).map(([normalizedClaim, entries]) => {
-                    const firstEntry = entries[0];
-                    const count = entries.length;
-                    const totalEvidence = entries.reduce((sum, e) => sum + e.evidence, 0);
-                    const totalWarrants = entries.reduce((sum, e) => sum + e.warrants, 0);
-                    const totalRebuttals = entries.reduce((sum, e) => sum + e.rebuttals, 0);
-                    const avgScore = entries.reduce((sum, e) => sum + e.score, 0) / count;
-                    const scorePercent = Math.min(100, Math.round((avgScore / 10) * 100));
-                    
-                    return (
-                      <div key={`${normalizedClaim}-${firstEntry.claim_id}`}>
-                        <p className="text-xs text-neutral-600 mb-1">
-                          Claim:{" "}
-                          {firstEntry.claim.length > 64
-                            ? `${firstEntry.claim.slice(0, 61)}...`
-                            : firstEntry.claim}
-                          {count > 1 && (
-                            <span className="ml-1 text-neutral-400 font-medium">
-                              ({count})
-                            </span>
-                          )}
-                        </p>
-                        <div className="h-2 bg-neutral-200 rounded-full">
-                          <div
-                            className="h-2 bg-emerald-500 rounded-full"
-                            style={{ width: `${scorePercent}%` }}
-                          ></div>
+                  return Array.from(claimGroups.entries()).map(
+                    ([normalizedClaim, entries]) => {
+                      const firstEntry = entries[0];
+                      const count = entries.length;
+                      const totalEvidence = entries.reduce(
+                        (sum, e) => sum + e.evidence,
+                        0
+                      );
+                      const totalWarrants = entries.reduce(
+                        (sum, e) => sum + e.warrants,
+                        0
+                      );
+                      const totalRebuttals = entries.reduce(
+                        (sum, e) => sum + e.rebuttals,
+                        0
+                      );
+                      const avgScore =
+                        entries.reduce((sum, e) => sum + e.score, 0) / count;
+                      const scorePercent = Math.min(
+                        100,
+                        Math.round((avgScore / 10) * 100)
+                      );
+
+                      return (
+                        <div key={`${normalizedClaim}-${firstEntry.claim_id}`}>
+                          <p className="text-xs text-neutral-600 mb-1">
+                            Claim:{" "}
+                            {firstEntry.claim.length > 64
+                              ? `${firstEntry.claim.slice(0, 61)}...`
+                              : firstEntry.claim}
+                            {count > 1 && (
+                              <span className="ml-1 text-neutral-400 font-medium">
+                                ({count})
+                              </span>
+                            )}
+                          </p>
+                          <div className="h-2 bg-neutral-200 rounded-full">
+                            <div
+                              className="h-2 bg-emerald-500 rounded-full"
+                              style={{ width: `${scorePercent}%` }}
+                            ></div>
+                          </div>
+                          <div className="mt-1 text-[11px] text-neutral-500">
+                            {totalEvidence} evidence | {totalWarrants} warrants
+                            | {totalRebuttals} rebuttals
+                          </div>
                         </div>
-                        <div className="mt-1 text-[11px] text-neutral-500">
-                          {totalEvidence} evidence | {totalWarrants} warrants |{" "}
-                          {totalRebuttals} rebuttals
-                        </div>
-                      </div>
-                    );
-                  });
+                      );
+                    }
+                  );
                 })()}
               </div>
             ) : (

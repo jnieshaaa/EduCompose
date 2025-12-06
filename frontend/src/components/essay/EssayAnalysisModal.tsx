@@ -237,12 +237,14 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
               <div className="text-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                    essay.argument_analysis.thesis_found
+                    essay.argument_analysis.argumentation?.argument_structure
+                      .has_thesis
                       ? "bg-success-100"
                       : "bg-error-100"
                   }`}
                 >
-                  {essay.argument_analysis.thesis_found ? (
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_thesis ? (
                     <CheckCircle className="w-6 h-6 text-success-default" />
                   ) : (
                     <X className="w-6 h-6 text-error-default" />
@@ -252,19 +254,24 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
                   Thesis Statement
                 </h5>
                 <p className="text-sm text-neutral-600">
-                  {essay.argument_analysis.thesis_found ? "Found" : "Not Found"}
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_thesis
+                    ? "Found"
+                    : "Not Found"}
                 </p>
               </div>
 
               <div className="text-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                    essay.argument_analysis.evidence_found
+                    essay.argument_analysis.argumentation?.argument_structure
+                      .has_evidence
                       ? "bg-success-100"
                       : "bg-error-100"
                   }`}
                 >
-                  {essay.argument_analysis.evidence_found ? (
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_evidence ? (
                     <CheckCircle className="w-6 h-6 text-success-default" />
                   ) : (
                     <X className="w-6 h-6 text-error-default" />
@@ -274,27 +281,33 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
                   Supporting Evidence
                 </h5>
                 <p className="text-sm text-neutral-600">
-                  {essay.argument_analysis.evidence_found ? "Found" : "Limited"}
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_evidence
+                    ? "Found"
+                    : "Limited"}
                 </p>
               </div>
 
               <div className="text-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                    essay.argument_analysis.conclusion_found
+                    essay.argument_analysis.argumentation?.argument_structure
+                      .has_reasoning
                       ? "bg-success-100"
                       : "bg-error-100"
                   }`}
                 >
-                  {essay.argument_analysis.conclusion_found ? (
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_reasoning ? (
                     <CheckCircle className="w-6 h-6 text-success-default" />
                   ) : (
                     <X className="w-6 h-6 text-error-default" />
                   )}
                 </div>
-                <h5 className="font-medium text-neutral-900">Conclusion</h5>
+                <h5 className="font-medium text-neutral-900">Reasoning</h5>
                 <p className="text-sm text-neutral-600">
-                  {essay.argument_analysis.conclusion_found
+                  {essay.argument_analysis.argumentation?.argument_structure
+                    .has_reasoning
                     ? "Found"
                     : "Not Found"}
                 </p>
@@ -311,18 +324,24 @@ const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({
               Recommendations
             </h4>
             <div className="space-y-2">
-              {essay.recommendations.map((recommendation, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start space-x-2 p-3 bg-primary-50 rounded-rd"
-                >
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                  <p className="text-sm text-neutral-700">{recommendation}</p>
-                </motion.div>
-              ))}
+              {essay.recommendations.map((recommendation, index) => {
+                const text =
+                  typeof recommendation === "string"
+                    ? recommendation
+                    : recommendation.message;
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-start space-x-2 p-3 bg-primary-50 rounded-rd"
+                  >
+                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-neutral-700">{text}</p>
+                  </motion.div>
+                );
+              })}
             </div>
           </Card>
         )}

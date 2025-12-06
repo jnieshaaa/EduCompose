@@ -140,11 +140,17 @@ const ToulminKnowledgeGraph: React.FC = () => {
       const toPos = getPixelPos(toNode.pos);
 
       // Create edge group to contain line and label
-      const edgeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      const edgeGroup = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g"
+      );
       edgeGroup.classList.add("edge-group");
 
       // Create line element
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      const line = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
       line.setAttribute("x1", fromPos.x.toString());
       line.setAttribute("y1", fromPos.y.toString());
       line.setAttribute("x2", toPos.x.toString());
@@ -155,7 +161,10 @@ const ToulminKnowledgeGraph: React.FC = () => {
       line.classList.add("edge-line");
 
       // Create label group
-      const labelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      const labelGroup = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g"
+      );
       labelGroup.classList.add("edge-label");
 
       if (edge.label) {
@@ -163,8 +172,14 @@ const ToulminKnowledgeGraph: React.FC = () => {
         const midY = (fromPos.y + toPos.y) / 2;
 
         // Background rectangle for label
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const rect = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "rect"
+        );
+        const textElement = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
         textElement.textContent = edge.label;
         textElement.setAttribute("x", midX.toString());
         textElement.setAttribute("y", midY.toString());
@@ -194,9 +209,11 @@ const ToulminKnowledgeGraph: React.FC = () => {
       if (edge.label) {
         edgeGroup.appendChild(labelGroup);
       }
-      
+
       // Append edge group to SVG
-      svgRef.current.appendChild(edgeGroup);
+      if (svgRef.current) {
+        svgRef.current.appendChild(edgeGroup);
+      }
     });
   }, [dimensions, nodes, edges]);
 
@@ -241,20 +258,32 @@ const ToulminKnowledgeGraph: React.FC = () => {
             >
               {/* Node circle */}
               <div
-                className={`w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full ${colorMap[node.color]} border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110`}
+                className={`w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full ${
+                  colorMap[node.color]
+                } border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110`}
               >
                 {/* Node number/icon */}
                 <span className="text-white font-bold text-xs md:text-sm lg:text-base">
-                  {node.type === "thesis" ? "T" : node.type === "claim" ? "C" : node.type === "evidence" ? "E" : node.type === "warrant" ? "W" : node.type === "backing" ? "B" : node.type === "rebuttal" ? "R" : "Q"}
+                  {node.type === "thesis"
+                    ? "T"
+                    : node.type === "claim"
+                    ? "C"
+                    : node.type === "evidence"
+                    ? "E"
+                    : node.type === "warrant"
+                    ? "W"
+                    : node.type === "backing"
+                    ? "B"
+                    : node.type === "rebuttal"
+                    ? "R"
+                    : "Q"}
                 </span>
               </div>
 
               {/* Node text label - hidden by default, visible on hover */}
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 md:w-56 lg:w-64 z-10">
                 <div className="bg-white border border-neutral-200 rounded-lg shadow-xl p-2 md:p-3">
-                  <p
-                    className="text-xs md:text-sm text-neutral-800 text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200"
-                  >
+                  <p className="text-xs md:text-sm text-neutral-800 text-center opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     {node.text}
                   </p>
                 </div>
@@ -300,4 +329,3 @@ const ToulminKnowledgeGraph: React.FC = () => {
 };
 
 export default ToulminKnowledgeGraph;
-

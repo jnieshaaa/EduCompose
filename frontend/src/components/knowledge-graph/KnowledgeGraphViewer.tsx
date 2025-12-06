@@ -1,20 +1,24 @@
-import React, { useRef, useEffect, useState } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
-import Card from '../ui/Card';
+import React, { useRef, useEffect, useState } from "react";
+import ForceGraph2D from "react-force-graph-2d";
+import Card from "../ui/Card";
 
 interface GraphNode {
   id: string;
   label: string;
   type?: string;
-  properties?: Record<string, any>;
-  [key: string]: any;
+  properties?: Record<string, unknown>;
+  fx?: number;
+  fy?: number;
+  x?: number;
+  y?: number;
+  [key: string]: unknown;
 }
 
 interface GraphEdge {
   source: string | GraphNode;
   target: string | GraphNode;
   type?: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 interface KnowledgeGraphData {
@@ -41,8 +45,11 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
   height = 600,
   width,
 }) => {
-  const fgRef = useRef<any>();
-  const [data, setData] = useState<KnowledgeGraphData | null>(graphData || null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fgRef = useRef<any>(null);
+  const [data, setData] = useState<KnowledgeGraphData | null>(
+    graphData || null
+  );
   const [loading, setLoading] = useState(!graphData);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,18 +63,20 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
   const loadGraphData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const { kgApi } = await import('../../api');
+      const { kgApi } = await import("../../api");
       const graphData = await kgApi.getKnowledgeGraph(essayId);
       setData(graphData);
-      
+
       if (onLoadGraph) {
         onLoadGraph(graphData);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load knowledge graph');
-      console.error('Error loading knowledge graph:', err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load knowledge graph"
+      );
+      console.error("Error loading knowledge graph:", err);
     } finally {
       setLoading(false);
     }
@@ -75,30 +84,31 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
 
   // Node color by type
   const getNodeColor = (node: GraphNode): string => {
-    const type = node.type?.toLowerCase() || 'kgnode';
-    
+    const type = node.type?.toLowerCase() || "kgnode";
+
     const colorMap: Record<string, string> = {
-      'essay': '#8B5CF6',      // Purple
-      'claim': '#EF4444',      // Red
-      'evidence': '#10B981',   // Green
-      'concept': '#3B82F6',    // Blue
-      'premise': '#F59E0B',    // Amber
-      'counterclaim': '#EC4899', // Pink
-      'background': '#6B7280', // Gray
+      essay: "#8B5CF6", // Purple
+      claim: "#EF4444", // Red
+      evidence: "#10B981", // Green
+      concept: "#3B82F6", // Blue
+      premise: "#F59E0B", // Amber
+      counterclaim: "#EC4899", // Pink
+      background: "#6B7280", // Gray
     };
-    
-    return colorMap[type] || '#6366F1'; // Default indigo
+
+    return colorMap[type] || "#6366F1"; // Default indigo
   };
 
   // Node size by connections
   const getNodeSize = (node: GraphNode): number => {
     if (!data) return 8;
-    
+
     const connections = data.edges.filter(
-      e => (typeof e.source === 'string' ? e.source : e.source.id) === node.id ||
-           (typeof e.target === 'string' ? e.target : e.target.id) === node.id
+      (e) =>
+        (typeof e.source === "string" ? e.source : e.source.id) === node.id ||
+        (typeof e.target === "string" ? e.target : e.target.id) === node.id
     ).length;
-    
+
     return Math.max(8, Math.min(20, 8 + connections * 2));
   };
 
@@ -136,7 +146,7 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
           <div className="flex items-center justify-center h-96">
             <div className="text-gray-500">
               No knowledge graph data available for this essay.
-              <button 
+              <button
                 onClick={loadGraphData}
                 className="ml-2 text-blue-500 hover:underline"
               >
@@ -160,19 +170,40 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
             </span>
           )}
         </div>
-        <div className="relative" style={{ width: width || '100%', height }}>
+        <div className="relative" style={{ width: width || "100%", height }}>
           <ForceGraph2D
             ref={fgRef}
-            graphData={data}
+            graphData={{
+              nodes: data.nodes,
+              links: data.edges.map((edge) => ({
+                source:
+                  typeof edge.source === "string"
+                    ? edge.source
+                    : edge.source.id,
+                target:
+                  typeof edge.target === "string"
+                    ? edge.target
+                    : edge.target.id,
+                type: edge.type,
+                ...(edge.properties && { properties: edge.properties }),
+              })),
+            }}
             nodeLabel={(node: GraphNode) => `
               ${node.label || node.id}
-              ${node.type ? `\nType: ${node.type}` : ''}
-              ${node.properties ? `\nProperties: ${JSON.stringify(node.properties).slice(0, 100)}` : ''}
+              ${node.type ? `\nType: ${node.type}` : ""}
+              ${
+                node.properties
+                  ? `\nProperties: ${JSON.stringify(node.properties).slice(
+                      0,
+                      100
+                    )}`
+                  : ""
+              }
             `}
             nodeColor={(node: GraphNode) => getNodeColor(node)}
             nodeVal={(node: GraphNode) => getNodeSize(node)}
-            linkLabel={(edge: GraphEdge) => edge.type || 'RELATED_TO'}
-            linkColor={() => '#94A3B8'}
+            linkLabel={(edge: GraphEdge) => edge.type || "RELATED_TO"}
+            linkColor={() => "#94A3B8"}
             linkWidth={2}
             cooldownTicks={100}
             onNodeDragEnd={(node: GraphNode) => {
@@ -185,7 +216,7 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
               node.fy = node.y;
             }}
           />
-          
+
           {/* Legend */}
           <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg text-xs">
             <div className="font-semibold mb-2">Node Types:</div>
@@ -209,7 +240,7 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
             </div>
           </div>
         </div>
-        
+
         {/* Controls */}
         <div className="mt-4 flex gap-2">
           <button
@@ -225,7 +256,7 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
           <button
             onClick={() => {
               if (fgRef.current) {
-                data?.nodes.forEach((node: any) => {
+                data?.nodes.forEach((node: GraphNode) => {
                   node.fx = undefined;
                   node.fy = undefined;
                 });
@@ -249,4 +280,3 @@ const KnowledgeGraphViewer: React.FC<KnowledgeGraphViewerProps> = ({
 };
 
 export default KnowledgeGraphViewer;
-
