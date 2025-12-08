@@ -18,6 +18,7 @@ import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
 import About from "./pages/About.tsx";
 import EssayActivity from "./pages/EssayActivity.tsx";
+import AnalysisResults from "./pages/AnalysisResults";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -50,10 +51,11 @@ const AppContent: React.FC = () => {
       <IntroModal isOpen={showIntro} onClose={handleClose} />
 
       <Routes>
-        <Route path='/' element={<LandingPage />} />
-        <Route path='/About' element={<About />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/About" element={<About />} />
+        <Route path="/AnalysisResults" element={<AnalysisResults />} />
         <Route
-          path='/Dashboard'
+          path="/Dashboard"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -63,7 +65,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/Dashboard_v2'
+          path="/Dashboard_v2"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -73,7 +75,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/EssayManagement'
+          path="/EssayManagement"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -83,7 +85,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/ClassManagement'
+          path="/ClassManagement"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -93,7 +95,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/EssayActivity'
+          path="/EssayActivity"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -103,7 +105,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/AssignmentManagement'
+          path="/AssignmentManagement"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -113,7 +115,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/Gradebook'
+          path="/Gradebook"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -123,7 +125,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/Settings'
+          path="/Settings"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -133,7 +135,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/Students'
+          path="/Students"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -143,7 +145,7 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path='/SectionsList'
+          path="/SectionsList"
           element={
             <ProtectedRoute>
               <ClientLayout>
@@ -152,7 +154,7 @@ const AppContent: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route path='*' element={<ErrorPage code={404} />} />
+        <Route path="*" element={<ErrorPage code={404} />} />
       </Routes>
     </>
   );

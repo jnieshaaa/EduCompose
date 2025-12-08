@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -13,7 +13,9 @@ import {
   ArrowRight,
   Award,
   ArrowLeft,
+  Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import ProgressBar from "../components/ui/ProgressBar";
@@ -32,6 +34,8 @@ type HighlightError = GrammarError & {
   errorLength: number;
 };
 
+const STORAGE_KEY = "essay_analysis_results";
+
 const AnalysisResults: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,6 +52,12 @@ const AnalysisResults: React.FC = () => {
   const [selectedError, setSelectedError] = useState<HighlightError | null>(
     null
   );
+  const [analysisKey, setAnalysisKey] = useState<string>(""); // Key to track when analysis changes
+
+  // Stable references to prevent recalculation
+  const stableAnalysisRef = useRef<Omit<AnalysisResponse, "essay_id"> | null>(null);
+  const stableTextRef = useRef<string>("");
+  const stableHighlightDataRef = useRef<{ html: string | null; errors: HighlightError[] } | null>(null);
 
   const handleAnalyze = async (
     text: string,
@@ -72,7 +82,35 @@ const AnalysisResults: React.FC = () => {
         // Analyze by text
         result = await analysisApi.analyzeText(text, title, "comprehensive");
       }
-      setAnalysis(result as Omit<AnalysisResponse, "essay_id">);
+      const analysisResult = result as Omit<AnalysisResponse, "essay_id">;
+      
+      // Create a deep clone to prevent mutations
+      const stableAnalysis = JSON.parse(JSON.stringify(analysisResult));
+      const stableText = text;
+      
+      // Create a unique key for this analysis (based on text hash and timestamp)
+      const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
+      
+      // Store stable references
+      stableAnalysisRef.current = stableAnalysis;
+      stableTextRef.current = stableText;
+      stableHighlightDataRef.current = null; // Reset to force recalculation with new data
+      
+      setAnalysis(stableAnalysis);
+      setAnalysisKey(newAnalysisKey); // Trigger recalculation
+      
+      // Save to localStorage for persistence
+      try {
+        const dataToSave = {
+          analysis: stableAnalysis,
+          text: stableText,
+          title: title || "Essay Analysis",
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      } catch (storageError) {
+        console.warn("Failed to save analysis to localStorage:", storageError);
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to analyze essay";
@@ -83,8 +121,13 @@ const AnalysisResults: React.FC = () => {
     }
   };
 
-  // Get analysis data from location state or trigger new analysis
+  // Get analysis data from location state, localStorage, or trigger new analysis
   useEffect(() => {
+    // Prevent re-running if we already have analysis data
+    if (analysis && originalText) {
+      return;
+    }
+
     const state = location.state as {
       analysis?: Omit<AnalysisResponse, "essay_id">;
       text?: string;
@@ -102,25 +145,279 @@ const AnalysisResults: React.FC = () => {
     }
 
     if (state?.analysis) {
-      // Analysis already provided
-      setAnalysis(state.analysis);
+      // Analysis already provided - create stable references
+      const stableAnalysis = JSON.parse(JSON.stringify(state.analysis));
+      const stableText = state.text || "";
+      
+      // Create a unique key for this analysis
+      const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
+      
+      stableAnalysisRef.current = stableAnalysis;
+      stableTextRef.current = stableText;
+      stableHighlightDataRef.current = null; // Reset to force recalculation
+      
+      setAnalysis(stableAnalysis);
+      setAnalysisKey(newAnalysisKey); // Trigger recalculation
       if (state.text) {
-        setOriginalText(state.text);
+        setOriginalText(stableText);
+        // Save to localStorage
+        try {
+          const dataToSave = {
+            analysis: stableAnalysis,
+            text: stableText,
+            title: state.title || "Essay Analysis",
+            timestamp: Date.now(),
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        } catch (storageError) {
+          console.warn("Failed to save analysis to localStorage:", storageError);
+        }
       }
     } else if (state?.text) {
-      // Need to analyze text
-      setOriginalText(state.text);
-      handleAnalyze(state.text, state.title || "Essay Analysis", state.essayId);
+      // Need to analyze text - ensure text is set before analyzing
+      const textToAnalyze = state.text;
+      setOriginalText(textToAnalyze);
+      handleAnalyze(textToAnalyze, state.title || "Essay Analysis", state.essayId);
     } else {
-      // No data provided, redirect home
+      // No state provided - try to load from localStorage
+      try {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          // Check if data is not too old (e.g., within 24 hours)
+          const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+          if (parsed.timestamp && Date.now() - parsed.timestamp < maxAge) {
+            // Create stable references
+            const stableAnalysis = JSON.parse(JSON.stringify(parsed.analysis));
+            const stableText = parsed.text || "";
+            
+            // Create a unique key for this analysis
+            const newAnalysisKey = `${stableText.substring(0, 50)}-${parsed.timestamp || Date.now()}`;
+            
+            stableAnalysisRef.current = stableAnalysis;
+            stableTextRef.current = stableText;
+            stableHighlightDataRef.current = null; // Reset to force recalculation
+            
+            setAnalysis(stableAnalysis);
+            setOriginalText(stableText);
+            setAnalysisKey(newAnalysisKey); // Trigger recalculation
+            return;
+          } else {
+            // Data is too old, remove it
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      } catch (storageError) {
+        console.warn("Failed to load analysis from localStorage:", storageError);
+      }
+      
+      // No data available, redirect home
       navigate("/");
     }
-  }, [location.state, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Clear selected error when switching tabs
   useEffect(() => {
     setSelectedError(null);
   }, [activeTab]);
+
+  // Export analysis results to PDF
+  const handleExportPDF = () => {
+    if (!analysis || !originalText) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const maxWidth = pageWidth - 2 * margin;
+    let yPosition = margin;
+
+    // Helper function to add a new page if needed
+    const checkPageBreak = (requiredHeight: number) => {
+      if (yPosition + requiredHeight > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Essay Analysis Report", margin, yPosition);
+    yPosition += 15;
+
+    // Date and word count
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const dateStr = analysis.generated_at
+      ? new Date(analysis.generated_at).toLocaleString()
+      : new Date().toLocaleString();
+    doc.text(`Generated: ${dateStr}`, margin, yPosition);
+    yPosition += 5;
+    if (analysis.word_count) {
+      doc.text(`Word Count: ${analysis.word_count}`, margin, yPosition);
+      yPosition += 10;
+    } else {
+      yPosition += 5;
+    }
+
+    // Overall Score
+    checkPageBreak(20);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Overall Score", margin, yPosition);
+    yPosition += 8;
+    doc.setFontSize(24);
+    const overallScore = analysis.scores?.overall || 0;
+    const scoreColor = overallScore >= 80 ? [34, 197, 94] : overallScore >= 60 ? [234, 179, 8] : [239, 68, 68];
+    doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.text(`${overallScore.toFixed(1)}/100`, margin, yPosition);
+    doc.setTextColor(0, 0, 0);
+    yPosition += 15;
+
+    // Score Breakdown
+    checkPageBreak(30);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Score Breakdown", margin, yPosition);
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    const scores = analysis.scores || {};
+    const scoreLabels = [
+      { key: "grammar", label: "Grammar" },
+      { key: "readability", label: "Readability" },
+      { key: "coherence", label: "Coherence" },
+      { key: "argument_strength", label: "Argument Strength" },
+      { key: "knowledge_graph", label: "Knowledge Graph" },
+    ];
+
+    scoreLabels.forEach(({ key, label }) => {
+      checkPageBreak(8);
+      const score = scores[key as keyof typeof scores] || 0;
+      doc.text(`${label}: ${score.toFixed(1)}/100`, margin + 5, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 5;
+
+    // Grammar Analysis
+    if (analysis.detailed_analysis?.grammar) {
+      checkPageBreak(30);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Grammar Analysis", margin, yPosition);
+      yPosition += 10;
+
+      const grammar = analysis.detailed_analysis.grammar;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      
+      checkPageBreak(8);
+      doc.text(`Score: ${grammar.score?.toFixed(1) || 0}/100`, margin, yPosition);
+      yPosition += 6;
+      
+      checkPageBreak(8);
+      doc.text(`Error Count: ${grammar.error_count || 0}`, margin, yPosition);
+      yPosition += 10;
+
+      // Group errors by type
+      if (grammar.errors && grammar.errors.length > 0) {
+        const errorGroups: Record<string, number> = {};
+        grammar.errors.forEach((error) => {
+          const type = error.type || "grammar";
+          errorGroups[type] = (errorGroups[type] || 0) + 1;
+        });
+
+        doc.setFont("helvetica", "bold");
+        doc.text("Errors by Type:", margin, yPosition);
+        yPosition += 6;
+        doc.setFont("helvetica", "normal");
+
+        Object.entries(errorGroups).forEach(([type, count]) => {
+          checkPageBreak(6);
+          doc.text(`  • ${type}: ${count}`, margin + 5, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 5;
+      }
+    }
+
+    // Readability Analysis
+    if (analysis.detailed_analysis?.readability) {
+      checkPageBreak(30);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Readability Analysis", margin, yPosition);
+      yPosition += 10;
+
+      const readability = analysis.detailed_analysis.readability;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      
+      checkPageBreak(8);
+      doc.text(`Flesch Reading Ease: ${readability.flesch_reading_ease?.toFixed(1) || 0}`, margin, yPosition);
+      yPosition += 6;
+      
+      checkPageBreak(8);
+      doc.text(`Grade Level: ${readability.flesch_kincaid_grade?.toFixed(1) || 0}`, margin, yPosition);
+      yPosition += 6;
+      
+      checkPageBreak(8);
+      doc.text(`Lexical Diversity: ${(readability.lexical_diversity * 100)?.toFixed(1) || 0}%`, margin, yPosition);
+      yPosition += 10;
+    }
+
+    // Recommendations
+    if (analysis.recommendations && analysis.recommendations.length > 0) {
+      checkPageBreak(30);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Recommendations", margin, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+
+      analysis.recommendations.forEach((rec, index) => {
+        checkPageBreak(15);
+        const recText = typeof rec === "string" ? rec : rec.message || rec.recommendation || "";
+        const lines = doc.splitTextToSize(`${index + 1}. ${recText}`, maxWidth - 10);
+        lines.forEach((line: string) => {
+          checkPageBreak(6);
+          doc.text(line, margin + 5, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 2;
+      });
+      yPosition += 5;
+    }
+
+    // Essay Text
+    checkPageBreak(30);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Essay Text", margin, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    
+    // Split essay text into lines that fit the page
+    const essayLines = doc.splitTextToSize(originalText, maxWidth);
+    essayLines.forEach((line: string) => {
+      checkPageBreak(6);
+      doc.text(line, margin, yPosition);
+      yPosition += 5;
+    });
+
+    // Save the PDF
+    const fileName = `essay-analysis-${Date.now()}.pdf`;
+    doc.save(fileName);
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "success";
@@ -214,15 +511,28 @@ const AnalysisResults: React.FC = () => {
     return colors[category.toLowerCase()] || colors.grammar;
   };
 
-  // Process grammar errors for highlighting
+  // Process grammar errors for highlighting - use stable references
   const highlightData = useMemo(() => {
-    const grammarErrors = analysis?.detailed_analysis?.grammar?.errors ?? [];
+    // Use stable refs if available, otherwise fall back to state
+    const currentAnalysis = stableAnalysisRef.current || analysis;
+    const currentText = stableTextRef.current || originalText;
+    
+    // If we have cached highlight data and analysis/text haven't changed, return cached
+    if (stableHighlightDataRef.current && 
+        stableAnalysisRef.current === currentAnalysis && 
+        stableTextRef.current === currentText) {
+      return stableHighlightDataRef.current;
+    }
+    
+    const grammarErrors = currentAnalysis?.detailed_analysis?.grammar?.errors ?? [];
 
-    if (!analysis || !originalText || grammarErrors.length === 0) {
-      return {
+    if (!currentAnalysis || !currentText || grammarErrors.length === 0) {
+      const result = {
         html: null as string | null,
         errors: [] as HighlightError[],
       };
+      stableHighlightDataRef.current = result;
+      return result;
     }
 
     const escapeHtml = (value: string) =>
@@ -233,14 +543,43 @@ const AnalysisResults: React.FC = () => {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
 
-    const validErrors = [...grammarErrors]
-      .filter(
-        (error): error is HighlightError =>
-          typeof error.offset === "number" &&
-          typeof error.errorLength === "number" &&
-          error.errorLength > 0 &&
-          error.offset < originalText.length
-      )
+    // Deep clone errors array to prevent mutations
+    const clonedErrors = grammarErrors.map(error => ({
+      ...error,
+      offset: error.offset,
+      errorLength: error.errorLength,
+    }));
+
+    // Validate errors and ensure offsets match the actual text
+    const validErrors = clonedErrors
+      .filter((error): error is HighlightError => {
+        // Basic type and bounds validation
+        if (
+          typeof error.offset !== "number" ||
+          typeof error.errorLength !== "number" ||
+          error.errorLength <= 0 ||
+          error.offset < 0 ||
+          error.offset >= currentText.length
+        ) {
+          return false;
+        }
+
+        // Ensure the error doesn't extend beyond text length
+        if (error.offset + error.errorLength > currentText.length) {
+          return false;
+        }
+
+        // Verify the text at the offset is not just whitespace
+        const textAtOffset = currentText.slice(
+          error.offset,
+          error.offset + error.errorLength
+        );
+        if (!textAtOffset.trim()) {
+          return false;
+        }
+
+        return true;
+      })
       .sort((a, b) => a.offset - b.offset);
 
     if (validErrors.length === 0) {
@@ -254,29 +593,45 @@ const AnalysisResults: React.FC = () => {
       const start = Math.max(error.offset, cursor);
       const end = Math.min(
         error.offset + error.errorLength,
-        originalText.length
+        currentText.length
       );
 
-      if (start > cursor) {
-        html += escapeHtml(originalText.slice(cursor, start));
+      // Skip if start is beyond cursor (overlapping errors handled)
+      if (start < cursor) {
+        return;
       }
 
-      const snippet = escapeHtml(originalText.slice(start, end));
+      if (start > cursor) {
+        html += escapeHtml(currentText.slice(cursor, start));
+      }
+
+      const snippet = escapeHtml(currentText.slice(start, end));
+      
+      // Skip if snippet is empty or only whitespace
+      if (!snippet || !snippet.trim()) {
+        cursor = Math.max(cursor, end);
+        return;
+      }
+
       const title = escapeHtml(error.message || "Grammar issue");
       const errorType = error.type || "grammar";
       const color = getHighlightColor(errorType);
       html += `<mark data-error-index="${index}" style="background: ${color.bg}; color: ${color.text}; padding: 0 2px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" title="${title}" class="error-highlight hover:opacity-80">`;
-      html += snippet || "\u200B";
+      html += snippet;
       html += "</mark>";
       cursor = end;
     });
 
-    if (cursor < originalText.length) {
-      html += escapeHtml(originalText.slice(cursor));
+    if (cursor < currentText.length) {
+      html += escapeHtml(currentText.slice(cursor));
     }
 
-    return { html, errors: validErrors };
-  }, [analysis, originalText]);
+    const result = { html, errors: validErrors };
+    // Cache the result
+    stableHighlightDataRef.current = result;
+    return result;
+    // Only recalculate when analysisKey changes (i.e., when new analysis is loaded)
+  }, [analysisKey]);
 
   // Group grammar errors by category/type and deduplicate by message
   const groupedGrammarErrors = useMemo(() => {
@@ -391,15 +746,25 @@ const AnalysisResults: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-6">
-        {/* Header with Back Button */}
+        {/* Header with Back Button and Export */}
         <div className="mb-6">
-          <button
-            onClick={() => navigate("/", { state: { text: originalText } })}
-            className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Home</span>
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate("/", { state: { text: originalText } })}
+              className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Home</span>
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors shadow-md"
+            >
+              <Download className="w-5 h-5" />
+              <span className="font-medium">Export to PDF</span>
+            </button>
+          </div>
 
           <div className="flex items-start justify-between">
             <div className="flex-1">

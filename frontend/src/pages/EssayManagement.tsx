@@ -114,7 +114,7 @@ const EssayManagement: React.FC = () => {
           },
         });
       }
-    } catch (error) {
+    } catch (_error) {
       // If analysis fails, still navigate with text to analyze
       navigate("/AnalysisResults", {
         state: {
