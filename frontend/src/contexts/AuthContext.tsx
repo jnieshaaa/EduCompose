@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check if user is authenticated on mount and when token changes
   const checkAuth = async () => {
     const token = localStorage.getItem("auth_token");
-    
+
     if (!token) {
       setUser(null);
       setIsLoading(false);
@@ -49,15 +49,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      // Verify token with backend
+      // Prefer locally cached user to avoid backend calls when running in demo/offline mode
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        return;
+      }
+
+      // Fallback: verify token with backend when available
       const userData = await userApi.getCurrentUser();
       setUser(userData);
     } catch (error: any) {
-      // Token is invalid or expired
+      // Token is invalid or backend unavailable; keep local user if present
       console.error("Auth check failed:", error);
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
-      setUser(null);
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }

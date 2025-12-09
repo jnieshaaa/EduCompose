@@ -109,48 +109,20 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
     setIsLoading(true);
 
-    try {
-      // Call backend API - will reject if credentials not in database
-      const response = await authApi.login(
-        { username: username.trim() },
-        password
-      );
+    // Demo/offline login: bypass backend and create a local session
+    const fakeUser = {
+      id: Date.now(),
+      email: `${username.trim() || "user"}@local.test`,
+      username: username.trim() || "user",
+      full_name: username.trim() || "User",
+      role: "teacher",
+      is_active: true,
+    };
 
-      // Use AuthContext login method to update auth state
-      if (response.access_token) {
-        login(response.access_token, response.user || undefined);
-
-        // Navigate to dashboard and close modal
-        navigate("/Dashboard");
-        onClose();
-      }
-    } catch (err) {
-      const apiError = err as { status?: number; message?: string };
-      // Handle API errors - backend will reject invalid credentials
-      if (
-        apiError.status === 0 ||
-        apiError.message?.includes("Failed to connect")
-      ) {
-        setError(
-          "Cannot connect to server. Please make sure the backend server is running on http://localhost:8000"
-        );
-      } else if (apiError.status === 401) {
-        setError(
-          "Invalid credentials. User not found in database or password is incorrect."
-        );
-      } else if (apiError.status === 403) {
-        setError("Account is inactive. Please contact administrator.");
-      } else if (apiError.status === 503) {
-        setError("Database connection failed. Please try again later.");
-      } else {
-        setError(
-          apiError.message ||
-            "Login failed. Please check your credentials and try again."
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    login("local-demo-token", fakeUser);
+    navigate("/Dashboard");
+    onClose();
+    setIsLoading(false);
   };
 
   return (
