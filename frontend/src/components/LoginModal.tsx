@@ -310,9 +310,7 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
         username: username.trim(),
       });
 
-      setSuccess(
-        `Account created successfully in Supabase! Please log in to continue.`
-      );
+      setSuccess(`Account created successfully! Please log in to continue.`);
       setUsername("");
       setEmail("");
       setPassword("");

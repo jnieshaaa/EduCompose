@@ -1,6 +1,6 @@
 """
 Authentication Controller
-Handles authentication-related endpoints with Supabase integration
+Handles authentication-related endpoints (local auth by default; Supabase optional)
 """
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -65,14 +65,10 @@ async def login(
 @auth_router.post("/register")
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """
-    User registration endpoint with Supabase Auth integration
-    
-    Creates a new user account in both Supabase Auth and local PostgreSQL database.
-    Sends email verification link automatically via Supabase.
-    
-    **IMPORTANT**: 
-    - User must verify their email before they can fully use the system
-    - Email verification link is sent automatically upon registration
+    User registration endpoint
+
+    By default creates a local user record stored in PostgreSQL.
+    When Supabase auth is enabled it will also create a Supabase Auth user.
     """
     user = await auth_service.create_user(user_data, db)
     return {
