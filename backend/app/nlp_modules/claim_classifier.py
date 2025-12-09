@@ -5,6 +5,7 @@ Uses a fine-tuned DistilBERT model for fast and accurate argument classification
 """
 
 import logging
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from enum import Enum
 import torch
@@ -31,7 +32,7 @@ class TransformerClaimClassifier:
     def __init__(
         self,
         model_name: str = "distilbert-base-uncased",
-        use_fine_tuned: bool = False,
+        use_fine_tuned: bool = True,
         fine_tuned_model_path: Optional[str] = None,
         device: str = "cpu"
     ):
@@ -43,12 +44,13 @@ class TransformerClaimClassifier:
                 - "distilbert-base-uncased" (default, fastest)
                 - "przvl/persuasive_essays_distilbert_uncased" (pre-fine-tuned)
                 - Custom path to fine-tuned model
-            use_fine_tuned: If True, load a fine-tuned model
+            use_fine_tuned: If True, load a fine-tuned model (preferred)
             fine_tuned_model_path: Path to fine-tuned model
             device: "cuda" or "cpu"
         """
         self.model_name = model_name
         self.device = device
+        self.fine_tuned_model_path = fine_tuned_model_path
         self.tokenizer = None
         self.model = None
         self._initialized = False
@@ -63,8 +65,24 @@ class TransformerClaimClassifier:
         }
         self.id2label = {v: k for k, v in self.label2id.items()}
 
+        # Prefer the local fine-tuned model by default; require it if requested
+        if use_fine_tuned and self.fine_tuned_model_path is None:
+            backend_root = Path(__file__).parent.parent.parent
+            default_path = backend_root / "my_finetuned_distilbert"
+            self.fine_tuned_model_path = str(default_path)
+
+        if use_fine_tuned and self.fine_tuned_model_path:
+            if not Path(self.fine_tuned_model_path).exists():
+                error_msg = (
+                    f"Fine-tuned DistilBERT expected at {self.fine_tuned_model_path} "
+                    "but was not found. Provide a valid fine_tuned_model_path or set "
+                    "use_fine_tuned=False explicitly."
+                )
+                logger.error(error_msg)
+                raise FileNotFoundError(error_msg)
+
         # Initialize model
-        self._initialize(use_fine_tuned, fine_tuned_model_path)
+        self._initialize(use_fine_tuned, self.fine_tuned_model_path)
 
     def _initialize(self, use_fine_tuned: bool = False, model_path: Optional[str] = None):
         """Load tokenizer and model"""
@@ -323,7 +341,7 @@ class TransformerClaimClassifier:
 
 # Convenience function
 def get_claim_classifier(
-    use_fine_tuned: bool = False,
+    use_fine_tuned: bool = True,
     fine_tuned_model_path: Optional[str] = None,
     device: str = "cpu"
 ) -> TransformerClaimClassifier:
@@ -331,7 +349,7 @@ def get_claim_classifier(
     Get a claim classifier instance.
 
     Args:
-        use_fine_tuned: Load fine-tuned model
+        use_fine_tuned: Load fine-tuned model (default: True)
         fine_tuned_model_path: Path to fine-tuned model
         device: "cuda" or "cpu"
 
