@@ -23,7 +23,7 @@ const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
         <Header onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
         <Breadcrumb />
 
-        <main className="flex-1 overflow-y-auto bg-neutral-300/10">
+        <main className="flex-1 overflow-y-auto bg-neutral-300/10 px-6 py-6">
           {children}
         </main>
       </div>

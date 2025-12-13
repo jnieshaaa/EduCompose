@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
   FileText,
+  Layers,
   // BarChart3,
   // Users,
-  GraduationCap,
+  // GraduationCap,
   // ClipboardList,
   // Award,
   Info,
@@ -12,6 +13,12 @@ import {
   Target,
   Zap,
   Shield,
+  // LayoutDashboard, 
+  Users, 
+  ClipboardCheck, 
+  BarChart3, 
+  Settings,
+  X
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,14 +58,39 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         path: "/Dashboard",
       },
       {
-        icon: <FileText className='w-5 h-5' />,
-        label: "Essay Management",
-        path: "/EssayManagement",
+        icon: <BookOpen className='w-5 h-5' />,
+        label: "Programs",
+        path: "/Programs",
       },
       {
-        icon: <GraduationCap className='w-5 h-5' />,
-        label: "Class Management",
-        path: "/ClassManagement",
+        icon: <Layers className='w-5 h-5' />,
+        label: "Blocks / Sections",
+        path: "/Blocks",
+      },
+      {
+        icon: <Users className='w-5 h-5' />,
+        label: "Students",
+        path: "/Students",
+      },
+      {
+        icon: <FileText className='w-5 h-5' />,
+        label: "Essay Submissions",
+        path: "/EssaySubmissions",
+      },
+      {
+        icon: <ClipboardCheck className='w-5 h-5' />,
+        label: "Rubrics / Criteria",
+        path: "/Rubrics",
+      },
+      {
+        icon: <BarChart3 className='w-5 h-5' />,
+        label: "Metrics",
+        path: "/Metrics",
+      },
+      {
+        icon: <Settings className='w-5 h-5' />,
+        label: "Settings",
+        path: "/Settings",
       },
       // {
       //   icon: <ClipboardList className='w-5 h-5' />,
@@ -74,11 +106,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       //   icon: <BarChart3 className='w-5 h-5' />,
       //   label: "Analytics",
       //   path: "/Analytics",
-      // },
-      // {
-      //   icon: <Users className='w-5 h-5' />,
-      //   label: "Students",
-      //   path: "/Students",
       // },
     ],
     []

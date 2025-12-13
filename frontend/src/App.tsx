@@ -22,6 +22,14 @@ import AnalysisResults from "./pages/AnalysisResults";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { DashboardTab } from "./pages/teachers/DashboardTab.tsx";
+import { SettingsTab } from "./pages/teachers/SettingsTab.tsx";
+import { StudentsTab } from "./pages/teachers/StudentsTab.tsx";
+import { EssaysTab } from "./pages/teachers/EssaysTab.tsx";
+import { MetricsTab } from "./pages/teachers/MetricsTab.tsx";
+import { ProgramsTab } from "./pages/teachers/ProgramsTab.tsx";
+import { RubricsTab } from "./pages/teachers/RubricsTab.tsx";
+import { SectionsTab } from "./pages/teachers/SectionsTab.tsx";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -59,7 +67,7 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <ClientLayout>
-                <Dashboard_v2 />
+                <DashboardTab />
               </ClientLayout>
             </ProtectedRoute>
           }
@@ -129,7 +137,7 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <ClientLayout>
-                <Settings />
+                <SettingsTab/>
               </ClientLayout>
             </ProtectedRoute>
           }
@@ -139,7 +147,57 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <ClientLayout>
-                <Students />
+                <StudentsTab/>
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/EssaySubmissions"
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <EssaysTab/>
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/Metrics"
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <MetricsTab />
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/Programs"
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <ProgramsTab />
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/Rubrics"
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <RubricsTab />
+              </ClientLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/Blocks"
+          element={
+            <ProtectedRoute>
+              <ClientLayout>
+                <SectionsTab />
               </ClientLayout>
             </ProtectedRoute>
           }

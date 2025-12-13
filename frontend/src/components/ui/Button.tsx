@@ -11,7 +11,8 @@ interface ButtonProps {
     | "success"
     | "warning"
     | "error"
-    | "ghost";
+    | "ghost"
+    | "outline"; // FIX C: Added 'outline' variant
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
@@ -47,6 +48,9 @@ const Button: React.FC<ButtonProps> = ({
       "bg-error-default text-white hover:bg-error-dark focus:ring-error-default",
     ghost:
       "bg-transparent text-primary border border-primary hover:bg-primary hover:text-white focus:ring-primary-500",
+    // FIX C: Added 'outline' variant styles
+    outline:
+      "bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-100 focus:ring-primary-500",
   };
 
   const sizeClasses = {

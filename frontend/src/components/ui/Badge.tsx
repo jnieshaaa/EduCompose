@@ -2,7 +2,7 @@ import React from "react";
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "error" | "info" | "neutral";
+  variant?: "default" | "success" | "warning" | "error" | "info" | "neutral" | "outline"; // <-- FIX: Added 'outline'
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -23,6 +23,8 @@ const Badge: React.FC<BadgeProps> = ({
     error: "bg-error-default text-white",
     info: "bg-info-default text-white",
     neutral: "bg-neutral-200 text-neutral-700",
+    // <-- FIX: Added 'outline' class for type compatibility
+    outline: "bg-white text-neutral-700 border border-neutral-300",
   };
 
   const sizeClasses = {
