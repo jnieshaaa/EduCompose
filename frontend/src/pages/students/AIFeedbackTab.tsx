@@ -1,8 +1,8 @@
-import { Card } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Button } from '../../ui/button';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 import { Award, Download, MessageSquare, FileText } from 'lucide-react';
-import { Progress } from '../../ui/progress';
+import { Progress } from '../../components/ui/progress';
 
 const essayFeedback = {
   essayTitle: 'Machine Learning Ethics',

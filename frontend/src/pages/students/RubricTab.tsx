@@ -1,6 +1,6 @@
-import { Card } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Progress } from '../../ui/progress';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import { Progress } from '../../components/ui/progress';
 import { Info } from 'lucide-react';
 
 const rubricData = {

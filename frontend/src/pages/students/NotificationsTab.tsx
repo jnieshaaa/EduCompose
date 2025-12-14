@@ -1,6 +1,6 @@
-import { Card } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Button } from '../../ui/button';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 import { CheckCircle, MessageSquare, AlertCircle, Clock, Bell } from 'lucide-react';
 
 const notifications = [

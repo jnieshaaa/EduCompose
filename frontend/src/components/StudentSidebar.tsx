@@ -147,43 +147,45 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         }}
       >
         {/* Header */}
-        <div className='flex items-center h-20 border-b border-white p-2.5 relative'>
-          <div className='relative w-14 h-14 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
-            <img
-              src={eduComposeLogo}
-              alt='EduCompose Logo'
-              className='w-full h-full object-cover cursor-none'
-            />
-            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
-              <div
-                className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
-          ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
-                onAnimationEnd={() => setLogoShine(false)}
-              ></div>
+        <div className='flex items-center h-16 border-b border-white p-2.5 relative'>
+            {/* 👇 CHANGE 1: Logo container size reduced from w-14 h-14 (56px) to w-10 h-10 (40px) */}
+            <div className='relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
+              <img
+                src={eduComposeLogo}
+                alt='EduCompose Logo'
+                className='w-full h-full object-cover cursor-none'
+              />
+              <div className='absolute inset-0 pointer-events-none overflow-hidden'>
+                <div
+                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
+                    ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
+                  onAnimationEnd={() => setLogoShine(false)}
+                ></div>
+              </div>
             </div>
-          </div>
 
-          {isSidebarOpen && (
-            <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
-              <AnimatePresence>
-                <motion.div
-                  initial='hidden'
-                  animate='visible'
-                  exit='hidden'
-                  variants={textVariants}
-                  className='flex flex-col max-w-[200px]'
-                >
-                  <h1 className='font-bold text-2xl text-white whitespace-nowrap'>
-                    EduCompose
-                  </h1>
-                  <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
-                    Student Portal for Essay Evaluation
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+            {isSidebarOpen && (
+              <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
+                <AnimatePresence>
+                  <motion.div
+                    initial='hidden'
+                    animate='visible'
+                    exit='hidden'
+                    variants={textVariants}
+                    className='flex flex-col max-w-[200px]'
+                  >
+                    {/* 👇 CHANGE 2 (Optional but Recommended): Reduced title text size from text-2xl to text-xl */}
+                    <h1 className='font-bold text-xl text-white whitespace-nowrap'>
+                      EduCompose
+                    </h1>
+                    <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
+                      Student Portal for Essay Evaluation
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
 
         {/* Navigation */}
         <nav className='flex-1 p-4'>

@@ -1,5 +1,5 @@
-import { Card } from '../../ui/card';
-import { Badge } from '../../ui/badge';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
 import { TrendingUp, Target } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 

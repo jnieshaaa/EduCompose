@@ -1,11 +1,11 @@
-import { Card } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Switch } from '../../ui/switch';
+import Card from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import { Label } from '../../components/ui/label';
+import { Switch } from '../../components/ui/switch';
 import { Save, Download } from 'lucide-react';
 
-export function SettingsTab() {
+export function StudentSettingsTab() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}

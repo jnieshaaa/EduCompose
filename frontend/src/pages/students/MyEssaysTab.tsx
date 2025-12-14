@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Card } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Badge } from '../../ui/badge';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import Badge from '../../components/ui/Badge';
 import { Search, Eye, MessageSquare, Download, Edit, FileText } from 'lucide-react';
 import {
   Table,
@@ -11,13 +11,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../ui/table';
+} from '../../components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../ui/dropdown-menu';
+} from '../../components/ui/dropdown-menu';
 
 const essaysData = [
   { 
@@ -168,7 +168,7 @@ export function MyEssaysTab() {
               type="search"
               placeholder="Search essays..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(value) => setSearchQuery(value)}
               className="pl-10"
             />
           </div>

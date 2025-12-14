@@ -109,13 +109,16 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
     setIsLoading(true);
 
+    const role = username.toLowerCase().includes("student") ? "student" : "teacher"; // <-- ADD THIS LINE
+
     // Demo/offline login: bypass backend and create a local session
     const fakeUser = {
       id: Date.now(),
       email: `${username.trim() || "user"}@local.test`,
       username: username.trim() || "user",
       full_name: username.trim() || "User",
-      role: "teacher",
+      // role: "teacher", // <-- REMOVE THIS LINE
+      role: role, // <-- USE THE DYNAMIC ROLE HERE
       is_active: true,
     };
 

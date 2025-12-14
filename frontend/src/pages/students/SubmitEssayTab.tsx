@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Card } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
-import { Badge } from '../../ui/badge';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import Badge from '../../components/ui/Badge';
 import { Upload, FileText, Save, Send, X } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 
 export function SubmitEssayTab() {
   const [uploadMode, setUploadMode] = useState<'file' | 'text'>('file');

@@ -1,6 +1,6 @@
-import { Card } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
 import { FileText, CheckCircle, Award, Clock, Upload, Eye, MessageSquare } from 'lucide-react';
 
 const statsCards = [
