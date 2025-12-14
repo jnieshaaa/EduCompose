@@ -22,7 +22,9 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea'; 
+import { Textarea } from '../../components/ui/textarea';
+import { BatchUploadDialog } from '../../components/ui/BatchUploadDialog';
+import type { UploadResult } from '../../services/BatchUploadController'; 
 
 import { 
   initialProgramsData, 
@@ -42,6 +44,13 @@ export function ProgramsTab() {
 
   const handleInputChange = (field: string, value: string) => {
     setNewProgram(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBatchUploadComplete = (result: UploadResult) => {
+    if (result.success && result.data) {
+      // Add imported programs to the list
+      setPrograms(prevPrograms => [...(result.data as Program[]), ...prevPrograms]);
+    }
   };
 
   // 2. HANDLE SUBMIT FUNCTION
@@ -153,10 +162,11 @@ export function ProgramsTab() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button variant="outline">
-            <Upload className="w-4 h-4 mr-2" />
-            Batch Upload
-          </Button>
+          <BatchUploadDialog
+            type="programs"
+            existingPrograms={programs}
+            onUploadComplete={handleBatchUploadComplete}
+          />
         </div>
       </div>
 
@@ -233,12 +243,7 @@ export function ProgramsTab() {
                         </Button>
                       </DropdownMenuTrigger>
                       
-                      {/* 💥 ADD forceMount FOR DEBUGGING 💥 */}
-                      <DropdownMenuContent 
-                       side="bottom"
-                        forceMount // This ensures it stays in the DOM, even when closed, for debugging. Remove later.
-                        className="z-50" // Ensures it stacks above everything else.
-                      >
+                      <DropdownMenuContent align="end">
                         <DropdownMenuItem>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Program

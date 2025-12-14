@@ -21,6 +21,8 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
+import { BatchUploadDialog } from '../../components/ui/BatchUploadDialog';
+import type { UploadResult } from '../../services/BatchUploadController';
 
 // IMPORT DATA
 import type { Student } from '../../data/studentsData';
@@ -55,6 +57,13 @@ export function StudentsTab() {
 
   const handleInputChange = (field: string, value: string) => {
     setNewStudent(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBatchUploadComplete = (result: UploadResult) => {
+    if (result.success && result.data) {
+      // Add imported students to the list
+      setStudents(prevStudents => [...(result.data as Student[]), ...prevStudents]);
+    }
   };
 
   // HANDLE SUBMIT FUNCTION for creating a new student
@@ -189,10 +198,13 @@ export function StudentsTab() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button variant="outline">
-            <Upload className="w-4 h-4 mr-2" />
-            Batch Upload
-          </Button>
+          <BatchUploadDialog
+            type="students"
+            existingStudents={students}
+            availablePrograms={availablePrograms}
+            availableSections={availableSections}
+            onUploadComplete={handleBatchUploadComplete}
+          />
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 
-import { Plus, Search, Edit, Trash2, Upload, MoreVertical } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MoreVertical } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -21,6 +21,8 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
+import { BatchUploadDialog } from '../../components/ui/BatchUploadDialog';
+import type { UploadResult } from '../../services/BatchUploadController';
 
 // IMPORT PROGRAMS DATA for dropdown population
 import { initialProgramsData } from '../../data/programsData';
@@ -44,6 +46,13 @@ export function SectionsTab() {
 
   const handleInputChange = (field: string, value: string) => {
     setNewSection(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBatchUploadComplete = (result: UploadResult) => {
+    if (result.success && result.data) {
+      // Add imported sections to the list
+      setSections(prevSections => [...(result.data as Section[]), ...prevSections]);
+    }
   };
 
   // HANDLE SUBMIT FUNCTION for creating a new section
@@ -165,10 +174,12 @@ export function SectionsTab() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button variant="outline">
-            <Upload className="w-4 h-4 mr-2" />
-            Batch Upload
-          </Button>
+          <BatchUploadDialog
+            type="sections"
+            existingSections={sections}
+            availablePrograms={availablePrograms}
+            onUploadComplete={handleBatchUploadComplete}
+          />
         </div>
       </div>
 

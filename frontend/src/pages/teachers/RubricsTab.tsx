@@ -9,6 +9,12 @@ import {
   Plus, Upload, FileCheck, Edit, // Icons for creation options
   MoreVertical, X, Settings, ClipboardList, Check, Trash2, // Utility Icons
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
 
 // --- DATA IMPORTS (MOCK DATA ASSUMPTIONS) ---
 // Assuming these types and data are available in the project structure
@@ -169,7 +175,7 @@ const RubricPreviewTable = ({ criteriaList }: { criteriaList: typeof initialCrit
                   </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200 bg-white">
-                  {criteriaList.map((criteria, rowIndex) => (
+                  {criteriaList.map((criteria) => (
                       <tr key={criteria.id}>
                           <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 w-1/4">
                               {criteria.title}
@@ -640,9 +646,23 @@ export function RubricsTab() {
                       <p className="text-sm text-neutral-500 mt-1">US English</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4 text-neutral-500" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4 text-neutral-500" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Rubric
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-error-default">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Rubric
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </Card>
                 ))}
@@ -662,9 +682,23 @@ export function RubricsTab() {
                           <p className="text-sm text-neutral-500 mt-1">{rubric.criteria} Criteria | Last Used: {rubric.lastUsed}</p>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4 text-neutral-500" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4 text-neutral-500" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Rubric
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-error-default">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Rubric
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </Card>
                     ))}

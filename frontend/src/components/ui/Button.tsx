@@ -18,9 +18,10 @@ interface ButtonProps {
   loading?: boolean;
   className?: string;
   type?: "button" | "submit" | "reset";
+  asChild?: boolean;
 }
 
-const Button: React.FC<ButtonProps> = ({
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
   onClick,
   variant = "primary",
@@ -29,7 +30,9 @@ const Button: React.FC<ButtonProps> = ({
   loading = false,
   className = "",
   type = "button",
-}) => {
+  asChild,
+  ...props
+}, ref) => {
   const baseClasses =
     "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
@@ -59,16 +62,22 @@ const Button: React.FC<ButtonProps> = ({
     lg: "px-6 py-3 text-lg rounded-rd", // Default: 8px
   };
 
+  const buttonProps = {
+    ref,
+    type,
+    onClick,
+    disabled: disabled || loading,
+    className: `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`,
+    ...(asChild ? {} : {
+      whileHover: { scale: disabled ? 1 : 1.02 },
+      whileTap: { scale: disabled ? 1 : 0.98 },
+      transition: { duration: 0.1 },
+    }),
+    ...props,
+  };
+
   return (
-    <motion.button
-      type={type}
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-      whileHover={{ scale: disabled ? 1 : 1.02 }}
-      whileTap={{ scale: disabled ? 1 : 0.98 }}
-      transition={{ duration: 0.1 }}
-    >
+    <motion.button {...buttonProps}>
       {loading ? (
         <div className="flex items-center">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -79,6 +88,8 @@ const Button: React.FC<ButtonProps> = ({
       )}
     </motion.button>
   );
-};
+});
+
+Button.displayName = "Button";
 
 export default Button;
