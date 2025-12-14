@@ -10,7 +10,7 @@ import AssignmentManagement from "./pages/AssignmentManagement";
 import Gradebook from "./pages/Gradebook";
 import Students from "./pages/Students";
 import Settings from "./pages/Settings";
-import ClientLayout from "./layout/ClientLayout";
+import TeacherLayout from "./layout/TeacherLayout.tsx";
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 import SectionsList from "./pages/SectionsList";
@@ -30,6 +30,7 @@ import { MetricsTab } from "./pages/teachers/MetricsTab.tsx";
 import { ProgramsTab } from "./pages/teachers/ProgramsTab.tsx";
 import { RubricsTab } from "./pages/teachers/RubricsTab.tsx";
 import { SectionsTab } from "./pages/teachers/SectionsTab.tsx";
+import Login from "./pages/Login.tsx";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -62,13 +63,14 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/About" element={<About />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
+        <Route path="/Login" element={<Login />} />
         <Route
           path="/Dashboard"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <DashboardTab />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -76,9 +78,9 @@ const AppContent: React.FC = () => {
           path="/Dashboard_v2"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <Dashboard_v2 />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -86,9 +88,9 @@ const AppContent: React.FC = () => {
           path="/EssayManagement"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <EssayManagement />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -96,9 +98,9 @@ const AppContent: React.FC = () => {
           path="/ClassManagement"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <ClassManagement />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -106,9 +108,9 @@ const AppContent: React.FC = () => {
           path="/EssayActivity"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <EssayActivity />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -116,9 +118,9 @@ const AppContent: React.FC = () => {
           path="/AssignmentManagement"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <AssignmentManagement />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -126,9 +128,9 @@ const AppContent: React.FC = () => {
           path="/Gradebook"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <Gradebook />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -136,9 +138,9 @@ const AppContent: React.FC = () => {
           path="/Settings"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <SettingsTab/>
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -146,9 +148,9 @@ const AppContent: React.FC = () => {
           path="/Students"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <StudentsTab/>
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -156,9 +158,9 @@ const AppContent: React.FC = () => {
           path="/EssaySubmissions"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <EssaysTab/>
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -166,9 +168,9 @@ const AppContent: React.FC = () => {
           path="/Metrics"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <MetricsTab />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -176,9 +178,9 @@ const AppContent: React.FC = () => {
           path="/Programs"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <ProgramsTab />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -186,9 +188,9 @@ const AppContent: React.FC = () => {
           path="/Rubrics"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <RubricsTab />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -196,9 +198,9 @@ const AppContent: React.FC = () => {
           path="/Blocks"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <SectionsTab />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />
@@ -206,9 +208,9 @@ const AppContent: React.FC = () => {
           path="/SectionsList"
           element={
             <ProtectedRoute>
-              <ClientLayout>
+              <TeacherLayout>
                 <SectionsList />
-              </ClientLayout>
+              </TeacherLayout>
             </ProtectedRoute>
           }
         />

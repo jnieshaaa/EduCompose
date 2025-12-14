@@ -1,5 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { userApi } from "../api";
+
+// --- FIX: ADD DESIGN MODE CONSTANTS AND EXPORT THEM ---
+export const DESIGN_MODE_ENABLED = true;
+export const DESIGN_MODE_TOKEN = "DESIGN_MODE_AUTH_TOKEN";
+export const DESIGN_MODE_USER = {
+  id: 1,
+  email: "demo@educompose.com",
+  username: "demo_user",
+  full_name: "Demo Teacher",
+  role: "teacher",
+  is_active: true,
+  email_verified: true,
+};
+// ----------------------------------------------------
 
 interface User {
   id: number;
@@ -120,4 +135,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

@@ -2,7 +2,7 @@ import React from "react";
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "error" | "info" | "neutral" | "outline"; // <-- FIX: Added 'outline'
+  variant?: "default" | "success" | "warning" | "error" | "info" | "neutral" | "outline"; 
   size?: "sm" | "md" | "lg";
   className?: string;
 }

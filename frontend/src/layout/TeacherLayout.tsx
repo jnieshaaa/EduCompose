@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import ClientSidebar from "../components/ClientSidebar";
-import Header from "../components/Header";
+import TeacherSidebar from "../components/TeacherSidebar";
+import TeacherHeader from "../components/TeacherHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
 
-const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
+const TeacherLayout: React.FC<{ children?: React.ReactNode }> = ({
   children,
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -14,13 +14,13 @@ const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
 
   return (
     <div className="flex h-screen">
-      <ClientSidebar
+      <TeacherSidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
       <div className="flex-1 flex flex-col">
-        <Header onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
+        <TeacherHeader onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} role="Teacher" />
         <Breadcrumb />
 
         <main className="flex-1 overflow-y-auto bg-neutral-300/10 px-6 py-6">
@@ -31,4 +31,4 @@ const ClientLayout: React.FC<{ children?: React.ReactNode }> = ({
   );
 };
 
-export default ClientLayout;
+export default TeacherLayout;

@@ -22,26 +22,68 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 
-const sectionsData = [
-  { id: 1, name: 'Section A', program: 'Computer Science 101', term: 'Fall 2025', students: 25, essays: 48 },
-  { id: 2, name: 'Section B', program: 'Computer Science 101', term: 'Fall 2025', students: 28, essays: 52 },
-  { id: 3, name: 'Section A', program: 'Data Structures', term: 'Fall 2025', students: 26, essays: 45 },
-  { id: 4, name: 'Section B', program: 'Data Structures', term: 'Fall 2025', students: 24, essays: 41 },
-  { id: 5, name: 'Section A', program: 'Web Development', term: 'Fall 2025', students: 30, essays: 58 },
-  { id: 6, name: 'Section B', program: 'Web Development', term: 'Fall 2025', students: 22, essays: 39 },
-  { id: 7, name: 'Section A', program: 'Machine Learning', term: 'Fall 2025', students: 27, essays: 49 },
-  { id: 8, name: 'Section A', program: 'Database Systems', term: 'Fall 2025', students: 23, essays: 42 },
-];
+// IMPORT PROGRAMS DATA for dropdown population
+import { initialProgramsData } from '../../data/programsData';
+
+// IMPORT SECTIONS DATA and TYPE
+import type { Section } from '../../data/sectionsData';
+import { initialSectionsData, initialNewSectionState } from '../../data/sectionsData';
+
 
 export function SectionsTab() {
+  // STATE: Main list of sections
+  const [sections, setSections] = useState<Section[]>(initialSectionsData);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newSection, setNewSection] = useState(initialNewSectionState);
+  const [programFilter, setProgramFilter] = useState('All Programs');
+  const [termFilter, setTermFilter] = useState('All Terms');
 
-  const filteredSections = sectionsData.filter(section =>
-    section.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    section.program.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    section.term.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Helper to get course names from the Programs list for dropdowns
+  const availablePrograms = initialProgramsData.map(p => p.name);
+
+  const handleInputChange = (field: string, value: string) => {
+    setNewSection(prev => ({ ...prev, [field]: value }));
+  };
+
+  // HANDLE SUBMIT FUNCTION for creating a new section
+  const handleCreateSection = () => {
+    // 1. Validation
+    if (!newSection.name || newSection.program === 'Select Program' || !newSection.term || parseInt(newSection.students) <= 0) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    // 2. Create the new section object
+    const newSectionObject: Section = {
+      id: sections.length > 0 ? Math.max(...sections.map(s => s.id)) + 1 : 1,
+      name: newSection.name,
+      program: newSection.program,
+      term: newSection.term,
+      students: parseInt(newSection.students, 10), 
+      essays: 0, // New sections start with 0 essays
+    };
+
+    // 3. Add to the list (prepending for visibility)
+    setSections(prevSections => [newSectionObject, ...prevSections]);
+
+    // 4. Reset form and close dialog
+    setNewSection(initialNewSectionState);
+    setIsAddDialogOpen(false);
+  };
+
+  // Filter Logic
+  const filteredSections = sections.filter(section => {
+    const matchesSearch = 
+      section.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      section.program.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      section.term.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesProgram = programFilter === 'All Programs' || section.program === programFilter;
+    const matchesTerm = termFilter === 'All Terms' || section.term === termFilter;
+
+    return matchesSearch && matchesProgram && matchesTerm;
+  });
 
   return (
     <div className="space-y-6">
@@ -56,43 +98,69 @@ export function SectionsTab() {
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary-300">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Section
+                Add Block
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Section</DialogTitle>
+                <DialogTitle>Add New Block</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div>
-                  <Label htmlFor="section-name">Section Name</Label>
-                  {/* Note: Input usage in dialog is currently uncontrolled (missing value/onChange). 
-                      If InputProps requires them, you'll get more errors. 
-                      Assuming InputProps were made optional in the last step. */}
-                  <Input id="section-name" placeholder="e.g., Section A" className="mt-1" />
+                  <Label htmlFor="section-name">Block Name</Label>
+                  {/* Controlled Input */}
+                  <Input 
+                    id="section-name" 
+                    placeholder="e.g., Section A" 
+                    className="mt-1" 
+                    value={newSection.name}
+                    onChange={(value) => handleInputChange('name', value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="section-program">Program</Label>
-                  <select id="section-program" className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-rd">
-                    <option>Select Program</option>
-                    <option>Computer Science 101</option>
-                    <option>Data Structures</option>
-                    <option>Web Development</option>
-                    <option>Machine Learning</option>
-                    <option>Database Systems</option>
+                  <select 
+                    id="section-program" 
+                    className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-rd"
+                    value={newSection.program}
+                    onChange={(e) => handleInputChange('program', e.target.value)}
+                  >
+                    <option value="Select Program">Select Program</option>
+                    {/* PROGRAM DATA INTEGRATION */}
+                    {availablePrograms.map(program => (
+                      <option key={program} value={program}>{program}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <Label htmlFor="section-term">Academic Term</Label>
-                  <Input id="section-term" placeholder="e.g., Fall 2025" className="mt-1" />
+                   {/* Controlled Input */}
+                  <Input 
+                    id="section-term" 
+                    placeholder="e.g., Fall 2025" 
+                    className="mt-1" 
+                    value={newSection.term}
+                    onChange={(value) => handleInputChange('term', value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="section-students">Expected Students</Label>
-                  <Input id="section-students" type="number" placeholder="0" className="mt-1" />
+                  {/* Controlled Input */}
+                  <Input 
+                    id="section-students" 
+                    type="number" 
+                    placeholder="0" 
+                    className="mt-1" 
+                    value={newSection.students}
+                    onChange={(value) => handleInputChange('students', value)}
+                  />
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button className="bg-primary hover:bg-primary-300">Create Section</Button>
+                  {/* Attach handler to create button */}
+                  <Button className="bg-primary hover:bg-primary-300" onClick={handleCreateSection}>
+                    Create Block
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -113,21 +181,31 @@ export function SectionsTab() {
               type="search"
               placeholder="Search sections..."
               value={searchQuery}
-              // FIX: Use the string value directly, not e.target.value
               onChange={setSearchQuery} 
               className="pl-10"
             />
           </div>
-          <select className="px-3 py-2 border border-neutral-300 rounded-rd">
-            <option>All Programs</option>
-            <option>Computer Science 101</option>
-            <option>Data Structures</option>
-            <option>Web Development</option>
+          {/* PROGRAM FILTER INTEGRATION */}
+          <select 
+            className="px-3 py-2 border border-neutral-300 rounded-rd"
+            value={programFilter}
+            onChange={(e) => setProgramFilter(e.target.value)}
+          >
+            <option value="All Programs">All Programs</option>
+            {availablePrograms.map(program => (
+              <option key={program} value={program}>{program}</option>
+            ))}
           </select>
-          <select className="px-3 py-2 border border-neutral-300 rounded-rd">
-            <option>All Terms</option>
-            <option>Fall 2025</option>
-            <option>Spring 2025</option>
+          <select 
+            className="px-3 py-2 border border-neutral-300 rounded-rd"
+            value={termFilter}
+            onChange={(e) => setTermFilter(e.target.value)}
+          >
+            <option value="All Terms">All Terms</option>
+            {/* Hardcoded terms for now, can be dynamically fetched later */}
+            <option value="Fall 2025">Fall 2025</option>
+            <option value="Spring 2025">Spring 2025</option>
+            <option value="Summer 2025">Summer 2025</option>
           </select>
         </div>
       </Card>
@@ -176,14 +254,16 @@ export function SectionsTab() {
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
+                    {/* NOTE: You should ensure your DropdownMenuContent in the shared UI component 
+                             handles the portal rendering correctly to fix the display issue you had in ProgramsTab. */}
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>
                         <Edit className="w-4 h-4 mr-2" />
-                        Edit Section
+                        Edit Block
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-error-default">
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Section
+                        Delete Block
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -5,6 +5,7 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
+  id?: string;
   onClick?: () => void;
 }
 

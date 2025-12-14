@@ -2,23 +2,28 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
   FileText,
-  Layers,
+  // Layers,
   // BarChart3,
   // Users,
   // GraduationCap,
   // ClipboardList,
   // Award,
   Info,
-  BookOpen,
-  Target,
-  Zap,
-  Shield,
-  // LayoutDashboard, 
-  Users, 
-  ClipboardCheck, 
-  BarChart3, 
+  // BookOpen,
+  // Target,
+  // Zap,
+  // Shield,
+  // LayoutDashboard,
+  // Users,
+  ClipboardCheck,
+  // BarChart3,
   Settings,
-  X
+  // X,
+  LayoutDashboard, // New icon for student dashboard
+  Upload, // New icon for submit essay
+  MessageSquare, // New icon for AI Feedback
+  TrendingUp, // New icon for Progress & Analytics
+  Bell, // New icon for Notifications
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,13 +37,14 @@ interface MenuItem {
   path: string;
 }
 
-interface ClientSidebarProps {
+interface StudentSidebarProps {
   children?: React.ReactNode;
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const ClientSidebar: React.FC<ClientSidebarProps> = ({
+// Renamed component from ClientSidebar to StudentSidebar
+const StudentSidebar: React.FC<StudentSidebarProps> = ({
   children,
   isSidebarOpen,
   setIsSidebarOpen,
@@ -50,63 +56,49 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Updated menu items for the student role
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
-        icon: <Home className='w-5 h-5' />,
+        icon: <LayoutDashboard className='w-5 h-5' />,
         label: "Dashboard",
-        path: "/Dashboard",
+        path: "/Student/Dashboard", 
       },
       {
-        icon: <BookOpen className='w-5 h-5' />,
-        label: "Programs",
-        path: "/Programs",
-      },
-      {
-        icon: <Layers className='w-5 h-5' />,
-        label: "Blocks / Sections",
-        path: "/Blocks",
-      },
-      {
-        icon: <Users className='w-5 h-5' />,
-        label: "Students",
-        path: "/Students",
+        icon: <Upload className='w-5 h-5' />,
+        label: "Submit Essay",
+        path: "/Student/Submit", 
       },
       {
         icon: <FileText className='w-5 h-5' />,
-        label: "Essay Submissions",
-        path: "/EssaySubmissions",
+        label: "My Essays",
+        path: "/Student/Essays",
+      },
+      {
+        icon: <MessageSquare className='w-5 h-5' />,
+        label: "AI Feedback",
+        path: "/Student/Feedback",
+      },
+      {
+        icon: <TrendingUp className='w-5 h-5' />,
+        label: "Progress & Analytics",
+        path: "/Student/Progress",
       },
       {
         icon: <ClipboardCheck className='w-5 h-5' />,
-        label: "Rubrics / Criteria",
-        path: "/Rubrics",
+        label: "Rubric / Criteria",
+        path: "/Student/Rubric",
       },
       {
-        icon: <BarChart3 className='w-5 h-5' />,
-        label: "Metrics",
-        path: "/Metrics",
+        icon: <Bell className='w-5 h-5' />,
+        label: "Notifications",
+        path: "/Student/Notifications",
       },
       {
         icon: <Settings className='w-5 h-5' />,
         label: "Settings",
-        path: "/Settings",
+        path: "/Student/Settings",
       },
-      // {
-      //   icon: <ClipboardList className='w-5 h-5' />,
-      //   label: "Assignments",
-      //   path: "/AssignmentManagement",
-      // },
-      // {
-      //   icon: <Award className='w-5 h-5' />,
-      //   label: "Gradebook",
-      //   path: "/Gradebook",
-      // },
-      // {
-      //   icon: <BarChart3 className='w-5 h-5' />,
-      //   label: "Analytics",
-      //   path: "/Analytics",
-      // },
     ],
     []
   );
@@ -123,7 +115,8 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     const currentItem = menuItems.find(
       (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
     );
-    document.title = currentItem ? currentItem.label : "EduCompose";
+    // Title updated to reflect Student context
+    document.title = currentItem ? currentItem.label : "EduCompose Student";
   }, [location.pathname, menuItems]);
 
   useEffect(() => {
@@ -184,7 +177,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                     EduCompose
                   </h1>
                   <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
-                    Teacher's Companion for Essay Evaluation
+                    Student Portal for Essay Evaluation
                   </p>
                 </motion.div>
               </AnimatePresence>
@@ -289,7 +282,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         {children}
       </main>
 
-      {/* Info Modal */}
+      {/* Info Modal - Reused from ClientSidebar */}
       <Modal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
@@ -320,53 +313,49 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
               <div className='flex items-center space-x-3 mb-2'>
-                <BookOpen className='w-6 h-6 text-primary' />
+                <Upload className='w-6 h-6 text-primary' />
                 <h4 className='font-semibold text-neutral-900'>
-                  Essay Management
+                  Essay Submission
                 </h4>
               </div>
               <p className='text-sm text-neutral-600'>
-                Streamline essay collection, organization, and grading with our
-                intuitive management system.
+                Easily submit your essays and track their status through the portal.
               </p>
             </div>
 
             <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
               <div className='flex items-center space-x-3 mb-2'>
-                <Target className='w-6 h-6 text-primary' />
+                <MessageSquare className='w-6 h-6 text-primary' />
                 <h4 className='font-semibold text-neutral-900'>
-                  Smart Analytics
+                  AI-Powered Feedback
                 </h4>
               </div>
               <p className='text-sm text-neutral-600'>
-                Get detailed insights into student performance and writing
-                patterns with advanced analytics.
+                Receive instant, constructive feedback on your writing to help you improve.
               </p>
             </div>
 
             <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
               <div className='flex items-center space-x-3 mb-2'>
-                <Zap className='w-6 h-6 text-primary' />
+                <TrendingUp className='w-6 h-6 text-primary' />
                 <h4 className='font-semibold text-neutral-900'>
-                  Quick Grading
+                  Track Progress
                 </h4>
               </div>
               <p className='text-sm text-neutral-600'>
-                Accelerate your grading process with automated tools and
-                customizable rubrics.
+                Visualize your improvement over time with detailed progress and analytics.
               </p>
             </div>
 
             <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
               <div className='flex items-center space-x-3 mb-2'>
-                <Shield className='w-6 h-6 text-primary' />
+                <ClipboardCheck className='w-6 h-6 text-primary' />
                 <h4 className='font-semibold text-neutral-900'>
-                  Secure Platform
+                  View Rubrics
                 </h4>
               </div>
               <p className='text-sm text-neutral-600'>
-                Your data and student information are protected with
-                enterprise-grade security.
+                Understand the grading criteria for each assignment to meet expectations.
               </p>
             </div>
           </div>
@@ -384,7 +373,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
               </div>
               <div className='text-right'>
                 <p className='text-xs text-neutral-600'>
-                  Made with ❤️ for educators
+                  Made with for educators and students
                 </p>
               </div>
             </div>
@@ -395,4 +384,4 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   );
 };
 
-export default ClientSidebar;
+export default StudentSidebar;
