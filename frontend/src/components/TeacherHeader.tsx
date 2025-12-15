@@ -4,13 +4,14 @@ import {
   X,
   Settings,
   LogOut,
-  Bell, // New: for notifications
   Search, // New: for the search bar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
+import { NotificationDropdown } from "./ui/NotificationDropdown";
+import { teacherNotifications } from "../data/notificationsData";
 
 // Updated interface to include the user's role
 interface TeacherHeaderProps {
@@ -27,6 +28,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [notifications, setNotifications] = useState(teacherNotifications);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
@@ -36,16 +38,24 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   // New state for search input
   const [searchTerm, setSearchTerm] = useState("");
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
+
   const routeLabels: Record<string, string> = {
-    "/Dashboard": "Dashboard",
-    "/Programs": "Programs", // Updated path from Sidebar.tsx
-    "/Blocks": "Blocks / Sections", // Updated path from Sidebar.tsx
-    "/Students": "Students", // Updated path from Sidebar.tsx
-    "/EssaySubmissions": "Essay Submissions", // Updated path from Sidebar.tsx
-    "/Rubrics": "Rubrics / Criteria", // Updated path from Sidebar.tsx
-    "/Metrics": "Metrics", // Updated path from Sidebar.tsx
-    "/Settings": "Settings", // Updated path from Sidebar.tsx
-    // Add student paths if needed, e.g., "/Student/Dashboard": "Dashboard"
+    "/Teacher/Dashboard": "Dashboard",
+    "/Teacher/Programs": "Programs",
+    "/Teacher/Sections": "Blocks / Sections",
+    "/Teacher/Students": "Students",
+    "/Teacher/Essays": "Essay Submissions",
+    "/Teacher/Rubrics": "Rubrics / Criteria",
+    "/Teacher/Metrics": "Metrics",
+    "/Teacher/Settings": "Settings",
+    "/Teacher/Notifications": "Notifications",
   };
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";
@@ -154,12 +164,13 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
       {/* 3. Right Section: Notifications and User Profile (Updated Design) */}
       <div className='flex items-center space-x-4 w-1/4 justify-end relative'>
-        {/* Notification Bell */}
-        <button className='p-2 rounded-full hover:bg-neutral-300/30 transition-colors relative'>
-          <Bell className='w-6 h-6 text-neutral-900' />
-          {/* Optional: Add a badge for unread notifications */}
-          {/* <span className="absolute top-1 right-1 w-2 h-2 bg-error-default rounded-full" /> */}
-        </button>
+        {/* Notification Dropdown */}
+        <NotificationDropdown
+          notifications={notifications}
+          unreadCount={unreadCount}
+          role="Teacher"
+          onMarkAsRead={handleMarkAsRead}
+        />
 
         {/* User Profile Container (Updated Design) */}
         <div
@@ -204,7 +215,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
                     <button
                       className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-100 text-neutral-900 w-full text-left transition-colors'
                       onClick={() => {
-                        navigate("/Settings");
+                        navigate("/Teacher/Settings");
                         setIsDropdownOpen(false);
                       }}
                     >

@@ -4,13 +4,14 @@ import {
   X,
   Settings,
   LogOut,
-  Bell, // New: for notifications
   Search, // New: for the search bar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
+import { NotificationDropdown } from "./ui/NotificationDropdown";
+import { studentNotifications } from "../data/notificationsData";
 
 // Updated interface to include the user's role
 interface StudentHeaderProps {
@@ -28,6 +29,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [notifications, setNotifications] = useState(studentNotifications);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
@@ -36,6 +38,14 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   
   // New state for search input
   const [searchTerm, setSearchTerm] = useState("");
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
 
   // Updated route labels for Student paths
   const routeLabels: Record<string, string> = {
@@ -156,10 +166,13 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
 
       {/* 3. Right Section: Notifications and User Profile (Updated Design) */}
       <div className='flex items-center space-x-4 w-1/4 justify-end relative'>
-        {/* Notification Bell */}
-        <button className='p-2 rounded-full hover:bg-neutral-300/30 transition-colors relative'>
-          <Bell className='w-6 h-6 text-neutral-900' />
-        </button>
+        {/* Notification Dropdown */}
+        <NotificationDropdown
+          notifications={notifications}
+          unreadCount={unreadCount}
+          role="Student"
+          onMarkAsRead={handleMarkAsRead}
+        />
 
         {/* User Profile Container (Updated Design) */}
         <div

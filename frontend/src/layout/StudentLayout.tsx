@@ -1,12 +1,11 @@
 import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
 // Import the student-specific components
 import StudentSidebar from "../components/StudentSidebar";
 import StudentHeader from "../components/StudentHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
 
-const StudentLayout: React.FC<{ children?: React.ReactNode }> = ({
-  children,
-}) => {
+const StudentLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -35,7 +34,7 @@ const StudentLayout: React.FC<{ children?: React.ReactNode }> = ({
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto bg-neutral-300/10 px-6 py-6">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

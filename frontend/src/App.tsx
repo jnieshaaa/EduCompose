@@ -12,6 +12,7 @@ import { MetricsTab } from "./pages/teachers/MetricsTab.tsx";
 import { ProgramsTab } from "./pages/teachers/ProgramsTab.tsx";
 import { RubricsTab } from "./pages/teachers/RubricsTab.tsx";
 import { SectionsTab } from "./pages/teachers/SectionsTab.tsx";
+import { NotificationsTab as TeacherNotificationsTab } from "./pages/teachers/NotificationsTab.tsx";
 
 // Import Student Layout and Pages (Placeholders)
 // NOTE: I'm creating a new StudentLayout and placeholder components for the student pages
@@ -111,6 +112,7 @@ const AppContent: React.FC = () => {
           <Route path="Programs" element={<ProgramsTab />} />
           <Route path="Rubrics" element={<RubricsTab />} />
           <Route path="Sections" element={<SectionsTab />} />
+          <Route path="Notifications" element={<TeacherNotificationsTab />} />
           
           {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
           <Route path="Dashboard_v2" element={<Dashboard_v2 />} />

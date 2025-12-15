@@ -1,12 +1,12 @@
 import { useState } from "react";
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
-import { Bell, Check } from 'lucide-react';
-import { studentNotifications, type Notification } from '../../data/notificationsData';
+import Card from "../../components/ui/Card";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import { Bell, Check } from "lucide-react";
+import { teacherNotifications, type Notification } from "../../data/notificationsData";
 
 export function NotificationsTab() {
-  const [notifications, setNotifications] = useState<Notification[]>(studentNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(teacherNotifications);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -20,7 +20,7 @@ export function NotificationsTab() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const getNotificationIcon = () => {
+  const getNotificationIcon = (type: Notification["type"]) => {
     return Bell; // You can customize icons per type
   };
 
@@ -120,3 +120,4 @@ export function NotificationsTab() {
     </div>
   );
 }
+

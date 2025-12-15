@@ -23,7 +23,6 @@ import {
   Upload, // New icon for submit essay
   MessageSquare, // New icon for AI Feedback
   TrendingUp, // New icon for Progress & Analytics
-  Bell, // New icon for Notifications
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,14 +37,12 @@ interface MenuItem {
 }
 
 interface StudentSidebarProps {
-  children?: React.ReactNode;
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Renamed component from ClientSidebar to StudentSidebar
 const StudentSidebar: React.FC<StudentSidebarProps> = ({
-  children,
   isSidebarOpen,
   setIsSidebarOpen,
 }) => {
@@ -74,11 +71,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         label: "My Essays",
         path: "/Student/Essays",
       },
-      {
-        icon: <MessageSquare className='w-5 h-5' />,
-        label: "AI Feedback",
-        path: "/Student/Feedback",
-      },
+      // {
+      //   icon: <MessageSquare className='w-5 h-5' />,
+      //   label: "AI Feedback",
+      //   path: "/Student/Feedback",
+      // },
       {
         icon: <TrendingUp className='w-5 h-5' />,
         label: "Progress & Analytics",
@@ -88,11 +85,6 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         icon: <ClipboardCheck className='w-5 h-5' />,
         label: "Rubric / Criteria",
         path: "/Student/Rubric",
-      },
-      {
-        icon: <Bell className='w-5 h-5' />,
-        label: "Notifications",
-        path: "/Student/Notifications",
       },
       {
         icon: <Settings className='w-5 h-5' />,
@@ -194,7 +186,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
             {menuItems.map((item) => {
-              const isActive = activePath === item.path;
+              const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
+                              activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
               return (
                 <li key={item.label} className='w-full'>
                   <Tooltip
@@ -279,10 +272,6 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-
-      <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
-        {children}
-      </main>
 
       {/* Info Modal - Reused from ClientSidebar */}
       <Modal

@@ -17,8 +17,7 @@ import {
   Users, 
   ClipboardCheck, 
   BarChart3, 
-  Settings,
-  X
+  Settings
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,13 +32,11 @@ interface MenuItem {
 }
 
 interface TeacherSidebarProps {
-  children?: React.ReactNode;
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
-  children,
   isSidebarOpen,
   setIsSidebarOpen,
 }) => {
@@ -55,42 +52,42 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       {
         icon: <Home className='w-5 h-5' />,
         label: "Dashboard",
-        path: "/Dashboard",
+        path: "/Teacher/Dashboard",
       },
       {
         icon: <BookOpen className='w-5 h-5' />,
         label: "Programs",
-        path: "/Programs",
+        path: "/Teacher/Programs",
       },
       {
         icon: <Layers className='w-5 h-5' />,
         label: "Blocks / Sections",
-        path: "/Blocks",
+        path: "/Teacher/Sections",
       },
       {
         icon: <Users className='w-5 h-5' />,
         label: "Students",
-        path: "/Students",
+        path: "/Teacher/Students",
       },
       {
         icon: <FileText className='w-5 h-5' />,
         label: "Essay Submissions",
-        path: "/EssaySubmissions",
+        path: "/Teacher/Essays",
       },
       {
         icon: <ClipboardCheck className='w-5 h-5' />,
         label: "Rubrics / Criteria",
-        path: "/Rubrics",
+        path: "/Teacher/Rubrics",
       },
       {
         icon: <BarChart3 className='w-5 h-5' />,
         label: "Metrics",
-        path: "/Metrics",
+        path: "/Teacher/Metrics",
       },
       {
         icon: <Settings className='w-5 h-5' />,
         label: "Settings",
-        path: "/Settings",
+        path: "/Teacher/Settings",
       },
       // {
       //   icon: <ClipboardList className='w-5 h-5' />,
@@ -201,7 +198,8 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
             {menuItems.map((item) => {
-              const isActive = activePath === item.path;
+              const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
+                              activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
               return (
                 <li key={item.label} className='w-full'>
                   <Tooltip
@@ -286,10 +284,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-
-      <main className='flex-1 h-screen overflow-y-auto bg-neutral2'>
-        {children}
-      </main>
 
       {/* Info Modal */}
       <Modal

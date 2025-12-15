@@ -109,7 +109,8 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
     setIsLoading(true);
 
-    const role = username.toLowerCase().includes("student") ? "student" : "teacher"; // <-- ADD THIS LINE
+    // Determines the role based on username for the demo
+    const role = username.toLowerCase().includes("student") ? "student" : "teacher";
 
     // Demo/offline login: bypass backend and create a local session
     const fakeUser = {
@@ -117,13 +118,21 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
       email: `${username.trim() || "user"}@local.test`,
       username: username.trim() || "user",
       full_name: username.trim() || "User",
-      // role: "teacher", // <-- REMOVE THIS LINE
-      role: role, // <-- USE THE DYNAMIC ROLE HERE
+      role: role, // Use the dynamic role here
       is_active: true,
     };
 
     login("local-demo-token", fakeUser);
-    navigate("/Dashboard");
+
+    // 👇 CORRECTED REDIRECTION LOGIC 👇
+    if (role === "student") {
+      navigate("/Student/Dashboard");
+    } else {
+      // Default to teacher dashboard, as the original logic assumed 'teacher'
+      navigate("/Teacher/Dashboard");
+    }
+    // 👆 END OF FIX 👆
+
     onClose();
     setIsLoading(false);
   };

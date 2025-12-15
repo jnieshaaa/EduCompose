@@ -1,11 +1,10 @@
 import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
 import TeacherSidebar from "../components/TeacherSidebar";
 import TeacherHeader from "../components/TeacherHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
 
-const TeacherLayout: React.FC<{ children?: React.ReactNode }> = ({
-  children,
-}) => {
+const TeacherLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -24,7 +23,7 @@ const TeacherLayout: React.FC<{ children?: React.ReactNode }> = ({
         <Breadcrumb />
 
         <main className="flex-1 overflow-y-auto bg-neutral-300/10 px-6 py-6">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>
