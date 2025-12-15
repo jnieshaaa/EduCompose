@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Upload, FileText, Eye } from "lucide-react";
+import { ArrowRight, BookOpen, Users, Zap } from "lucide-react";
 import {
   motion,
   AnimatePresence,
@@ -16,9 +16,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
-import TextAnalysisModal from "../components/essay/TextAnalysisModal";
-
-const MIN_WORDS = 150;
 
 // --- About Page Interfaces and Constants ---
 interface Entity {
@@ -121,7 +118,6 @@ const COLORS: Record<Entity["type"], string> = {
 const LandingPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [text, setText] = useState("");
   const [showLogin, setShowLogin] = useState(false);
 
   // Show login modal if redirected from a protected route
@@ -129,12 +125,7 @@ const LandingPage: React.FC = () => {
     if (location.state?.from) {
       setShowLogin(true);
     }
-    // Restore text if navigating back from AnalysisResults
-    if (location.state?.text) {
-      setText(location.state.text);
-    }
   }, [location.state]);
-  const [showTextAnalysisModal, setShowTextAnalysisModal] = useState(false);
 
   // --- About Page State Management ---
   const [activeTechStep, setActiveTechStep] = useState<
@@ -162,10 +153,10 @@ const LandingPage: React.FC = () => {
   const chartScaleControls = useAnimation();
   const isChartScaleInView = useInView(chartScaleRef, { amount: 0.3 });
 
-  // Essay box animation
-  const essayBoxRef = useRef<HTMLDivElement>(null);
-  const essayBoxControls = useAnimation();
-  const isEssayBoxInView = useInView(essayBoxRef, { once: false, amount: 0.3 });
+  // Hero section animation
+  const heroRef = useRef<HTMLDivElement>(null);
+  const heroControls = useAnimation();
+  const isHeroInView = useInView(heroRef, { once: false, amount: 0.3 });
 
   // Tech steps animation refs and controls
   const techStepsRef = useRef<HTMLDivElement>(null);
@@ -199,21 +190,22 @@ const LandingPage: React.FC = () => {
     }
   }, [isChartScaleInView, chartScaleControls]);
 
-  // Essay box animation - animates once when in view, fades out when leaving
+  // Hero section animation
   useEffect(() => {
-    if (isEssayBoxInView) {
-      essayBoxControls.start({
+    if (isHeroInView) {
+      heroControls.start({
         opacity: 1,
         y: 0,
         transition: { duration: 0.8, ease: "easeOut" },
       });
     } else {
-      essayBoxControls.start({
+      heroControls.start({
         opacity: 0,
+        y: 20,
         transition: { duration: 0.5, ease: "easeOut" },
       });
     }
-  }, [isEssayBoxInView, essayBoxControls]);
+  }, [isHeroInView, heroControls]);
 
   // Tech steps animation - scales down when in view, resets instantly when out
   useEffect(() => {
@@ -289,33 +281,8 @@ const LandingPage: React.FC = () => {
     gapItem3Controls,
   ]);
 
-  const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-  const charCount = text.length;
-
-  // Determine button text and behavior
-  const showViewResult = false; // Always show analyze button
-
-  const handleAnalyze = async () => {
-    if (!text.trim()) {
-      // Show error in a simple way or just return
-      return;
-    }
-
-    // Navigate to AnalysisResults page with text in state
-    // The loading will happen on the AnalysisResults page
-    navigate("/AnalysisResults", {
-      state: {
-        text: text,
-        title: "Essay Analysis",
-      },
-    });
-  };
-
-  const handleViewResult = () => {
-    // Open the modal to view results
-    if (text.trim()) {
-      setShowTextAnalysisModal(true);
-    }
+  const handleGetStarted = () => {
+    navigate("/AnalyzeEssay");
   };
 
   // --- About Page Functions ---
@@ -834,123 +801,107 @@ const LandingPage: React.FC = () => {
       {showLogin && <AuthModal onClose={() => setShowLogin(false)} />}
 
       {/* Hero Section */}
-      <div id="hero">
+      <div id="hero" className="min-h-screen flex items-center justify-center py-20">
         <motion.div
+          ref={heroRef}
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          animate={heroControls}
+          className="container mx-auto px-4 lg:px-6 xl:px-8"
         >
-          <div className="mx-auto px-4 lg:px-6 xl:px-8">
-            <div className="flex flex-col items-center justify-center gap-3 lg:gap-3 w-full max-w-[90vw] my-10 m-auto">
-              <motion.div
-                ref={essayBoxRef}
-                initial={{ opacity: 0, y: 30 }}
-                animate={essayBoxControls}
-                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl mx-auto h-[70vh] mb-5 flex flex-col"
+          <div className="max-w-5xl mx-auto text-center">
+            {/* Main Heading */}
+            <motion.h1
+              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              Empowering Educators with
+              <br />
+              <span className="text-cyan-600">AI-Driven Essay Analysis</span>
+            </motion.h1>
+
+            {/* Subheading */}
+            <motion.p
+              className="text-xl md:text-2xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay
+              Evaluation. Provide deeper, more effective feedback on student
+              writing without replacing the human touch.
+            </motion.p>
+
+            {/* CTA Buttons */}
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+              <button
+                onClick={handleGetStarted}
+                className="bg-primary text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center gap-2 text-lg hover:bg-primary-100 hover:shadow-xl hover:scale-105 transform"
               >
-                <div className="relative flex-1">
-                  <textarea
-                    placeholder="Paste your essay here to get started..."
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="w-full h-full border-none focus:ring-0 text-gray-800 placeholder-gray-400 resize-none outline-none text-lg leading-relaxed px-2 py-3"
-                    style={{
-                      overflowY: "auto",
-                    }}
-                  />
-                </div>
-
-                <div className="flex justify-between items-center pt-2 border-t border-neutral-100">
-                  <div className="px-3 py-2 rounded text-sm">
-                    <span
-                      className={`font-semibold ${
-                        wordCount >= MIN_WORDS
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {wordCount}
-                    </span>
-                    <span className="text-gray-500"> Words </span>
-                    <span className="text-gray-500">
-                      {charCount} Characters
-                    </span>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <label className="hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm">
-                      <Upload className="w-4 h-4" />
-                      Upload
-                      <input
-                        type="file"
-                        accept=".txt,.doc,.docx"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const content = event.target?.result as string;
-                            setText(content);
-                          };
-                          reader.readAsText(file);
-                        }}
-                      />
-                    </label>
-
-                    <button
-                      onClick={
-                        showViewResult ? handleViewResult : handleAnalyze
-                      }
-                      className={`font-semibold px-6 py-2.5 rounded-full transition-all duration-300 flex items-center gap-2 text-sm ${
-                        !showViewResult && wordCount < MIN_WORDS
-                          ? "bg-neutral-300/50"
-                          : "bg-primary text-white transform hover:bg-primary-100 hover:shadow-lg "
-                      }`}
-                    >
-                      {showViewResult ? (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          View Result
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          Analyze Essay
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Text Analysis Modal for word requirement guide */}
-              <TextAnalysisModal
-                isOpen={showTextAnalysisModal}
-                onClose={() => setShowTextAnalysisModal(false)}
-                text={text}
-                title="Essay Analysis"
-              />
-
-              {/* Hero Section Description */}
-              <motion.div
-                id="hero-bottom"
-                className="container mx-auto px-6 text-center mt-6"
-                initial={{ opacity: 0 }}
-                animate={essayBoxControls}
+                Analyze Essay Now
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => {
+                  const challengeSection = document.getElementById("challenge");
+                  challengeSection?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="bg-white text-gray-700 font-semibold px-8 py-4 rounded-full transition-all duration-300 border-2 border-gray-300 hover:border-primary hover:text-primary hover:shadow-lg"
               >
-                <p className="text-xl md:text-2xl">
-                  Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay
-                  Evaluation
+                Learn More
+              </button>
+            </motion.div>
+
+            {/* Feature Highlights */}
+            <motion.div
+              className="grid md:grid-cols-3 gap-6 mt-16"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+            >
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+                <div className="bg-cyan-100 w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <Zap className="w-6 h-6 text-cyan-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Fast Analysis</h3>
+                <p className="text-gray-600">
+                  Get comprehensive essay analysis in seconds, saving hours of
+                  grading time.
                 </p>
-                <p className="mt-4 max-w-3xl mx-auto text-lg">
-                  Empowering educators with AI-driven insights to provide
-                  deeper, more effective feedback on student writing, without
-                  replacing the human touch.
+              </div>
+
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <BookOpen className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  Deep Insights
+                </h3>
+                <p className="text-gray-600">
+                  Analyze argument strength, coherence, and clarity beyond
+                  surface-level grammar.
                 </p>
-              </motion.div>
-            </div>
+              </div>
+
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+                <div className="bg-indigo-100 w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <Users className="w-6 h-6 text-indigo-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  Teacher-Centered
+                </h3>
+                <p className="text-gray-600">
+                  Designed to augment your expertise, not replace your
+                  professional judgment.
+                </p>
+              </div>
+            </motion.div>
           </div>
         </motion.div>
       </div>

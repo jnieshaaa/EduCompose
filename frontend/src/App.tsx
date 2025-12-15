@@ -46,6 +46,7 @@ import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
+import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
 import Login from "./pages/Login.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
@@ -85,6 +86,7 @@ const AppContent: React.FC = () => {
         {/* 1. General Routes (No Layout / Public Access) */}
         {/* ======================================================= */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/AnalyzeEssay" element={<AnalyzeEssay />} />
         <Route path="/About" element={<About />} />
         <Route path="/Login" element={<Login />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
