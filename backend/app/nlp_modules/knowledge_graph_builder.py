@@ -81,7 +81,7 @@ class KnowledgeGraphBuilder:
         return results
     
     def _extract_concepts(self, text: str) -> List[Dict[str, Any]]:
-        """Extract key concepts from text using NLP"""
+        """Extract key concepts from text using NLP with enhanced sensitivity to narrative details"""
         concepts = []
         self._ensure_nlp_loaded()
         
@@ -98,6 +98,19 @@ class KnowledgeGraphBuilder:
                     })
             return concepts
         
+        # Text cleaning: normalize multiple spaces and handle typos
+        text = re.sub(r'\s+', ' ', text)  # Normalize multiple spaces to single space
+        text = text.strip()  # Remove leading/trailing whitespace
+        
+        # Blocklist of generic academic terms to filter out
+        generic_terms = {
+            "essay", "paragraph", "conclusion", "student", "students", "teacher", "teachers",
+            "paper", "assignment", "class", "classes", "course", "courses", "school",
+            "example", "examples", "thing", "things", "way", "ways", "time", "times",
+            "year", "years", "day", "days", "week", "weeks", "people", "person",
+            "place", "places", "idea", "ideas", "point", "points", "topic", "topics"
+        }
+        
         doc = self.nlp(text)
         
         # Extract noun phrases and important entities
@@ -107,43 +120,106 @@ class KnowledgeGraphBuilder:
             if len(chunk.text.split()) <= 3 and len(chunk.text) > 4:
                 noun_phrases.append(chunk.text.lower())
         
-        # Extract named entities
+        # Extract named entities (keep original case for better identification)
         entities = []
+        entity_types = {}  # Track entity types for importance boosting
         for ent in doc.ents:
             if ent.label_ in ["PERSON", "ORG", "GPE", "EVENT", "PRODUCT"]:
-                entities.append(ent.text.lower())
+                ent_text_lower = ent.text.lower()
+                entities.append(ent_text_lower)
+                entity_types[ent_text_lower] = ent.label_
         
-        # Extract important nouns (not stop words)
+        # Extract important nouns (not stop words) - include proper nouns with frequency 1
         important_nouns = []
+        proper_nouns = set()  # Track proper nouns separately (both text and lemma)
         for token in doc:
             if (token.pos_ in ["NOUN", "PROPN"] and 
                 not token.is_stop and 
                 not token.is_punct and
                 len(token.text) > 3):
-                important_nouns.append(token.lemma_.lower())
+                lemma_lower = token.lemma_.lower()
+                text_lower = token.text.lower()
+                # Check if it's a proper noun (PROPN)
+                if token.pos_ == "PROPN":
+                    proper_nouns.add(lemma_lower)
+                    proper_nouns.add(text_lower)  # Also track original text
+                important_nouns.append(lemma_lower)
         
         # Combine and count frequencies
         all_concepts = noun_phrases + entities + important_nouns
         concept_counts = Counter(all_concepts)
         
-        # Select top concepts (by frequency and importance)
-        top_concepts = concept_counts.most_common(20)  # Top 20 concepts
+        # Select top concepts (increased from 20 to 50)
+        top_concepts = concept_counts.most_common(50)
         
+        # Process concepts with enhanced scoring
         for concept_text, frequency in top_concepts:
-            # Calculate importance (TF-IDF-like scoring)
-            importance = frequency * len(concept_text.split())  # Longer phrases might be more important
+            # Skip generic terms
+            if concept_text in generic_terms:
+                continue
+            
+            # Check if it's a named entity (boost importance)
+            is_entity = concept_text in entity_types
+            entity_label = entity_types.get(concept_text)
+            
+            # Check if it's a proper noun (check if concept_text or any word component is in proper_nouns)
+            # Also check original text for capitalization hints
+            concept_words = concept_text.split()
+            is_proper_noun = (concept_text in proper_nouns or 
+                            any(word in proper_nouns for word in concept_words))
+            
+            # Additional check: if concept appears as capitalized in original text, likely proper noun
+            if not is_proper_noun:
+                # Search for concept in original text to check capitalization
+                pattern = r'\b' + re.escape(concept_text) + r'\b'
+                matches = re.finditer(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    matched_text = match.group()
+                    # If the matched text has capital letters, it's likely a proper noun
+                    if matched_text and matched_text[0].isupper():
+                        is_proper_noun = True
+                        proper_nouns.add(concept_text)  # Add to set for future checks
+                        break
+            
+            # Allow frequency of 1 if it's a distinct entity or proper noun (narrative details)
+            if frequency == 1 and not is_entity and not is_proper_noun:
+                continue  # Skip single-occurrence common nouns (but keep entities and proper nouns)
+            
+            # Calculate base importance
+            base_importance = frequency * len(concept_text.split())
+            
+            # Boost importance for named entities (significant boost for narrative details)
+            if is_entity:
+                entity_boost_multiplier = {
+                    "EVENT": 5.0,      # Events like "CCS Summit" are very important
+                    "PERSON": 4.0,     # People mentioned
+                    "ORG": 4.0,        # Organizations
+                    "GPE": 3.5,        # Geographic locations
+                    "PRODUCT": 3.0     # Products like specific items
+                }
+                boost = entity_boost_multiplier.get(entity_label, 2.0)
+                importance = base_importance * boost
+                concept_type = "entity"
+            elif is_proper_noun:
+                # Boost proper nouns (might be names, places, etc.)
+                importance = base_importance * 2.0
+                concept_type = "proper_noun"
+            else:
+                importance = base_importance
+                concept_type = "concept"
             
             concepts.append({
                 "text": concept_text,
                 "frequency": frequency,
                 "importance": importance,
-                "type": "concept"
+                "type": concept_type,
+                "entity_label": entity_label if is_entity else None
             })
         
-        # Sort by importance
+        # Sort by importance (prioritizing entities and proper nouns)
         concepts.sort(key=lambda x: x["importance"], reverse=True)
         
-        return concepts[:15]  # Return top 15 concepts
+        return concepts[:50]  # Return top 50 concepts (increased from 15)
     
     def _extract_relationships(self, text: str, concepts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Extract relationships between concepts"""

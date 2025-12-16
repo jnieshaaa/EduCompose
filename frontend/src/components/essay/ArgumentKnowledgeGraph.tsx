@@ -41,6 +41,23 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
   const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
   const [linkTooltipPos, setLinkTooltipPos] = useState({ x: 0, y: 0 });
+  
+  // Track connected node IDs for hover highlighting
+  const connectedNodeIds = useMemo(() => {
+    if (!hoveredNode || !graphData.links) return new Set<string>();
+    const connected = new Set<string>([hoveredNode.id as string]);
+    graphData.links.forEach((link) => {
+      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+      const targetId = typeof link.target === "object" ? link.target.id : link.target;
+      if (sourceId === hoveredNode.id) {
+        connected.add(targetId as string);
+      }
+      if (targetId === hoveredNode.id) {
+        connected.add(sourceId as string);
+      }
+    });
+    return connected;
+  }, [hoveredNode, graphData.links]);
 
   useEffect(() => {
     if (!containerRef.current || typeof ResizeObserver === "undefined") {
@@ -219,6 +236,11 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   const nodeX = typeof node.x === "number" ? node.x : 0;
                   const nodeY = typeof node.y === "number" ? node.y : 0;
 
+                  // Check if node is connected to hovered node
+                  const nodeId = node.id as string;
+                  const isHighlighted = hoveredNode && connectedNodeIds.has(nodeId);
+                  const isDimmed = hoveredNode && !connectedNodeIds.has(nodeId);
+
                   // Larger nodes based on type
                   const nodeRadius =
                     node.type === "thesis"
@@ -226,6 +248,9 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                       : node.type === "claim"
                       ? 12
                       : 10;
+
+                  // Apply dimming effect for non-connected nodes when hovering
+                  ctx.globalAlpha = isDimmed ? 0.3 : 1.0;
 
                   // Draw node circle with solid color and shadow effect
                   ctx.beginPath();
@@ -250,19 +275,53 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   // Reset fill style
                   ctx.fillStyle = color;
 
-                  // Add white border for contrast
-                  ctx.strokeStyle = "#ffffff";
-                  ctx.lineWidth = 2.5;
+                  // Enhanced border for highlighted nodes
+                  ctx.strokeStyle = isHighlighted ? "#0284c7" : "#ffffff";
+                  ctx.lineWidth = isHighlighted ? 3 : 2.5;
                   ctx.stroke();
+
+                  // Reset alpha
+                  ctx.globalAlpha = 1.0;
 
                   // No text rendered - tooltip will show on hover instead
                 }}
-                linkColor={(link: ForceLink) =>
-                  LINK_COLORS[link.type ?? "supports"] || "#94a3b8"
-                }
-                linkWidth={(link: ForceLink) =>
-                  link.type === "rebuts" ? 2.5 : 1.5
-                }
+                linkColor={(link: ForceLink) => {
+                  // Highlight link if it's connected to hovered node
+                  if (hoveredNode) {
+                    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+                    const targetId = typeof link.target === "object" ? link.target.id : link.target;
+                    const isHighlighted = 
+                      sourceId === hoveredNode.id || targetId === hoveredNode.id;
+                    if (isHighlighted) {
+                      return "#0284c7"; // Highlight color
+                    }
+                  }
+                  return LINK_COLORS[link.type ?? "supports"] || "#94a3b8";
+                }}
+                linkWidth={(link: ForceLink) => {
+                  // Make links thicker when highlighted
+                  if (hoveredNode) {
+                    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+                    const targetId = typeof link.target === "object" ? link.target.id : link.target;
+                    const isHighlighted = 
+                      sourceId === hoveredNode.id || targetId === hoveredNode.id;
+                    if (isHighlighted) {
+                      return link.type === "rebuts" ? 3.5 : 2.5;
+                    }
+                  }
+                  return link.type === "rebuts" ? 2.5 : 1.5;
+                }}
+                linkOpacity={(link: ForceLink) => {
+                  // Dim links not connected to hovered node
+                  if (hoveredNode) {
+                    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+                    const targetId = typeof link.target === "object" ? link.target.id : link.target;
+                    const isHighlighted = 
+                      sourceId === hoveredNode.id || targetId === hoveredNode.id;
+                    return isHighlighted ? 1.0 : 0.3;
+                  }
+                  return 1.0;
+                }}
                 linkDirectionalArrowLength={6}
                 linkDirectionalParticles={0}
                 // Better force simulation parameters
@@ -276,32 +335,22 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               </div>
             )}
 
-            {/* Tooltip for nodes - appears next to node */}
+            {/* Tooltip for nodes - appears next to node (similar to LandingPage style) */}
             {hoveredNode && (
               <div
-                className="absolute z-50 pointer-events-none transition-opacity duration-200"
+                className="absolute z-50 pointer-events-none transition-opacity duration-300"
                 style={{
                   left: `${
-                    dimensions.width / 2 + (hoveredNode.x as number) + 20
+                    dimensions.width / 2 + (hoveredNode.x as number) + 15
                   }px`,
-                  top: `${dimensions.height / 2 + (hoveredNode.y as number)}px`,
-                  transform: "translateY(-50%)",
+                  top: `${dimensions.height / 2 + (hoveredNode.y as number) + 15}px`,
                 }}
               >
-                <div className="bg-neutral-900 text-white text-xs rounded-lg shadow-2xl p-3 max-w-xs border border-neutral-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        backgroundColor:
-                          NODE_COLORS[hoveredNode.type] || "#0f172a",
-                      }}
-                    ></span>
-                    <span className="font-semibold uppercase text-[10px] text-neutral-400 tracking-wide">
-                      {hoveredNode.type}
-                    </span>
+                <div className="bg-black bg-opacity-75 text-white text-sm rounded-md p-2 max-w-xs border border-neutral-700 shadow-xl">
+                  <div className="font-semibold mb-1">
+                    {hoveredNode.type.charAt(0).toUpperCase() + hoveredNode.type.slice(1)}: 
                   </div>
-                  <p className="text-white leading-relaxed text-sm">
+                  <p className="text-white leading-relaxed">
                     {hoveredNode.text || "No text available"}
                   </p>
                 </div>

@@ -9,9 +9,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Lazy import helpers
-from .spacy_utils import load_spacy_model
-
 class ArgumentMiner:
     """Analyzes argumentative structure using Toulmin's model"""
     
@@ -33,13 +30,12 @@ class ArgumentMiner:
             fine_tuned_model_path: Path to fine-tuned model (defaults to backend/my_finetuned_distilbert)
             device: "cuda" or "cpu" (default: "cpu")
         """
-        self.nlp = None
-        # Don't initialize here - wait until first use to avoid import errors at startup
         self.use_transformer_classifier = use_transformer_classifier
         self.use_fine_tuned = use_fine_tuned
         self.fine_tuned_model_path = fine_tuned_model_path
         self.device = device
         self.transformer_classifier = None
+        self._transformer_available = False  # Track if transformer is actually available
         
         # Claim indicators
         self.claim_indicators = [
@@ -81,11 +77,6 @@ class ArgumentMiner:
             "yet", "but", "rather", "instead"
         ]
     
-    def _ensure_nlp_loaded(self):
-        """Ensure spaCy is loaded (lazy loading)"""
-        if self.nlp is None:
-            self.nlp = load_spacy_model("en_core_web_md")
-    
     def _ensure_transformer_classifier_loaded(self):
         """Lazy load transformer-based claim classifier if requested and available"""
         if not self.use_transformer_classifier:
@@ -119,18 +110,28 @@ class ArgumentMiner:
                         "Using pattern-based classification."
                     )
                     self.transformer_classifier = False  # Mark as unavailable
+                    self._transformer_available = False
+                else:
+                    # Transformer is available (DistilBERT or fine-tuned)
+                    self._transformer_available = True
+                    if self.use_fine_tuned:
+                        logger.info("Fine-tuned DistilBERT available")
+                    else:
+                        logger.info("DistilBERT available")
             except ImportError as e:
                 if self.use_fine_tuned:
                     # Caller demanded the fine-tuned transformer; surface the failure
                     raise
                 logger.debug(f"Transformer classifier import failed: {e}")
                 self.transformer_classifier = False  # Mark as unavailable
+                self._transformer_available = False
             except Exception as e:
                 if self.use_fine_tuned:
                     # Do not silently downgrade when fine-tuned is required
                     raise
                 logger.warning(f"Failed to load transformer classifier: {e}. Using pattern-based classification.")
                 self.transformer_classifier = False  # Mark as unavailable
+                self._transformer_available = False
         
         return self.transformer_classifier if self.transformer_classifier is not False else None
     
@@ -161,6 +162,10 @@ class ArgumentMiner:
         
         if not text or len(text.strip()) < 50:
             return results
+        
+        # Ensure transformer is loaded early to set _transformer_available flag
+        if self.use_transformer_classifier:
+            self._ensure_transformer_classifier_loaded()
         
         # Segment text
         paragraphs = self._segment_paragraphs(text)
@@ -215,14 +220,15 @@ class ArgumentMiner:
         return paragraphs
     
     def _segment_sentences(self, text: str) -> List[str]:
-        """Segment text into sentences"""
-        self._ensure_nlp_loaded()
-        if self.nlp:
-            doc = self.nlp(text)
-            return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
-        else:
+        """Segment text into sentences using regex-based splitting"""
+        # Use regex-based sentence splitting (no spaCy dependency)
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = [s.strip() for s in sentences if s.strip() and len(s) > 1]
+        # Also handle cases where punctuation might be missing spaces
+        if not sentences:
             sentences = re.split(r'[.!?]+', text)
-            return [s.strip() for s in sentences if s.strip()]
+            sentences = [s.strip() for s in sentences if s.strip() and len(s) > 1]
+        return sentences
     
     def _identify_thesis(self, paragraphs: List[str]) -> Optional[Dict[str, Any]]:
         """Identify thesis statement, typically in first paragraph"""
@@ -317,10 +323,11 @@ class ArgumentMiner:
                             "classification_method": "transformer"
                         })
                 
-                # If transformer found claims, return them (optionally filter by confidence)
+                # If transformer found claims, use them exclusively
                 if claims:
                     logger.debug(f"Found {len(claims)} claims using transformer classifier")
-                    return claims
+                    if self._transformer_available:
+                        return claims
             except Exception as e:
                 logger.warning(f"Transformer classification failed: {e}. Falling back to pattern matching.")
         
@@ -342,58 +349,6 @@ class ArgumentMiner:
                     })
                     found_indices.add(i)
                     break
-        
-        # Enhanced: Identify topic sentences (first sentence of each paragraph) as potential claims
-        self._ensure_nlp_loaded()
-        if self.nlp:
-            paragraphs = self._segment_paragraphs(text)
-            for para_idx, paragraph in enumerate(paragraphs):
-                para_sentences = self._segment_sentences(paragraph)
-                if para_sentences:
-                    # First sentence of paragraph is often a claim/topic sentence
-                    first_sent = para_sentences[0]
-                    # Find its index in full sentence list
-                    for i, sent in enumerate(sentences):
-                        if first_sent.strip() == sent.strip() and i not in found_indices:
-                            # Check if it's assertive (not a question, has subject-verb structure)
-                            doc = self.nlp(sent)
-                            if len(doc) > 5 and not sent.strip().endswith('?'):
-                                claims.append({
-                                    "sentence_index": i,
-                                    "sentence": sent,
-                                    "indicator": "topic_sentence",
-                                    "type": "claim",
-                                    "classification_method": "structural"
-                                })
-                                found_indices.add(i)
-                            break
-        
-        # Enhanced: Identify assertive statements with strong verbs
-        if self.nlp:
-            assertive_verbs = ["presents", "defines", "demonstrates", "shows", "reveals", 
-                              "requires", "necessitates", "establishes", "creates", "leads to",
-                              "results in", "causes", "amplifies", "manifests"]
-            for i, sentence in enumerate(sentences):
-                if i in found_indices:
-                    continue
-                sentence_lower = sentence.lower()
-                doc = self.nlp(sentence)
-                # Check for assertive verbs
-                has_assertive = any(token.lemma_.lower() in assertive_verbs for token in doc)
-                # Check for declarative structure (not question)
-                is_declarative = not sentence.strip().endswith('?')
-                # Check length (claims are usually substantial)
-                is_substantial = len(doc) >= 8
-                
-                if has_assertive and is_declarative and is_substantial:
-                    claims.append({
-                        "sentence_index": i,
-                        "sentence": sentence,
-                        "indicator": "assertive_statement",
-                        "type": "claim",
-                        "classification_method": "semantic"
-                    })
-                    found_indices.add(i)
         
         return claims
     
@@ -422,7 +377,7 @@ class ArgumentMiner:
                             "classification_method": "transformer"
                         })
                 
-                # If transformer found evidence, use it (but also check pattern-based for completeness)
+                # If transformer found evidence, use it
                 if grounds:
                     logger.debug(f"Found {len(grounds)} evidence statements using transformer classifier")
             except Exception as e:
@@ -451,44 +406,6 @@ class ArgumentMiner:
                     pattern_found_indices.add(i)
                     break
         
-        # Enhanced: Detect examples and concrete instances as evidence
-        self._ensure_nlp_loaded()
-        if self.nlp:
-            example_markers = ["such as", "like", "including", "such as"]
-            concrete_nouns = ["platform", "service", "retailer", "application", "website",
-                            "movie", "product", "content", "option", "choice"]
-            
-            for i, sentence in enumerate(sentences):
-                if i in pattern_found_indices:
-                    continue
-                
-                sentence_lower = sentence.lower()
-                doc = self.nlp(sentence)
-                
-                # Check for example markers
-                has_example_marker = any(marker in sentence_lower for marker in example_markers)
-                
-                # Check for concrete nouns (specific instances)
-                has_concrete = any(token.text.lower() in concrete_nouns for token in doc)
-                
-                # Check for specific details (numbers, proper nouns, specific entities)
-                has_details = any(token.tag_ in ["CD", "NNP", "NNPS"] for token in doc)
-                
-                # Check for temporal indicators (specific time periods)
-                has_temporal = any(word in sentence_lower for word in ["today", "in", "when", "during", "today,"])
-                
-                # Evidence often describes specific scenarios or examples
-                if (has_example_marker or (has_concrete and has_details)) or \
-                   (has_temporal and len([t for t in doc if t.pos_ == "NOUN"]) >= 2):
-                    grounds.append({
-                        "sentence_index": i,
-                        "sentence": sentence,
-                        "indicator": "concrete_instance",
-                        "type": "evidence",
-                        "classification_method": "semantic"
-                    })
-                    pattern_found_indices.add(i)
-        
         return grounds
     
     def _extract_warrants(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
@@ -512,49 +429,49 @@ class ArgumentMiner:
                     found_indices.add(i)
                     break
         
-        # Enhanced: Detect explanatory/causal reasoning sentences
-        self._ensure_nlp_loaded()
-        if self.nlp:
-            causal_verbs = ["causes", "leads to", "results in", "creates", "produces",
-                           "generates", "triggers", "forces", "makes", "enables",
-                           "allows", "prevents", "blocks", "defaults to"]
-            explanatory_phrases = ["this means", "which means", "this suggests",
-                                  "this indicates", "this implies", "as a result",
-                                  "the result is", "the consequence"]
+        # Enhanced: Detect explanatory/causal reasoning sentences using pattern matching
+        causal_verbs = ["causes", "leads to", "results in", "creates", "produces",
+                       "generates", "triggers", "forces", "makes", "enables",
+                       "allows", "prevents", "blocks", "defaults to"]
+        explanatory_phrases = ["this means", "which means", "this suggests",
+                              "this indicates", "this implies", "as a result",
+                              "the result is", "the consequence"]
+        
+        for i, sentence in enumerate(sentences):
+            if i in found_indices:
+                continue
             
-            for i, sentence in enumerate(sentences):
-                if i in found_indices:
-                    continue
-                
-                sentence_lower = sentence.lower()
-                doc = self.nlp(sentence)
-                
-                # Check for causal verbs
-                has_causal = any(verb in sentence_lower for verb in causal_verbs)
-                
-                # Check for explanatory phrases
-                has_explanatory = any(phrase in sentence_lower for phrase in explanatory_phrases)
-                
-                # Check for sentences that explain "why" (often contain "for" or "to" + verb)
-                has_reasoning = any(word in sentence_lower for word in ["due to", "because of", 
-                                                                       "attributed to", "the fault lies"])
-                
-                # Check for sentences explaining psychological/mental processes
-                mental_terms = ["brain", "mind", "cognitive", "psychological", "mental",
-                               "overwhelmed", "exhausting", "feel", "think", "perceive"]
-                has_mental = any(term in sentence_lower for term in mental_terms)
-                
-                # Warrants often explain consequences or mechanisms
-                if (has_causal or has_explanatory or has_reasoning) or \
-                   (has_mental and len(doc) >= 10):
-                    warrants.append({
-                        "sentence_index": i,
-                        "sentence": sentence,
-                        "indicator": "explanatory_reasoning",
-                        "type": "warrant",
-                        "classification_method": "semantic"
-                    })
-                    found_indices.add(i)
+            sentence_lower = sentence.lower()
+            
+            # Check for causal verbs
+            has_causal = any(verb in sentence_lower for verb in causal_verbs)
+            
+            # Check for explanatory phrases
+            has_explanatory = any(phrase in sentence_lower for phrase in explanatory_phrases)
+            
+            # Check for sentences that explain "why" (often contain "for" or "to" + verb)
+            has_reasoning = any(word in sentence_lower for word in ["due to", "because of", 
+                                                                   "attributed to", "the fault lies"])
+            
+            # Check for sentences explaining psychological/mental processes
+            mental_terms = ["brain", "mind", "cognitive", "psychological", "mental",
+                           "overwhelmed", "exhausting", "feel", "think", "perceive"]
+            has_mental = any(term in sentence_lower for term in mental_terms)
+            
+            # Warrants often explain consequences or mechanisms
+            # Check length using simple word count (no spaCy dependency)
+            is_substantial = len(sentence.split()) >= 10
+            
+            if (has_causal or has_explanatory or has_reasoning) or \
+               (has_mental and is_substantial):
+                warrants.append({
+                    "sentence_index": i,
+                    "sentence": sentence,
+                    "indicator": "explanatory_reasoning",
+                    "type": "warrant",
+                    "classification_method": "pattern"
+                })
+                found_indices.add(i)
         
         return warrants
     

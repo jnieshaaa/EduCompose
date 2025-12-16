@@ -293,18 +293,14 @@ class TransformerClaimClassifier:
         Returns:
             Dictionary with overall classification results
         """
-        try:
-            from spacy_utils import load_spacy_model
-            nlp = load_spacy_model("en_core_web_md")  # Use 'md' for speed
-        except:
-            nlp = None
-
-        if nlp:
-            doc = nlp(text)
-            sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
-        else:
-            # Fallback: simple splitting
-            import re
+        # Prioritize regex-based sentence splitting (no spaCy dependency)
+        # Fine-tuned models work better without spaCy dependency
+        import re
+        # Use regex for sentence splitting - works well for most texts
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = [s.strip() for s in sentences if s.strip() and len(s) > 5]
+        # Fallback to simpler splitting if needed
+        if not sentences:
             sentences = re.split(r'[.!?]+', text)
             sentences = [s.strip() for s in sentences if s.strip() and len(s) > 5]
 

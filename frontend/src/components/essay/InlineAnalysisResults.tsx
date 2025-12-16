@@ -114,6 +114,11 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
           text: "text-yellow-700",
           border: "border-yellow-200",
         },
+        structure: {
+          bg: "bg-green-50",
+          text: "text-green-700",
+          border: "border-green-200",
+        },
       };
     return colors[category.toLowerCase()] || colors.grammar;
   };
@@ -179,6 +184,10 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       punctuation: {
         bg: "rgba(234, 179, 8, 0.35)", // yellow
         text: "#854d0e",
+      },
+      structure: {
+        bg: "rgba(34, 197, 94, 0.35)", // green
+        text: "#166534",
       },
     };
     return colors[category.toLowerCase()] || colors.grammar;

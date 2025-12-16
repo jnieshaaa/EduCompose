@@ -37,6 +37,7 @@ class EssayAnalysisService:
             nltk.download('averaged_perceptron_tagger')
         
         # Initialize NLP analyzers
+        # Use LLM only (LanguageTool has been completely removed)
         self.grammar_analyzer = GrammarAnalyzer()
         self.readability_analyzer = ReadabilityAnalyzer()
         self.coherence_analyzer = CoherenceAnalyzer()

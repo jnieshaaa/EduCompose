@@ -507,6 +507,10 @@ const AnalysisResults: React.FC = () => {
         bg: "rgba(234, 179, 8, 0.35)", // yellow
         text: "#854d0e",
       },
+      structure: {
+        bg: "rgba(34, 197, 94, 0.35)", // green
+        text: "#166534",
+      },
     };
     return colors[category.toLowerCase()] || colors.grammar;
   };
@@ -1319,6 +1323,12 @@ const AnalysisResults: React.FC = () => {
                             label: "Punctuation",
                             color: "rgba(234, 179, 8, 0.35)",
                             textColor: "#854d0e",
+                          },
+                          {
+                            type: "structure",
+                            label: "Structure",
+                            color: "rgba(34, 197, 94, 0.35)",
+                            textColor: "#166534",
                           },
                         ].map((item) => (
                           <div
