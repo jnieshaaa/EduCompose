@@ -7,6 +7,10 @@ import Modal from "../components/ui/Modal";
 import BlockPage from "./Block";
 import StudentPage from "./Student";
 import EssayActivity from "./EssayActivity";
+import {
+  PROGRAM_SUGGESTIONS,
+  BLOCK_CODE_OPTIONS,
+} from "../data/classOptions";
 
 // Types
 interface Program {
@@ -26,199 +30,6 @@ interface StudentV2 {
   blockId: string;
   activityId?: string | null;
 }
-
-// Program suggestions for autocomplete
-const PROGRAM_SUGGESTIONS = [
-  // Business / Management / Finance
-  "BSA",
-  "BSBA",
-  "BSBAFM",
-  "BSBAMM",
-  "BSBAHRDM",
-  "BSBAMKT",
-  "BSBABA",
-  "BSAIS",
-  "BSMA",
-  "BSECON",
-  "BSEntrep",
-  "BSHM",
-  "BSTM",
-  "BSRE",
-  "BSCoEcon",
-
-  // Engineering / Technology
-  "BSCE",
-  "BSME",
-  "BSEE",
-  "BSCoE",
-  "BSECE",
-  "BSChE",
-  "BSIE",
-  "BSMatE",
-  "BSARE",
-  "BSGE",
-  "BSMetE",
-  "BSEnE",
-  "BSEM",
-  "BSEnTech",
-
-  // Computing / IT / Data
-  "BSCS",
-  "BSCS-AI",
-  "BSCS-ML",
-  "BSCS-DS",
-  "BSCS-SE",
-  "BSCS-SD",
-  "BSCS-GD",
-  "BSCS-CY",
-  "BSCS-NS",
-  "BSCS-NET",
-  "BSCS-CC",
-  "BSCS-ROBO",
-  "BSCS-IOT",
-  "BSCS-ARVR",
-  "BSCS-Graphics",
-  "BSCS-CompEng",
-  "BSCS-BDA",
-  "BSCS-IS",
-  "BSCS-THEO",
-  "BSIT",
-  "BSIT-NET",
-  "BSIT-NS",
-  "BSIT-CY",
-  "BSIT-WMAD",
-  "BSIT-SD",
-  "BSIT-SE",
-  "BSIT-DB",
-  "BSIT-DA",
-  "BSIT-CC",
-  "BSIT-IMA",
-  "BSIT-MMA",
-  "BSIT-SYS",
-  "BSIT-SA",
-  "BSIT-IOT",
-  "BSIT-ERP",
-  "BSIT-ITSM",
-  "BSIT-GD",
-  "BSIS",
-  "BSDA",
-  "BSDS",
-  "BSSE",
-  "BSAI",
-  "BSCpE",
-  "BSIT-ML",
-
-  // Health / Medical-Allied
-  "BSN",
-  "BSMT",
-  "BSPharma",
-  "BSRT",
-  "BSMedTech",
-  "BSND",
-  "BSSW",
-  "BSMLS",
-  "BSOT",
-  "BSPT",
-
-  // Science / Natural Science
-  "BSBio",
-  "BSCH",
-  "BSPhy",
-  "BSStat",
-  "BSAMath",
-  "BSMath",
-  "BSEnvSci",
-  "BSITech",
-  "BSFT",
-  "BSBiotech",
-  "BSMicro",
-  "BSGeol",
-  "BSMarBio",
-  "BSEnviEng",
-
-  // Arts / Humanities
-  "ABEng",
-  "ABFil",
-  "ABPolSci",
-  "ABPsy",
-  "ABComm",
-  "ABMMA",
-  "ABHist",
-  "ABPhilo",
-  "ABIS",
-  "BFA",
-  "BFAID",
-  "BFAMC",
-  "BFAPA",
-  "BFAMMA",
-
-  // Education
-  "BEEd",
-  "BSEd",
-  "BSEdEng",
-  "BSEdFil",
-  "BSEdMath",
-  "BSEdSci",
-  "BPEd",
-  "BTVTEd",
-  "BTTE",
-  "BCAEd",
-
-  // Social Sciences
-  "ABSS",
-  "ABDevStud",
-  "ABAnthro",
-  "ABJourn",
-
-  // Media / Communications / Design
-  "BJourn",
-  "BFAAD",
-  "BFAVC",
-  "BFAMMA",
-  "BSD",
-
-  // Law / Public Affairs / Governance
-  "BSPA",
-  "BSLGA",
-  "ABPH",
-  "ABILS",
-
-  // Criminology / Security / Public Safety
-  "BSCrim",
-  "BSSec",
-  "BSForenSci",
-
-  // Agriculture / Forestry / Environment
-  "BSAgri",
-  "BSFor",
-  "BSAB",
-  "BSAT",
-
-  // Maritime
-  "BSMarE",
-  "BSMarT",
-  "BSNav",
-];
-
-// Block suggestions: 1A-1D, 2A-2D, 3A-3D, 4A-4D
-const ALL_BLOCK_OPTIONS = [
-  "1A",
-  "1B",
-  "1C",
-  "1D",
-  "2A",
-  "2B",
-  "2C",
-  "2D",
-  "3A",
-  "3B",
-  "3C",
-  "3D",
-  "4A",
-  "4B",
-  "4C",
-  "4D",
-];
 
 // Empty initial data
 const initialPrograms: Program[] = [];
@@ -465,7 +276,7 @@ const ClassManagement: React.FC = () => {
         .filter((b) => b.programId === newBlock.programId)
         .map((b) => b.name.toUpperCase());
 
-      const filtered = ALL_BLOCK_OPTIONS.filter(
+      const filtered = BLOCK_CODE_OPTIONS.filter(
         (option) =>
           option.startsWith(trimmed) && !existingBlocks.includes(option)
       );
