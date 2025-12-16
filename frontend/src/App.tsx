@@ -44,7 +44,7 @@ import Settings from "./pages/Settings"; // Renamed to SettingsTab, keeping the 
 // General/Utility Imports
 import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
-import IntroModal from "./components/IntroModal";
+// import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
 import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
@@ -59,13 +59,13 @@ const AppContent: React.FC = () => {
   const { setLoading } = useLoader();
   const [showIntro, setShowIntro] = React.useState(false);
 
-  useEffect(() => {
-    const modalShown = sessionStorage.getItem("introModalShown");
-    if (location.pathname === "/" && !modalShown) {
-      setShowIntro(true);
-      sessionStorage.setItem("introModalShown", "true");
-    }
-  }, [location.pathname]);
+  // useEffect(() => {
+  //   const modalShown = sessionStorage.getItem("introModalShown");
+  //   if (location.pathname === "/" && !modalShown) {
+  //     setShowIntro(true);
+  //     sessionStorage.setItem("introModalShown", "true");
+  //   }
+  // }, [location.pathname]);
 
   // Trigger loader on route change
   useEffect(() => {
@@ -74,12 +74,12 @@ const AppContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, [location.pathname, setLoading]);
 
-  const handleClose = () => setShowIntro(false);
+  // const handleClose = () => setShowIntro(false);
 
   return (
     <>
       <ClickEffect />
-      <IntroModal isOpen={showIntro} onClose={handleClose} />
+      {/* <IntroModal isOpen={showIntro} onClose={handleClose} /> */}
 
       <Routes>
         {/* ======================================================= */}

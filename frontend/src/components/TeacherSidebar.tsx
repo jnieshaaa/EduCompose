@@ -41,6 +41,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
@@ -124,10 +125,18 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   }, [location.pathname, menuItems]);
 
   useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsDesktop(width >= 1024);
+      setIsTablet(width >= 768 && width < 1024);
+      // Auto-close sidebar on mobile when resizing to mobile size
+      if (width < 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [isSidebarOpen]);
 
   useEffect(() => {
     setLogoShine(true);
@@ -145,7 +154,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       <aside
         className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary'
         style={{
-          width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
+          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
           overflow: isSidebarOpen ? "hidden" : "visible",
         }}
@@ -169,20 +178,19 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
             </div>
 
             {isSidebarOpen && (
-              <div className='ml-3 flex flex-col overflow-hidden w-[184px]'>
+              <div className='ml-2 sm:ml-3 flex flex-col overflow-hidden flex-1 min-w-0'>
                 <AnimatePresence>
                   <motion.div
                     initial='hidden'
                     animate='visible'
                     exit='hidden'
                     variants={textVariants}
-                    className='flex flex-col max-w-[200px]'
+                    className='flex flex-col min-w-0'
                   >
-                    {/* Optional: You could also reduce the h1 text size from text-2xl to text-xl if needed */}
-                    <h1 className='font-bold text-2xl text-white whitespace-nowrap'>
+                    <h1 className='font-bold text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap truncate'>
                       EduCompose
                     </h1>
-                    <p className='text-xxs font-md mt-0.5 text-white whitespace-nowrap'>
+                    <p className='text-[10px] sm:text-xxs font-md mt-0.5 text-white whitespace-nowrap truncate'>
                       Teacher's Companion for Essay Evaluation
                     </p>
                   </motion.div>

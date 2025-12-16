@@ -102,10 +102,10 @@ const Breadcrumb: React.FC = () => {
 
   return (
     <nav
-      className='flex items-center space-x-2 px-4 py-3 bg-white border-b border-neutral-200 text-sm'
+      className='flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b border-neutral-200 text-xs sm:text-sm overflow-x-auto'
       aria-label='Breadcrumb'
     >
-      <ol className='flex items-center space-x-2'>
+      <ol className='flex items-center space-x-1 sm:space-x-2 min-w-max'>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
