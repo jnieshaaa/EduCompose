@@ -55,10 +55,11 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
   const routeLabels: Record<string, string> = {
     "/Teacher/Dashboard": "Dashboard",
-    "/Teacher/Programs": "Programs",
-    "/Teacher/Sections": "Blocks / Sections",
-    "/Teacher/Students": "Students",
+    "/Teacher/Programs": "Class Management",
+    "/Teacher/Sections": "Class Management",
+    "/Teacher/Students": "Class Management",
     "/Teacher/Essays": "Essay Submissions",
+    "/Teacher/EssayManagement": "Essay Management",
     "/Teacher/Rubrics": "Rubrics / Criteria",
     "/Teacher/Metrics": "Metrics",
     "/Teacher/Settings": "Settings",

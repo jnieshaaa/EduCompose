@@ -1,21 +1,42 @@
 import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
   path: string;
+  icon?: React.ReactNode;
 }
 
-const routeMap: Record<string, string> = {
-  "/Dashboard": "Dashboard",
-  "/EssayManagement": "Essay Management",
-  "/ClassManagement": "Class Management",
-  "/AssignmentManagement": "Assignment Management",
-  "/Gradebook": "Gradebook",
-  "/Students": "Students",
-  "/Settings": "Settings",
-  "/SectionsList": "Sections List",
+// Route configurations with their parent sections
+const routeConfig: Record<string, { label: string; parent?: string; icon?: React.ReactNode }> = {
+  // Dashboard
+  "/Teacher/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
+  
+  // Class Management section
+  "/Teacher/Programs": { label: "Programs", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Sections": { label: "Sections", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Students": { label: "Students", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
+  
+  // Essay section
+  "/Teacher/Essays": { label: "Essay Submissions", icon: <FileText className="w-4 h-4" /> },
+  "/Teacher/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
+  
+  // Other sections
+  "/Teacher/Rubrics": { label: "Rubrics / Criteria", icon: <ClipboardCheck className="w-4 h-4" /> },
+  "/Teacher/Metrics": { label: "Metrics", icon: <BarChart3 className="w-4 h-4" /> },
+  "/Teacher/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
+  "/Teacher/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
+  
+  // Legacy routes
+  "/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
+  "/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
+  "/ClassManagement": { label: "Class Management", icon: <Layers className="w-4 h-4" /> },
+  "/AssignmentManagement": { label: "Assignment Management" },
+  "/Gradebook": { label: "Gradebook" },
+  "/Students": { label: "Students" },
+  "/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
+  "/SectionsList": { label: "Sections List" },
 };
 
 const Breadcrumb: React.FC = () => {
@@ -28,25 +49,95 @@ const Breadcrumb: React.FC = () => {
     return null;
   }
 
-  const items: BreadcrumbItem[] = [
-    {
-      label: "Home",
-      path: "/Dashboard",
-    },
-  ];
+  const items: BreadcrumbItem[] = [];
+  const config = routeConfig[pathname];
 
-  // Add current page if it's not the home page
-  if (pathname !== "/Dashboard" && routeMap[pathname]) {
+  // Get URL params for drill-down context
+  const programFilter = searchParams.get("program");
+  const sectionFilter = searchParams.get("section");
+
+  // Build breadcrumb based on route and context
+  if (config) {
+    // Add parent section if exists (e.g., "Class Management" for Programs/Sections/Students)
+    if (config.parent) {
+      items.push({
+        label: config.parent,
+        path: "/Teacher/Programs", // Class Management defaults to Programs
+        icon: <Layers className="w-4 h-4" />,
+      });
+    }
+
+    // Handle drill-down paths for Class Management
+    if (config.parent === "Class Management") {
+      if (pathname === "/Teacher/Programs") {
+        // On Programs page - just show "Class Management > Programs"
+        items.push({
+          label: "Programs",
+          path: "/Teacher/Programs",
+        });
+      } else if (pathname === "/Teacher/Sections") {
+        // On Sections page
+        items.push({
+          label: "Programs",
+          path: "/Teacher/Programs",
+        });
+        
+        if (programFilter) {
+          // Drill-down from a specific program
+          items.push({
+            label: programFilter,
+            path: `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
+          });
+        } else {
+          items.push({
+            label: "Sections",
+            path: "/Teacher/Sections",
+          });
+        }
+      } else if (pathname === "/Teacher/Students") {
+        // On Students page
+        items.push({
+          label: "Programs",
+          path: "/Teacher/Programs",
+        });
+        
+        if (programFilter) {
+          items.push({
+            label: programFilter,
+            path: `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
+          });
+        }
+        
+        if (sectionFilter) {
+          items.push({
+            label: sectionFilter,
+            path: `/Teacher/Students?program=${encodeURIComponent(programFilter || "")}&section=${encodeURIComponent(sectionFilter)}`,
+          });
+        } else if (!programFilter) {
+          items.push({
+            label: "Students",
+            path: "/Teacher/Students",
+          });
+        }
+      }
+    } else {
+      // Non-Class Management routes - just show the current page
+      items.push({
+        label: config.label,
+        path: pathname,
+        icon: config.icon,
+      });
+    }
+  } else {
+    // Fallback for unknown routes
     items.push({
-      label: routeMap[pathname],
-      path: pathname,
+      label: "Dashboard",
+      path: "/Teacher/Dashboard",
+      icon: <Home className="w-4 h-4" />,
     });
-  } else if (pathname === "/Dashboard") {
-    // On Dashboard, show just "Home"
-    items[0].label = "Dashboard";
   }
 
-  // Check if we're viewing Block inside ClassManagement
+  // Handle legacy ClassManagement route with query params
   if (pathname === "/ClassManagement" && searchParams.get("programId")) {
     const programId = searchParams.get("programId");
     const programName = searchParams.get("programName") || "Program";
@@ -55,6 +146,14 @@ const Breadcrumb: React.FC = () => {
     const view = searchParams.get("view");
     const activityTitle = searchParams.get("activityTitle") || "Essay Activity";
     const basePath = `${pathname}?programId=${programId}&programName=${programName}`;
+
+    // Clear and rebuild for legacy route
+    items.length = 0;
+    items.push({
+      label: "Class Management",
+      path: "/ClassManagement",
+      icon: <Layers className="w-4 h-4" />,
+    });
 
     // Add program breadcrumb
     items.push({
@@ -108,15 +207,16 @@ const Breadcrumb: React.FC = () => {
       <ol className='flex items-center space-x-1 sm:space-x-2 min-w-max'>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
+          const isFirst = index === 0;
 
           return (
-            <li key={item.path} className='flex items-center'>
+            <li key={`${item.path}-${index}`} className='flex items-center'>
               {index > 0 && (
-                <ChevronRight className='w-4 h-4 text-neutral-400 mx-2' />
+                <ChevronRight className='w-4 h-4 text-neutral-400 mx-1 sm:mx-2' />
               )}
               {isLast ? (
                 <span className='text-neutral-900 font-medium flex items-center'>
-                  {index === 0 && <Home className='w-4 h-4 mr-1.5' />}
+                  {isFirst && item.icon && <span className="mr-1.5">{item.icon}</span>}
                   {item.label}
                 </span>
               ) : (
@@ -124,7 +224,7 @@ const Breadcrumb: React.FC = () => {
                   to={item.path}
                   className='text-neutral-600 hover:text-primary transition-colors flex items-center'
                 >
-                  {index === 0 && <Home className='w-4 h-4 mr-1.5' />}
+                  {isFirst && item.icon && <span className="mr-1.5">{item.icon}</span>}
                   {item.label}
                 </Link>
               )}

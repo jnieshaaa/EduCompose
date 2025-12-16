@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 
-import { Plus, Search, Edit, Trash2, Upload, MoreVertical, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MoreVertical, Eye, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -26,13 +27,19 @@ import type { UploadResult } from '../../services/BatchUploadController';
 
 // IMPORT DATA
 import type { Student } from '../../data/studentsData';
-import { initialStudentsData, initialNewStudentState } from '../../data/studentsData';
+import { initialNewStudentState } from '../../data/studentsData';
 import { initialProgramsData } from '../../data/programsData';
 import { initialSectionsData } from '../../data/sectionsData';
 import { supabase } from "../../lib/supabaseClient";
 
 
 export function StudentsTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Read filters from URL params (for drill-down from Sections)
+  const urlProgramFilter = searchParams.get('program');
+  const urlSectionFilter = searchParams.get('section');
+  
   // STATE: Main list of students (using the updated mock data)
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,9 +48,19 @@ export function StudentsTab() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newStudent, setNewStudent] = useState(initialNewStudentState);
   
-  // FILTER STATES
-  const [programFilter, setProgramFilter] = useState('All Programs');
-  const [sectionFilter, setSectionFilter] = useState('All Sections');
+  // FILTER STATES - initialized from URL params
+  const [programFilter, setProgramFilter] = useState(urlProgramFilter || 'All Programs');
+  const [sectionFilter, setSectionFilter] = useState(urlSectionFilter || 'All Sections');
+
+  // Sync filters with URL params
+  useEffect(() => {
+    if (urlProgramFilter) {
+      setProgramFilter(urlProgramFilter);
+    }
+    if (urlSectionFilter) {
+      setSectionFilter(urlSectionFilter);
+    }
+  }, [urlProgramFilter, urlSectionFilter]);
 
   // Helper for dropdown options
   const [availablePrograms, setAvailablePrograms] = useState<string[]>(
@@ -61,6 +78,32 @@ export function StudentsTab() {
     if (result.success && result.data) {
       // Add imported students to the list
       setStudents(prevStudents => [...(result.data as Student[]), ...prevStudents]);
+    }
+  };
+
+  // Clear all filters and URL params
+  const handleClearFilters = () => {
+    setProgramFilter('All Programs');
+    setSectionFilter('All Sections');
+    setSearchParams({});
+  };
+
+  // Clear specific filter
+  const handleClearProgramFilter = () => {
+    setProgramFilter('All Programs');
+    if (urlSectionFilter) {
+      setSearchParams({ section: urlSectionFilter });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const handleClearSectionFilter = () => {
+    setSectionFilter('All Sections');
+    if (urlProgramFilter) {
+      setSearchParams({ program: urlProgramFilter });
+    } else {
+      setSearchParams({});
     }
   };
 
@@ -187,13 +230,27 @@ export function StudentsTab() {
     return matchesSearch && matchesProgram && matchesSection;
   });
 
+  // Check if we're in drill-down mode
+  const isDrillDown = urlProgramFilter !== null || urlSectionFilter !== null;
+  const hasActiveFilters = programFilter !== 'All Programs' || sectionFilter !== 'All Sections';
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900">Students Management</h1>
-          <p className="text-sm text-neutral-500 mt-1">Manage students and track their progress</p>
+          <h1 className="text-2xl text-neutral-900 font-semibold">
+            {urlSectionFilter 
+              ? `${urlSectionFilter} Students`
+              : urlProgramFilter 
+                ? `${urlProgramFilter} Students`
+                : 'Students Management'}
+          </h1>
+          <p className="text-sm text-neutral-500 mt-1">
+            {isDrillDown 
+              ? `Viewing ${filteredStudents.length} student${filteredStudents.length !== 1 ? 's' : ''}`
+              : 'Manage students and track their progress'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -286,27 +343,82 @@ export function StudentsTab() {
         </div>
       </div>
 
-      {/* Stats Cards (unchanged) */}
+      {/* Active filter indicators */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-neutral-500">Filtered by:</span>
+          {programFilter !== 'All Programs' && (
+            <Badge 
+              variant="outline" 
+              className="bg-primary/10 text-primary border-primary/30 px-3 py-1 flex items-center gap-2"
+            >
+              Program: {programFilter}
+              <button 
+                onClick={handleClearProgramFilter}
+                className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {sectionFilter !== 'All Sections' && (
+            <Badge 
+              variant="outline" 
+              className="bg-secondary/10 text-secondary border-secondary/30 px-3 py-1 flex items-center gap-2"
+            >
+              Section: {sectionFilter}
+              <button 
+                onClick={handleClearSectionFilter}
+                className="hover:bg-secondary/20 rounded-full p-0.5 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {(programFilter !== 'All Programs' && sectionFilter !== 'All Sections') && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearFilters}
+              className="text-neutral-500 hover:text-neutral-700"
+            >
+              Clear all
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
-          <p className="text-sm text-neutral-500">Total Students</p>
-          <p className="text-2xl text-neutral-900 mt-1">456</p>
+          <p className="text-sm text-neutral-500">
+            {hasActiveFilters ? 'Filtered Students' : 'Total Students'}
+          </p>
+          <p className="text-2xl text-neutral-900 mt-1">{filteredStudents.length}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Active Students</p>
-          <p className="text-2xl text-success-default mt-1">448</p>
+          <p className="text-2xl text-success-default mt-1">
+            {filteredStudents.filter(s => s.submitted > 0 || s.pending > 0).length || filteredStudents.length}
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Avg. Submission Rate</p>
-          <p className="text-2xl text-info-default mt-1">87%</p>
+          <p className="text-2xl text-info-default mt-1">
+            {filteredStudents.length > 0 
+              ? Math.round(filteredStudents.reduce((acc, s) => acc + (s.submitted / Math.max(s.submitted + s.pending + s.missing, 1)), 0) / filteredStudents.length * 100) || 0
+              : 0}%
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">At-Risk Students</p>
-          <p className="text-2xl text-warning-default mt-1">12</p>
+          <p className="text-2xl text-warning-default mt-1">
+            {filteredStudents.filter(s => s.missing > 2 || s.avgScore < 70).length}
+          </p>
         </Card>
       </div>
 
-      {/* Search & Filters (unchanged) */}
+      {/* Search & Filters */}
       <Card className="p-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -319,26 +431,32 @@ export function StudentsTab() {
               className="pl-10"
             />
           </div>
-          <select 
-            className="px-3 py-2 border border-neutral-300 rounded-rd"
-            value={programFilter}
-            onChange={(e) => setProgramFilter(e.target.value)}
-          >
-            <option value="All Programs">All Programs</option>
-            {availablePrograms.map(program => (
-              <option key={program} value={program}>{program}</option>
-            ))}
-          </select>
-          <select 
-            className="px-3 py-2 border border-neutral-300 rounded-rd"
-            value={sectionFilter}
-            onChange={(e) => setSectionFilter(e.target.value)}
-          >
-            <option value="All Sections">All Sections</option>
-            {availableSections.map(section => (
-              <option key={section} value={section}>{section}</option>
-            ))}
-          </select>
+          {/* Hide program filter dropdown when filtered from URL */}
+          {!urlProgramFilter && (
+            <select 
+              className="px-3 py-2 border border-neutral-300 rounded-rd"
+              value={programFilter}
+              onChange={(e) => setProgramFilter(e.target.value)}
+            >
+              <option value="All Programs">All Programs</option>
+              {availablePrograms.map(program => (
+                <option key={program} value={program}>{program}</option>
+              ))}
+            </select>
+          )}
+          {/* Hide section filter dropdown when filtered from URL */}
+          {!urlSectionFilter && (
+            <select 
+              className="px-3 py-2 border border-neutral-300 rounded-rd"
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+            >
+              <option value="All Sections">All Sections</option>
+              {availableSections.map(section => (
+                <option key={section} value={section}>{section}</option>
+              ))}
+            </select>
+          )}
         </div>
         {loadError && (
           <p className="mt-3 text-xs text-warning-default">
@@ -355,10 +473,25 @@ export function StudentsTab() {
           </div>
         ) : filteredStudents.length === 0 ? (
           <div className="p-6 text-sm text-neutral-500 text-center">
-            No students found in Supabase. Use{" "}
-            <span className="font-semibold">Add Student</span> or{" "}
-            <span className="font-semibold">Batch Upload</span> to add students
-            to your classes.
+            {hasActiveFilters ? (
+              <>
+                No students found matching the current filters.{" "}
+                <button 
+                  onClick={handleClearFilters}
+                  className="text-primary hover:underline"
+                >
+                  Clear filters
+                </button>{" "}
+                or use <span className="font-semibold">Add Student</span> to add a student.
+              </>
+            ) : (
+              <>
+                No students found in Supabase. Use{" "}
+                <span className="font-semibold">Add Student</span> or{" "}
+                <span className="font-semibold">Batch Upload</span> to add students
+                to your classes.
+              </>
+            )}
           </div>
         ) : (
           <Table>
@@ -366,8 +499,8 @@ export function StudentsTab() {
               <TableRow>
                 <TableHead>Student ID</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Section</TableHead>
+                {!urlProgramFilter && <TableHead>Program</TableHead>}
+                {!urlSectionFilter && <TableHead>Section</TableHead>}
                 <TableHead>Email</TableHead>
                 <TableHead className="text-center">Submitted</TableHead>
                 <TableHead className="text-center">Pending</TableHead>
@@ -387,19 +520,23 @@ export function StudentsTab() {
                   <TableCell>
                     <div className="text-neutral-900">{student.name}</div>
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-neutral-600">
-                      {student.program}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="bg-secondary/10 text-secondary border-secondary/20"
-                    >
-                      {student.section}
-                    </Badge>
-                  </TableCell>
+                  {!urlProgramFilter && (
+                    <TableCell>
+                      <div className="text-sm text-neutral-600">
+                        {student.program}
+                      </div>
+                    </TableCell>
+                  )}
+                  {!urlSectionFilter && (
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="bg-secondary/10 text-secondary border-secondary/20"
+                      >
+                        {student.section}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="text-sm text-neutral-600">
                       {student.email}

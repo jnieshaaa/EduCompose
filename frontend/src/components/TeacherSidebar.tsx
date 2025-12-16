@@ -3,22 +3,14 @@ import {
   Home,
   FileText,
   Layers,
-  // BarChart3,
-  // Users,
-  // GraduationCap,
-  // ClipboardList,
-  // Award,
   Info,
   BookOpen,
   Target,
   Zap,
   Shield,
-  // LayoutDashboard,
-  Users,
   ClipboardCheck,
   BarChart3,
   Settings,
-  ChevronDown,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,35 +41,18 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Class Management sub-items: Programs, Blocks/Sections, Students
-  const classManagementItems: MenuItem[] = useMemo(
-    () => [
-      {
-        icon: <BookOpen className='w-4 h-4' />,
-        label: "Programs",
-        path: "/Teacher/Programs",
-      },
-      {
-        icon: <Layers className='w-4 h-4' />,
-        label: "Blocks / Sections",
-        path: "/Teacher/Sections",
-      },
-      {
-        icon: <Users className='w-4 h-4' />,
-        label: "Students",
-        path: "/Teacher/Students",
-      },
-    ],
-    []
-  );
-
-  // Other top-level navigation items
-  const otherMenuItems: MenuItem[] = useMemo(
+  // All menu items (flat structure - no sub-menus)
+  const menuItems: MenuItem[] = useMemo(
     () => [
       {
         icon: <Home className='w-5 h-5' />,
         label: "Dashboard",
         path: "/Teacher/Dashboard",
+      },
+      {
+        icon: <Layers className='w-5 h-5' />,
+        label: "Class Management",
+        path: "/Teacher/Programs", // Goes directly to Programs (card grid)
       },
       {
         icon: <FileText className='w-5 h-5' />,
@@ -108,43 +83,33 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     []
   );
 
-  const allMenuItems: MenuItem[] = useMemo(
-    () => [...classManagementItems, ...otherMenuItems],
-    [classManagementItems, otherMenuItems]
-  );
+  // Routes that belong to Class Management section (for highlighting)
+  const classManagementPaths = ["/Teacher/Programs", "/Teacher/Sections", "/Teacher/Students"];
 
   const [activePath, setActivePath] = useState(location.pathname);
-  const [isClassManagementOpen, setIsClassManagementOpen] = useState(false);
-
-  const isClassManagementRoute = useMemo(
-    () =>
-      classManagementItems.some((item) =>
-        activePath.toLowerCase().startsWith(item.path.toLowerCase())
-      ),
-    [activePath, classManagementItems]
-  );
 
   useEffect(() => setActivePath(location.pathname), [location.pathname]);
 
   const handleItemClick = (path: string) => {
-    // Only navigate; do not auto-close sidebar. It should only be
-    // controlled by the burger icon in the parent layout.
     navigate(path);
   };
 
   useEffect(() => {
-    const currentItem = allMenuItems.find(
+    const currentItem = menuItems.find(
       (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
     );
-    document.title = currentItem ? currentItem.label : "EduCompose";
-  }, [location.pathname, allMenuItems]);
-
-  // Automatically open Class Management dropdown when one of its routes is active
-  useEffect(() => {
+    
+    // For Class Management sub-routes, show "Class Management" in title
+    const isClassManagementRoute = classManagementPaths.some(
+      p => location.pathname.toLowerCase().startsWith(p.toLowerCase())
+    );
+    
     if (isClassManagementRoute) {
-      setIsClassManagementOpen(true);
+      document.title = "Class Management";
+    } else {
+      document.title = currentItem ? currentItem.label : "EduCompose";
     }
-  }, [isClassManagementRoute]);
+  }, [location.pathname, menuItems]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -167,6 +132,19 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
   };
 
+  // Check if a menu item is active (including Class Management sub-routes)
+  const isItemActive = (itemPath: string) => {
+    const currentPath = activePath.toLowerCase();
+    const targetPath = itemPath.toLowerCase();
+    
+    // For Class Management, check if current path is any of its sub-routes
+    if (targetPath === "/teacher/programs") {
+      return classManagementPaths.some(p => currentPath.startsWith(p.toLowerCase()));
+    }
+    
+    return currentPath === targetPath || currentPath.startsWith(targetPath + "/");
+  };
+
   return (
     <div className='flex h-screen overflow-hidden'>
       <aside
@@ -179,7 +157,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       >
         {/* Header */}
         <div className='flex items-center h-16 border-b border-white p-2.5 relative'>
-            {/* 👇 CHANGE 1: Logo container size reduced from w-14 h-14 (56px) to w-10 h-10 (40px) */}
             <div className='relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
               <img
                 src={eduComposeLogo}
@@ -223,201 +200,47 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
             className='space-y-2'
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
-            {/* Dashboard (top-level item) */}
-            {otherMenuItems
-              .filter((item) => item.label === "Dashboard")
-              .map((item) => {
-                const isActive =
-                  activePath.toLowerCase() === item.path.toLowerCase() ||
-                  activePath
-                    .toLowerCase()
-                    .startsWith(item.path.toLowerCase() + "/");
-                return (
-                  <li key={item.label} className='w-full'>
-                    <Tooltip
-                      content={item.label}
-                      position='right'
-                      delay={200}
-                      disabled={isSidebarOpen}
-                    >
-                      <button
-                        onClick={() => handleItemClick(item.path)}
-                        className={`btn-fade group w-full flex items-center rounded-rd ${
-                          isActive
-                            ? "bg-neutral-50 text-primary"
-                            : "bg-primary text-white hover:text-support-superlight"
-                        }`}
-                      >
-                        <div className='flex items-center w-full flex-1'>
-                          <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                            {item.icon}
-                          </span>
-                          <AnimatePresence>
-                            {isSidebarOpen && (
-                              <motion.span
-                                initial='hidden'
-                                animate='visible'
-                                exit='hidden'
-                                variants={textVariants}
-                                className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                              >
-                                {item.label}
-                              </motion.span>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </button>
-                    </Tooltip>
-                  </li>
-                );
-              })}
-
-            {/* Class Management parent item with dropdown children */}
-            <li className='w-full'>
-              <Tooltip
-                content='Class Management'
-                position='right'
-                delay={200}
-                disabled={isSidebarOpen}
-              >
-                <button
-                  onClick={() => {
-                    setIsClassManagementOpen((prev) => !prev);
-                    // Navigate to default sub-route (Programs)
-                    handleItemClick("/Teacher/Programs");
-                  }}
-                  className={`btn-fade group w-full flex items-center rounded-rd ${
-                    isClassManagementRoute
-                      ? "bg-neutral-50 text-primary"
-                      : "bg-primary text-white hover:text-support-superlight"
-                  }`}
-                >
-                  <div className='flex items-center w-full flex-1'>
-                    <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                      <Layers className='w-5 h-5' />
-                    </span>
-                    <AnimatePresence>
-                      {isSidebarOpen && (
-                        <motion.span
-                          initial='hidden'
-                          animate='visible'
-                          exit='hidden'
-                          variants={textVariants}
-                          className='font-medium whitespace-nowrap flex-1 pr-2 text-left flex items-center justify-between'
-                        >
-                          <span>Class Management</span>
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform duration-200 ml-2 ${
-                              isClassManagementOpen ? "rotate-180" : ""
-                            }`}
-                          />
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </button>
-              </Tooltip>
-
-              {/* Class Management sub-menu */}
-              <AnimatePresence initial={false}>
-                {isSidebarOpen && isClassManagementOpen && (
-                  <motion.ul
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className='mt-1 ml-12 space-y-1 overflow-hidden'
+            {menuItems.map((item) => {
+              const isActive = isItemActive(item.path);
+              return (
+                <li key={item.label} className='w-full'>
+                  <Tooltip
+                    content={item.label}
+                    position='right'
+                    delay={200}
+                    disabled={isSidebarOpen}
                   >
-                    {classManagementItems.map((item) => {
-                      const isActive =
-                        activePath.toLowerCase() === item.path.toLowerCase() ||
-                        activePath
-                          .toLowerCase()
-                          .startsWith(item.path.toLowerCase() + "/");
-                      return (
-                        <li key={item.label} className='w-full'>
-                          <button
-                            onClick={() => handleItemClick(item.path)}
-                            className={`btn-fade group w-full flex items-center rounded-rd text-sm ${
-                              isActive
-                                ? "bg-neutral-50 text-primary"
-                                : "bg-primary text-white hover:text-support-superlight"
-                            }`}
-                          >
-                            <div className='flex items-center w-full flex-1'>
-                              <span className='flex-shrink-0 flex items-center justify-center w-8 h-8'>
-                                {item.icon}
-                              </span>
-                              <AnimatePresence>
-                                {isSidebarOpen && (
-                                  <motion.span
-                                    initial='hidden'
-                                    animate='visible'
-                                    exit='hidden'
-                                    variants={textVariants}
-                                    className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                                  >
-                                    {item.label}
-                                  </motion.span>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </motion.ul>
-                )}
-              </AnimatePresence>
-            </li>
-
-            {/* Remaining top-level items (excluding Dashboard) */}
-            {otherMenuItems
-              .filter((item) => item.label !== "Dashboard")
-              .map((item) => {
-                const isActive =
-                  activePath.toLowerCase() === item.path.toLowerCase() ||
-                  activePath
-                    .toLowerCase()
-                    .startsWith(item.path.toLowerCase() + "/");
-                return (
-                  <li key={item.label} className='w-full'>
-                    <Tooltip
-                      content={item.label}
-                      position='right'
-                      delay={200}
-                      disabled={isSidebarOpen}
+                    <button
+                      onClick={() => handleItemClick(item.path)}
+                      className={`btn-fade group w-full flex items-center rounded-rd ${
+                        isActive
+                          ? "bg-neutral-50 text-primary"
+                          : "bg-primary text-white hover:text-support-superlight"
+                      }`}
                     >
-                      <button
-                        onClick={() => handleItemClick(item.path)}
-                        className={`btn-fade group w-full flex items-center rounded-rd ${
-                          isActive
-                            ? "bg-neutral-50 text-primary"
-                            : "bg-primary text-white hover:text-support-superlight"
-                        }`}
-                      >
-                        <div className='flex items-center w-full flex-1'>
-                          <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                            {item.icon}
-                          </span>
-                          <AnimatePresence>
-                            {isSidebarOpen && (
-                              <motion.span
-                                initial='hidden'
-                                animate='visible'
-                                exit='hidden'
-                                variants={textVariants}
-                                className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                              >
-                                {item.label}
-                              </motion.span>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </button>
-                    </Tooltip>
-                  </li>
-                );
-              })}
+                      <div className='flex items-center w-full flex-1'>
+                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                          {item.icon}
+                        </span>
+                        <AnimatePresence>
+                          {isSidebarOpen && (
+                            <motion.span
+                              initial='hidden'
+                              animate='visible'
+                              exit='hidden'
+                              variants={textVariants}
+                              className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </button>
+                  </Tooltip>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
@@ -559,7 +382,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
               </div>
               <div className='text-right'>
                 <p className='text-xs text-neutral-600'>
-                  Made with for educators
+                  Made with ❤️ for educators
                 </p>
               </div>
             </div>
