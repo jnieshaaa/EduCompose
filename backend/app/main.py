@@ -47,23 +47,46 @@ app.include_router(kg_controller.kg_router, prefix="/api/kg", tags=["Knowledge G
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database tables on startup"""
+    """Initialize database tables and warm up NLP models on startup"""
+    # Initialize database
     try:
         models.Base.metadata.create_all(bind=engine)
         print("✓ Database tables initialized successfully")
 
         # Ensure legacy schemas have password_hash column nullable
-        with engine.begin() as conn:
-            conn.execute(
-                text(
-                    "ALTER TABLE IF EXISTS users "
-                    "ALTER COLUMN password_hash DROP NOT NULL"
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE IF EXISTS users "
+                        "ALTER COLUMN password_hash DROP NOT NULL"
+                    )
                 )
-            )
+        except Exception:
+            pass  # Ignore if column doesn't exist or already nullable
     except Exception as e:
         print(f"⚠ Warning: Could not initialize database tables: {e}")
         print("  The app will continue, but database operations may fail.")
         print("  Please check your DATABASE_URL in the .env file.")
+    
+    # Warm up NLP models to avoid cold start delays
+    # This runs synchronously to ensure models are loaded before server accepts requests
+    print("\n🔥 Warming up NLP models (this may take 30-60 seconds)...")
+    print("   Please wait - this ensures fast analysis responses...")
+    try:
+        from .services.model_warmup import warmup_all_models
+        warmup_result = warmup_all_models()
+        if warmup_result.get("status") == "complete":
+            print(f"✓ Model warmup complete in {warmup_result.get('duration', 0):.2f}s")
+            print(f"  {warmup_result.get('success_count', 0)} models ready")
+            if warmup_result.get("errors"):
+                print(f"  ⚠ {len(warmup_result['errors'])} warnings (non-critical)")
+        else:
+            print("⚠ Model warmup skipped (already warmed)")
+    except Exception as e:
+        print(f"⚠ Warning: Model warmup failed: {e}")
+        print("  The app will continue, but first analysis may be slow.")
+    print()
 
 @app.get("/")
 async def root():
@@ -76,6 +99,30 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "message": "EduCompose API is running"}
+
+@app.get("/api/warmup")
+async def warmup_endpoint():
+    """
+    Manually trigger NLP model warmup.
+    Useful for keeping models loaded on serverless platforms.
+    """
+    from .services.model_warmup import warmup_all_models, get_warmup_status
+    
+    status = get_warmup_status()
+    if status["warmed"]:
+        return {
+            "status": "already_warmed",
+            "message": "Models already warmed up",
+            "duration": status.get("duration"),
+            "warmed": True
+        }
+    
+    result = warmup_all_models()
+    return {
+        "status": "warmed",
+        "message": "Models warmed up successfully",
+        **result
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
