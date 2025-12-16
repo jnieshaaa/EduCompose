@@ -34,11 +34,10 @@ def init_database():
         db.query(models.User).delete()
         db.commit()
         
-        # Add users (passwords stored in Supabase Auth only, not in PostgreSQL)
-        # Note: Users should be created through the registration endpoint which creates them in Supabase Auth
-        # This script only creates the PostgreSQL user records for existing Supabase Auth users
-        
+        # Add users
+        auth_service = AuthService()
         for user_data in data.get('users', []):
+            password = user_data.get('password', 'password')
             user = models.User(
                 id=user_data['id'],
                 email=user_data['email'],
@@ -46,22 +45,24 @@ def init_database():
                 full_name=user_data['full_name'],
                 role=user_data['role'],
                 is_active=user_data['is_active'],
-                password_hash=None,  # Using Supabase Auth only - password not stored in PostgreSQL
-                supabase_user_id=user_data.get('supabase_user_id')  # Link to Supabase Auth user if available
+                password_hash=auth_service._hash_password(password)
             )
             db.add(user)
         
-        print(f"Created {len(data.get('users', []))} user records (passwords managed by Supabase Auth)")
+        print(f"Created {len(data.get('users', []))} user records")
 
-        # Reset the users table sequence to avoid duplicate key errors
+        # Reset the users table sequence to avoid duplicate key errors (PostgreSQL only)
+        # For SQLite, this is not needed as autoincrement handles it automatically
         try:
-            db.execute(
-                text(
-                    "SELECT setval(pg_get_serial_sequence('users','id'), "
-                    "(SELECT COALESCE(MAX(id), 0) + 1 FROM users))"
+            from app.database import engine
+            if engine.url.drivername == 'postgresql':
+                db.execute(
+                    text(
+                        "SELECT setval(pg_get_serial_sequence('users','id'), "
+                        "(SELECT COALESCE(MAX(id), 0) + 1 FROM users))"
+                    )
                 )
-            )
-            db.commit()
+                db.commit()
         except Exception as e:
             db.rollback()
             print(f"Warning: Failed to reset users sequence: {e}")

@@ -1,6 +1,6 @@
 """
 Authentication Controller
-Handles authentication-related endpoints (local auth by default; Supabase optional)
+Handles authentication-related endpoints
 """
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -30,15 +30,15 @@ async def login(
     """
     User login endpoint
     
-    **IMPORTANT**: Login will only succeed if credentials exist in PostgreSQL database.
+    **IMPORTANT**: Login will only succeed if credentials exist in the database.
     All user credentials must be recorded in the database before login can succeed.
     
     Validates:
-    - User email exists in PostgreSQL
-    - Password matches the hash stored in PostgreSQL
+    - User email exists in database
+    - Password matches the hash stored in database
     - User account is active in database
     
-    Records login activity in PostgreSQL including:
+    Records login activity including:
     - Login timestamp
     - IP address
     - User agent
@@ -67,8 +67,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """
     User registration endpoint
 
-    By default creates a local user record stored in PostgreSQL.
-    When Supabase auth is enabled it will also create a Supabase Auth user.
+    Creates a local user record stored in the database.
     """
     user = await auth_service.create_user(user_data, db)
     return {
@@ -131,7 +130,7 @@ async def update_password(
     """
     Update user password
     
-    Updates the password in both PostgreSQL database and Supabase Auth.
+    Updates the password in the database.
     The old password will no longer work for login after this update.
     """
     return await auth_service.update_password(

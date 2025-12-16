@@ -9,11 +9,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from jose import JWTError, jwt
-from supabase import create_client, Client
 from passlib.context import CryptContext
 
 # Local imports
-from ..database import get_db, supabase as supabase_anon
+from ..database import get_db
 from ..models import User, LoginActivity
 from ..schemas import UserUpdate
 
@@ -21,7 +20,6 @@ from ..schemas import UserUpdate
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-SUPABASE_AUTH_ENABLED = os.getenv("SUPABASE_AUTH_ENABLED", "false").lower() == "true"
 LOCAL_AUTH_AUTO_CREATE = os.getenv("LOCAL_AUTH_AUTO_CREATE", "true").lower() == "true"
 DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "teacher")
 
@@ -29,20 +27,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 security = HTTPBearer()
 
-# --- SUPABASE ADMIN CLIENT (optional) ---
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-
 USERNAME_PATTERN = re.compile(r"^[A-Za-z.,]{3,20}$")
 
-supabase_admin: Client = None
-if SUPABASE_AUTH_ENABLED and SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-elif SUPABASE_AUTH_ENABLED:
-    print("⚠️ Warning: SUPABASE_SERVICE_ROLE_KEY missing. Admin functions will fail.")
-
 class AuthService:
-    """Authentication service with Supabase + local DB"""
+    """Authentication service with local DB"""
 
     def _validate_username_format(self, username: str) -> str:
         cleaned = (username or "").strip()
@@ -98,7 +86,6 @@ class AuthService:
             full_name=full_name,
             role=DEFAULT_USER_ROLE,
             password_hash=self._hash_password(password),
-            supabase_user_id=None,
             email_verified=True,
             is_active=True
         )
@@ -159,7 +146,7 @@ class AuthService:
 
         if not user:
             self._log_login_activity(db, login_email or login_username, ip_address, user_agent, False, "User not found in DB")
-            if not SUPABASE_AUTH_ENABLED and LOCAL_AUTH_AUTO_CREATE:
+            if LOCAL_AUTH_AUTO_CREATE:
                 username = login_username or self._generate_username_from_email(login_email or "", db)
                 derived_email = login_email or f"{username}@local.test"
                 full_name = username.replace(".", " ").title()
@@ -173,30 +160,13 @@ class AuthService:
             else:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
 
-        if not SUPABASE_AUTH_ENABLED:
-            if user.password_hash:
-                if not self._verify_password(credentials.password, user.password_hash):
-                    self._log_login_activity(db, user.email, ip_address, user_agent, False, "Incorrect password", user.id)
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
-            if not user.is_active:
-                self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account inactive.")
-        else:
-            # Authenticate with Supabase
-            if not supabase_anon:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Supabase auth client is not configured on the server."
-                )
-            try:
-                supabase_resp = supabase_anon.auth.sign_in_with_password({"email": login_email, "password": credentials.password})
-                if not supabase_resp.user:
-                    raise Exception("Supabase returned no user")
-            except Exception as e:
-                self._log_login_activity(db, login_email, ip_address, user_agent, False, str(e), user.id)
-                if "Email not confirmed" in str(e):
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not verified.")
+        if user.password_hash:
+            if not self._verify_password(credentials.password, user.password_hash):
+                self._log_login_activity(db, user.email, ip_address, user_agent, False, "Incorrect password", user.id)
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
+        if not user.is_active:
+            self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account inactive.")
 
         if not user.is_active:
             self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
@@ -224,7 +194,7 @@ class AuthService:
         }
 
     async def create_user(self, user_data, db: Session):
-        """Create a new user in Supabase + local DB"""
+        """Create a new user in local DB"""
         if db.query(User).filter(User.email == user_data.email).first():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered.")
 
@@ -240,76 +210,17 @@ class AuthService:
 
         full_name = user_data.full_name or username.replace(".", " ").title()
 
-        if not SUPABASE_AUTH_ENABLED:
-            return self._create_local_user(
-                email=user_data.email,
-                username=username,
-                full_name=full_name,
-                password=user_data.password,
-                db=db
-            )
-
-        supabase_user_id = None
-        email_confirmed = True
-        if not supabase_admin:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase admin client is not configured on the server."
-            )
-        try:
-            attributes = {
-                "email": user_data.email,
-                "password": user_data.password,
-                "email_confirm": True,
-                "user_metadata": {"username": username, "full_name": full_name, "role": "teacher"}
-            }
-            response = supabase_admin.auth.admin.create_user(attributes)
-            if not response.user:
-                raise Exception("Supabase did not return a user object")
-            supabase_user_id = response.user.id
-            if hasattr(response.user, 'email_confirmed_at'):
-                email_confirmed = bool(response.user.email_confirmed_at) or True
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create user in Supabase: {str(e)}")
-
-        db_user = User(
+        return self._create_local_user(
             email=user_data.email,
             username=username,
             full_name=full_name,
-            role="teacher",
-            password_hash="supabase_managed",
-            supabase_user_id=supabase_user_id,
-            email_verified=email_confirmed
+            password=user_data.password,
+            db=db
         )
-        try:
-            db.add(db_user)
-            db.commit()
-            db.refresh(db_user)
-        except Exception as db_err:
-            db.rollback()
-            if supabase_user_id:
-                try:
-                    supabase_admin.auth.admin.delete_user(supabase_user_id)
-                except:
-                    pass
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error. User creation rolled back. Error: {str(db_err)}")
-        return db_user
 
     async def request_delete_code(self, current_user: User):
         """Send a one-time OTP to user's email"""
-        if not SUPABASE_AUTH_ENABLED:
-            return {"message": "Verification code not required in local auth mode."}
-
-        if not supabase_anon:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase auth client is not configured on the server."
-            )
-        try:
-            supabase_anon.auth.sign_in_with_otp({"email": current_user.email, "create_user": False})
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to send verification code: {str(e)}")
-        return {"message": "Verification code sent to your email."}
+        return {"message": "Verification code not required in local auth mode."}
 
     async def update_account(
         self,
@@ -348,29 +259,6 @@ class AuthService:
         if not (email_changed or username_changed):
             return current_user
 
-        if supabase_admin and current_user.supabase_user_id:
-            payload = {
-                "user_metadata": {
-                    "username": current_user.username,
-                    "full_name": current_user.full_name,
-                    "role": current_user.role,
-                }
-            }
-            if email_changed:
-                payload["email"] = current_user.email
-            try:
-                supabase_admin.auth.admin.update_user_by_id(
-                    current_user.supabase_user_id,
-                    payload
-                )
-            except Exception as e:
-                current_user.email = old_email
-                current_user.username = old_username
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to update Supabase account: {str(e)}"
-                )
-
         try:
             db.commit()
             db.refresh(current_user)
@@ -392,7 +280,7 @@ class AuthService:
         new_password: str,
         db: Session,
     ):
-        """Update Supabase password after validating the current one."""
+        """Update password after validating the current one."""
         if not current_password or not new_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -407,104 +295,25 @@ class AuthService:
 
         self._validate_password_rules(new_password)
 
-        if not SUPABASE_AUTH_ENABLED:
-            if current_user.password_hash and not self._verify_password(current_password, current_user.password_hash):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Current password is incorrect.",
-                )
-            current_user.password_hash = self._hash_password(new_password)
-            try:
-                db.commit()
-                db.refresh(current_user)
-            except SQLAlchemyError:
-                db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update password in database."
-                )
-            return {"message": "Password updated successfully."}
-
-        # Verify current password via Supabase sign-in
-        if not supabase_anon:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase auth client is not configured on the server.",
-            )
-        try:
-            auth_result = supabase_anon.auth.sign_in_with_password(
-                {"email": current_user.email, "password": current_password}
-            )
-        except Exception:
+        if current_user.password_hash and not self._verify_password(current_password, current_user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Current password is incorrect.",
             )
-
-        supabase_user_id = current_user.supabase_user_id
-        if not supabase_user_id:
-            supabase_user_id = getattr(auth_result.user, "id", None)
-            if supabase_user_id:
-                current_user.supabase_user_id = supabase_user_id
-                try:
-                    db.commit()
-                    db.refresh(current_user)
-                except SQLAlchemyError:
-                    db.rollback()
-
-        if not supabase_user_id:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Supabase user identifier is missing. Please re-link your account.",
-            )
-
-        if not supabase_admin:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Supabase admin client is not configured on the server.",
-            )
-
+        current_user.password_hash = self._hash_password(new_password)
         try:
-            supabase_admin.auth.admin.update_user_by_id(
-                supabase_user_id,
-                {"password": new_password},
-            )
-        except Exception as e:
+            db.commit()
+            db.refresh(current_user)
+        except SQLAlchemyError:
+            db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update password in Supabase: {str(e)}",
+                detail="Failed to update password in database."
             )
-
         return {"message": "Password updated successfully."}
 
     async def delete_account(self, current_user: User, verification_code: str, db: Session):
-        """Delete account after OTP verification"""
-        if SUPABASE_AUTH_ENABLED:
-            if not verification_code.strip():
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code required.")
-
-            # Verify OTP with Supabase
-            if not supabase_anon:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Supabase auth client is not configured on the server."
-                )
-            try:
-                supabase_anon.auth.verify_otp({
-                    "email": current_user.email,
-                    "token": verification_code.strip(),
-                    "type": "email"
-                })
-            except Exception:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
-
-            # Delete Supabase user
-            if supabase_admin and current_user.supabase_user_id:
-                try:
-                    supabase_admin.auth.admin.delete_user(current_user.supabase_user_id)
-                except Exception:
-                    pass
-
+        """Delete account"""
         # Delete local DB user
         try:
             db.delete(current_user)
@@ -516,21 +325,21 @@ class AuthService:
         return {"message": "Account deleted successfully."}
 
     async def request_password_reset(self, email: str):
-        if not SUPABASE_AUTH_ENABLED:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password reset via email is disabled in local auth mode. Please update password from your profile."
-            )
-        if not supabase_anon:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase auth client is not configured on the server."
-            )
-        try:
-            supabase_anon.auth.reset_password_for_email(email)
-            return {"message": "Password reset email sent (if user exists)."}
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to send reset email: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset via email is disabled in local auth mode. Please update password from your profile."
+        )
+
+    async def send_verification_email(self, email: str):
+        """Send email verification (stub for local auth mode)"""
+        # In local auth mode, email verification is not required
+        # Users are automatically marked as verified on registration
+        return {"message": "Email verification is not required in local auth mode."}
+
+    async def verify_email_token(self, token: str, db: Session):
+        """Verify email token (stub for local auth mode)"""
+        # In local auth mode, email verification is not required
+        return {"message": "Email verification is not required in local auth mode."}
 
     async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
         try:

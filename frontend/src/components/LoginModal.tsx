@@ -286,7 +286,7 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
     setIsLoading(true);
 
     try {
-      // Call backend API to register user in PostgreSQL database
+      // Call backend API to register user in database
       // Backend will auto-generate username and full_name from email
       await authApi.register({
         email: email.trim(),

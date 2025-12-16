@@ -14,11 +14,10 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
-    password_hash = Column(String, nullable=True)  # Deprecated: Using Supabase Auth only
+    password_hash = Column(String, nullable=True)
     role = Column(String, default="teacher")  # teacher, admin
     is_active = Column(Boolean, default=True)
     email_verified = Column(Boolean, default=False)
-    supabase_user_id = Column(String, unique=True, index=True, nullable=True)  # Link to Supabase Auth user
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

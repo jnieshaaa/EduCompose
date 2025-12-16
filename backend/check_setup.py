@@ -26,11 +26,12 @@ else:
 database_url = os.getenv("DATABASE_URL")
 if database_url:
     print(f"✓ DATABASE_URL is set")
-    if database_url.startswith("postgresql://") or database_url.startswith("postgresql+psycopg2://"):
+    if database_url.startswith("sqlite://"):
+        print(f"  → Using SQLite")
+    elif database_url.startswith("postgresql://") or database_url.startswith("postgresql+psycopg2://"):
         print(f"  → Using PostgreSQL")
     else:
-        print(f"  ✗ WARNING: Only PostgreSQL is supported")
-        print(f"  → Current: {database_url[:30]}...")
+        print(f"  → Using: {database_url[:30]}...")
 else:
     print("✗ DATABASE_URL is NOT SET")
     print("  → Add DATABASE_URL to .env file")
@@ -51,7 +52,6 @@ required_packages = [
     ("fastapi", "fastapi"),
     ("uvicorn", "uvicorn"),
     ("sqlalchemy", "sqlalchemy"),
-    ("psycopg2", "psycopg2"),
     ("python-dotenv", "dotenv"),
     ("pydantic", "pydantic")
 ]
@@ -87,7 +87,6 @@ try:
         print("✓ Database connection successful")
 except Exception as e:
     print(f"✗ Database connection failed: {e}")
-    print("  → Make sure PostgreSQL is running")
     print("  → Check DATABASE_URL in .env file")
     sys.exit(1)
 
