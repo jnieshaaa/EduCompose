@@ -5,7 +5,8 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 
-import { Plus, Search, Edit, Trash2, MoreVertical, Eye, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MoreVertical, Eye, X, LayoutGrid, List, Mail, GraduationCap, FileText, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Table,
   TableBody,
@@ -51,6 +52,9 @@ export function StudentsTab() {
   // FILTER STATES - initialized from URL params
   const [programFilter, setProgramFilter] = useState(urlProgramFilter || 'All Programs');
   const [sectionFilter, setSectionFilter] = useState(urlSectionFilter || 'All Sections');
+  
+  // View mode state
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   // Sync filters with URL params
   useEffect(() => {
@@ -420,43 +424,71 @@ export function StudentsTab() {
 
       {/* Search & Filters */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input
-              type="search"
-              placeholder="Search by name, ID, email..."
-              value={searchQuery}
-              onChange={setSearchQuery}
-              className="pl-10"
-            />
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Input
+                type="search"
+                placeholder="Search by name, ID, email..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                className="pl-10"
+              />
+            </div>
+            {/* Hide program filter dropdown when filtered from URL */}
+            {!urlProgramFilter && (
+              <select 
+                className="px-3 py-2 border border-neutral-300 rounded-rd"
+                value={programFilter}
+                onChange={(e) => setProgramFilter(e.target.value)}
+              >
+                <option value="All Programs">All Programs</option>
+                {availablePrograms.map(program => (
+                  <option key={program} value={program}>{program}</option>
+                ))}
+              </select>
+            )}
+            {/* Hide section filter dropdown when filtered from URL */}
+            {!urlSectionFilter && (
+              <select 
+                className="px-3 py-2 border border-neutral-300 rounded-rd"
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+              >
+                <option value="All Sections">All Sections</option>
+                {availableSections.map(section => (
+                  <option key={section} value={section}>{section}</option>
+                ))}
+              </select>
+            )}
           </div>
-          {/* Hide program filter dropdown when filtered from URL */}
-          {!urlProgramFilter && (
-            <select 
-              className="px-3 py-2 border border-neutral-300 rounded-rd"
-              value={programFilter}
-              onChange={(e) => setProgramFilter(e.target.value)}
+          
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'cards'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
             >
-              <option value="All Programs">All Programs</option>
-              {availablePrograms.map(program => (
-                <option key={program} value={program}>{program}</option>
-              ))}
-            </select>
-          )}
-          {/* Hide section filter dropdown when filtered from URL */}
-          {!urlSectionFilter && (
-            <select 
-              className="px-3 py-2 border border-neutral-300 rounded-rd"
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
+              <LayoutGrid className="w-4 h-4" />
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
             >
-              <option value="All Sections">All Sections</option>
-              {availableSections.map(section => (
-                <option key={section} value={section}>{section}</option>
-              ))}
-            </select>
-          )}
+              <List className="w-4 h-4" />
+              Table
+            </button>
+          </div>
         </div>
         {loadError && (
           <p className="mt-3 text-xs text-warning-default">
@@ -465,14 +497,18 @@ export function StudentsTab() {
         )}
       </Card>
 
-      {/* Students Table */}
-      <Card>
-        {isLoading ? (
-          <div className="p-6 text-sm text-neutral-500">
-            Loading students from Supabase…
-          </div>
-        ) : filteredStudents.length === 0 ? (
-          <div className="p-6 text-sm text-neutral-500 text-center">
+      {/* Students Display */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-48 bg-neutral-200 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : filteredStudents.length === 0 ? (
+        <Card className="p-12 text-center">
+          <GraduationCap className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-neutral-700 mb-2">No students found</h3>
+          <p className="text-sm text-neutral-500 mb-4">
             {hasActiveFilters ? (
               <>
                 No students found matching the current filters.{" "}
@@ -481,19 +517,147 @@ export function StudentsTab() {
                   className="text-primary hover:underline"
                 >
                   Clear filters
-                </button>{" "}
-                or use <span className="font-semibold">Add Student</span> to add a student.
+                </button>
               </>
             ) : (
-              <>
-                No students found in Supabase. Use{" "}
-                <span className="font-semibold">Add Student</span> or{" "}
-                <span className="font-semibold">Batch Upload</span> to add students
-                to your classes.
-              </>
+              "Get started by adding your first student."
             )}
-          </div>
-        ) : (
+          </p>
+          {!hasActiveFilters && (
+            <Button className="bg-primary hover:bg-primary-300" onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          )}
+        </Card>
+      ) : viewMode === 'cards' ? (
+        /* Card Grid View */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <AnimatePresence mode="popLayout">
+            {filteredStudents.map((student, index) => {
+              const isAtRisk = student.missing > 2 || student.avgScore < 70;
+              return (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.03, duration: 0.2 }}
+                  layout
+                >
+                  <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
+                    {/* Status indicator bar */}
+                    <div className={`absolute top-0 left-0 right-0 h-1 ${
+                      isAtRisk 
+                        ? 'bg-gradient-to-r from-error-default to-error-default/60' 
+                        : student.avgScore >= 85
+                        ? 'bg-gradient-to-r from-success-default to-success-default/60'
+                        : 'bg-gradient-to-r from-info-default to-info-default/60'
+                    }`} />
+                    
+                    <div className="p-5">
+                      {/* Header with name and menu */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-bold text-neutral-900 truncate">
+                              {student.name}
+                            </h3>
+                            {isAtRisk && (
+                              <Badge className="bg-error-default/10 text-error-default border-error-default/20 text-xs flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                At Risk
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-neutral-500">{student.id}</p>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-1">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Essay History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Student
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-error-default">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove Student
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      {/* Email */}
+                      <div className="flex items-center gap-2 text-sm text-neutral-500 mb-3">
+                        <Mail className="w-4 h-4" />
+                        <span className="truncate">{student.email}</span>
+                      </div>
+                      
+                      {/* Program & Section badges */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {!urlProgramFilter && (
+                          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+                            {student.program}
+                          </Badge>
+                        )}
+                        {!urlSectionFilter && (
+                          <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs">
+                            {student.section}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-4 gap-2 pt-4 border-t border-neutral-100">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-success-default">
+                            <FileText className="w-3 h-3" />
+                            <span className="text-lg font-bold">{student.submitted}</span>
+                          </div>
+                          <p className="text-xs text-neutral-500">Done</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-warning-default">
+                            <span className="text-lg font-bold">{student.pending}</span>
+                          </div>
+                          <p className="text-xs text-neutral-500">Pending</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-error-default">
+                            <span className="text-lg font-bold">{student.missing}</span>
+                          </div>
+                          <p className="text-xs text-neutral-500">Missing</p>
+                        </div>
+                        <div className="text-center">
+                          <div className={`text-lg font-bold ${
+                            student.avgScore >= 85 ? 'text-success-default' :
+                            student.avgScore >= 75 ? 'text-info-default' :
+                            'text-warning-default'
+                          }`}>
+                            {student.avgScore}%
+                          </div>
+                          <p className="text-xs text-neutral-500">Avg</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      ) : (
+        /* Table View */
+        <Card>
           <Table>
             <TableHeader>
               <TableRow>
@@ -614,8 +778,8 @@ export function StudentsTab() {
               ))}
             </TableBody>
           </Table>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

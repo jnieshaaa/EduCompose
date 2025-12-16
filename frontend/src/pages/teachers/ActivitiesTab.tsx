@@ -16,6 +16,8 @@ import {
   Search,
   Clock,
   Target,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -27,6 +29,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/ui/table';
 import Modal from "../../components/ui/Modal";
 
 type Program = { id: string; name: string };
@@ -107,6 +117,7 @@ export function ActivitiesTab() {
   const [activities, setActivities] = useState<EssayActivity[]>(initialActivities);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   const [newActivity, setNewActivity] = useState<{
     title: string;
@@ -272,9 +283,9 @@ export function ActivitiesTab() {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Search & View Toggle */}
       <Card className="p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <Input
@@ -285,10 +296,36 @@ export function ActivitiesTab() {
               className="pl-10"
             />
           </div>
+          
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'cards'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Table
+            </button>
+          </div>
         </div>
       </Card>
 
-      {/* Activities Grid */}
+      {/* Activities Display */}
       {filteredActivities.length === 0 ? (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
@@ -308,7 +345,8 @@ export function ActivitiesTab() {
             </Button>
           )}
         </Card>
-      ) : (
+      ) : viewMode === 'cards' ? (
+        /* Card Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
             {filteredActivities.map((activity, index) => {
@@ -432,6 +470,105 @@ export function ActivitiesTab() {
             })}
           </AnimatePresence>
         </div>
+      ) : (
+        /* Table View */
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Activity Title</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Section</TableHead>
+                <TableHead>Rubric</TableHead>
+                <TableHead className="text-center">Due Date</TableHead>
+                <TableHead className="text-center">Submissions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredActivities.map((activity) => {
+                const dueDateStatus = getDueDateStatus(activity.dueDate);
+                const rubricLabel = getRubricLabel(activity.rubricId);
+                
+                return (
+                  <TableRow 
+                    key={activity.id}
+                    className="cursor-pointer hover:bg-primary/5 transition-colors"
+                    onClick={() => handleActivityClick(activity.id)}
+                  >
+                    <TableCell>
+                      <div className="font-medium text-neutral-900">{activity.title}</div>
+                      {activity.description && (
+                        <div className="text-xs text-neutral-500 truncate max-w-xs">
+                          {activity.description}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+                        {getProgramLabel(activity.programId)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs">
+                        {getBlockLabel(activity.blockId)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {rubricLabel ? (
+                        <Badge className="bg-info-default/10 text-info-default border-info-default/20 text-xs">
+                          {rubricLabel}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-neutral-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {dueDateStatus ? (
+                        <Badge className={`${dueDateStatus.color} text-xs`}>
+                          {dueDateStatus.label}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-neutral-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge className={
+                        activity.submissionCount > 0
+                          ? "bg-success-default/10 text-success-default border-success-default/20"
+                          : "bg-neutral-100 text-neutral-500 border-neutral-200"
+                      }>
+                        {activity.submissionCount}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Activity
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteActivity(e, activity.id)}
+                            className="text-error-default"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Activity
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {/* Create Activity Modal */}
