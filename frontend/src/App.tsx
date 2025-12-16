@@ -32,15 +32,15 @@ import {ClassDetailTab} from "./pages/students/ClassDetailTab.tsx"; // Create th
 
 // General/Legacy Imports (kept for reference or removal later)
 import Dashboard_v2 from "./pages/Dashboard_v2"; // Kept, but moved under /Teacher
-import EssayManagement from "./pages/EssayManagement"; // Kept, but moved under /Teacher
 import ClassManagement from "./pages/ClassManagement"; // Kept, but moved under /Teacher
 import AssignmentManagement from "./pages/AssignmentManagement"; // Kept, but moved under /Teacher
 import Gradebook from "./pages/Gradebook"; // Kept, but moved under /Teacher
 import EssayActivity from "./pages/EssayActivity.tsx"; // Kept, but moved under /Teacher
 import SectionsList from "./pages/SectionsList"; // Kept, but moved under /Teacher
 import AnalysisResults from "./pages/AnalysisResults"; // General route (no layout)
-import Students from "./pages/Students"; // Renamed to StudentsTab, keeping the file for reference
-import Settings from "./pages/Settings"; // Renamed to SettingsTab, keeping the file for reference
+// import Students from "./pages/Students"; // Legacy, kept for reference
+// import Settings from "./pages/Settings"; // Legacy, kept for reference
+import { EssayManagementTab } from "./pages/teachers/EssayManagementTab.tsx";
 
 
 // General/Utility Imports
@@ -59,7 +59,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const AppContent: React.FC = () => {
   const location = useLocation();
   const { setLoading } = useLoader();
-  const [showIntro, setShowIntro] = React.useState(false);
 
   // useEffect(() => {
   //   const modalShown = sessionStorage.getItem("introModalShown");
@@ -112,6 +111,7 @@ const AppContent: React.FC = () => {
           <Route path="Settings" element={<SettingsTab />} />
           <Route path="Students" element={<StudentsTab />} />
           <Route path="Essays" element={<EssaysTab />} />
+          <Route path="EssayManagement" element={<EssayManagementTab />} />
           <Route path="Metrics" element={<MetricsTab />} />
           <Route path="Programs" element={<ProgramsTab />} />
           <Route path="Rubrics" element={<RubricsTab />} />
@@ -120,7 +120,6 @@ const AppContent: React.FC = () => {
           
           {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
           <Route path="Dashboard_v2" element={<Dashboard_v2 />} />
-          <Route path="EssayManagement" element={<EssayManagement />} />
           <Route path="ClassManagement" element={<ClassManagement />} />
           <Route path="AssignmentManagement" element={<AssignmentManagement />} />
           <Route path="Gradebook" element={<Gradebook />} />

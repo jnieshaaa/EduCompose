@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { userApi } from "../api";
+import { supabase } from "../lib/supabaseClient";
 
-// --- FIX: ADD DESIGN MODE CONSTANTS AND EXPORT THEM ---
-export const DESIGN_MODE_ENABLED = true;
+// Design/demo mode is now disabled so Supabase auth is used.
+export const DESIGN_MODE_ENABLED = false;
 export const DESIGN_MODE_TOKEN = "DESIGN_MODE_AUTH_TOKEN";
 export const DESIGN_MODE_USER = {
   id: 1,
@@ -14,10 +14,9 @@ export const DESIGN_MODE_USER = {
   is_active: true,
   email_verified: true,
 };
-// ----------------------------------------------------
 
 interface User {
-  id: number;
+  id: string | number;
   email: string;
   username: string;
   full_name: string;
@@ -53,38 +52,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is authenticated on mount and when token changes
+  // Map Supabase user object into our local User shape
+  const mapSupabaseUser = (supabaseUser: any): User => {
+    const metadata = supabaseUser.user_metadata || {};
+    const fullName =
+      metadata.full_name ||
+      metadata.name ||
+      supabaseUser.email?.split("@")[0] ||
+      "Teacher";
+
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email ?? "",
+      username: metadata.username || supabaseUser.email || fullName,
+      full_name: fullName,
+      role: "teacher",
+      is_active: true,
+      email_verified: !!supabaseUser.email_confirmed_at,
+    };
+  };
+
+  // Check if user is authenticated via Supabase on mount and when token changes
   const checkAuth = async () => {
-    const token = localStorage.getItem("auth_token");
-
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
+    setIsLoading(true);
     try {
-      // Prefer locally cached user to avoid backend calls when running in demo/offline mode
+      // Prefer locally cached user if present
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         setUser(JSON.parse(storedUser));
+        setIsLoading(false);
         return;
       }
 
-      // Fallback: verify token with backend when available
-      const userData = await userApi.getCurrentUser();
-      setUser(userData);
-    } catch (error: any) {
-      // Token is invalid or backend unavailable; keep local user if present
-      console.error("Auth check failed:", error);
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (error || !session || !session.user) {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         setUser(null);
+        setIsLoading(false);
+        return;
       }
+
+      const mappedUser = mapSupabaseUser(session.user);
+      localStorage.setItem("auth_token", session.access_token);
+      localStorage.setItem("user", JSON.stringify(mappedUser));
+      setUser(mappedUser);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -93,18 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check authentication on mount
     checkAuth();
-
-    // Also check if user data exists in localStorage (from previous login)
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-      } catch (error) {
-        console.error("Failed to parse stored user data:", error);
-        localStorage.removeItem("user");
-      }
-    }
   }, []);
 
   const login = (token: string, userData?: User) => {

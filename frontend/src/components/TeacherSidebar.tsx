@@ -13,11 +13,12 @@ import {
   Target,
   Zap,
   Shield,
-  // LayoutDashboard, 
-  Users, 
-  ClipboardCheck, 
-  BarChart3, 
-  Settings
+  // LayoutDashboard,
+  Users,
+  ClipboardCheck,
+  BarChart3,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,7 +49,30 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const menuItems: MenuItem[] = useMemo(
+  // Class Management sub-items: Programs, Blocks/Sections, Students
+  const classManagementItems: MenuItem[] = useMemo(
+    () => [
+      {
+        icon: <BookOpen className='w-4 h-4' />,
+        label: "Programs",
+        path: "/Teacher/Programs",
+      },
+      {
+        icon: <Layers className='w-4 h-4' />,
+        label: "Blocks / Sections",
+        path: "/Teacher/Sections",
+      },
+      {
+        icon: <Users className='w-4 h-4' />,
+        label: "Students",
+        path: "/Teacher/Students",
+      },
+    ],
+    []
+  );
+
+  // Other top-level navigation items
+  const otherMenuItems: MenuItem[] = useMemo(
     () => [
       {
         icon: <Home className='w-5 h-5' />,
@@ -56,24 +80,14 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         path: "/Teacher/Dashboard",
       },
       {
-        icon: <BookOpen className='w-5 h-5' />,
-        label: "Programs",
-        path: "/Teacher/Programs",
-      },
-      {
-        icon: <Layers className='w-5 h-5' />,
-        label: "Blocks / Sections",
-        path: "/Teacher/Sections",
-      },
-      {
-        icon: <Users className='w-5 h-5' />,
-        label: "Students",
-        path: "/Teacher/Students",
-      },
-      {
         icon: <FileText className='w-5 h-5' />,
         label: "Essay Submissions",
         path: "/Teacher/Essays",
+      },
+      {
+        icon: <BookOpen className='w-5 h-5' />,
+        label: "Essay Management",
+        path: "/Teacher/EssayManagement",
       },
       {
         icon: <ClipboardCheck className='w-5 h-5' />,
@@ -90,53 +104,57 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         label: "Settings",
         path: "/Teacher/Settings",
       },
-      // {
-      //   icon: <ClipboardList className='w-5 h-5' />,
-      //   label: "Assignments",
-      //   path: "/AssignmentManagement",
-      // },
-      // {
-      //   icon: <Award className='w-5 h-5' />,
-      //   label: "Gradebook",
-      //   path: "/Gradebook",
-      // },
-      // {
-      //   icon: <BarChart3 className='w-5 h-5' />,
-      //   label: "Analytics",
-      //   path: "/Analytics",
-      // },
     ],
     []
   );
 
+  const allMenuItems: MenuItem[] = useMemo(
+    () => [...classManagementItems, ...otherMenuItems],
+    [classManagementItems, otherMenuItems]
+  );
+
   const [activePath, setActivePath] = useState(location.pathname);
+  const [isClassManagementOpen, setIsClassManagementOpen] = useState(false);
+
+  const isClassManagementRoute = useMemo(
+    () =>
+      classManagementItems.some((item) =>
+        activePath.toLowerCase().startsWith(item.path.toLowerCase())
+      ),
+    [activePath, classManagementItems]
+  );
+
   useEffect(() => setActivePath(location.pathname), [location.pathname]);
 
   const handleItemClick = (path: string) => {
+    // Only navigate; do not auto-close sidebar. It should only be
+    // controlled by the burger icon in the parent layout.
     navigate(path);
-    if (!isDesktop) setIsSidebarOpen(false);
   };
 
   useEffect(() => {
-    const currentItem = menuItems.find(
+    const currentItem = allMenuItems.find(
       (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
     );
     document.title = currentItem ? currentItem.label : "EduCompose";
-  }, [location.pathname, menuItems]);
+  }, [location.pathname, allMenuItems]);
+
+  // Automatically open Class Management dropdown when one of its routes is active
+  useEffect(() => {
+    if (isClassManagementRoute) {
+      setIsClassManagementOpen(true);
+    }
+  }, [isClassManagementRoute]);
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
       setIsTablet(width >= 768 && width < 1024);
-      // Auto-close sidebar on mobile when resizing to mobile size
-      if (width < 768 && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isSidebarOpen]);
+  }, []);
 
   useEffect(() => {
     setLogoShine(true);
@@ -205,48 +223,201 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
             className='space-y-2'
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
-            {menuItems.map((item) => {
-              const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
-                              activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
-              return (
-                <li key={item.label} className='w-full'>
-                  <Tooltip
-                    content={item.label}
-                    position='right'
-                    delay={200}
-                    disabled={isSidebarOpen}
-                  >
-                    <button
-                      onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-rd ${
-                        isActive
-                          ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:text-support-superlight"
-                      }`}
+            {/* Dashboard (top-level item) */}
+            {otherMenuItems
+              .filter((item) => item.label === "Dashboard")
+              .map((item) => {
+                const isActive =
+                  activePath.toLowerCase() === item.path.toLowerCase() ||
+                  activePath
+                    .toLowerCase()
+                    .startsWith(item.path.toLowerCase() + "/");
+                return (
+                  <li key={item.label} className='w-full'>
+                    <Tooltip
+                      content={item.label}
+                      position='right'
+                      delay={200}
+                      disabled={isSidebarOpen}
                     >
-                      <div className='flex items-center w-full flex-1'>
-                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                          {item.icon}
-                        </span>
-                        <AnimatePresence>
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial='hidden'
-                              animate='visible'
-                              exit='hidden'
-                              variants={textVariants}
-                              className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </button>
-                  </Tooltip>
-                </li>
-              );
-            })}
+                      <button
+                        onClick={() => handleItemClick(item.path)}
+                        className={`btn-fade group w-full flex items-center rounded-rd ${
+                          isActive
+                            ? "bg-neutral-50 text-primary"
+                            : "bg-primary text-white hover:text-support-superlight"
+                        }`}
+                      >
+                        <div className='flex items-center w-full flex-1'>
+                          <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                            {item.icon}
+                          </span>
+                          <AnimatePresence>
+                            {isSidebarOpen && (
+                              <motion.span
+                                initial='hidden'
+                                animate='visible'
+                                exit='hidden'
+                                variants={textVariants}
+                                className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
+                              >
+                                {item.label}
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </button>
+                    </Tooltip>
+                  </li>
+                );
+              })}
+
+            {/* Class Management parent item with dropdown children */}
+            <li className='w-full'>
+              <Tooltip
+                content='Class Management'
+                position='right'
+                delay={200}
+                disabled={isSidebarOpen}
+              >
+                <button
+                  onClick={() => {
+                    setIsClassManagementOpen((prev) => !prev);
+                    // Navigate to default sub-route (Programs)
+                    handleItemClick("/Teacher/Programs");
+                  }}
+                  className={`btn-fade group w-full flex items-center rounded-rd ${
+                    isClassManagementRoute
+                      ? "bg-neutral-50 text-primary"
+                      : "bg-primary text-white hover:text-support-superlight"
+                  }`}
+                >
+                  <div className='flex items-center w-full flex-1'>
+                    <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                      <Layers className='w-5 h-5' />
+                    </span>
+                    <AnimatePresence>
+                      {isSidebarOpen && (
+                        <motion.span
+                          initial='hidden'
+                          animate='visible'
+                          exit='hidden'
+                          variants={textVariants}
+                          className='font-medium whitespace-nowrap flex-1 pr-2 text-left flex items-center justify-between'
+                        >
+                          <span>Class Management</span>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ml-2 ${
+                              isClassManagementOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </button>
+              </Tooltip>
+
+              {/* Class Management sub-menu */}
+              <AnimatePresence initial={false}>
+                {isSidebarOpen && isClassManagementOpen && (
+                  <motion.ul
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className='mt-1 ml-12 space-y-1 overflow-hidden'
+                  >
+                    {classManagementItems.map((item) => {
+                      const isActive =
+                        activePath.toLowerCase() === item.path.toLowerCase() ||
+                        activePath
+                          .toLowerCase()
+                          .startsWith(item.path.toLowerCase() + "/");
+                      return (
+                        <li key={item.label} className='w-full'>
+                          <button
+                            onClick={() => handleItemClick(item.path)}
+                            className={`btn-fade group w-full flex items-center rounded-rd text-sm ${
+                              isActive
+                                ? "bg-neutral-50 text-primary"
+                                : "bg-primary text-white hover:text-support-superlight"
+                            }`}
+                          >
+                            <div className='flex items-center w-full flex-1'>
+                              <span className='flex-shrink-0 flex items-center justify-center w-8 h-8'>
+                                {item.icon}
+                              </span>
+                              <AnimatePresence>
+                                {isSidebarOpen && (
+                                  <motion.span
+                                    initial='hidden'
+                                    animate='visible'
+                                    exit='hidden'
+                                    variants={textVariants}
+                                    className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
+                                  >
+                                    {item.label}
+                                  </motion.span>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </li>
+
+            {/* Remaining top-level items (excluding Dashboard) */}
+            {otherMenuItems
+              .filter((item) => item.label !== "Dashboard")
+              .map((item) => {
+                const isActive =
+                  activePath.toLowerCase() === item.path.toLowerCase() ||
+                  activePath
+                    .toLowerCase()
+                    .startsWith(item.path.toLowerCase() + "/");
+                return (
+                  <li key={item.label} className='w-full'>
+                    <Tooltip
+                      content={item.label}
+                      position='right'
+                      delay={200}
+                      disabled={isSidebarOpen}
+                    >
+                      <button
+                        onClick={() => handleItemClick(item.path)}
+                        className={`btn-fade group w-full flex items-center rounded-rd ${
+                          isActive
+                            ? "bg-neutral-50 text-primary"
+                            : "bg-primary text-white hover:text-support-superlight"
+                        }`}
+                      >
+                        <div className='flex items-center w-full flex-1'>
+                          <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                            {item.icon}
+                          </span>
+                          <AnimatePresence>
+                            {isSidebarOpen && (
+                              <motion.span
+                                initial='hidden'
+                                animate='visible'
+                                exit='hidden'
+                                variants={textVariants}
+                                className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
+                              >
+                                {item.label}
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </button>
+                    </Tooltip>
+                  </li>
+                );
+              })}
           </ul>
         </nav>
 

@@ -7,11 +7,10 @@ import {
   UserPlus,
   ArrowLeft,
   X,
-  User,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../api";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth, DESIGN_MODE_ENABLED, DESIGN_MODE_TOKEN, DESIGN_MODE_USER } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 
 // --- Form Components ---
 
@@ -85,7 +84,7 @@ interface FormProps {
 
 // --- Login Form ---
 const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -102,39 +101,64 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
     setError("");
 
     // Validate inputs
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password");
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password");
       return;
     }
 
     setIsLoading(true);
 
-    // Determines the role based on username for the demo
-    const role = username.toLowerCase().includes("student") ? "student" : "teacher";
+    try {
+      if (DESIGN_MODE_ENABLED) {
+        // Local/demo mode: reuse design-mode user
+        login(DESIGN_MODE_TOKEN, DESIGN_MODE_USER);
+        navigate("/Teacher/Dashboard");
+        onClose();
+        return;
+      }
 
-    // Demo/offline login: bypass backend and create a local session
-    const fakeUser = {
-      id: Date.now(),
-      email: `${username.trim() || "user"}@local.test`,
-      username: username.trim() || "user",
-      full_name: username.trim() || "User",
-      role: role, // Use the dynamic role here
-      is_active: true,
-    };
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
 
-    login("local-demo-token", fakeUser);
+      if (error) {
+        throw error;
+      }
 
-    // 👇 CORRECTED REDIRECTION LOGIC 👇
-    if (role === "student") {
-      navigate("/Student/Dashboard");
-    } else {
-      // Default to teacher dashboard, as the original logic assumed 'teacher'
-      navigate("/Teacher/Dashboard");
+      if (data.session && data.user) {
+        const userMeta = (data.user.user_metadata || {}) as any;
+        const fullName =
+          userMeta.full_name ||
+          userMeta.name ||
+          data.user.email?.split("@")[0] ||
+          "Teacher";
+
+        login(data.session.access_token, {
+          id: data.user.id,
+          email: data.user.email ?? "",
+          username: data.user.email ?? "",
+          full_name: fullName,
+          role: (userMeta.role as string) || "teacher",
+          is_active: true,
+          email_verified: !!data.user.email_confirmed_at,
+        });
+
+        const role = (userMeta.role as string) || "teacher";
+        if (role === "student") {
+          navigate("/Student/Dashboard");
+        } else {
+          navigate("/Teacher/Dashboard");
+        }
+        onClose();
+      } else {
+        setError("Authentication failed. Please check your email and password.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Authentication failed. Please check your credentials and try again.");
+    } finally {
+      setIsLoading(false);
     }
-    // 👆 END OF FIX 👆
-
-    onClose();
-    setIsLoading(false);
   };
 
   return (
@@ -154,16 +178,16 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
         )}
 
         <InputField
-          id='login-username'
-          label='Username'
-          type='text'
-          value={username}
+          id='login-email'
+          label='Email'
+          type='email'
+          value={email}
           onChange={(e) => {
-            setUsername(e.target.value);
+            setEmail(e.target.value);
             setError(""); // Clear error when user types
           }}
-          placeholder='Enter your username'
-          Icon={User}
+          placeholder='Enter your email'
+          Icon={Mail}
         />
         <InputField
           id='login-password'
@@ -226,7 +250,6 @@ const LoginForm: React.FC<FormProps> = ({ onViewChange, onClose }) => {
 
 // --- Sign Up Form ---
 const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -246,21 +269,8 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
     setSuccess("");
 
     // Validate inputs
-    if (
-      !username.trim() ||
-      !email.trim() ||
-      !password.trim() ||
-      !confirmPassword.trim()
-    ) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    const usernameRegex = /^[a-zA-Z.,]{3,20}$/;
-    if (!usernameRegex.test(username.trim())) {
-      setError(
-        "Username must be 3-20 characters and include only letters, commas, or periods."
-      );
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -286,16 +296,24 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
     setIsLoading(true);
 
     try {
-      // Call backend API to register user in database
-      // Backend will auto-generate username and full_name from email
-      await authApi.register({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
-        password: password,
-        username: username.trim(),
+        password: password.trim(),
+        options: {
+          data: {
+            full_name: email.trim().split("@")[0],
+            role: "teacher",
+          },
+        },
       });
 
-      setSuccess(`Account created successfully! Please log in to continue.`);
-      setUsername("");
+      if (error) {
+        throw error;
+      }
+
+      setSuccess(
+        "Account created successfully! Please check your email to verify your account, then log in."
+      );
       setEmail("");
       setPassword("");
       setConfirmPassword("");
@@ -304,30 +322,8 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
       setTimeout(() => {
         onViewChange("login");
       }, 2000);
-    } catch (err) {
-      const apiError = err as { status?: number; message?: string };
-      // Handle API errors
-      if (
-        apiError.status === 0 ||
-        apiError.message?.includes("Failed to connect")
-      ) {
-        setError(
-          "Cannot connect to server. Please make sure the backend server is running on http://localhost:8000"
-        );
-      } else if (apiError.status === 400) {
-        setError(
-          apiError.message ||
-            "Email already registered. Please use a different email."
-        );
-      } else if (apiError.status === 503) {
-        // Show the detailed error message from the backend
-        setError(
-          apiError.message ||
-            "Database connection failed. Please check your database configuration."
-        );
-      } else {
-        setError(apiError.message || "Registration failed. Please try again.");
-      }
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -362,18 +358,6 @@ const SignUpForm: React.FC<FormProps> = ({ onViewChange }) => {
           </div>
         )}
 
-        <InputField
-          id='signup-username'
-          label='Username'
-          type='text'
-          value={username}
-          onChange={(e) => {
-            setUsername(e.target.value);
-            setError("");
-          }}
-          placeholder='Choose a unique username'
-          Icon={User}
-        />
         <InputField
           id='signup-email'
           label='Email Address'

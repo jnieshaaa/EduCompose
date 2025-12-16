@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../api";
 import { useAuth, DESIGN_MODE_ENABLED, DESIGN_MODE_TOKEN, DESIGN_MODE_USER } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -10,10 +10,11 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = async (e?: React.FormEvent) => {
+  const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
     }
@@ -30,32 +31,69 @@ const Login: React.FC = () => {
     try {
       if (DESIGN_MODE_ENABLED) {
         login(DESIGN_MODE_TOKEN, DESIGN_MODE_USER);
-        navigate("/Dashboard");
+        navigate("/Teacher/Dashboard");
         return;
       }
 
-      const response = await authApi.login(
-        { email: email.trim() },
-        password
-      );
-      
-      if (response.access_token) {
-        // Use AuthContext login method to update auth state
-        login(response.access_token, response.user || undefined);
-        navigate("/Dashboard");
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: password.trim(),
+          options: {
+            data: {
+              full_name: email.trim().split("@")[0],
+              role: "teacher",
+            },
+          },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        // Depending on email confirmation settings, session may or may not exist immediately.
+        if (data.session && data.user) {
+          login(data.session.access_token, {
+            id: data.user.id,
+            email: data.user.email ?? "",
+            username: data.user.email ?? "",
+            full_name: (data.user.user_metadata as any)?.full_name ?? data.user.email ?? "",
+            role: "teacher",
+            is_active: true,
+            email_verified: !!data.user.email_confirmed_at,
+          });
+          navigate("/Teacher/Dashboard");
+          return;
+        }
+
+        setError("Sign-up successful. Please check your email to verify your account, then log in.");
+        return;
+      }
+
+      // Login mode
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.session && data.user) {
+        login(data.session.access_token, {
+          id: data.user.id,
+          email: data.user.email ?? "",
+          username: data.user.email ?? "",
+          full_name: (data.user.user_metadata as any)?.full_name ?? data.user.email ?? "",
+          role: "teacher",
+          is_active: true,
+          email_verified: !!data.user.email_confirmed_at,
+        });
+        navigate("/Teacher/Dashboard");
       }
     } catch (err: any) {
-      if (err.status === 0 || err.message?.includes("Failed to connect")) {
-        setError("Cannot connect to server. Please make sure the backend server is running on http://localhost:8000");
-      } else if (err.status === 401) {
-        setError("Invalid credentials. User not found in database or password is incorrect.");
-      } else if (err.status === 403) {
-        setError("Account is inactive. Please contact administrator.");
-      } else if (err.status === 503) {
-        setError("Database connection failed. Please try again later.");
-      } else {
-        setError(err.message || "Login failed. Please check your credentials and try again.");
-      }
+      setError(err.message || "Authentication failed. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +191,7 @@ const Login: React.FC = () => {
               <p className='text-neutral-900'>Login to access your dashboard</p>
             </div>
 
-            <form onSubmit={handleLogin} className='space-y-5'>
+            <form onSubmit={handleAuthSubmit} className='space-y-5'>
               {/* Error Message */}
               {error && (
                 <div className='p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm'>
@@ -231,22 +269,53 @@ const Login: React.FC = () => {
                 </button>
               </div>
 
-              {/* Login Button */}
+              {/* Primary Auth Button */}
               <button
                 type='submit'
                 disabled={isLoading}
                 className='w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading
+                  ? mode === "login"
+                    ? "Logging in..."
+                    : "Creating account..."
+                  : mode === "login"
+                  ? "Login"
+                  : "Sign up"}
               </button>
             </form>
 
             {/* Sign Up */}
             <p className='text-center text-neutral-900 text-sm mt-6'>
-              Don’t have an account?{" "}
-              <button className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'>
-                Sign up now!
-              </button>
+              {mode === "login" ? (
+                <>
+                  Don’t have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("signup");
+                      setError("");
+                    }}
+                    className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'
+                  >
+                    Sign up now!
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("login");
+                      setError("");
+                    }}
+                    className='font-semibold text-primary-500 hover:text-primary-50 transition-colors'
+                  >
+                    Login instead
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>

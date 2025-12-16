@@ -216,7 +216,11 @@ export class BatchUploadController {
 
       try {
         const id = this.getFieldValue(row, ["id", "student id", "student_id", "studentid"]).toUpperCase();
-        const name = this.getFieldValue(row, ["name", "full name", "full_name", "student name", "student_name"]);
+        const firstName = this.getFieldValue(row, ["firstname", "first name", "first_name", "given name", "given_name"]);
+        const middleName = this.getFieldValue(row, ["middlename", "middle name", "middle_name", "m.i.", "mi"]);
+        const lastName = this.getFieldValue(row, ["lastname", "last name", "last_name", "family name", "family_name"]);
+        // Backwards-compat: if old single-name columns exist, use them and split
+        const legacyFullName = this.getFieldValue(row, ["name", "full name", "full_name", "student name", "student_name"]);
         const email = this.getFieldValue(row, ["email", "email address", "email_address"]);
         const program = this.getFieldValue(row, ["program", "program name", "program_name"]);
         const section = this.getFieldValue(row, ["section", "section name", "section_name", "block", "block name", "block_name"]);
@@ -226,8 +230,19 @@ export class BatchUploadController {
           continue;
         }
 
-        if (!name) {
-          errors.push(`Row ${rowNum}: Student name is required`);
+        const effectiveFirstName = firstName || (legacyFullName ? legacyFullName.split(" ")[0] : "");
+        const effectiveLastName = lastName || (legacyFullName ? legacyFullName.split(" ").slice(-1)[0] : "");
+        const effectiveMiddleName =
+          middleName ||
+          (legacyFullName
+            ? legacyFullName
+                .split(" ")
+                .slice(1, -1)
+                .join(" ")
+            : "");
+
+        if (!effectiveFirstName || !effectiveLastName) {
+          errors.push(`Row ${rowNum}: First name and last name are required`);
           continue;
         }
 
@@ -252,9 +267,15 @@ export class BatchUploadController {
           continue;
         }
 
+        const studentNameParts = [
+          effectiveFirstName.trim(),
+          effectiveMiddleName.trim(),
+          effectiveLastName.trim(),
+        ].filter(Boolean);
+
         const student: Student = {
           id: id.trim(),
-          name: name.trim(),
+          name: studentNameParts.join(" "),
           email: email.trim(),
           program: program.trim(),
           section: section.trim(),

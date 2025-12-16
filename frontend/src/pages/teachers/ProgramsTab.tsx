@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input"; 
 import type { Program } from '../../data/programsData';
+import { supabase } from "../../lib/supabaseClient";
 
 import { Plus, Search, Edit, Archive, Upload, MoreVertical } from 'lucide-react';
 import {
@@ -34,7 +35,9 @@ import {
 
 export function ProgramsTab() {
   // 1. STATE FOR THE LIST OF PROGRAMS
-  const [programs, setPrograms] = useState<Program[]>(initialProgramsData);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -52,6 +55,47 @@ export function ProgramsTab() {
       setPrograms(prevPrograms => [...(result.data as Program[]), ...prevPrograms]);
     }
   };
+
+  // Load programs from Supabase (teacher-end) – falls back to mock data on error.
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const { data, error } = await supabase
+          .from("programs")
+          .select("id, name, description, tracks, courses, avg_class_size, status")
+          .order("id", { ascending: true });
+
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error("Error loading programs from Supabase:", error);
+          setLoadError("Unable to load programs from Supabase.");
+          return;
+        }
+
+        const mapped: Program[] =
+          data?.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            description: row.description ?? "",
+            tracks: row.tracks ?? 0,
+            courses: row.courses ?? 0,
+            avgClassSize: row.avg_class_size ?? 0,
+            status: row.status ?? "Active",
+          })) ?? [];
+        setPrograms(mapped);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Unexpected error loading programs:", err);
+        setLoadError("Unable to load programs from Supabase.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPrograms();
+  }, []);
 
   // 2. HANDLE SUBMIT FUNCTION
   const handleCreateProgram = () => {
@@ -185,64 +229,93 @@ export function ProgramsTab() {
           </div>
           {/* <Button variant="outline">Filter</Button> */}
         </div>
+        {loadError && (
+          <p className="mt-3 text-xs text-warning-default">
+            {loadError}
+          </p>
+        )}
       </Card>
 
       {/* Programs Table */}
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Program Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-center">Course Tracks</TableHead>
-              <TableHead className="text-center">Total Courses</TableHead>
-              <TableHead className="text-center">Avg. Class Size</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* The table now renders data from the 'programs' state */}
-            {filteredPrograms.map((program) => (
-              <TableRow key={program.id}>
-                <TableCell>
-                  <div className="text-neutral-900">{program.name}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm text-neutral-600">{program.description}</div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    {program.tracks}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-success-default/10 text-success-default border-success-default/20">
-                    {program.courses}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                    {program.avgClassSize}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge className={
-                    program.status === 'Active' 
-                      ? 'bg-success-default text-white' 
-                      : 'bg-neutral-400 text-white'
-                  }>
-                    {program.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
+        {isLoading ? (
+          <div className="p-6 text-sm text-neutral-500">
+            Loading programs from Supabase…
+          </div>
+        ) : filteredPrograms.length === 0 ? (
+          <div className="p-6 text-sm text-neutral-500 text-center">
+            No programs found in Supabase. Use{" "}
+            <span className="font-semibold">Add Program</span> or{" "}
+            <span className="font-semibold">Batch Upload</span> to create your
+            first program.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Program Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-center">Course Tracks</TableHead>
+                <TableHead className="text-center">Total Courses</TableHead>
+                <TableHead className="text-center">Avg. Class Size</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPrograms.map((program) => (
+                <TableRow key={program.id}>
+                  <TableCell>
+                    <div className="text-neutral-900">{program.name}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-neutral-600">
+                      {program.description}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/20"
+                    >
+                      {program.tracks}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-success-default/10 text-success-default border-success-default/20"
+                    >
+                      {program.courses}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-secondary/10 text-secondary border-secondary/20"
+                    >
+                      {program.avgClassSize}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      className={
+                        program.status === "Active"
+                          ? "bg-success-default text-white"
+                          : "bg-neutral-400 text-white"
+                      }
+                    >
+                      {program.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      
+
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>
                           <Edit className="w-4 h-4 mr-2" />
@@ -253,13 +326,13 @@ export function ProgramsTab() {
                           Archive Program
                         </DropdownMenuItem>
                       </DropdownMenuContent>
-                      
                     </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
     </div>
   );

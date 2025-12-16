@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -29,20 +29,14 @@ import type { Student } from '../../data/studentsData';
 import { initialStudentsData, initialNewStudentState } from '../../data/studentsData';
 import { initialProgramsData } from '../../data/programsData';
 import { initialSectionsData } from '../../data/sectionsData';
-
-
-// NOTE: Conceptual update to the Student interface and initialStudentsData 
-// to include 'missing': number
-const updatedStudentsData = initialStudentsData.map(student => ({
-  ...student,
-  // Adding sample data for the new 'missing' column
-  missing: student.id === 'STU005' ? 2 : (student.id === 'STU003' ? 1 : 0), 
-}));
+import { supabase } from "../../lib/supabaseClient";
 
 
 export function StudentsTab() {
   // STATE: Main list of students (using the updated mock data)
-  const [students, setStudents] = useState<Student[]>(updatedStudentsData);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newStudent, setNewStudent] = useState(initialNewStudentState);
@@ -52,8 +46,12 @@ export function StudentsTab() {
   const [sectionFilter, setSectionFilter] = useState('All Sections');
 
   // Helper for dropdown options
-  const availablePrograms = initialProgramsData.map(p => p.name);
-  const availableSections = Array.from(new Set(initialSectionsData.map(s => s.name)));
+  const [availablePrograms, setAvailablePrograms] = useState<string[]>(
+    initialProgramsData.map((p) => p.name)
+  );
+  const [availableSections, setAvailableSections] = useState<string[]>(
+    Array.from(new Set(initialSectionsData.map((s) => s.name)))
+  );
 
   const handleInputChange = (field: string, value: string) => {
     setNewStudent(prev => ({ ...prev, [field]: value }));
@@ -65,6 +63,86 @@ export function StudentsTab() {
       setStudents(prevStudents => [...(result.data as Student[]), ...prevStudents]);
     }
   };
+
+  // Load students + programs + sections from Supabase (teacher-end).
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        // Load programs and sections to map ids -> names
+        const [{ data: programsData, error: programsError }, { data: sectionsData, error: sectionsError }] =
+          await Promise.all([
+            supabase.from("programs").select("id, name").order("id", {
+              ascending: true,
+            }),
+            supabase.from("sections").select("id, name").order("id", {
+              ascending: true,
+            }),
+          ]);
+
+        if (programsError) throw programsError;
+        if (sectionsError) throw sectionsError;
+
+        const programMap = new Map<number, string>();
+        const sectionMap = new Map<number, string>();
+
+        if (programsData) {
+          programsData.forEach((p: any) => {
+            programMap.set(p.id, p.name);
+          });
+          setAvailablePrograms(programsData.map((p: any) => p.name));
+        }
+
+        if (sectionsData) {
+          sectionsData.forEach((s: any) => {
+            sectionMap.set(s.id, s.name);
+          });
+          setAvailableSections(sectionsData.map((s: any) => s.name));
+        }
+
+        const { data: studentsData, error: studentsError } = await supabase
+          .from("students")
+          .select(
+            "id, student_code, full_name, email, program_id, section_id"
+          )
+          .order("id", { ascending: true });
+
+        if (studentsError) {
+          throw studentsError;
+        }
+
+        const mapped: Student[] =
+          studentsData?.map((row: any) => ({
+            id: row.student_code,
+            name: row.full_name ?? "",
+            email: row.email ?? "",
+            program:
+              (row.program_id && programMap.get(row.program_id)) ||
+              "Unknown program",
+            section:
+              (row.section_id && sectionMap.get(row.section_id)) ||
+              "Unknown section",
+            submitted: 0,
+            pending: 0,
+            missing: 0,
+            avgScore: 0,
+          })) ?? [];
+
+        setStudents(mapped);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Error loading students from Supabase:", error);
+        setLoadError(
+          "Unable to load students from Supabase."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, []);
 
   // HANDLE SUBMIT FUNCTION for creating a new student
   const handleCreateStudent = () => {
@@ -262,107 +340,144 @@ export function StudentsTab() {
             ))}
           </select>
         </div>
+        {loadError && (
+          <p className="mt-3 text-xs text-warning-default">
+            {loadError}
+          </p>
+        )}
       </Card>
 
       {/* Students Table */}
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Section</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-center">Submitted</TableHead>
-              <TableHead className="text-center">Pending</TableHead>
-              <TableHead className="text-center">Missing</TableHead> {/* <<-- NEW HEADER */}
-              <TableHead className="text-center">Avg Score</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredStudents.map((student) => (
-              <TableRow key={student.id}>
-                <TableCell>
-                  <div className="text-sm text-neutral-600">{student.id}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-neutral-900">{student.name}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm text-neutral-600">{student.program}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                    {student.section}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm text-neutral-600">{student.email}</div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-success-default/10 text-success-default border-success-default/20">
-                    {student.submitted}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className={
-                    student.pending > 2 
-                      ? 'bg-error-default/10 text-error-default border-error-default/20'
-                      : 'bg-warning-default/10 text-warning-default border-warning-default/20'
-                  }>
-                    {student.pending}
-                  </Badge>
-                </TableCell>
-                
-                {/* <<-- NEW MISSING ESSAY CELL -->> */}
-                <TableCell className="text-center">
-                  <Badge variant="outline" className={
-                    student.missing > 0 
-                      ? 'bg-error-default/10 text-error-default border-error-default/20'
-                      : 'bg-neutral-300/10 text-neutral-600 border-neutral-300/20'
-                  }>
-                    {student.missing}
-                  </Badge>
-                </TableCell>
-                
-                <TableCell className="text-center">
-                  <Badge className={
-                    student.avgScore >= 85 ? 'bg-success-default text-white' :
-                    student.avgScore >= 75 ? 'bg-info-default text-white' :
-                    'bg-warning-default text-white'
-                  }>
-                    {student.avgScore}%
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Essay History
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Student
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-error-default">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remove Student
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+        {isLoading ? (
+          <div className="p-6 text-sm text-neutral-500">
+            Loading students from Supabase…
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="p-6 text-sm text-neutral-500 text-center">
+            No students found in Supabase. Use{" "}
+            <span className="font-semibold">Add Student</span> or{" "}
+            <span className="font-semibold">Batch Upload</span> to add students
+            to your classes.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Section</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead className="text-center">Submitted</TableHead>
+                <TableHead className="text-center">Pending</TableHead>
+                <TableHead className="text-center">Missing</TableHead>
+                <TableHead className="text-center">Avg Score</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student) => (
+                <TableRow key={student.id}>
+                  <TableCell>
+                    <div className="text-sm text-neutral-600">
+                      {student.id}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-neutral-900">{student.name}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-neutral-600">
+                      {student.program}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className="bg-secondary/10 text-secondary border-secondary/20"
+                    >
+                      {student.section}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-neutral-600">
+                      {student.email}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-success-default/10 text-success-default border-success-default/20"
+                    >
+                      {student.submitted}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={
+                        student.pending > 2
+                          ? "bg-error-default/10 text-error-default border-error-default/20"
+                          : "bg-warning-default/10 text-warning-default border-warning-default/20"
+                      }
+                    >
+                      {student.pending}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={
+                        student.missing > 0
+                          ? "bg-error-default/10 text-error-default border-error-default/20"
+                          : "bg-neutral-300/10 text-neutral-600 border-neutral-300/20"
+                      }
+                    >
+                      {student.missing}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      className={
+                        student.avgScore >= 85
+                          ? "bg-success-default text-white"
+                          : student.avgScore >= 75
+                          ? "bg-info-default text-white"
+                          : "bg-warning-default text-white"
+                      }
+                    >
+                      {student.avgScore}%
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Essay History
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Student
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-error-default">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove Student
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
     </div>
   );

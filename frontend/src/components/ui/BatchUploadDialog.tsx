@@ -128,7 +128,15 @@ export function BatchUploadDialog({
       case "sections":
         return ["name", "program", "term", "students"];
       case "students":
-        return ["id", "name", "email", "program", "section"];
+        return [
+          "id",
+          "firstname",
+          "middlename (optional)",
+          "lastname",
+          "email",
+          "program",
+          "section",
+        ];
       default:
         return [];
     }

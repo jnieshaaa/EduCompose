@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -30,11 +30,14 @@ import { initialProgramsData } from '../../data/programsData';
 // IMPORT SECTIONS DATA and TYPE
 import type { Section } from '../../data/sectionsData';
 import { initialSectionsData, initialNewSectionState } from '../../data/sectionsData';
+import { supabase } from "../../lib/supabaseClient";
 
 
 export function SectionsTab() {
   // STATE: Main list of sections
-  const [sections, setSections] = useState<Section[]>(initialSectionsData);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newSection, setNewSection] = useState(initialNewSectionState);
@@ -42,7 +45,9 @@ export function SectionsTab() {
   const [termFilter, setTermFilter] = useState('All Terms');
 
   // Helper to get course names from the Programs list for dropdowns
-  const availablePrograms = initialProgramsData.map(p => p.name);
+  const [availablePrograms, setAvailablePrograms] = useState<string[]>(
+    initialProgramsData.map((p) => p.name)
+  );
 
   const handleInputChange = (field: string, value: string) => {
     setNewSection(prev => ({ ...prev, [field]: value }));
@@ -54,6 +59,67 @@ export function SectionsTab() {
       setSections(prevSections => [...(result.data as Section[]), ...prevSections]);
     }
   };
+
+  // Load sections + programs from Supabase (teacher-end).
+  useEffect(() => {
+    const fetchSections = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        // Load programs first to map program_id -> name
+        const { data: programsData, error: programsError } = await supabase
+          .from("programs")
+          .select("id, name")
+          .order("id", { ascending: true });
+
+        if (programsError) {
+          throw programsError;
+        }
+
+        const programMap = new Map<number, string>();
+        if (programsData) {
+          programsData.forEach((p: any) => {
+            programMap.set(p.id, p.name);
+          });
+          setAvailablePrograms(programsData.map((p: any) => p.name));
+        }
+
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from("sections")
+          .select(
+            "id, name, term, students_estimated, essays_estimated, program_id"
+          )
+          .order("id", { ascending: true });
+
+        if (sectionsError) {
+          throw sectionsError;
+        }
+
+        const mapped: Section[] =
+          sectionsData?.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            program:
+              (row.program_id && programMap.get(row.program_id)) ||
+              "Unknown program",
+            term: row.term ?? "",
+            students: row.students_estimated ?? 0,
+            essays: row.essays_estimated ?? 0,
+          })) ?? [];
+        setSections(mapped);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Error loading sections from Supabase:", error);
+        setLoadError(
+          "Unable to load blocks/sections from Supabase."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSections();
+  }, []);
 
   // HANDLE SUBMIT FUNCTION for creating a new section
   const handleCreateSection = () => {
@@ -219,70 +285,97 @@ export function SectionsTab() {
             <option value="Summer 2025">Summer 2025</option>
           </select>
         </div>
+        {loadError && (
+          <p className="mt-3 text-xs text-warning-default">
+            {loadError}
+          </p>
+        )}
       </Card>
 
       {/* Sections Table */}
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Section Name</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Academic Term</TableHead>
-              <TableHead className="text-center">Students</TableHead>
-              <TableHead className="text-center">Essays</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSections.map((section) => (
-              <TableRow key={section.id}>
-                <TableCell>
-                  <div className="text-neutral-900">{section.name}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm text-neutral-600">{section.program}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-info-default/10 text-info-default border-info-default/20">
-                    {section.term}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20">
-                    {section.students}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    {section.essays}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    {/* NOTE: You should ensure your DropdownMenuContent in the shared UI component 
-                             handles the portal rendering correctly to fix the display issue you had in ProgramsTab. */}
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Block
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-error-default">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Block
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+        {isLoading ? (
+          <div className="p-6 text-sm text-neutral-500">
+            Loading blocks/sections from Supabase…
+          </div>
+        ) : filteredSections.length === 0 ? (
+          <div className="p-6 text-sm text-neutral-500 text-center">
+            No blocks/sections found in Supabase. Use{" "}
+            <span className="font-semibold">Add Block</span> or{" "}
+            <span className="font-semibold">Batch Upload</span> to create your
+            first section.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Section Name</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Academic Term</TableHead>
+                <TableHead className="text-center">Students</TableHead>
+                <TableHead className="text-center">Essays</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredSections.map((section) => (
+                <TableRow key={section.id}>
+                  <TableCell>
+                    <div className="text-neutral-900">{section.name}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-neutral-600">
+                      {section.program}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className="bg-info-default/10 text-info-default border-info-default/20"
+                    >
+                      {section.term}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-secondary/10 text-secondary border-secondary/20"
+                    >
+                      {section.students}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/20"
+                    >
+                      {section.essays}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Block
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-error-default">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Block
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
     </div>
   );

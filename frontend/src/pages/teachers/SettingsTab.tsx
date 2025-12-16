@@ -288,9 +288,14 @@ export function SettingsTab() {
   useEffect(() => {
     // Only set up the observer if it hasn't been created yet
     if (!observerRef.current) {
+        // Use the main scrollable container in TeacherLayout as the observer root
+        const scrollContainer = document.querySelector('main');
+
         const observerOptions: IntersectionObserverInit = {
+          // Observe within the main scroll container instead of the window
+          root: scrollContainer as Element | null,
           // Trigger intersection when the section is near the top of the viewport
-          rootMargin: '-10% 0px -85% 0px', 
+          rootMargin: '-10% 0px -85% 0px',
           threshold: 0,
         };
 
@@ -324,16 +329,27 @@ export function SettingsTab() {
     };
   }, [isScrollingManually]); // Depend on isScrollingManually to potentially re-evaluate logic
 
-  // Click handler for smooth scrolling
+  // Click handler for smooth scrolling within the main scroll container
   const handleNavClick = (id: string) => {
     // 1. Start the manual scroll process
     setIsScrollingManually(true);
-    
-    // 2. Scroll the element into view
-    document.getElementById(id)?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start'
-    });
+
+    const scrollContainer = document.querySelector('main');
+    const targetElement = document.getElementById(id);
+
+    if (scrollContainer && targetElement) {
+      const containerRect = (scrollContainer as HTMLElement).getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+
+      // Calculate the scroll position so that the target is aligned near the top
+      const offsetTop =
+        targetRect.top - containerRect.top + (scrollContainer as HTMLElement).scrollTop - 16; // small padding
+
+      (scrollContainer as HTMLElement).scrollTo({
+        top: offsetTop,
+        behavior: 'smooth',
+      });
+    }
     
     // 3. Set a timeout to end the manual scroll lock
     // The duration (400ms) should be slightly longer than the smooth scroll animation
