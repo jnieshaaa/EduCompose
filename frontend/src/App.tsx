@@ -26,6 +26,8 @@ import {ProgressTab} from "./pages/students/ProgressTab.tsx"; // Create this fil
 import {RubricTab} from "./pages/students/RubricTab.tsx"; // Create this file
 import {NotificationsTab} from "./pages/students/NotificationsTab.tsx"; // Create this file
 import {StudentSettingsTab} from "./pages/students/StudentSettingsTab.tsx"; // Create this file
+import {MyClassesTab} from "./pages/students/MyClassesTab.tsx"; // Create this file
+import {ClassDetailTab} from "./pages/students/ClassDetailTab.tsx"; // Create this file
 
 
 // General/Legacy Imports (kept for reference or removal later)
@@ -144,6 +146,8 @@ const AppContent: React.FC = () => {
         >
           {/* StudentSidebar Menu Items */}
           <Route path="Dashboard" element={<StudentDashboardTab />} />
+          <Route path="Classes" element={<MyClassesTab />} />
+          <Route path="Classes/:classId" element={<ClassDetailTab />} />
           <Route path="Submit" element={<SubmitEssayTab />} />
           <Route path="Essays" element={<MyEssaysTab />} />
           <Route path="Feedback" element={<AIFeedbackTab />} />

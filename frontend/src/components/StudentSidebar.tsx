@@ -20,9 +20,12 @@ import {
   Settings,
   // X,
   LayoutDashboard, // New icon for student dashboard
-  Upload, // New icon for submit essay
+  BookOpen, // Icon for My Classes
+  Upload, // Icon for Essay Submission in Info Modal
   MessageSquare, // New icon for AI Feedback
   TrendingUp, // New icon for Progress & Analytics
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,9 +53,17 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isClassesOpen, setIsClassesOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Mock classes data
+  const classes = [
+    { id: 1, code: "PC 4121", name: "CS Thesis 1", instructor: "Prof. Smith" },
+    { id: 2, code: "PC 4122", name: "CS Thesis 1", instructor: "Joselle Banocnoc" },
+    { id: 3, code: "TC 4103", name: "Advanced Programming", instructor: "Prof. Johnson" },
+  ];
 
   // Updated menu items for the student role
   const menuItems: MenuItem[] = useMemo(
@@ -60,12 +71,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
       {
         icon: <LayoutDashboard className='w-5 h-5' />,
         label: "Dashboard",
-        path: "/Student/Dashboard", 
-      },
-      {
-        icon: <Upload className='w-5 h-5' />,
-        label: "Submit Essay",
-        path: "/Student/Submit", 
+        path: "/Student/Dashboard",
       },
       {
         icon: <FileText className='w-5 h-5' />,
@@ -97,7 +103,13 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   );
 
   const [activePath, setActivePath] = useState(location.pathname);
-  useEffect(() => setActivePath(location.pathname), [location.pathname]);
+  useEffect(() => {
+    setActivePath(location.pathname);
+    // Auto-expand classes dropdown if on a class detail page
+    if (location.pathname.startsWith('/Student/Classes/')) {
+      setIsClassesOpen(true);
+    }
+  }, [location.pathname]);
 
   const handleItemClick = (path: string) => {
     navigate(path);
@@ -188,12 +200,150 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           </div>
 
         {/* Navigation */}
-        <nav className='flex-1 p-4'>
+        <nav className='flex-1 p-4 overflow-y-auto'>
           <ul
             className='space-y-2'
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
-            {menuItems.map((item) => {
+            {/* Dashboard (always first) */}
+            {menuItems.slice(0, 1).map((item) => {
+              const isActive = activePath.toLowerCase() === item.path.toLowerCase() ||
+                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + "/");
+              return (
+                <li key={item.label} className='w-full'>
+                  <Tooltip
+                    content={item.label}
+                    position='right'
+                    delay={200}
+                    disabled={isSidebarOpen}
+                  >
+                    <button
+                      onClick={() => handleItemClick(item.path)}
+                      className={`btn-fade group w-full flex items-center rounded-rd ${
+                        isActive
+                          ? "bg-neutral-50 text-primary"
+                          : "bg-primary text-white hover:text-support-superlight"
+                      }`}
+                    >
+                      <div className='flex items-center w-full flex-1'>
+                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                          {item.icon}
+                        </span>
+                        <AnimatePresence>
+                          {isSidebarOpen && (
+                            <motion.span
+                              initial='hidden'
+                              animate='visible'
+                              exit='hidden'
+                              variants={textVariants}
+                              className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </button>
+                  </Tooltip>
+                </li>
+              );
+            })}
+
+            {/* My Classes - always below Dashboard, acts as dropdown */}
+            <li className='w-full'>
+              <Tooltip
+                content="My Classes"
+                position='right'
+                delay={200}
+                disabled={isSidebarOpen}
+              >
+                <button
+                  onClick={() => {
+                    // Ensure sidebar is open and dropdown toggles
+                    if (!isSidebarOpen) {
+                      setIsSidebarOpen(true);
+                    }
+                    setIsClassesOpen((prev) => !prev);
+                    navigate("/Student/Classes");
+                    if (!isDesktop) {
+                      // keep sidebar open on mobile while viewing classes
+                      setIsSidebarOpen(true);
+                    }
+                  }}
+                  className={`btn-fade group w-full flex items-center rounded-rd ${
+                    activePath.toLowerCase().startsWith("/student/classes")
+                      ? "bg-neutral-50 text-primary"
+                      : "bg-primary text-white hover:text-support-superlight"
+                  }`}
+                >
+                  <div className='flex items-center w-full flex-1'>
+                    <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
+                      <BookOpen className='w-5 h-5' />
+                    </span>
+                    <AnimatePresence>
+                      {isSidebarOpen && (
+                        <motion.div
+                          initial='hidden'
+                          animate='visible'
+                          exit='hidden'
+                          variants={textVariants}
+                          className='font-medium whitespace-nowrap flex-1 pr-4 text-left flex items-center justify-between'
+                        >
+                          <span>My Classes</span>
+                          <span className='ml-auto'>
+                            {isClassesOpen ? (
+                              <ChevronDown className='w-4 h-4' />
+                            ) : (
+                              <ChevronRight className='w-4 h-4' />
+                            )}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </button>
+              </Tooltip>
+
+              {/* Classes Dropdown */}
+              <AnimatePresence>
+                {isSidebarOpen && isClassesOpen && (
+                  <motion.ul
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className='ml-12 mt-2 space-y-1 overflow-hidden'
+                  >
+                    {classes.map((classItem) => {
+                      const classPath = `/Student/Classes/${classItem.id}`;
+                      const isClassActive = activePath === classPath;
+                      return (
+                        <li key={classItem.id}>
+                          <button
+                            onClick={() => {
+                              navigate(classPath);
+                              if (!isDesktop) setIsSidebarOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                              isClassActive
+                                ? "bg-neutral-100 text-primary font-medium"
+                                : "text-white/80 hover:text-white hover:bg-white/10"
+                            }`}
+                          >
+                            <div className='flex flex-col'>
+                              <span className='font-medium'>#{classItem.id} - {classItem.code}</span>
+                              <span className='text-xs opacity-75'>{classItem.name}</span>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </li>
+
+            {/* Remaining menu items (start after Dashboard) */}
+            {menuItems.slice(1).map((item) => {
               const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
               return (
