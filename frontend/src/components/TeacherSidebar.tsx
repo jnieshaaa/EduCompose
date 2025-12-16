@@ -55,14 +55,14 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         path: "/Teacher/Programs", // Goes directly to Programs (card grid)
       },
       {
-        icon: <FileText className='w-5 h-5' />,
-        label: "Essay Submissions",
-        path: "/Teacher/Essays",
+        icon: <BookOpen className='w-5 h-5' />,
+        label: "Activities",
+        path: "/Teacher/Activities",
       },
       {
-        icon: <BookOpen className='w-5 h-5' />,
-        label: "Essay Management",
-        path: "/Teacher/EssayManagement",
+        icon: <FileText className='w-5 h-5' />,
+        label: "Submissions",
+        path: "/Teacher/Essays",
       },
       {
         icon: <ClipboardCheck className='w-5 h-5' />,
