@@ -1,18 +1,22 @@
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Define the interface for the vocabulary complexity data structure
-interface VocabularyComplexityData {
-  level: string;
-  value: number;
-  color: string;
-  // FIX 1: Add index signature to satisfy ChartDataInput (recharts data array type)
-  [key: string]: any; 
-}
+// Import reusable chart components
+import { 
+  SectionPerformanceChart,
+  GrammarTrendChart,
+  CoherenceDistributionChart,
+  VocabularyComplexityChart,
+  type SectionPerformanceData,
+  type GrammarTrendData,
+  type CoherenceDistributionData,
+  type VocabularyComplexityData,
+} from '../../components/charts';
 
-const sectionScoresData = [
+// --- MOCK DATA ---
+
+const sectionScoresData: SectionPerformanceData[] = [
   { section: 'CS101-A', avgScore: 85 },
   { section: 'CS101-B', avgScore: 82 },
   { section: 'DS-A', avgScore: 79 },
@@ -23,7 +27,7 @@ const sectionScoresData = [
   { section: 'DB-A', avgScore: 87 },
 ];
 
-const grammarTrendsData = [
+const grammarTrendsData: GrammarTrendData[] = [
   { week: 'Week 1', errors: 45 },
   { week: 'Week 2', errors: 42 },
   { week: 'Week 3', errors: 38 },
@@ -34,7 +38,7 @@ const grammarTrendsData = [
   { week: 'Week 8', errors: 25 },
 ];
 
-const coherenceDistribution = [
+const coherenceDistribution: CoherenceDistributionData[] = [
   { range: '90-100', count: 120 },
   { range: '80-89', count: 180 },
   { range: '70-79', count: 145 },
@@ -146,29 +150,13 @@ export function MetricsTab() {
         {/* Average Scores per Section */}
         <Card className="p-6">
           <h2 className="text-xl text-neutral-900 mb-4">Average Scores per Section</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={sectionScoresData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0F2FE" />
-              <XAxis dataKey="section" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="avgScore" fill="#0791B2" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <SectionPerformanceChart data={sectionScoresData} />
         </Card>
 
         {/* Grammar Error Trends */}
         <Card className="p-6">
           <h2 className="text-xl text-neutral-900 mb-4">Grammar Error Trends</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={grammarTrendsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0F2FE" />
-              <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="errors" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981', r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <GrammarTrendChart data={grammarTrendsData} />
         </Card>
       </div>
 
@@ -177,43 +165,13 @@ export function MetricsTab() {
         {/* Coherence Score Distribution */}
         <Card className="p-6">
           <h2 className="text-xl text-neutral-900 mb-4">Coherence Score Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={coherenceDistribution}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0F2FE" />
-              <XAxis dataKey="range" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#38BDF8" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <CoherenceDistributionChart data={coherenceDistribution} />
         </Card>
 
         {/* Vocabulary Complexity */}
         <Card className="p-6">
           <h2 className="text-xl text-neutral-900 mb-4">Vocabulary Complexity Index</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={vocabularyComplexity}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(props: any) => (
-                  <text x={props.x} y={props.y} fill="#000" textAnchor={props.textAnchor} dominantBaseline="central">
-                    {`${props.level}: ${props.value}%`}
-                  </text>
-                )}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {vocabularyComplexity.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <VocabularyComplexityChart data={vocabularyComplexity} />
         </Card>
       </div>
 
