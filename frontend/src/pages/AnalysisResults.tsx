@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import Card from '../components/ui/Card';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
-import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, type HighlightError } from '../components/grading';
+import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, FloatingErrorCard, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi } from '../api';
 
@@ -46,7 +46,7 @@ const MOCK_ANALYSIS = {
         {
           type: 'spelling',
           message: 'Commonly misspelled word',
-          suggestion: 'Consider using "occurrence" instead',
+          suggestion: 'Consider using "occurrence" instead of "occurance"',
           context: 'common occurance in academic',
           offset: 1559,
           errorLength: 9,
@@ -62,7 +62,7 @@ const MOCK_ANALYSIS = {
         {
           type: 'word_choice',
           message: 'Vague word usage',
-          suggestion: 'Consider using more specific language',
+          suggestion: 'Replace "things" with more specific language like "factors" or "elements"',
           context: 'things that affect',
           offset: 1745,
           errorLength: 6,
@@ -70,7 +70,7 @@ const MOCK_ANALYSIS = {
         {
           type: 'grammar',
           message: 'Dangling modifier',
-          suggestion: 'Rephrase to clarify the subject',
+          suggestion: 'Rephrase to clarify the subject: "As I walked to school, the rain started falling"',
           context: 'Walking to school, the rain started',
           offset: 1779,
           errorLength: 18,
@@ -234,6 +234,7 @@ const AnalysisResults: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric'>('insights');
   const [originalText, setOriginalText] = useState<string>('');
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
+  const [selectedError, setSelectedError] = useState<HighlightError | null>(null);
   const [analysisKey, setAnalysisKey] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
@@ -377,9 +378,16 @@ const AnalysisResults: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  // Handle error click from metrics panel - scroll to error in essay
-  const handleErrorClick = useCallback((_error: HighlightError, index: number) => {
+  // Handle error click - show the floating error card
+  const handleErrorClick = useCallback((error: HighlightError, index: number) => {
     setSelectedErrorIndex(index);
+    setSelectedError(error);
+  }, []);
+
+  // Close the floating error card
+  const handleCloseErrorCard = useCallback(() => {
+    setSelectedError(null);
+    setSelectedErrorIndex(null);
   }, []);
 
   // Export analysis results to PDF
@@ -557,10 +565,10 @@ const AnalysisResults: React.FC = () => {
   const grammarErrors = analysis.detailed_analysis?.grammar?.errors || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-neutral-200 px-6 py-4">
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
+      {/* Header - Fixed height */}
+      <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-b border-neutral-200 px-6 py-3">
+        <div className="max-w-[1920px] mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/', { state: { text: originalText } })}
@@ -571,7 +579,7 @@ const AnalysisResults: React.FC = () => {
             </button>
             <div className="h-6 w-px bg-neutral-300" />
             <div>
-              <h1 className="text-xl font-bold text-neutral-900">
+              <h1 className="text-lg font-bold text-neutral-900">
                 {isPreviewMode ? 'Analysis Preview (Demo)' : 'Essay Analysis'}
               </h1>
               <div className="flex items-center space-x-3 text-xs text-neutral-500">
@@ -591,18 +599,19 @@ const AnalysisResults: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Split-Screen Layout */}
-      <div className="max-w-[1800px] mx-auto p-6">
+      {/* Main 50/50 Split-Screen Layout */}
+      <div className="flex-1 overflow-hidden">
         <div 
-          className="gap-6" 
+          className="h-full"
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'minmax(0, 1fr) 420px',
+            gridTemplateColumns: '1fr 1fr',
           }}
         >
-          {/* Left Column - Essay Text */}
-          <div className="min-w-0">
-            <div style={{ height: 'calc(100vh - 160px)', position: 'sticky', top: '100px' }}>
+          {/* Left Panel - Essay Text with Floating Error Card */}
+          <div className="relative h-full flex flex-col border-r border-neutral-200 bg-white">
+            {/* Scrollable Essay Content */}
+            <div className="flex-1 overflow-y-auto p-6">
               <EssayTextDisplay
                 originalText={originalText}
                 grammarErrors={grammarErrors}
@@ -611,60 +620,70 @@ const AnalysisResults: React.FC = () => {
                 analysisKey={analysisKey}
               />
             </div>
+            
+            {/* Floating Error Card - appears when an error is selected */}
+            {selectedError && (
+              <div className="flex-shrink-0 p-4 border-t border-neutral-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+                <FloatingErrorCard 
+                  error={selectedError} 
+                  onClose={handleCloseErrorCard} 
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Column - Sticky Sidebar with Tabs */}
-          <div className="w-[420px] flex-shrink-0">
-            <div style={{ position: 'sticky', top: '100px' }}>
-              {/* Sidebar Tabs */}
-              <div className="bg-white rounded-t-xl border border-b-0 border-neutral-200">
-                <div className="flex">
-                  {[
-                    { id: 'insights', label: 'Insights', icon: TrendingUp },
-                    { id: 'feedback', label: 'Feedback', icon: Lightbulb },
-                    { id: 'rubric', label: 'Rubric', icon: ClipboardList },
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric')}
-                        className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'text-primary border-b-2 border-primary bg-primary-50/50'
-                            : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+          {/* Right Panel - Analysis Tabs */}
+          <div className="h-full flex flex-col bg-neutral-50/50 overflow-hidden">
+            {/* Tabs Header */}
+            <div className="flex-shrink-0 bg-white border-b border-neutral-200">
+              <div className="flex">
+                {[
+                  { id: 'insights', label: 'Insights', icon: TrendingUp },
+                  { id: 'feedback', label: 'Feedback', icon: Lightbulb },
+                  { id: 'rubric', label: 'Rubric', icon: ClipboardList },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric')}
+                      className={`flex-1 flex items-center justify-center space-x-2 px-4 py-4 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'text-primary border-b-2 border-primary bg-primary-50/50'
+                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Tab Content */}
-              <div className="bg-white rounded-b-xl border border-t-0 border-neutral-200 shadow-sm">
-                <div className="p-4 h-[calc(100vh-220px)] overflow-y-auto">
-                  {activeTab === 'insights' && (
-                    <AnalysisMetrics analysis={analysis} onErrorClick={handleErrorClick} />
-                  )}
+            {/* Tab Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {activeTab === 'insights' && (
+                <AnalysisMetrics 
+                  analysis={analysis} 
+                  onErrorClick={handleErrorClick}
+                  prominentGraph={true}
+                />
+              )}
 
-                  {activeTab === 'feedback' && <FeedbackPanel recommendations={recommendations} />}
+              {activeTab === 'feedback' && <FeedbackPanel recommendations={recommendations} />}
 
-                  {activeTab === 'rubric' && (
-                    <Card className="text-center py-12">
-                      <ClipboardList className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-2">Manual Grading</h3>
-                      <p className="text-sm text-neutral-600 max-w-xs mx-auto">
-                        Manual grading interface with custom rubrics coming soon. Teachers will be able
-                        to apply rubrics and provide personalized feedback.
-                      </p>
-                    </Card>
-                  )}
-                </div>
-              </div>
+              {activeTab === 'rubric' && (
+                <Card className="text-center py-12">
+                  <ClipboardList className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">Manual Grading</h3>
+                  <p className="text-sm text-neutral-600 max-w-xs mx-auto">
+                    Manual grading interface with custom rubrics coming soon. Teachers will be able
+                    to apply rubrics and provide personalized feedback.
+                  </p>
+                </Card>
+              )}
             </div>
           </div>
         </div>

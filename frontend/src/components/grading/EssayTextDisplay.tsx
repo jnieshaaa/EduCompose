@@ -181,23 +181,49 @@ export function EssayTextDisplay({
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-neutral-900">Essay Text</h3>
-        {highlightData.errors.length > 0 && (
-          <Badge variant="warning" size="sm">
-            {highlightData.errors.length} issues found
-          </Badge>
-        )}
+        <div className="flex items-center space-x-3">
+          {/* Error Type Legend - Inline */}
+          <div className="hidden sm:flex items-center gap-3">
+            {[
+              { type: 'grammar', label: 'Grammar', color: 'rgba(239, 68, 68, 0.35)', textColor: '#991b1b' },
+              { type: 'spelling', label: 'Spelling', color: 'rgba(249, 115, 22, 0.35)', textColor: '#9a3412' },
+              { type: 'punctuation', label: 'Punctuation', color: 'rgba(234, 179, 8, 0.35)', textColor: '#854d0e' },
+              { type: 'word_choice', label: 'Word Choice', color: 'rgba(168, 85, 247, 0.35)', textColor: '#6b21a8' },
+            ].map((item) => (
+              <div key={item.type} className="flex items-center space-x-1.5 text-xs">
+                <div
+                  className="w-2.5 h-2.5 rounded"
+                  style={{ backgroundColor: item.color, border: `1px solid ${item.textColor}` }}
+                />
+                <span className="text-neutral-500">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          {highlightData.errors.length > 0 && (
+            <Badge variant="warning" size="sm">
+              {highlightData.errors.length} issues
+            </Badge>
+          )}
+        </div>
       </div>
 
-      {/* Essay Content - Scrollable */}
-      <Card className="flex-1 overflow-hidden">
-        <div ref={containerRef} className="h-full overflow-y-auto pr-2">
+      {/* Instruction Text */}
+      {highlightData.errors.length > 0 && (
+        <p className="text-xs text-neutral-500 mb-3 italic">
+          💡 Click on highlighted text to see error details and suggestions
+        </p>
+      )}
+
+      {/* Essay Content */}
+      <Card className="p-6">
+        <div ref={containerRef}>
           {highlightData.html ? (
             <div
-              className="whitespace-pre-wrap leading-relaxed text-neutral-800 text-[15px]"
+              className="whitespace-pre-wrap leading-relaxed text-neutral-800 text-[15px] selection:bg-primary/20"
               dangerouslySetInnerHTML={{ __html: highlightData.html }}
               onClick={handleClick}
             />
@@ -208,24 +234,6 @@ export function EssayTextDisplay({
           )}
         </div>
       </Card>
-
-      {/* Error Type Legend */}
-      <div className="mt-4 flex flex-wrap gap-3">
-        {[
-          { type: 'grammar', label: 'Grammar', color: 'rgba(239, 68, 68, 0.35)', textColor: '#991b1b' },
-          { type: 'spelling', label: 'Spelling', color: 'rgba(249, 115, 22, 0.35)', textColor: '#9a3412' },
-          { type: 'punctuation', label: 'Punctuation', color: 'rgba(234, 179, 8, 0.35)', textColor: '#854d0e' },
-          { type: 'word_choice', label: 'Word Choice', color: 'rgba(168, 85, 247, 0.35)', textColor: '#6b21a8' },
-        ].map((item) => (
-          <div key={item.type} className="flex items-center space-x-1.5 text-xs">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: item.color, border: `1px solid ${item.textColor}` }}
-            />
-            <span className="text-neutral-600">{item.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

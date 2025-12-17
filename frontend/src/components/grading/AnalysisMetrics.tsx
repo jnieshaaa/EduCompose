@@ -15,6 +15,7 @@ import type { HighlightError } from './EssayTextDisplay';
 interface AnalysisMetricsProps {
   analysis: Omit<AnalysisResponse, 'essay_id'>;
   onErrorClick?: (error: HighlightError, index: number) => void;
+  prominentGraph?: boolean;
 }
 
 // Category colors for grammar errors
@@ -35,7 +36,7 @@ const getScoreColor = (score: number) => {
   return 'error';
 };
 
-export function AnalysisMetrics({ analysis, onErrorClick }: AnalysisMetricsProps) {
+export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false }: AnalysisMetricsProps) {
   const scores = analysis.scores || {
     grammar: 0,
     readability: 0,
@@ -140,38 +141,53 @@ export function AnalysisMetrics({ analysis, onErrorClick }: AnalysisMetricsProps
         </div>
       </Card>
 
-      {/* Argument Structure (Toulmin's Model) */}
+      {/* Argument Structure (Toulmin's Model) - Knowledge Graph */}
       {analysis.detailed_analysis?.argumentation && (
-        <Card>
-          <h4 className="text-sm font-semibold text-neutral-700 mb-3">Argument Structure</h4>
-          <div className="grid grid-cols-4 gap-2 mb-3">
+        <Card className={prominentGraph ? 'border-2 border-primary/20 shadow-lg' : ''}>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className={`font-semibold text-neutral-800 ${prominentGraph ? 'text-lg' : 'text-sm'}`}>
+              Argument Knowledge Graph
+            </h4>
+            {prominentGraph && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                Toulmin's Model
+              </span>
+            )}
+          </div>
+          
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
             <div className="text-center p-2 bg-primary-50 rounded-lg">
               <p className="text-xs text-neutral-500">Claims</p>
-              <p className="text-lg font-bold text-primary">
+              <p className={`font-bold text-primary ${prominentGraph ? 'text-xl' : 'text-lg'}`}>
                 {analysis.detailed_analysis.argumentation.argument_structure.total_claims}
               </p>
             </div>
             <div className="text-center p-2 bg-success-50 rounded-lg">
               <p className="text-xs text-neutral-500">Evidence</p>
-              <p className="text-lg font-bold text-success-default">
+              <p className={`font-bold text-success-default ${prominentGraph ? 'text-xl' : 'text-lg'}`}>
                 {analysis.detailed_analysis.argumentation.argument_structure.total_grounds}
               </p>
             </div>
             <div className="text-center p-2 bg-info-50 rounded-lg">
               <p className="text-xs text-neutral-500">Warrants</p>
-              <p className="text-lg font-bold text-info-default">
+              <p className={`font-bold text-info-default ${prominentGraph ? 'text-xl' : 'text-lg'}`}>
                 {analysis.detailed_analysis.argumentation.argument_structure.total_warrants}
               </p>
             </div>
             <div className="text-center p-2 bg-warning-50 rounded-lg">
               <p className="text-xs text-neutral-500">Rebuttals</p>
-              <p className="text-lg font-bold text-warning-default">
+              <p className={`font-bold text-warning-default ${prominentGraph ? 'text-xl' : 'text-lg'}`}>
                 {analysis.detailed_analysis.argumentation.argument_structure.total_rebuttals}
               </p>
             </div>
           </div>
-          {/* Argument Graph */}
-          <div className="border rounded-lg overflow-hidden">
+          
+          {/* Argument Graph - Prominent with min-height 500px */}
+          <div 
+            className="border rounded-lg overflow-hidden bg-neutral-50"
+            style={{ minHeight: prominentGraph ? '500px' : '300px' }}
+          >
             <ArgumentKnowledgeGraph
               graph={analysis.detailed_analysis.argumentation.graph}
               metrics={analysis.detailed_analysis.argumentation.metrics}
