@@ -41,23 +41,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
   const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
   const [linkTooltipPos, setLinkTooltipPos] = useState({ x: 0, y: 0 });
-  
-  // Track connected node IDs for hover highlighting
-  const connectedNodeIds = useMemo(() => {
-    if (!hoveredNode || !graphData.links) return new Set<string>();
-    const connected = new Set<string>([hoveredNode.id as string]);
-    graphData.links.forEach((link) => {
-      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
-      const targetId = typeof link.target === "object" ? link.target.id : link.target;
-      if (sourceId === hoveredNode.id) {
-        connected.add(targetId as string);
-      }
-      if (targetId === hoveredNode.id) {
-        connected.add(sourceId as string);
-      }
-    });
-    return connected;
-  }, [hoveredNode, graphData.links]);
 
   useEffect(() => {
     if (!containerRef.current || typeof ResizeObserver === "undefined") {
@@ -182,6 +165,23 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
 
     return { nodes, links };
   }, [graph, dimensions.width, dimensions.height]);
+
+  // Track connected node IDs for hover highlighting
+  const connectedNodeIds = useMemo(() => {
+    if (!hoveredNode || !graphData.links) return new Set<string>();
+    const connected = new Set<string>([hoveredNode.id as string]);
+    graphData.links.forEach((link) => {
+      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+      const targetId = typeof link.target === "object" ? link.target.id : link.target;
+      if (sourceId === hoveredNode.id) {
+        connected.add(targetId as string);
+      }
+      if (targetId === hoveredNode.id) {
+        connected.add(sourceId as string);
+      }
+    });
+    return connected;
+  }, [hoveredNode, graphData.links]);
 
   const strengthMetrics: ArgumentStrengthMetric[] = useMemo(() => {
     return metrics?.argument_strength ?? [];
@@ -506,7 +506,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
             )}
           </div>
 
-          {metrics && metrics.verification.length > 0 && (
+          {metrics && metrics.verification && metrics.verification.length > 0 && (
             <div className="border-t border-neutral-200 pt-3">
               <h5 className="text-sm font-semibold text-neutral-800 mb-2">
                 Evidence Verification
