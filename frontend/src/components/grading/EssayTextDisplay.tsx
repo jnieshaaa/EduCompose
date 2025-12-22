@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import { X, AlertTriangle, Lightbulb } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import type { GrammarError } from '../../types/Essay';
@@ -6,6 +7,34 @@ import type { GrammarError } from '../../types/Essay';
 export type HighlightError = GrammarError & {
   offset: number;
   errorLength: number;
+};
+
+// Helper functions for error badge
+const getErrorBadgeVariant = (type: string): 'error' | 'warning' | 'info' | 'neutral' => {
+  switch (type?.toLowerCase()) {
+    case 'grammar':
+      return 'error';
+    case 'spelling':
+    case 'punctuation':
+      return 'warning';
+    case 'word_choice':
+    case 'capitalization':
+      return 'info';
+    default:
+      return 'neutral';
+  }
+};
+
+const getErrorTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    grammar: 'Grammar Error',
+    spelling: 'Spelling Issue',
+    punctuation: 'Punctuation',
+    word_choice: 'Word Choice',
+    capitalization: 'Capitalization',
+    structure: 'Structure Issue',
+  };
+  return labels[type?.toLowerCase()] || 'Grammar Issue';
 };
 
 interface EssayTextDisplayProps {
@@ -66,19 +95,15 @@ export function EssayTextDisplay({
 }: EssayTextDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Process grammar errors for highlighting
-  const highlightData = useMemo(() => {
-    if (!originalText || grammarErrors.length === 0) {
-      return { html: null, errors: [] as HighlightError[] };
+  // Process grammar errors and create text segments with highlights
+  const textSegments = useMemo(() => {
+    if (!originalText) {
+      return { segments: [{ type: 'text', text: originalText }], errors: [] as HighlightError[] };
     }
 
-    const escapeHtml = (value: string) =>
-      value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    if (grammarErrors.length === 0) {
+      return { segments: [{ type: 'text', text: originalText }], errors: [] as HighlightError[] };
+    }
 
     // Deep clone errors array to prevent mutations
     const clonedErrors = grammarErrors.map((error) => ({
@@ -111,10 +136,11 @@ export function EssayTextDisplay({
       .sort((a, b) => a.offset - b.offset);
 
     if (validErrors.length === 0) {
-      return { html: null, errors: [] };
+      return { segments: [{ type: 'text', text: originalText }], errors: [] };
     }
 
-    let html = '';
+    // Create segments array with text and highlight segments
+    const segments: Array<{ type: 'text' | 'highlight'; text: string; errorIndex?: number }> = [];
     let cursor = 0;
 
     validErrors.forEach((error, index) => {
@@ -123,61 +149,54 @@ export function EssayTextDisplay({
 
       if (start < cursor) return;
 
+      // Add text before highlight
       if (start > cursor) {
-        html += escapeHtml(originalText.slice(cursor, start));
+        segments.push({ type: 'text', text: originalText.slice(cursor, start) });
       }
 
-      const snippet = escapeHtml(originalText.slice(start, end));
-      if (!snippet || !snippet.trim()) {
-        cursor = Math.max(cursor, end);
-        return;
+      // Add highlight segment
+      const snippet = originalText.slice(start, end);
+      if (snippet && snippet.trim()) {
+        segments.push({ type: 'highlight', text: snippet, errorIndex: index });
       }
 
-      const title = escapeHtml(error.message || 'Grammar issue');
-      const errorType = error.type || 'grammar';
-      const isSelected = selectedErrorIndex === index;
-      const color = getHighlightColor(errorType, isSelected);
-
-      html += `<mark 
-        id="error-mark-${index}"
-        data-error-index="${index}" 
-        style="background: ${color.bg}; color: ${color.text}; padding: 1px 3px; border-radius: 4px; cursor: pointer; transition: all 0.2s; ${isSelected ? 'box-shadow: 0 0 0 2px ' + color.text + ';' : ''}" 
-        title="${title}" 
-        class="error-highlight hover:opacity-80"
-      >`;
-      html += snippet;
-      html += '</mark>';
       cursor = end;
     });
 
+    // Add remaining text
     if (cursor < originalText.length) {
-      html += escapeHtml(originalText.slice(cursor));
+      segments.push({ type: 'text', text: originalText.slice(cursor) });
     }
 
-    return { html, errors: validErrors };
-  }, [originalText, grammarErrors, selectedErrorIndex, analysisKey]);
+    return { segments, errors: validErrors };
+  }, [originalText, grammarErrors, analysisKey]);
 
   // Scroll to selected error when it changes
   useEffect(() => {
     if (selectedErrorIndex !== null && containerRef.current) {
       const errorMark = document.getElementById(`error-mark-${selectedErrorIndex}`);
       if (errorMark) {
-        errorMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          errorMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
       }
     }
   }, [selectedErrorIndex]);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.classList.contains('error-highlight')) {
-        const errorIndex = parseInt(target.getAttribute('data-error-index') || '0');
-        if (errorIndex >= 0 && errorIndex < highlightData.errors.length) {
-          onErrorClick(highlightData.errors[errorIndex], errorIndex);
+  const handleErrorClick = useCallback(
+    (errorIndex: number) => {
+      if (errorIndex >= 0 && errorIndex < textSegments.errors.length) {
+        // Toggle: if same error is clicked, close it; otherwise select new one
+        const newIndex = selectedErrorIndex === errorIndex ? null : errorIndex;
+        if (newIndex !== null) {
+          onErrorClick(textSegments.errors[newIndex], newIndex);
+        } else {
+          onErrorClick(textSegments.errors[errorIndex], errorIndex);
         }
       }
     },
-    [highlightData.errors, onErrorClick]
+    [textSegments.errors, selectedErrorIndex, onErrorClick]
   );
 
   return (
@@ -203,16 +222,16 @@ export function EssayTextDisplay({
               </div>
             ))}
           </div>
-          {highlightData.errors.length > 0 && (
+          {textSegments.errors.length > 0 && (
             <Badge variant="warning" size="sm">
-              {highlightData.errors.length} issues
+              {textSegments.errors.length} issues
             </Badge>
           )}
         </div>
       </div>
 
       {/* Instruction Text */}
-      {highlightData.errors.length > 0 && (
+      {textSegments.errors.length > 0 && (
         <p className="text-xs text-neutral-500 mb-3 italic">
           💡 Click on highlighted text to see error details and suggestions
         </p>
@@ -220,20 +239,114 @@ export function EssayTextDisplay({
 
       {/* Essay Content */}
       <Card className="p-6">
-        <div ref={containerRef}>
-          {highlightData.html ? (
-            <div
-              className="whitespace-pre-wrap leading-relaxed text-neutral-800 text-[15px] selection:bg-primary/20"
-              dangerouslySetInnerHTML={{ __html: highlightData.html }}
-              onClick={handleClick}
-            />
-          ) : (
-            <p className="whitespace-pre-wrap leading-relaxed text-neutral-800 text-[15px]">
-              {originalText || 'No essay text available.'}
-            </p>
-          )}
+        <div ref={containerRef} className="leading-relaxed text-neutral-800 text-[15px] selection:bg-primary/20">
+          <div className="whitespace-pre-wrap">
+            {textSegments.segments.map((segment, idx) => {
+              if (segment.type === 'text') {
+                return <span key={idx}>{segment.text}</span>;
+              } else {
+                // Highlight segment
+                const errorIndex = segment.errorIndex!;
+                const error = textSegments.errors[errorIndex];
+                const isSelected = selectedErrorIndex === errorIndex;
+                const color = getHighlightColor(error.type || 'grammar', isSelected);
+
+                return (
+                  <React.Fragment key={idx}>
+                    <mark
+                      id={`error-mark-${errorIndex}`}
+                      onClick={() => handleErrorClick(errorIndex)}
+                      style={{
+                        background: color.bg,
+                        color: color.text,
+                        padding: '1px 3px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: isSelected ? `0 0 0 2px ${color.text}` : 'none',
+                      }}
+                      title={error.message || 'Grammar issue'}
+                      className="error-highlight hover:opacity-80"
+                    >
+                      {segment.text}
+                    </mark>
+                    {/* Show inline error details right after the selected highlight */}
+                    {isSelected && (
+                      <InlineErrorDetails
+                        error={error}
+                        errorIndex={errorIndex}
+                        onClose={() => handleErrorClick(errorIndex)}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              }
+            })}
+          </div>
         </div>
       </Card>
+    </div>
+  );
+}
+
+// Inline Error Details Component
+interface InlineErrorDetailsProps {
+  error: HighlightError;
+  errorIndex: number;
+  onClose: () => void;
+}
+
+function InlineErrorDetails({ error, errorIndex, onClose }: InlineErrorDetailsProps) {
+  return (
+    <div 
+      id={`error-details-${errorIndex}`}
+      className="block w-full mt-2 mb-2"
+      style={{ animation: 'slideIn 0.2s ease-out' }}
+    >
+      <div className="bg-white rounded-lg shadow-md border border-neutral-200 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-neutral-50 to-neutral-100 border-b border-neutral-200">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+            </div>
+            <Badge variant={getErrorBadgeVariant(error.type || 'grammar')} size="sm">
+              {getErrorTypeLabel(error.type || 'grammar')}
+            </Badge>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-neutral-200 transition-colors text-neutral-500 hover:text-neutral-700"
+            aria-label="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-4 py-3 space-y-2.5">
+          {/* Error Message */}
+          <div>
+            <p className="text-sm font-medium text-neutral-900">{error.message || 'Grammar issue detected'}</p>
+            {error.context && (
+              <p className="text-xs text-neutral-500 mt-1 italic">
+                Context: "{error.context}"
+              </p>
+            )}
+          </div>
+
+          {/* Suggestion */}
+          {error.suggestion && (
+            <div className="flex items-start space-x-2 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200">
+              <Lightbulb className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">Suggestion</p>
+                <p className="text-sm text-emerald-700 mt-0.5">{error.suggestion}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

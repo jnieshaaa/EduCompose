@@ -22,6 +22,9 @@ interface BatchUploadDialogProps {
   existingStudents?: Student[];
   availablePrograms?: string[];
   availableSections?: string[];
+  // Optional: When provided, these will be used instead of reading from CSV
+  defaultProgram?: string;
+  defaultSection?: string;
 }
 
 export function BatchUploadDialog({
@@ -33,6 +36,8 @@ export function BatchUploadDialog({
   existingStudents = [],
   availablePrograms = [],
   availableSections = [],
+  defaultProgram,
+  defaultSection,
 }: BatchUploadDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -46,6 +51,7 @@ export function BatchUploadDialog({
 
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (extension !== "csv" && extension !== "xlsx" && extension !== "xls") {
+      // File type validation - using alert for now, can be replaced with modal if needed
       alert("Please select a .csv or .xlsx file");
       return;
     }
@@ -82,7 +88,9 @@ export function BatchUploadDialog({
             selectedFile,
             existingStudents,
             availablePrograms,
-            availableSections
+            availableSections,
+            defaultProgram,
+            defaultSection
           );
           break;
         default:
@@ -128,15 +136,21 @@ export function BatchUploadDialog({
       case "sections":
         return ["name", "program", "term", "students"];
       case "students":
-        return [
+        const baseColumns = [
           "id",
           "firstname",
           "middlename (optional)",
           "lastname",
           "email",
-          "program",
-          "section",
         ];
+        // Only include program/section if not provided as defaults
+        if (!defaultProgram) {
+          baseColumns.push("program");
+        }
+        if (!defaultSection) {
+          baseColumns.push("section");
+        }
+        return baseColumns;
       default:
         return [];
     }
@@ -238,6 +252,12 @@ export function BatchUploadDialog({
             <p className="text-xs text-neutral-500 mt-2">
               Column names are case-insensitive and can include spaces or underscores
             </p>
+            {type === "students" && (defaultProgram || defaultSection) && (
+              <p className="text-xs text-info-default mt-2">
+                Note: Program and Section are automatically set from the current context.
+                You don't need to include these columns in your file.
+              </p>
+            )}
           </div>
 
           {/* Upload Result */}

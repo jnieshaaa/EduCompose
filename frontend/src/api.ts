@@ -52,13 +52,13 @@ const apiRequest = async <T>(
     }
 
     return response.json();
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Handle network errors (backend not running, connection failed, etc.)
-    if (
-      err instanceof TypeError ||
-      err.name === "TypeError" ||
-      err.message?.includes("fetch")
-    ) {
+    const isTypeError = err instanceof TypeError;
+    const errMessage = err instanceof Error ? err.message : String(err);
+    const messageContainsFetch = errMessage.includes("fetch");
+
+    if (isTypeError || messageContainsFetch) {
       const networkError = new ApiError(
         0,
         "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000"
@@ -221,13 +221,13 @@ export const kgApi = {
         id: string;
         label: string;
         type?: string;
-        properties?: Record<string, any>;
+        properties?: Record<string, unknown>;
       }>;
       edges: Array<{
         source: string;
         target: string;
         type?: string;
-        properties?: Record<string, any>;
+        properties?: Record<string, unknown>;
       }>;
       source: string;
       stats?: {
@@ -244,13 +244,13 @@ export const kgApi = {
         id: string;
         label: string;
         type?: string;
-        properties?: Record<string, any>;
+        properties?: Record<string, unknown>;
       }>;
       edges: Array<{
         source: string;
         target: string;
         type?: string;
-        properties?: Record<string, any>;
+        properties?: Record<string, unknown>;
       }>;
       export_stats: {
         nodes_created: number;

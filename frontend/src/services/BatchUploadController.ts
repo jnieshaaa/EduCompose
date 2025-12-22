@@ -14,7 +14,7 @@ export type UploadResult = {
   message: string;
   imported: number;
   errors: string[];
-  data?: any[];
+  data?: unknown[];
 };
 
 export type UploadType = "programs" | "sections" | "students";
@@ -28,7 +28,7 @@ export class BatchUploadController {
     existingPrograms: Program[]
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
-    
+
     if (!parseResult.success) {
       return {
         success: false,
@@ -40,9 +40,10 @@ export class BatchUploadController {
 
     const errors: string[] = [];
     const imported: Program[] = [];
-    let nextId = existingPrograms.length > 0 
-      ? Math.max(...existingPrograms.map(p => p.id)) + 1 
-      : 1;
+    let nextId =
+      existingPrograms.length > 0
+        ? Math.max(...existingPrograms.map((p) => p.id)) + 1
+        : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
       const row = parseResult.data[i];
@@ -50,9 +51,23 @@ export class BatchUploadController {
 
       try {
         // Map CSV/XLSX columns to Program fields
-        const name = this.getFieldValue(row, ["name", "program name", "program_name", "program"]);
+        const name = this.getFieldValue(row, [
+          "name",
+          "program name",
+          "program_name",
+          "program",
+        ]);
         const description = this.getFieldValue(row, ["description", "desc"]);
-        const tracks = parseInt(this.getFieldValue(row, ["tracks", "course tracks", "course_tracks", "tracks_count"]), 10) || 0;
+        const tracks =
+          parseInt(
+            this.getFieldValue(row, [
+              "tracks",
+              "course tracks",
+              "course_tracks",
+              "tracks_count",
+            ]),
+            10
+          ) || 0;
         const status = this.getFieldValue(row, ["status", "state"]) || "Active";
 
         if (!name) {
@@ -61,8 +76,12 @@ export class BatchUploadController {
         }
 
         // Check for duplicates
-        if (existingPrograms.some(p => p.name.toLowerCase() === name.toLowerCase()) ||
-            imported.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        if (
+          existingPrograms.some(
+            (p) => p.name.toLowerCase() === name.toLowerCase()
+          ) ||
+          imported.some((p) => p.name.toLowerCase() === name.toLowerCase())
+        ) {
           errors.push(`Row ${rowNum}: Program "${name}" already exists`);
           continue;
         }
@@ -79,13 +98,19 @@ export class BatchUploadController {
 
         imported.push(program);
       } catch (error) {
-        errors.push(`Row ${rowNum}: ${error instanceof Error ? error.message : "Invalid data"}`);
+        errors.push(
+          `Row ${rowNum}: ${
+            error instanceof Error ? error.message : "Invalid data"
+          }`
+        );
       }
     }
 
     return {
       success: imported.length > 0,
-      message: `Imported ${imported.length} program(s)${errors.length > 0 ? ` with ${errors.length} error(s)` : ""}`,
+      message: `Imported ${imported.length} program(s)${
+        errors.length > 0 ? ` with ${errors.length} error(s)` : ""
+      }`,
       imported: imported.length,
       errors,
       data: imported,
@@ -101,7 +126,7 @@ export class BatchUploadController {
     availablePrograms: string[]
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
-    
+
     if (!parseResult.success) {
       return {
         success: false,
@@ -113,19 +138,46 @@ export class BatchUploadController {
 
     const errors: string[] = [];
     const imported: Section[] = [];
-    let nextId = existingSections.length > 0 
-      ? Math.max(...existingSections.map(s => s.id)) + 1 
-      : 1;
+    let nextId =
+      existingSections.length > 0
+        ? Math.max(...existingSections.map((s) => s.id)) + 1
+        : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
       const row = parseResult.data[i];
       const rowNum = i + 2;
 
       try {
-        const name = this.getFieldValue(row, ["name", "section name", "section_name", "section", "block name", "block_name", "block"]);
-        const program = this.getFieldValue(row, ["program", "program name", "program_name"]);
-        const term = this.getFieldValue(row, ["term", "academic term", "academic_term", "semester"]);
-        const students = parseInt(this.getFieldValue(row, ["students", "expected students", "expected_students", "student_count"]), 10) || 0;
+        const name = this.getFieldValue(row, [
+          "name",
+          "section name",
+          "section_name",
+          "section",
+          "block name",
+          "block_name",
+          "block",
+        ]);
+        const program = this.getFieldValue(row, [
+          "program",
+          "program name",
+          "program_name",
+        ]);
+        const term = this.getFieldValue(row, [
+          "term",
+          "academic term",
+          "academic_term",
+          "semester",
+        ]);
+        const students =
+          parseInt(
+            this.getFieldValue(row, [
+              "students",
+              "expected students",
+              "expected_students",
+              "student_count",
+            ]),
+            10
+          ) || 0;
 
         if (!name) {
           errors.push(`Row ${rowNum}: Section name is required`);
@@ -148,18 +200,24 @@ export class BatchUploadController {
         }
 
         // Check for duplicates
-        const duplicate = existingSections.some(s => 
-          s.name.toLowerCase() === name.toLowerCase() && 
-          s.program.toLowerCase() === program.toLowerCase() &&
-          s.term.toLowerCase() === term.toLowerCase()
-        ) || imported.some(s => 
-          s.name.toLowerCase() === name.toLowerCase() && 
-          s.program.toLowerCase() === program.toLowerCase() &&
-          s.term.toLowerCase() === term.toLowerCase()
-        );
+        const duplicate =
+          existingSections.some(
+            (s) =>
+              s.name.toLowerCase() === name.toLowerCase() &&
+              s.program.toLowerCase() === program.toLowerCase() &&
+              s.term.toLowerCase() === term.toLowerCase()
+          ) ||
+          imported.some(
+            (s) =>
+              s.name.toLowerCase() === name.toLowerCase() &&
+              s.program.toLowerCase() === program.toLowerCase() &&
+              s.term.toLowerCase() === term.toLowerCase()
+          );
 
         if (duplicate) {
-          errors.push(`Row ${rowNum}: Section "${name}" already exists for this program and term`);
+          errors.push(
+            `Row ${rowNum}: Section "${name}" already exists for this program and term`
+          );
           continue;
         }
 
@@ -174,13 +232,19 @@ export class BatchUploadController {
 
         imported.push(section);
       } catch (error) {
-        errors.push(`Row ${rowNum}: ${error instanceof Error ? error.message : "Invalid data"}`);
+        errors.push(
+          `Row ${rowNum}: ${
+            error instanceof Error ? error.message : "Invalid data"
+          }`
+        );
       }
     }
 
     return {
       success: imported.length > 0,
-      message: `Imported ${imported.length} section(s)${errors.length > 0 ? ` with ${errors.length} error(s)` : ""}`,
+      message: `Imported ${imported.length} section(s)${
+        errors.length > 0 ? ` with ${errors.length} error(s)` : ""
+      }`,
       imported: imported.length,
       errors,
       data: imported,
@@ -194,10 +258,12 @@ export class BatchUploadController {
     file: File,
     existingStudents: Student[],
     availablePrograms: string[],
-    availableSections: string[]
+    availableSections: string[],
+    defaultProgram?: string,
+    defaultSection?: string
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
-    
+
     if (!parseResult.success) {
       return {
         success: false,
@@ -215,30 +281,79 @@ export class BatchUploadController {
       const rowNum = i + 2;
 
       try {
-        const id = this.getFieldValue(row, ["id", "student id", "student_id", "studentid"]).toUpperCase();
-        const firstName = this.getFieldValue(row, ["firstname", "first name", "first_name", "given name", "given_name"]);
-        const middleName = this.getFieldValue(row, ["middlename", "middle name", "middle_name", "m.i.", "mi"]);
-        const lastName = this.getFieldValue(row, ["lastname", "last name", "last_name", "family name", "family_name"]);
+        const id = this.getFieldValue(row, [
+          "id",
+          "student id",
+          "student_id",
+          "studentid",
+        ]).toUpperCase();
+        const firstName = this.getFieldValue(row, [
+          "firstname",
+          "first name",
+          "first_name",
+          "given name",
+          "given_name",
+        ]);
+        const middleName = this.getFieldValue(row, [
+          "middlename",
+          "middle name",
+          "middle_name",
+          "m.i.",
+          "mi",
+        ]);
+        const lastName = this.getFieldValue(row, [
+          "lastname",
+          "last name",
+          "last_name",
+          "family name",
+          "family_name",
+        ]);
         // Backwards-compat: if old single-name columns exist, use them and split
-        const legacyFullName = this.getFieldValue(row, ["name", "full name", "full_name", "student name", "student_name"]);
-        const email = this.getFieldValue(row, ["email", "email address", "email_address"]);
-        const program = this.getFieldValue(row, ["program", "program name", "program_name"]);
-        const section = this.getFieldValue(row, ["section", "section name", "section_name", "block", "block name", "block_name"]);
+        const legacyFullName = this.getFieldValue(row, [
+          "name",
+          "full name",
+          "full_name",
+          "student name",
+          "student_name",
+        ]);
+        const email = this.getFieldValue(row, [
+          "email",
+          "email address",
+          "email_address",
+        ]);
+        // Use default program/section if provided, otherwise read from CSV
+        const program =
+          defaultProgram ||
+          this.getFieldValue(row, [
+            "program",
+            "program name",
+            "program_name",
+          ]);
+        const section =
+          defaultSection ||
+          this.getFieldValue(row, [
+            "section",
+            "section name",
+            "section_name",
+            "block",
+            "block name",
+            "block_name",
+          ]);
 
         if (!id) {
           errors.push(`Row ${rowNum}: Student ID is required`);
           continue;
         }
 
-        const effectiveFirstName = firstName || (legacyFullName ? legacyFullName.split(" ")[0] : "");
-        const effectiveLastName = lastName || (legacyFullName ? legacyFullName.split(" ").slice(-1)[0] : "");
+        const effectiveFirstName =
+          firstName || (legacyFullName ? legacyFullName.split(" ")[0] : "");
+        const effectiveLastName =
+          lastName ||
+          (legacyFullName ? legacyFullName.split(" ").slice(-1)[0] : "");
         const effectiveMiddleName =
           middleName ||
           (legacyFullName
-            ? legacyFullName
-                .split(" ")
-                .slice(1, -1)
-                .join(" ")
+            ? legacyFullName.split(" ").slice(1, -1).join(" ")
             : "");
 
         if (!effectiveFirstName || !effectiveLastName) {
@@ -251,18 +366,37 @@ export class BatchUploadController {
           continue;
         }
 
-        if (!program || !availablePrograms.includes(program)) {
-          errors.push(`Row ${rowNum}: Valid program is required`);
+        // Validate program (only if not using default)
+        if (!defaultProgram) {
+          if (!program || !availablePrograms.includes(program)) {
+            errors.push(`Row ${rowNum}: Valid program is required`);
+            continue;
+          }
+        } else if (!availablePrograms.includes(program)) {
+          errors.push(
+            `Row ${rowNum}: Default program "${program}" is not available`
+          );
           continue;
         }
 
-        if (!section || !availableSections.includes(section)) {
-          errors.push(`Row ${rowNum}: Valid section is required`);
+        // Validate section (only if not using default)
+        if (!defaultSection) {
+          if (!section || !availableSections.includes(section)) {
+            errors.push(`Row ${rowNum}: Valid section is required`);
+            continue;
+          }
+        } else if (!availableSections.includes(section)) {
+          errors.push(
+            `Row ${rowNum}: Default section "${section}" is not available`
+          );
           continue;
         }
 
         // Check for duplicates
-        if (existingStudents.some(s => s.id === id) || imported.some(s => s.id === id)) {
+        if (
+          existingStudents.some((s) => s.id === id) ||
+          imported.some((s) => s.id === id)
+        ) {
           errors.push(`Row ${rowNum}: Student ID "${id}" already exists`);
           continue;
         }
@@ -287,13 +421,19 @@ export class BatchUploadController {
 
         imported.push(student);
       } catch (error) {
-        errors.push(`Row ${rowNum}: ${error instanceof Error ? error.message : "Invalid data"}`);
+        errors.push(
+          `Row ${rowNum}: ${
+            error instanceof Error ? error.message : "Invalid data"
+          }`
+        );
       }
     }
 
     return {
       success: imported.length > 0,
-      message: `Imported ${imported.length} student(s)${errors.length > 0 ? ` with ${errors.length} error(s)` : ""}`,
+      message: `Imported ${imported.length} student(s)${
+        errors.length > 0 ? ` with ${errors.length} error(s)` : ""
+      }`,
       imported: imported.length,
       errors,
       data: imported,
@@ -303,14 +443,17 @@ export class BatchUploadController {
   /**
    * Get field value from row with multiple possible column names
    */
-  private static getFieldValue(row: ParsedRow, possibleNames: string[]): string {
+  private static getFieldValue(
+    row: ParsedRow,
+    possibleNames: string[]
+  ): string {
     for (const name of possibleNames) {
       // Try exact match
       if (row[name]) return String(row[name]);
-      
+
       // Try case-insensitive match
       const key = Object.keys(row).find(
-        k => k.toLowerCase().trim() === name.toLowerCase().trim()
+        (k) => k.toLowerCase().trim() === name.toLowerCase().trim()
       );
       if (key) return String(row[key]);
     }
@@ -325,4 +468,3 @@ export class BatchUploadController {
     return emailRegex.test(email);
   }
 }
-

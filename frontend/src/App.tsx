@@ -52,6 +52,7 @@ import LandingPage from "./pages/LandingPage";
 import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
 import Login from "./pages/Login.tsx";
+import EmailConfirmation from "./pages/EmailConfirmation.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -91,6 +92,7 @@ const AppContent: React.FC = () => {
         <Route path="/AnalyzeEssay" element={<AnalyzeEssay />} />
         <Route path="/About" element={<About />} />
         <Route path="/Login" element={<Login />} />
+        <Route path="/auth/confirm" element={<EmailConfirmation />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
         <Route path="*" element={<ErrorPage code={404} />} />
 

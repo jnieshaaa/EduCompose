@@ -65,6 +65,7 @@ export function SubmitEssayTab() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 10 * 1024 * 1024) {
+        // File size validation - using alert for now, can be replaced with modal if needed
         alert("File is too large. Maximum size is 10MB.");
         return;
       }

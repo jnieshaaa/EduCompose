@@ -21,26 +21,29 @@ export class FileParserService {
   static async parseCSV(file: File): Promise<ParseResult> {
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+      const lines = text
+        .split(/\r?\n/)
+        .filter((line) => line.trim().length > 0);
 
       if (lines.length < 2) {
         return {
           success: false,
           data: [],
           headers: [],
-          error: "CSV file must include a header row and at least one data row.",
+          error:
+            "CSV file must include a header row and at least one data row.",
         };
       }
 
       // Parse header
       const headers = this.parseCSVLine(lines[0]);
-      
+
       // Parse data rows
       const data: ParsedRow[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = this.parseCSVLine(lines[i]);
         if (values.length === 0) continue;
-        
+
         const row: ParsedRow = {};
         headers.forEach((header, index) => {
           row[header.trim()] = values[index]?.trim() || "";
@@ -58,7 +61,8 @@ export class FileParserService {
         success: false,
         data: [],
         headers: [],
-        error: error instanceof Error ? error.message : "Failed to parse CSV file",
+        error:
+          error instanceof Error ? error.message : "Failed to parse CSV file",
       };
     }
   }
@@ -70,38 +74,44 @@ export class FileParserService {
     try {
       // Dynamic import to avoid bundling xlsx in initial load
       const XLSX = await import("xlsx");
-      
+
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      
+
       // Get first sheet
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      
+
       // Convert to JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+      }) as unknown[][];
+
       if (jsonData.length < 2) {
         return {
           success: false,
           data: [],
           headers: [],
-          error: "XLSX file must include a header row and at least one data row.",
+          error:
+            "XLSX file must include a header row and at least one data row.",
         };
       }
 
       // First row is headers
-      const headers = jsonData[0].map((h) => String(h || "").trim());
-      
+      const headers = (jsonData[0] as unknown[]).map((h) =>
+        String(h || "").trim()
+      );
+
       // Remaining rows are data
       const data: ParsedRow[] = [];
       for (let i = 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
+        const row = jsonData[i] as unknown[];
         if (!row || row.length === 0) continue;
-        
+
         const parsedRow: ParsedRow = {};
         headers.forEach((header, index) => {
-          parsedRow[header] = row[index] !== undefined ? String(row[index]).trim() : "";
+          parsedRow[header] =
+            row[index] !== undefined ? String(row[index]).trim() : "";
         });
         data.push(parsedRow);
       }
@@ -116,7 +126,8 @@ export class FileParserService {
         success: false,
         data: [],
         headers: [],
-        error: error instanceof Error ? error.message : "Failed to parse XLSX file",
+        error:
+          error instanceof Error ? error.message : "Failed to parse XLSX file",
       };
     }
   }
@@ -126,7 +137,7 @@ export class FileParserService {
    */
   static async parseFile(file: File): Promise<ParseResult> {
     const extension = file.name.split(".").pop()?.toLowerCase();
-    
+
     if (extension === "csv") {
       return this.parseCSV(file);
     } else if (extension === "xlsx" || extension === "xls") {
@@ -148,10 +159,10 @@ export class FileParserService {
     const result: string[] = [];
     let current = "";
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
+
       if (char === '"') {
         if (inQuotes && line[i + 1] === '"') {
           // Escaped quote
@@ -169,11 +180,10 @@ export class FileParserService {
         current += char;
       }
     }
-    
+
     // Add last field
     result.push(current);
-    
+
     return result.map((field) => field.trim().replace(/^"|"$/g, ""));
   }
 }
-

@@ -1,10 +1,10 @@
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 export interface VocabularyComplexityData {
   level: string;
   value: number;
   color: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface VocabularyComplexityChartProps {
@@ -13,10 +13,10 @@ interface VocabularyComplexityChartProps {
   outerRadius?: number;
 }
 
-export function VocabularyComplexityChart({ 
-  data, 
+export function VocabularyComplexityChart({
+  data,
   height = 300,
-  outerRadius = 100 
+  outerRadius = 100,
 }: VocabularyComplexityChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -26,12 +26,18 @@ export function VocabularyComplexityChart({
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={(props: any) => (
-            <text 
-              x={props.x} 
-              y={props.y} 
-              fill="#000" 
-              textAnchor={props.textAnchor} 
+          label={(props: {
+            x?: number;
+            y?: number;
+            textAnchor?: string;
+            level?: string;
+            value?: number;
+          }) => (
+            <text
+              x={props.x}
+              y={props.y}
+              fill="#000"
+              textAnchor={props.textAnchor}
               dominantBaseline="central"
             >
               {`${props.level}: ${props.value}%`}
@@ -50,4 +56,3 @@ export function VocabularyComplexityChart({
     </ResponsiveContainer>
   );
 }
-

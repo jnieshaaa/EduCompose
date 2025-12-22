@@ -66,6 +66,7 @@ const Settings: React.FC = () => {
     // Placeholder save action
     // In a real app, call an API to persist preferences
 
+    // Settings saved notification - using alert for now, can be replaced with modal if needed
     alert("Settings saved.");
   };
 

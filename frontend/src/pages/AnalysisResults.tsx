@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import Card from '../components/ui/Card';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
-import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, FloatingErrorCard, type HighlightError } from '../components/grading';
+import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi } from '../api';
 
@@ -378,17 +378,17 @@ const AnalysisResults: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  // Handle error click - show the floating error card
+  // Handle error click - toggle selection (inline details are handled in EssayTextDisplay)
   const handleErrorClick = useCallback((error: HighlightError, index: number) => {
-    setSelectedErrorIndex(index);
-    setSelectedError(error);
-  }, []);
-
-  // Close the floating error card
-  const handleCloseErrorCard = useCallback(() => {
-    setSelectedError(null);
-    setSelectedErrorIndex(null);
-  }, []);
+    // Toggle: if same error is clicked, deselect it; otherwise select the new one
+    if (selectedErrorIndex === index) {
+      setSelectedErrorIndex(null);
+      setSelectedError(null);
+    } else {
+      setSelectedErrorIndex(index);
+      setSelectedError(error);
+    }
+  }, [selectedErrorIndex]);
 
   // Export analysis results to PDF
   const handleExportPDF = () => {
@@ -608,28 +608,20 @@ const AnalysisResults: React.FC = () => {
             gridTemplateColumns: '1fr 1fr',
           }}
         >
-          {/* Left Panel - Essay Text with Floating Error Card */}
-          <div className="relative h-full flex flex-col border-r border-neutral-200 bg-white">
+          {/* Left Panel - Essay Text */}
+          <div className="relative h-full flex flex-col border-r border-neutral-200 bg-white overflow-hidden">
             {/* Scrollable Essay Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <EssayTextDisplay
-                originalText={originalText}
-                grammarErrors={grammarErrors}
-                selectedErrorIndex={selectedErrorIndex}
-                onErrorClick={handleErrorClick}
-                analysisKey={analysisKey}
-              />
-            </div>
-            
-            {/* Floating Error Card - appears when an error is selected */}
-            {selectedError && (
-              <div className="flex-shrink-0 p-4 border-t border-neutral-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-                <FloatingErrorCard 
-                  error={selectedError} 
-                  onClose={handleCloseErrorCard} 
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
+                <EssayTextDisplay
+                  originalText={originalText}
+                  grammarErrors={grammarErrors}
+                  selectedErrorIndex={selectedErrorIndex}
+                  onErrorClick={handleErrorClick}
+                  analysisKey={analysisKey}
                 />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Right Panel - Analysis Tabs */}

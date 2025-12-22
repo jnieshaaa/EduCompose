@@ -53,22 +53,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Map Supabase user object into our local User shape
-  const mapSupabaseUser = (supabaseUser: any): User => {
-    const metadata = supabaseUser.user_metadata || {};
+  const mapSupabaseUser = (supabaseUser: unknown): User => {
+    const su = supabaseUser as {
+      id?: string | number;
+      email?: string | null;
+      user_metadata?: Record<string, unknown> | null;
+      email_confirmed_at?: string | null;
+    };
+    const metadata = su.user_metadata ?? {};
+    const meta = metadata as Record<string, unknown>;
     const fullName =
-      metadata.full_name ||
-      metadata.name ||
-      supabaseUser.email?.split("@")[0] ||
+      (meta["full_name"] as string | undefined) ||
+      (meta["name"] as string | undefined) ||
+      su.email?.split("@")[0] ||
       "Teacher";
 
     return {
-      id: supabaseUser.id,
-      email: supabaseUser.email ?? "",
-      username: metadata.username || supabaseUser.email || fullName,
+      id: su.id ?? "",
+      email: su.email ?? "",
+      username:
+        (meta["username"] as string | undefined) || su.email || fullName,
       full_name: fullName,
       role: "teacher",
       is_active: true,
-      email_verified: !!supabaseUser.email_confirmed_at,
+      email_verified: !!su.email_confirmed_at,
     };
   };
 
@@ -76,20 +84,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuth = async () => {
     setIsLoading(true);
     try {
-      // Prefer locally cached user if present
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-        setIsLoading(false);
-        return;
-      }
-
+      // Always verify with Supabase to ensure session is valid
       const {
         data: { session },
         error,
       } = await supabase.auth.getSession();
 
       if (error || !session || !session.user) {
+        // Clear all auth data if session is invalid
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         setUser(null);
@@ -97,12 +99,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      const mappedUser = mapSupabaseUser(session.user);
+      // Verify session is still valid by checking user
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !currentUser) {
+        // Session expired or invalid, clear everything
+        await supabase.auth.signOut();
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Session is valid, update user data
+      const mappedUser = mapSupabaseUser(currentUser);
       localStorage.setItem("auth_token", session.access_token);
       localStorage.setItem("user", JSON.stringify(mappedUser));
       setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);
+      // On any error, clear auth and sign out
+      await supabase.auth.signOut();
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
@@ -114,6 +132,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check authentication on mount
     checkAuth();
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        // User signed out or session expired
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        setUser(null);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        // User signed in or token refreshed, update user data
+        if (session.user) {
+          const mappedUser = mapSupabaseUser(session.user);
+          localStorage.setItem("auth_token", session.access_token);
+          localStorage.setItem("user", JSON.stringify(mappedUser));
+          setUser(mappedUser);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = (token: string, userData?: User) => {
@@ -127,10 +169,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user");
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      // Always clear local storage regardless of Supabase signout result
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      setUser(null);
+    }
   };
 
   const value: AuthContextType = {

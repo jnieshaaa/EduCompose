@@ -16,7 +16,11 @@ interface InputProps {
   id?: string;
   readOnly?: boolean;
   // FIX: Add defaultValue prop
-  defaultValue?: string | number; 
+  defaultValue?: string | number;
+  // Event handlers
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -33,6 +37,9 @@ const Input: React.FC<InputProps> = ({
   id,
   readOnly = false,
   defaultValue, // Destructure defaultValue
+  onKeyDown,
+  onFocus,
+  onBlur,
 }) => {
   const baseClasses =
     "w-full px-3 py-2 border rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200";
@@ -76,6 +83,9 @@ const Input: React.FC<InputProps> = ({
           id={id}
           {...finalValueProps} // Apply value or defaultValue
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
@@ -89,6 +99,9 @@ const Input: React.FC<InputProps> = ({
           type={type}
           {...finalValueProps} // Apply value or defaultValue
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
