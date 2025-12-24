@@ -121,6 +121,36 @@ const Breadcrumb: React.FC = () => {
           });
         }
       }
+    } else if (pathname === "/Teacher/Activities") {
+      // Handle Activities drill-down
+      const activityId = searchParams.get("activityId");
+      const activityTitle = searchParams.get("activityTitle");
+      const programSection = searchParams.get("programSection");
+      const programName = searchParams.get("programName");
+      
+      items.push({
+        label: "Activities",
+        path: "/Teacher/Activities",
+        icon: config.icon,
+      });
+      
+      if (activityId && activityTitle) {
+        items.push({
+          label: activityTitle,
+          path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}`,
+        });
+        
+        if (programSection && programName) {
+          const sectionLabel = `${programName} - ${programSection}`;
+          items.push({
+            label: sectionLabel,
+            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
+          });
+          
+          // If we're viewing students, add that to the breadcrumb
+          // (This is implicit - we're already on the students view)
+        }
+      }
     } else {
       // Non-Class Management routes - just show the current page
       items.push({
