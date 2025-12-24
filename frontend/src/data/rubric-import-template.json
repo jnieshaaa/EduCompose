@@ -1,0 +1,68 @@
+{
+  "name": "Sample Essay Rubric",
+  "description": "A sample rubric for evaluating essays",
+  "gradingIntensity": "Basic",
+  "programs": ["Computer Science", "Engineering"],
+  "criteria": [
+    {
+      "id": 1,
+      "title": "Grammar & Mechanics",
+      "scores": [
+        {
+          "id": 1,
+          "title": "Excellent",
+          "points": 4,
+          "description": "Virtually no errors; demonstrates mastery of grammar and mechanics"
+        },
+        {
+          "id": 2,
+          "title": "Proficient",
+          "points": 3,
+          "description": "Few minor errors; strong command of grammar"
+        },
+        {
+          "id": 3,
+          "title": "Developing",
+          "points": 2,
+          "description": "Some errors that don't impede understanding"
+        },
+        {
+          "id": 4,
+          "title": "Beginning",
+          "points": 1,
+          "description": "Frequent errors that significantly impact readability"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Organization & Structure",
+      "scores": [
+        {
+          "id": 1,
+          "title": "Excellent",
+          "points": 4,
+          "description": "Clear, logical structure with smooth transitions"
+        },
+        {
+          "id": 2,
+          "title": "Proficient",
+          "points": 3,
+          "description": "Generally organized with some minor flow issues"
+        },
+        {
+          "id": 3,
+          "title": "Developing",
+          "points": 2,
+          "description": "Basic structure but lacks coherence"
+        },
+        {
+          "id": 4,
+          "title": "Beginning",
+          "points": 1,
+          "description": "Disorganized and difficult to follow"
+        }
+      ]
+    }
+  ]
+}

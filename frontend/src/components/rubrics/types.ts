@@ -15,8 +15,8 @@ export interface CriteriaRow {
 
 export interface RubricFormData {
   name: string;
-  gradingIntensity: 'Easy' | 'Normal' | 'Strict';
-  program: string;
+  gradingIntensity: 'Basic' | 'Professional' | 'Advanced' | 'Technical';
+  programs: string[];
   criteria: CriteriaRow[];
 }
 
@@ -52,8 +52,8 @@ export const initialCriteria: CriteriaRow[] = [
 
 export const defaultRubricFormData: RubricFormData = {
   name: '',
-  gradingIntensity: 'Normal',
-  program: '',
+  gradingIntensity: 'Basic',
+  programs: [],
   criteria: initialCriteria,
 };
 

@@ -1,10 +1,33 @@
-import { X, Copy, Download, BookOpen } from 'lucide-react';
+import { X, Copy, Download, BookOpen, FileText, FileSpreadsheet } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import type { PlatformRubric } from './types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
 interface RubricPreviewModalProps {
-  rubric: PlatformRubric;
+  rubric: PlatformRubric | {
+    id: number;
+    name: string;
+    description: string;
+    type: string;
+    criteria: Array<{
+      id: number;
+      title: string;
+      scores: Array<{
+        id: number;
+        title: string;
+        points: number;
+        description: string;
+      }>;
+    }>;
+    programs: number;
+    lastUpdated: string;
+  };
   isOpen: boolean;
   onClose: () => void;
   onUseTemplate?: (rubric: PlatformRubric) => void;
@@ -154,14 +177,50 @@ export function RubricPreviewModal({ rubric, isOpen, onClose, onUseTemplate }: R
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t bg-neutral-50">
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Copy className="w-4 h-4 mr-2" />
-              Copy to My Rubrics
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export PDF
-            </Button>
+            {onUseTemplate && (
+              <Button variant="outline" size="sm" onClick={() => onUseTemplate(rubric)}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy to My Rubrics
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      const { exportRubricToPDF } = await import('../../services/rubricExportService');
+                      await exportRubricToPDF(rubric as PlatformRubric);
+                    } catch (error) {
+                      console.error('Error exporting to PDF:', error);
+                      alert('Failed to export rubric to PDF');
+                    }
+                  }}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      const { exportRubricToExcel } = await import('../../services/rubricExportService');
+                      await exportRubricToExcel(rubric as PlatformRubric);
+                    } catch (error) {
+                      console.error('Error exporting to Excel:', error);
+                      alert('Failed to export rubric to Excel');
+                    }
+                  }}
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>

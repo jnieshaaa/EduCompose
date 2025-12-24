@@ -63,12 +63,14 @@ CREATE TABLE IF NOT EXISTS students (
 --------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS rubrics (
-  id           bigserial PRIMARY KEY,
-  name         text        NOT NULL,
-  description  text,
-  criteria     jsonb,
-  created_by   bigint      REFERENCES teachers(id) ON DELETE SET NULL,
-  created_at   timestamptz NOT NULL DEFAULT now()
+  id               bigserial PRIMARY KEY,
+  name             text        NOT NULL,
+  description      text,
+  criteria         jsonb,
+  programs         jsonb        DEFAULT '[]'::jsonb,
+  grading_intensity text,
+  created_by       bigint      REFERENCES teachers(id) ON DELETE SET NULL,
+  created_at       timestamptz NOT NULL DEFAULT now()
 );
 
 --------------------------------------------------------------------------------
