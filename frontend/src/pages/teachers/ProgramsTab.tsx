@@ -69,6 +69,8 @@ export function ProgramsTab() {
 
   // STATE for the new program form
   const [newProgram, setNewProgram] = useState(initialNewProgramState);
+  // Prevent duplicate submissions when creating a program
+  const [isCreating, setIsCreating] = useState(false);
 
   // Autocomplete state for program name
   const [programSuggestions, setProgramSuggestions] = useState<
@@ -205,6 +207,9 @@ export function ProgramsTab() {
 
   // 2. HANDLE SUBMIT FUNCTION
   const handleCreateProgram = async () => {
+    // Prevent multiple submissions
+    if (isCreating) return;
+    setIsCreating(true);
     // 1. Validate fields (Basic check)
     if (
       !newProgram.name ||
@@ -215,6 +220,7 @@ export function ProgramsTab() {
       setTimeout(() => {
         showError("Please fill in required fields correctly.");
       }, 100);
+      setIsCreating(false);
       return;
     }
 
@@ -239,6 +245,7 @@ export function ProgramsTab() {
         setTimeout(() => {
           showError(`Failed to create program: ${error.message}`);
         }, 100);
+        setIsCreating(false);
         return;
       }
 
@@ -260,6 +267,7 @@ export function ProgramsTab() {
       setProgramSuggestions([]);
       setShowSuggestions(false);
       setIsAddDialogOpen(false);
+      setIsCreating(false);
       setTimeout(() => {
         showSuccess("Program created successfully!");
       }, 100);
@@ -269,6 +277,7 @@ export function ProgramsTab() {
       setTimeout(() => {
         showError("An unexpected error occurred while creating the program.");
       }, 100);
+      setIsCreating(false);
     }
   };
 
@@ -430,8 +439,10 @@ export function ProgramsTab() {
                   <Button
                     className="bg-primary hover:bg-primary-300"
                     onClick={handleCreateProgram}
+                    disabled={isCreating}
+                    aria-busy={isCreating}
                   >
-                    Create Program
+                    {isCreating ? "Creating..." : "Create Program"}
                   </Button>
                 </div>
               </div>

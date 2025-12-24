@@ -69,6 +69,8 @@ export function StudentsTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newStudent, setNewStudent] = useState(initialNewStudentState);
+  // Prevent duplicate submissions when creating a student
+  const [isCreatingStudent, setIsCreatingStudent] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [studentCodeToDbIdMap, setStudentCodeToDbIdMap] = useState<
@@ -543,6 +545,9 @@ export function StudentsTab() {
 
   // HANDLE SUBMIT FUNCTION for creating a new student
   const handleCreateStudent = async () => {
+    // Prevent multiple submissions
+    if (isCreatingStudent) return;
+    setIsCreatingStudent(true);
     // 1. Validation
     if (
       !newStudent.name ||
@@ -555,6 +560,7 @@ export function StudentsTab() {
       setTimeout(() => {
         showError("Please fill in all required fields.");
       }, 100);
+      setIsCreatingStudent(false);
       return;
     }
 
@@ -569,6 +575,7 @@ export function StudentsTab() {
           `Program "${newStudent.program}" not found. Please refresh and try again.`
         );
       }, 100);
+      setIsCreatingStudent(false);
       return;
     }
     if (!sectionId) {
@@ -578,6 +585,7 @@ export function StudentsTab() {
           `Section "${newStudent.section}" not found. Please refresh and try again.`
         );
       }, 100);
+      setIsCreatingStudent(false);
       return;
     }
 
@@ -606,6 +614,7 @@ export function StudentsTab() {
         setTimeout(() => {
           showError(`Failed to create student: ${error.message}`);
         }, 100);
+        setIsCreatingStudent(false);
         return;
       }
 
@@ -634,6 +643,7 @@ export function StudentsTab() {
       // 6. Reset form and close dialog
       setNewStudent(initialNewStudentState);
       setIsAddDialogOpen(false);
+      setIsCreatingStudent(false);
       setTimeout(() => {
         showSuccess("Student created successfully!");
       }, 100);
@@ -643,6 +653,7 @@ export function StudentsTab() {
       setTimeout(() => {
         showError("An unexpected error occurred while creating the student.");
       }, 100);
+      setIsCreatingStudent(false);
     }
   };
 
@@ -797,8 +808,10 @@ export function StudentsTab() {
                   <Button
                     className="bg-primary hover:bg-primary-300"
                     onClick={handleCreateStudent}
+                    disabled={isCreatingStudent}
+                    aria-busy={isCreatingStudent}
                   >
-                    Add Student
+                    {isCreatingStudent ? "Adding..." : "Add Student"}
                   </Button>
                 </div>
               </div>

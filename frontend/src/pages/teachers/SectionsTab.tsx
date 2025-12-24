@@ -69,6 +69,8 @@ export function SectionsTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newSection, setNewSection] = useState(initialNewSectionState);
+  // Prevent duplicate submissions when creating a section
+  const [isCreatingSection, setIsCreatingSection] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [programFilter, setProgramFilter] = useState(
@@ -340,6 +342,9 @@ export function SectionsTab() {
 
   // HANDLE SUBMIT FUNCTION for creating a new section
   const handleCreateSection = async () => {
+    // Prevent multiple submissions
+    if (isCreatingSection) return;
+    setIsCreatingSection(true);
     // 1. Basic validation
     if (
       !newSection.name ||
@@ -351,6 +356,7 @@ export function SectionsTab() {
       setTimeout(() => {
         showError("Please fill in all required fields.");
       }, 100);
+      setIsCreatingSection(false);
       return;
     }
 
@@ -371,6 +377,7 @@ export function SectionsTab() {
             `Cannot create more sections. The program "${selectedProgram}" has a maximum of ${maxTracks} track(s) (sections). You have already created ${existingSectionsCount} section(s).`
           );
         }, 100);
+        setIsCreatingSection(false);
         return;
       }
     }
@@ -384,6 +391,7 @@ export function SectionsTab() {
           `Program "${selectedProgram}" not found. Please refresh and try again.`
         );
       }, 100);
+      setIsCreatingSection(false);
       return;
     }
 
@@ -407,6 +415,7 @@ export function SectionsTab() {
         setTimeout(() => {
           showError(`Failed to create section: ${error.message}`);
         }, 100);
+        setIsCreatingSection(false);
         return;
       }
 
@@ -425,6 +434,7 @@ export function SectionsTab() {
       // 6. Reset form and close dialog
       setNewSection(initialNewSectionState);
       setIsAddDialogOpen(false);
+      setIsCreatingSection(false);
       setTimeout(() => {
         showSuccess("Section created successfully!");
       }, 100);
@@ -434,6 +444,7 @@ export function SectionsTab() {
       setTimeout(() => {
         showError("An unexpected error occurred while creating the section.");
       }, 100);
+      setIsCreatingSection(false);
     }
   };
 
@@ -590,8 +601,10 @@ export function SectionsTab() {
                   <Button
                     className="bg-primary hover:bg-primary-300"
                     onClick={handleCreateSection}
+                    disabled={isCreatingSection}
+                    aria-busy={isCreatingSection}
                   >
-                    Create Block
+                    {isCreatingSection ? "Creating..." : "Create Block"}
                   </Button>
                 </div>
               </div>
