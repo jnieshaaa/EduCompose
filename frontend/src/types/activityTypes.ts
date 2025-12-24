@@ -36,8 +36,8 @@ export type Student = {
 
 export type NewActivityForm = {
   title: string;
-  programId: string | "all";
-  blockId: string | "all";
+  programIds: string[]; // Array of selected program IDs, empty means "all"
+  sectionIds: string[]; // Array of selected section IDs, empty means "all"
   rubricId: string | "";
   dueDate: string;
   description: string;

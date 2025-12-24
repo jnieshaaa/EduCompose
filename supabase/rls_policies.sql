@@ -210,10 +210,20 @@ WITH CHECK (
 );
 
 -- Allow authenticated teachers to delete essays they manage
+DROP POLICY IF EXISTS "Teachers can delete their own essays" ON essays;
 CREATE POLICY "Teachers can delete their own essays" 
 ON essays FOR DELETE 
 TO authenticated 
 USING (
+  teacher_id IN (SELECT id FROM teachers WHERE auth_user_id = auth.uid())
+);
+
+-- Allow authenticated teachers to create essays (for manual uploads)
+DROP POLICY IF EXISTS "Teachers can create essays" ON essays;
+CREATE POLICY "Teachers can create essays" 
+ON essays FOR INSERT 
+TO authenticated 
+WITH CHECK (
   teacher_id IN (SELECT id FROM teachers WHERE auth_user_id = auth.uid())
 );
 

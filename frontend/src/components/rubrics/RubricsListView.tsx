@@ -46,7 +46,12 @@ export function RubricsListView({
   onPreviewRubric,
   onPreviewMyRubric,
 }: RubricsListViewProps) {
-  const filteredPlatformRubrics = platformRubrics.filter(
+  // Debug: Log platform rubrics count
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Platform rubrics count:', platformRubrics?.length || 0);
+  }
+
+  const filteredPlatformRubrics = (platformRubrics || []).filter(
     (rubric) =>
       rubric.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rubric.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -93,15 +98,27 @@ export function RubricsListView({
       {/* Tab Content */}
       <div>
         {activeTab === "platform" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPlatformRubrics.map((rubric) => (
-              <PlatformRubricCard
-                key={rubric.id}
-                rubric={rubric}
-                onClick={() => onPreviewRubric(rubric)}
-              />
-            ))}
-          </div>
+          <>
+            {filteredPlatformRubrics.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-neutral-500">
+                  {searchQuery
+                    ? "No platform rubrics match your search."
+                    : "No platform rubrics available."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredPlatformRubrics.map((rubric) => (
+                  <PlatformRubricCard
+                    key={rubric.id}
+                    rubric={rubric}
+                    onClick={() => onPreviewRubric(rubric)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === "my" && (

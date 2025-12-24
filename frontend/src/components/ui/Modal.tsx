@@ -74,7 +74,7 @@ const Modal: React.FC<ModalProps> = ({
               transparent ? "bg-transparent" : "bg-white"
             } rounded-rl ${transparent ? "" : "shadow-xl"} w-full ${
               sizeClasses[size]
-            } ${className} flex flex-col`}
+            } ${className} flex flex-col max-h-[90vh]`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -96,7 +96,7 @@ const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Content */}
-            <div className={`p-6 ${contentClassName}`}>{children}</div>
+            <div className={`p-6 ${contentClassName} overflow-y-auto flex-1 min-h-0`}>{children}</div>
           </motion.div>
         </div>
       )}

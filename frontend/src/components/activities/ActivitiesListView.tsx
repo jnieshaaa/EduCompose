@@ -42,7 +42,6 @@ import {
   getRubricLabel,
   getDueDateStatus,
 } from "../../data/activityData";
-import { demoPrograms, demoBlocks, demoRubrics } from "../../data/activityData";
 
 interface ActivitiesListViewProps {
   activities: EssayActivity[];
@@ -56,6 +55,9 @@ interface ActivitiesListViewProps {
   totalActivities: number;
   totalSubmissions: number;
   upcomingDue: number;
+  programs: { id: string; name: string }[];
+  sections: { id: string; name: string; programId: string }[];
+  rubrics: { id: string; name: string }[];
 }
 
 export function ActivitiesListView({
@@ -70,6 +72,9 @@ export function ActivitiesListView({
   totalActivities,
   totalSubmissions,
   upcomingDue,
+  programs,
+  sections,
+  rubrics,
 }: ActivitiesListViewProps) {
   const filteredActivities = activities.filter(
     (a) =>
@@ -213,7 +218,7 @@ export function ActivitiesListView({
               const dueDateStatus = getDueDateStatus(activity.dueDate);
               const rubricLabel = getRubricLabel(
                 activity.rubricId,
-                demoRubrics
+                rubrics.map((r) => ({ id: r.id, name: r.name }))
               );
 
               return (
@@ -289,11 +294,21 @@ export function ActivitiesListView({
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge className="bg-primary/10 text-primary border-primary/20 text-xs flex items-center gap-1">
                           <Users className="w-3 h-3" />
-                          {getProgramLabel(activity.programId, demoPrograms)}
+                          {getProgramLabel(
+                            activity.programId,
+                            programs.map((p) => ({ id: p.id, name: p.name }))
+                          )}
                         </Badge>
                         <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs flex items-center gap-1">
                           <Layers className="w-3 h-3" />
-                          {getBlockLabel(activity.blockId, demoBlocks)}
+                          {getBlockLabel(
+                            activity.blockId,
+                            sections.map((s) => ({
+                              id: s.id,
+                              name: s.name,
+                              programId: s.programId,
+                            }))
+                          )}
                         </Badge>
                         {rubricLabel && (
                           <Badge className="bg-info-default/10 text-info-default border-info-default/20 text-xs flex items-center gap-1">
@@ -359,7 +374,7 @@ export function ActivitiesListView({
                 const dueDateStatus = getDueDateStatus(activity.dueDate);
                 const rubricLabel = getRubricLabel(
                   activity.rubricId,
-                  demoRubrics
+                  rubrics.map((r) => ({ id: r.id, name: r.name }))
                 );
 
                 return (
@@ -380,12 +395,22 @@ export function ActivitiesListView({
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                        {getProgramLabel(activity.programId, demoPrograms)}
+                        {getProgramLabel(
+                          activity.programId,
+                          programs.map((p) => ({ id: p.id, name: p.name }))
+                        )}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs">
-                        {getBlockLabel(activity.blockId, demoBlocks)}
+                        {getBlockLabel(
+                          activity.blockId,
+                          sections.map((s) => ({
+                            id: s.id,
+                            name: s.name,
+                            programId: s.programId,
+                          }))
+                        )}
                       </Badge>
                     </TableCell>
                     <TableCell>
