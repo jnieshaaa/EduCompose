@@ -50,6 +50,7 @@ interface ActivitiesListViewProps {
   viewMode: "cards" | "table";
   onViewModeChange: (mode: "cards" | "table") => void;
   onActivityClick: (activityId: string) => void;
+  onEditActivity: (e: React.MouseEvent, activityId: string) => void;
   onDeleteActivity: (e: React.MouseEvent, activityId: string) => void;
   onCreateActivity: () => void;
   totalActivities: number;
@@ -67,6 +68,7 @@ export function ActivitiesListView({
   viewMode,
   onViewModeChange,
   onActivityClick,
+  onEditActivity,
   onDeleteActivity,
   onCreateActivity,
   totalActivities,
@@ -267,7 +269,7 @@ export function ActivitiesListView({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => onEditActivity(e, activity.id)}
                             >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Activity
@@ -454,7 +456,7 @@ export function ActivitiesListView({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => onEditActivity(e, activity.id)}
                           >
                             <Edit className="w-4 h-4 mr-2" />
                             Edit Activity

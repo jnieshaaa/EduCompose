@@ -7,6 +7,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { ViewEssayModal } from "./ViewEssayModal";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -62,6 +63,11 @@ export function StudentsView({
     useState(false);
   const [currentUploadIdForSelection, setCurrentUploadIdForSelection] =
     useState<string | null>(null);
+  const [isViewEssayModalOpen, setIsViewEssayModalOpen] = useState(false);
+  const [selectedStudentForView, setSelectedStudentForView] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Filter out students who have already submitted
   const availableStudents = useMemo(() => {
@@ -231,8 +237,12 @@ export function StudentsView({
         )
       );
 
-      const successCount = results.filter((r) => r.success).length;
-      const failedCount = results.filter((r) => !r.success).length;
+      const successCount = results.filter(
+        (r: { success: boolean }) => r.success
+      ).length;
+      const failedCount = results.filter(
+        (r: { success: boolean }) => !r.success
+      ).length;
 
       if (failedCount === 0) {
         alert(`${successCount} file(s) uploaded successfully!`);
@@ -242,16 +252,16 @@ export function StudentsView({
         window.location.reload();
       } else {
         const errors = results
-          .filter((r) => !r.success)
-          .map((r) => r.error)
+          .filter((r: { success: boolean }) => !r.success)
+          .map((r: { error?: string }) => r.error)
           .join(", ");
         alert(
           `${successCount} file(s) uploaded successfully, ${failedCount} failed. Errors: ${errors}`
         );
         // Remove successful uploads from pending list
         const failedIndices = results
-          .map((r, i) => (!r.success ? i : -1))
-          .filter((i) => i !== -1);
+          .map((r: { success: boolean }, i: number) => (!r.success ? i : -1))
+          .filter((i: number) => i !== -1);
         setPendingUploads((prev) =>
           prev.filter((_, index) => {
             const uploadIndex = uploadsToSubmit.findIndex(
@@ -415,11 +425,34 @@ export function StudentsView({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (student.status === "submitted") {
+                              setSelectedStudentForView({
+                                id: student.id,
+                                name: student.name,
+                              });
+                              setIsViewEssayModalOpen(true);
+                            } else {
+                              alert(
+                                "This student has not submitted an essay yet."
+                              );
+                            }
+                          }}
+                          disabled={student.status !== "submitted"}
+                        >
                           <FileText className="w-4 h-4 mr-2" />
                           View Essay
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Grade Essay functionality - placeholder for future implementation
+                            alert("Grade Essay feature coming soon!");
+                          }}
+                          disabled={student.status !== "submitted"}
+                        >
                           <Edit className="w-4 h-4 mr-2" />
                           Grade Essay
                         </DropdownMenuItem>
@@ -721,6 +754,20 @@ export function StudentsView({
           </div>
         </div>
       </Modal>
+
+      {/* View Essay Modal */}
+      {selectedStudentForView && (
+        <ViewEssayModal
+          isOpen={isViewEssayModalOpen}
+          onClose={() => {
+            setIsViewEssayModalOpen(false);
+            setSelectedStudentForView(null);
+          }}
+          studentId={selectedStudentForView.id}
+          studentName={selectedStudentForView.name}
+          activityId={activity.id}
+        />
+      )}
     </div>
   );
 }

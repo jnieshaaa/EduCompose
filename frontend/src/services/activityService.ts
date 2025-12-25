@@ -1,7 +1,7 @@
 // Activity service for data operations
 
 import { supabase } from "../lib/supabaseClient";
-import type { EssayActivity } from "../types/activityTypes";
+import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
 import { fetchTeacherId } from "./rubricService";
 
 // Supabase row type for essay_activities
@@ -163,6 +163,83 @@ export const createActivity = async (activity: {
     };
   } catch (err) {
     console.error("Unexpected error creating activity:", err);
+    throw err;
+  }
+};
+
+// Update an activity
+export const updateActivity = async (
+  activityId: string,
+  activityData: NewActivityForm
+): Promise<EssayActivity> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      throw new Error("Teacher ID not available");
+    }
+
+    const id = parseInt(activityId, 10);
+    if (isNaN(id)) {
+      throw new Error("Invalid activity ID");
+    }
+
+    // Get first selected program/section or null
+    const programId =
+      activityData.programIds.length > 0
+        ? parseInt(activityData.programIds[0], 10)
+        : null;
+    const sectionId =
+      activityData.sectionIds.length > 0
+        ? parseInt(activityData.sectionIds[0], 10)
+        : null;
+    const rubricId = activityData.rubricId
+      ? parseInt(activityData.rubricId, 10)
+      : null;
+
+    const updateData: {
+      title: string;
+      program_id: number | null;
+      section_id: number | null;
+      rubric_id: number | null;
+      due_date: string | null;
+      instructions: string | null;
+    } = {
+      title: activityData.title,
+      program_id: programId && !isNaN(programId) ? programId : null,
+      section_id: sectionId && !isNaN(sectionId) ? sectionId : null,
+      rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
+      due_date: activityData.dueDate || null,
+      instructions: activityData.description || null,
+    };
+
+    const { data, error } = await supabase
+      .from("essay_activities")
+      .update(updateData)
+      .eq("id", id)
+      .eq("teacher_id", teacherId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating activity:", error);
+      throw error;
+    }
+
+    // Map back to EssayActivity format
+    const row = data as SupabaseActivityRow;
+    return {
+      id: String(row.id),
+      title: row.title,
+      programId: row.program_id ? String(row.program_id) : "all",
+      blockId: row.section_id ? String(row.section_id) : "all",
+      rubricId: row.rubric_id ? String(row.rubric_id) : null,
+      dueDate: row.due_date || undefined,
+      description: row.instructions || undefined,
+      createdAt: row.created_at.split("T")[0],
+      submissionCount: 0, // Will be updated when activities are reloaded
+    };
+  } catch (err) {
+    console.error("Unexpected error updating activity:", err);
     throw err;
   }
 };
@@ -626,5 +703,74 @@ export const fetchProgramSectionCounts = async (
   } catch (err) {
     console.error("Unexpected error fetching counts:", err);
     return { studentCount: 0, submissionCount: 0 };
+  }
+};
+
+// Fetch essay submission for a specific student and activity
+export const fetchEssayByStudentAndActivity = async (
+  studentId: string,
+  activityId: string
+): Promise<{ fileUrl: string; title: string; fileType: string } | null> => {
+  try {
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        console.error("Error finding student:", studentError);
+        return null;
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      console.error("Invalid activity ID");
+      return null;
+    }
+
+    // Fetch essay record
+    const { data: essayData, error: essayError } = await supabase
+      .from("essays")
+      .select("file_path, title")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (essayError || !essayData) {
+      console.error("Error fetching essay:", essayError);
+      return null;
+    }
+
+    // Get signed URL from Supabase Storage (bucket is private)
+    // Signed URLs are valid for 1 hour (3600 seconds)
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from("essays")
+      .createSignedUrl(essayData.file_path, 3600);
+
+    if (urlError || !urlData?.signedUrl) {
+      console.error("Error getting file URL:", urlError);
+      return null;
+    }
+
+    // Determine file type from file path
+    const fileExt = essayData.file_path.split(".").pop()?.toLowerCase() || "";
+    const isPdf = fileExt === "pdf";
+    const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt);
+
+    return {
+      fileUrl: urlData.signedUrl,
+      title: essayData.title || "Essay Submission",
+      fileType: isPdf ? "pdf" : isImage ? "image" : "unknown",
+    };
+  } catch (err) {
+    console.error("Unexpected error fetching essay:", err);
+    return null;
   }
 };
