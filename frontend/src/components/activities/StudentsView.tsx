@@ -26,9 +26,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Trash2, RefreshCw } from "lucide-react";
 import type { EssayActivity, Student } from "../../types/activityTypes";
-import { uploadEssayFile } from "../../services/activityService";
+import { uploadEssayFile, updateEssayFile, deleteEssay } from "../../services/activityService";
 
 interface StudentsViewProps {
   activity: EssayActivity;
@@ -68,6 +68,19 @@ export function StudentsView({
     id: string;
     name: string;
   } | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedStudentForUpdate, setSelectedStudentForUpdate] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [selectedStudentForDelete, setSelectedStudentForDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [updateFile, setUpdateFile] = useState<File | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter out students who have already submitted
   const availableStudents = useMemo(() => {
@@ -279,6 +292,95 @@ export function StudentsView({
     }
   };
 
+  const handleUpdateFileSelect = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const isValidFile =
+      file.type === "application/pdf" || file.type.startsWith("image/");
+    if (!isValidFile) {
+      alert("Please select a PDF or image file");
+      event.target.value = "";
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be less than 10MB");
+      event.target.value = "";
+      return;
+    }
+
+    setUpdateFile(file);
+    event.target.value = "";
+  };
+
+  const handleUpdateEssay = async () => {
+    if (!updateFile || !selectedStudentForUpdate) {
+      alert("Please select a file to update");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const result = await updateEssayFile(
+        updateFile,
+        selectedStudentForUpdate.id,
+        activity.id,
+        programName,
+        programSection
+      );
+
+      if (result.success) {
+        alert("Essay updated successfully!");
+        setIsUpdateModalOpen(false);
+        setUpdateFile(null);
+        setSelectedStudentForUpdate(null);
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        alert(`Failed to update essay: ${result.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("Failed to update essay. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteEssay = async () => {
+    if (!selectedStudentForDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteEssay(
+        selectedStudentForDelete.id,
+        activity.id
+      );
+
+      if (result.success) {
+        alert("Essay deleted successfully!");
+        setIsDeleteModalOpen(false);
+        setSelectedStudentForDelete(null);
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        alert(`Failed to delete essay: ${result.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete essay. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Back Button and Upload Buttons */}
@@ -455,6 +557,47 @@ export function StudentsView({
                         >
                           <Edit className="w-4 h-4 mr-2" />
                           Grade Essay
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (student.status === "submitted") {
+                              setSelectedStudentForUpdate({
+                                id: student.id,
+                                name: student.name,
+                              });
+                              setIsUpdateModalOpen(true);
+                            } else {
+                              alert(
+                                "This student has not submitted an essay yet."
+                              );
+                            }
+                          }}
+                          disabled={student.status !== "submitted"}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Update Essay
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (student.status === "submitted") {
+                              setSelectedStudentForDelete({
+                                id: student.id,
+                                name: student.name,
+                              });
+                              setIsDeleteModalOpen(true);
+                            } else {
+                              alert(
+                                "This student has not submitted an essay yet."
+                              );
+                            }
+                          }}
+                          disabled={student.status !== "submitted"}
+                          className="text-error-default focus:text-error-default focus:bg-error-default/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Essay
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -768,6 +911,114 @@ export function StudentsView({
           activityId={activity.id}
         />
       )}
+
+      {/* Update Essay Modal */}
+      <Modal
+        isOpen={isUpdateModalOpen}
+        onClose={() => {
+          setIsUpdateModalOpen(false);
+          setUpdateFile(null);
+          setSelectedStudentForUpdate(null);
+        }}
+        title={`Update Essay - ${selectedStudentForUpdate?.name}`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-neutral-600 mb-4">
+              Select a new file to replace the existing submission. This will
+              remove the current file and reset all analysis scores.
+            </p>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Select New File (PDF / Images)
+            </label>
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              onChange={handleUpdateFileSelect}
+              className="block w-full text-sm text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-rd file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-300"
+            />
+            {updateFile && (
+              <p className="mt-2 text-sm text-neutral-600">
+                Selected:{" "}
+                <span className="font-medium">{updateFile.name}</span> (
+                {(updateFile.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
+            <p className="mt-1 text-xs text-neutral-500">
+              Maximum file size: 10MB. Supported formats: PDF, JPG, PNG, GIF
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsUpdateModalOpen(false);
+                setUpdateFile(null);
+                setSelectedStudentForUpdate(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateEssay}
+              disabled={!updateFile || isUpdating}
+            >
+              {isUpdating ? "Updating..." : "Update Essay"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Essay Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedStudentForDelete(null);
+        }}
+        title="Delete Essay Submission"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600">
+            Are you sure you want to delete the essay submission for{" "}
+            <span className="font-semibold text-neutral-900">
+              {selectedStudentForDelete?.name}
+            </span>
+            ? This action cannot be undone and will permanently remove the file
+            and all associated analysis data.
+          </p>
+
+          <div className="bg-warning-default/10 border border-warning-default/20 rounded-md p-3">
+            <p className="text-sm text-warning-default font-medium">
+              ⚠️ Warning: This will delete the essay file and all analysis
+              results permanently.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setSelectedStudentForDelete(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteEssay}
+              disabled={isDeleting}
+              className="bg-error-default hover:bg-error-dark text-white"
+            >
+              {isDeleting ? "Deleting..." : "Delete Essay"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

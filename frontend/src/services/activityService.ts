@@ -635,6 +635,219 @@ export const uploadEssayFile = async (
   }
 };
 
+// Update essay file (replace existing submission)
+export const updateEssayFile = async (
+  file: File,
+  studentId: string,
+  activityId: string,
+  programName: string,
+  sectionName: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return { success: false, error: "Teacher ID not available" };
+    }
+
+    // Get section ID from program name and section name
+    const { data: programData, error: programError } = await supabase
+      .from("programs")
+      .select("id")
+      .eq("name", programName)
+      .single();
+
+    if (programError || !programData) {
+      return { success: false, error: "Program not found" };
+    }
+
+    const { data: sectionData, error: sectionError } = await supabase
+      .from("sections")
+      .select("id")
+      .eq("name", sectionName)
+      .eq("program_id", programData.id)
+      .single();
+
+    if (sectionError || !sectionData) {
+      return { success: false, error: "Section not found" };
+    }
+
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return { success: false, error: "Student not found" };
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return { success: false, error: "Invalid activity ID" };
+    }
+
+    // Find existing essay submission
+    const { data: existingEssay, error: findError } = await supabase
+      .from("essays")
+      .select("id, file_path")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (findError || !existingEssay) {
+      return { success: false, error: "Essay submission not found" };
+    }
+
+    // Delete old file from storage if it exists
+    if (existingEssay.file_path) {
+      await supabase.storage.from("essays").remove([existingEssay.file_path]);
+    }
+
+    // Generate new unique file path
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.${fileExt}`;
+    const filePath = `essays/${activityId}/${fileName}`;
+
+    // Upload new file to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from("essays")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Error uploading file:", uploadError);
+      return {
+        success: false,
+        error: `File upload failed: ${uploadError.message}`,
+      };
+    }
+
+    // Update essay record in database
+    const { error: updateError } = await supabase
+      .from("essays")
+      .update({
+        title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
+        file_path: filePath,
+        submitted_at: new Date().toISOString(),
+        // Reset analysis scores when updating
+        grammar_score: null,
+        readability_score: null,
+        coherence_score: null,
+        argument_strength_score: null,
+        overall_score: null,
+        grammar_errors: null,
+        style_issues: null,
+        argument_analysis: null,
+        analysis_payload: null,
+        status: "submitted",
+      })
+      .eq("id", existingEssay.id);
+
+    if (updateError) {
+      console.error("Error updating essay record:", updateError);
+      // Try to delete the uploaded file if DB update fails
+      await supabase.storage.from("essays").remove([filePath]);
+      return {
+        success: false,
+        error: `Failed to update essay record: ${updateError.message}`,
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error updating essay:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Delete essay submission
+export const deleteEssay = async (
+  studentId: string,
+  activityId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return { success: false, error: "Student not found" };
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return { success: false, error: "Invalid activity ID" };
+    }
+
+    // Find existing essay submission
+    const { data: existingEssay, error: findError } = await supabase
+      .from("essays")
+      .select("id, file_path")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (findError || !existingEssay) {
+      return { success: false, error: "Essay submission not found" };
+    }
+
+    // Delete file from storage if it exists
+    if (existingEssay.file_path) {
+      const { error: deleteFileError } = await supabase.storage
+        .from("essays")
+        .remove([existingEssay.file_path]);
+
+      if (deleteFileError) {
+        console.error("Error deleting file from storage:", deleteFileError);
+        // Continue with DB deletion even if file deletion fails
+      }
+    }
+
+    // Delete essay record from database
+    const { error: deleteError } = await supabase
+      .from("essays")
+      .delete()
+      .eq("id", existingEssay.id);
+
+    if (deleteError) {
+      console.error("Error deleting essay record:", deleteError);
+      return {
+        success: false,
+        error: `Failed to delete essay record: ${deleteError.message}`,
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error deleting essay:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error occurred",
+    };
+  }
+};
+
 // Fetch student count and submission count for a program-section-activity combination
 export const fetchProgramSectionCounts = async (
   programName: string,
