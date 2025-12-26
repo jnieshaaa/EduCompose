@@ -98,13 +98,13 @@ export function DashboardTab() {
                 </div>
                 <div className="flex items-center gap-3">
                   {activity.status === 'new' && (
-                    <Badge className="bg-info-default text-white">New</Badge>
+                    <Badge className="bg-blue-600 text-white">New</Badge>
                   )}
                   {activity.status === 'evaluated' && activity.score && (
-                    <Badge className="bg-success-default text-white">{activity.score}%</Badge>
+                    <Badge className="bg-green-600 text-white">{activity.score}%</Badge>
                   )}
                   {activity.status === 'review' && (
-                    <Badge className="bg-warning-default text-white">Review</Badge>
+                    <Badge className="bg-amber-600 text-white">Review</Badge>
                   )}
                   <span className="text-xs text-neutral-400 whitespace-nowrap">{activity.time}</span>
                 </div>

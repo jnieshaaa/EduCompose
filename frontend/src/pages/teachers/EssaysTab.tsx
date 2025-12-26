@@ -217,26 +217,26 @@ export function EssaysTab() {
   const getAIStatusColor = (status: string) => {
     switch (status) {
       case 'Completed':
-        return 'bg-success-default text-white';
+        return 'bg-green-600 text-white';
       case 'In Progress':
-        return 'bg-info-default text-white';
+        return 'bg-blue-600 text-white';
       case 'Pending':
-        return 'bg-warning-default text-white';
+        return 'bg-amber-600 text-white';
       default:
-        return 'bg-neutral-400 text-white';
+        return 'bg-neutral-600 text-white';
     }
   };
 
   const getReviewStatusColor = (status: string) => {
     switch (status) {
       case 'Reviewed':
-        return 'bg-success-default text-white';
+        return 'bg-green-600 text-white';
       case 'In Progress':
-        return 'bg-info-default text-white';
+        return 'bg-blue-600 text-white';
       case 'Pending':
-        return 'bg-warning-default text-white';
+        return 'bg-amber-600 text-white';
       default:
-        return 'bg-neutral-400 text-white';
+        return 'bg-neutral-600 text-white';
     }
   };
 
@@ -413,10 +413,10 @@ export function EssaysTab() {
                   <TableCell className="text-center">
                     {essay.score ? (
                       <Badge className={
-                        essay.score >= 85 ? 'bg-success-default text-white' :
-                        essay.score >= 75 ? 'bg-info-default text-white' :
-                        essay.score >= 60 ? 'bg-warning-default text-white' :
-                        'bg-error-default text-white'
+                        essay.score >= 85 ? 'bg-green-600 text-white' :
+                        essay.score >= 75 ? 'bg-blue-600 text-white' :
+                        essay.score >= 60 ? 'bg-amber-600 text-white' :
+                        'bg-red-600 text-white'
                       }>
                         {essay.score}%
                       </Badge>

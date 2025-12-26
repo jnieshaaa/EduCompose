@@ -115,10 +115,10 @@ export function StudentsTableView({
                 <Badge
                   className={
                     student.avgScore >= 85
-                      ? "bg-success-default text-white"
+                      ? "bg-green-600 text-white"
                       : student.avgScore >= 75
-                      ? "bg-info-default text-white"
-                      : "bg-warning-default text-white"
+                      ? "bg-blue-600 text-white"
+                      : "bg-amber-600 text-white"
                   }
                 >
                   {student.avgScore}%

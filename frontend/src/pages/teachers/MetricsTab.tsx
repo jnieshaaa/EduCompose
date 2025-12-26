@@ -212,7 +212,7 @@ export function MetricsTab() {
                     <p className="text-neutral-900">{student.name}</p>
                     <p className="text-xs text-neutral-500">{student.essays} essays submitted</p>
                   </div>
-                  <Badge className="bg-warning-default text-white">{student.avgScore}%</Badge>
+                  <Badge className="bg-amber-600 text-white">{student.avgScore}%</Badge>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {student.issues.map((issue, i) => (

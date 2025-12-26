@@ -43,11 +43,11 @@ export function AIFeedbackTab() {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'high':
-        return <Badge className="bg-error-default text-white text-xs">High Priority</Badge>;
+        return <Badge className="bg-red-600 text-white text-xs">High Priority</Badge>;
       case 'medium':
-        return <Badge className="bg-warning-default text-white text-xs">Medium</Badge>;
+        return <Badge className="bg-amber-600 text-white text-xs">Medium</Badge>;
       case 'low':
-        return <Badge className="bg-info-default text-white text-xs">Low Priority</Badge>;
+        return <Badge className="bg-blue-600 text-white text-xs">Low Priority</Badge>;
       default:
         return null;
     }
@@ -179,9 +179,9 @@ export function AIFeedbackTab() {
             >
               <div className="flex items-start justify-between mb-2">
                 <Badge className={`text-xs ${
-                  suggestion.type === 'grammar' ? 'bg-error-default text-white' :
-                  suggestion.type === 'coherence' ? 'bg-info-default text-white' :
-                  suggestion.type === 'vocabulary' ? 'bg-warning-default text-white' :
+                  suggestion.type === 'grammar' ? 'bg-red-600 text-white' :
+                  suggestion.type === 'coherence' ? 'bg-blue-600 text-white' :
+                  suggestion.type === 'vocabulary' ? 'bg-amber-600 text-white' :
                   'bg-primary text-white'
                 }`}>
                   {suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1)}

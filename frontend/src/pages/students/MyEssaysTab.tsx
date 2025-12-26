@@ -92,23 +92,23 @@ export function MyEssaysTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Reviewed':
-        return <Badge className="bg-success-default text-white">Reviewed</Badge>;
+        return <Badge className="bg-green-600 text-white">Reviewed</Badge>;
       case 'AI Evaluated':
-        return <Badge className="bg-info-default text-white">AI Evaluated</Badge>;
+        return <Badge className="bg-blue-600 text-white">AI Evaluated</Badge>;
       case 'Under AI Evaluation':
-        return <Badge className="bg-warning-default text-white">Evaluating</Badge>;
+        return <Badge className="bg-amber-600 text-white">Evaluating</Badge>;
       default:
-        return <Badge className="bg-neutral-400 text-white">{status}</Badge>;
+        return <Badge className="bg-neutral-600 text-white">{status}</Badge>;
     }
   };
 
   const getScoreBadge = (score: number | null) => {
     if (score === null) return <span className="text-sm text-neutral-400">-</span>;
     
-    if (score >= 90) return <Badge className="bg-success-default text-white">{score}%</Badge>;
-    if (score >= 80) return <Badge className="bg-info-default text-white">{score}%</Badge>;
-    if (score >= 70) return <Badge className="bg-warning-default text-white">{score}%</Badge>;
-    return <Badge className="bg-error-default text-white">{score}%</Badge>;
+    if (score >= 90) return <Badge className="bg-green-600 text-white">{score}%</Badge>;
+    if (score >= 80) return <Badge className="bg-blue-600 text-white">{score}%</Badge>;
+    if (score >= 70) return <Badge className="bg-amber-600 text-white">{score}%</Badge>;
+    return <Badge className="bg-red-600 text-white">{score}%</Badge>;
   };
 
   // Empty state

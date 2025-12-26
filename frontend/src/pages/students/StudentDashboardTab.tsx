@@ -92,7 +92,7 @@ export function StudentDashboardTab() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="text-neutral-900">Climate Change Impact</h3>
-                    <Badge className="bg-info-default text-white">New</Badge>
+                    <Badge className="bg-blue-600 text-white">New</Badge>
                   </div>
                   <p className="text-sm text-neutral-500">Submitted 5 mins ago</p>
                   <p className="text-sm text-neutral-600 mt-2">Currently under AI evaluation</p>

@@ -507,10 +507,10 @@ export function StudentsView({
                       <Badge
                         className={
                           student.score >= 90
-                            ? "bg-success-default text-white"
+                            ? "bg-green-600 text-white"
                             : student.score >= 80
-                            ? "bg-info-default text-white"
-                            : "bg-warning-default text-white"
+                            ? "bg-blue-600 text-white"
+                            : "bg-amber-600 text-white"
                         }
                       >
                         {student.score}%
