@@ -35,6 +35,7 @@ export function useStudents() {
   // Read filters from URL params (for drill-down from Sections)
   const urlProgramFilter = searchParams.get("program");
   const urlSectionFilter = searchParams.get("section");
+  const urlSearchQuery = searchParams.get("search");
 
   // STATE: Main list of students
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,7 +52,7 @@ export function useStudents() {
   const [sectionFilter, setSectionFilter] = useState(
     urlSectionFilter || "All Sections"
   );
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
 
   // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -80,7 +81,10 @@ export function useStudents() {
     if (urlSectionFilter) {
       setSectionFilter(urlSectionFilter);
     }
-  }, [urlProgramFilter, urlSectionFilter]);
+    if (urlSearchQuery !== null) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlProgramFilter, urlSectionFilter, urlSearchQuery]);
 
   // If user opens the Add dialog while in drill-down mode (from Sections),
   // pre-fill the new student's program and section and keep them fixed.

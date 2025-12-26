@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ActivitiesListView } from "../../components/activities/ActivitiesListView";
 import { ProgramSectionsView } from "../../components/activities/ProgramSectionsView";
@@ -10,7 +10,8 @@ import type { NewActivityForm } from "../../types/activityTypes";
 
 export function ActivitiesTab() {
   const [searchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState("");
+  const urlSearchQuery = searchParams.get("search");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -44,6 +45,13 @@ export function ActivitiesTab() {
   const activityId = searchParams.get("activityId");
   const programSection = searchParams.get("programSection");
   const programName = searchParams.get("programName");
+
+  // Sync searchQuery with URL params
+  useEffect(() => {
+    if (urlSearchQuery !== null) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlSearchQuery]);
 
   // Edit handlers
   const handleEditClick = (e: React.MouseEvent, activityId: string) => {

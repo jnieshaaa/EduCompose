@@ -14,12 +14,13 @@ export function useSections() {
 
   // Read program filter from URL params (for drill-down from Programs)
   const urlProgramFilter = searchParams.get("program");
+  const urlSearchQuery = searchParams.get("search");
 
   // STATE: Main list of sections
   const [sections, setSections] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newSection, setNewSection] = useState(initialNewSectionState);
   const [isCreatingSection, setIsCreatingSection] = useState(false);
@@ -45,12 +46,15 @@ export function useSections() {
     Map<string, number>
   >(new Map());
 
-  // Sync programFilter with URL params
+  // Sync programFilter and searchQuery with URL params
   useEffect(() => {
     if (urlProgramFilter) {
       setProgramFilter(urlProgramFilter);
     }
-  }, [urlProgramFilter]);
+    if (urlSearchQuery !== null) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlProgramFilter, urlSearchQuery]);
 
   // If user opens the Add dialog while viewing a specific program (drill-down),
   // pre-fill the new section's program and keep it fixed to that program.
@@ -456,4 +460,3 @@ export function useSections() {
     handleBatchUploadComplete,
   };
 }
-

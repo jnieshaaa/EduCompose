@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { RubricsListView } from "../../components/rubrics/RubricsListView";
@@ -26,11 +27,14 @@ import {
 } from "../../services/rubricService";
 
 export function RubricsTab() {
+  const [searchParams] = useSearchParams();
+  const urlSearchQuery = searchParams.get("search");
+
   const [currentView, setCurrentView] = useState<RubricView>("list");
   const [selectedMode, setSelectedMode] = useState<BuilderMode>(null);
 
   const [activeTab, setActiveTab] = useState<"platform" | "my">("platform");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
 
   // Lifted state: savedRubrics loaded from Supabase
   const [savedRubrics, setSavedRubrics] = useState<
@@ -74,6 +78,13 @@ export function RubricsTab() {
 
     loadData();
   }, []);
+
+  // Sync searchQuery with URL params
+  useEffect(() => {
+    if (urlSearchQuery !== null) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlSearchQuery]);
 
   // Handlers
   const handleCreateClick = () => {

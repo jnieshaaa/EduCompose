@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Program } from "../data/programsData";
 import { initialNewProgramState } from "../data/programsData";
 import { supabase } from "../lib/supabaseClient";
@@ -8,13 +8,17 @@ import type { UploadResult } from "../services/BatchUploadController";
 
 export function usePrograms() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showError, showSuccess } = useAlert();
+
+  // Read search query from URL params
+  const urlSearchQuery = searchParams.get("search");
 
   // STATE FOR THE LIST OF PROGRAMS
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newProgram, setNewProgram] = useState(initialNewProgramState);
   const [isCreating, setIsCreating] = useState(false);
@@ -69,6 +73,13 @@ export function usePrograms() {
 
     fetchPrograms();
   }, []);
+
+  // Sync searchQuery with URL params
+  useEffect(() => {
+    if (urlSearchQuery !== null) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlSearchQuery]);
 
   // Filter Logic
   const filteredPrograms = useMemo(() => {
