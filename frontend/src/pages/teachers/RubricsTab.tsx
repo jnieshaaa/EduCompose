@@ -209,26 +209,26 @@ export function RubricsTab() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className='space-y-6 p-6'>
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl text-neutral-900 font-semibold">
+      <div className='flex items-center justify-between mb-6'>
+        <h1 className='text-2xl text-neutral-900 font-semibold'>
           {currentView === "options" ? "New Rubric" : "Rubrics"}
         </h1>
-        <div className="flex gap-2">
+        <div className='flex gap-2'>
           {currentView === "list" && (
             <Button
-              className="bg-primary hover:bg-primary-300"
+              className='bg-primary hover:bg-primary-300'
               onClick={handleCreateClick}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className='w-4 h-4 mr-2' />
               Create New Rubric
             </Button>
           )}
 
           {currentView === "options" && (
-            <Button variant="outline" onClick={handleBackToList}>
-              <X className="w-4 h-4 mr-2" />
+            <Button variant='outline' onClick={handleBackToList}>
+              <X className='w-4 h-4 mr-2' />
               Close
             </Button>
           )}
@@ -239,7 +239,7 @@ export function RubricsTab() {
 
       {/* View 2/3: Creation Options and Dynamic Builder */}
       {currentView === "options" && (
-        <div className="w-full space-y-6">
+        <div className='w-full space-y-6'>
           <RubricCreationOptionsView
             selectedMode={selectedMode}
             onModeSelect={handleModeSelection}

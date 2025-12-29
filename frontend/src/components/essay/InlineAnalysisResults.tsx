@@ -293,7 +293,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
         className='max-h-[90vh]'
       >
         <div className='flex flex-col items-center text-center p-8'>
-          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <div className='w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4'>
             <AlertTriangle className='w-6 h-6 text-red-600' />
           </div>
           <h4 className='text-xl font-semibold text-neutral-900 mb-3'>

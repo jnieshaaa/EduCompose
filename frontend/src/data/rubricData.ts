@@ -14,15 +14,15 @@ export { platformRubrics, defaultRubricFormData, initialCriteria };
 export const getTypeBadgeColor = (type: string): string => {
   switch (type) {
     case "Basic":
-      return "bg-green-500/10 text-green-700 border-green-500/30";
+      return "bg-green-400/20 text-green-700/90 border-green-500";
     case "Professional":
-      return "bg-blue-500/10 text-blue-700 border-blue-500/30";
+      return "bg-blue-400/20 text-blue-700/90 border-blue-500";
     case "Advanced":
-      return "bg-purple-500/10 text-purple-700 border-purple-500/30";
+      return "bg-yellow-400/20 text-yellow-700/90 border-yellow-500";
     case "Technical":
-      return "bg-orange-500/10 text-orange-700 border-orange-500/30";
+      return "bg-orange-400/20 text-orange-700/90 border-orange-500";
     default:
-      return "bg-neutral-100 text-neutral-700 border-neutral-300";
+      return "bg-neutral-400/20 text-neutral-600/90 border-neutral-500";
   }
 };
 
@@ -66,4 +66,3 @@ export const extractProgramsFromSupabase = (
 
   return [];
 };
-

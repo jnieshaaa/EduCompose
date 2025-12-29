@@ -75,35 +75,35 @@ export function ProgramSectionsView({
   }, [programSections, activity.id]);
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
+      <div className='flex items-center gap-4'>
         <Button
-          variant="ghost"
+          variant='ghost'
           onClick={onBack}
-          className="flex items-center gap-2"
+          className='flex items-center gap-2'
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className='w-4 h-4' />
           Back to Activities
         </Button>
       </div>
 
       {/* Activity Header */}
-      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <h1 className="text-2xl font-bold text-neutral-900 mb-2">
+      <Card className='p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20'>
+        <h1 className='text-2xl font-bold text-neutral-900 mb-2'>
           {activity.title}
         </h1>
         {activity.description && (
-          <p className="text-neutral-600 mb-4">{activity.description}</p>
+          <p className='text-neutral-600 mb-4'>{activity.description}</p>
         )}
-        <div className="flex flex-wrap gap-2">
-          <Badge className="bg-primary/10 text-primary border-primary/20">
+        <div className='flex flex-wrap gap-2'>
+          <Badge className='bg-support/20 text-neutral-900/70 border-primary/90 font-light'>
             {getProgramLabel(
               activity.programId,
               programs.map((p) => ({ id: p.id, name: p.name }))
             )}
           </Badge>
-          <Badge className="bg-secondary/10 text-secondary border-secondary/20">
+          <Badge className='bg-support/20 text-neutral-900/70 border-primary/90 font-light'>
             {getBlockLabel(
               activity.blockId,
               sections.map((s) => ({
@@ -114,8 +114,8 @@ export function ProgramSectionsView({
             )}
           </Badge>
           {activity.dueDate && (
-            <Badge className="bg-info-default/10 text-info-default border-info-default/20">
-              <Calendar className="w-3 h-3 mr-1" />
+            <Badge className='bg-info-default/10 text-info-default border-info-default/20'>
+              <Calendar className='w-3 h-3 mr-1' />
               Due: {new Date(activity.dueDate).toLocaleDateString()}
             </Badge>
           )}
@@ -124,11 +124,11 @@ export function ProgramSectionsView({
 
       {/* Program-Sections Table */}
       <Card>
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-neutral-900">
+        <div className='p-4 border-b'>
+          <h2 className='text-lg font-semibold text-neutral-900'>
             Program - Sections
           </h2>
-          <p className="text-sm text-neutral-500">
+          <p className='text-sm text-neutral-500'>
             Click on a section to view students
           </p>
         </div>
@@ -136,8 +136,8 @@ export function ProgramSectionsView({
           <TableHeader>
             <TableRow>
               <TableHead>Program - Section</TableHead>
-              <TableHead className="text-center">Students</TableHead>
-              <TableHead className="text-center">Submissions</TableHead>
+              <TableHead className='text-center'>Students</TableHead>
+              <TableHead className='text-center'>Submissions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -145,7 +145,7 @@ export function ProgramSectionsView({
               <TableRow>
                 <TableCell
                   colSpan={3}
-                  className="text-center py-8 text-neutral-500"
+                  className='text-center py-8 text-neutral-500'
                 >
                   Loading counts...
                 </TableCell>
@@ -154,16 +154,16 @@ export function ProgramSectionsView({
               sectionsWithCounts.map((section) => (
                 <TableRow
                   key={section.id}
-                  className="cursor-pointer hover:bg-primary/5 transition-colors"
+                  className='cursor-pointer hover:bg-primary/5 transition-colors'
                   onClick={() => onSectionClick(section)}
                 >
-                  <TableCell className="font-medium">{section.name}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge className="bg-primary/10 text-primary border-primary/20">
+                  <TableCell className='font-medium'>{section.name}</TableCell>
+                  <TableCell className='text-center'>
+                    <Badge className='bg-primary/10 text-primary border-primary/20'>
                       {section.studentCount}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className='text-center'>
                     <Badge
                       className={
                         section.submissionCount > 0
