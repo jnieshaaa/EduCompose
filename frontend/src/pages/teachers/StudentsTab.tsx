@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { Plus, GraduationCap } from "lucide-react";
@@ -15,6 +15,7 @@ import { StudentsTableView } from "../../components/students/StudentsTableView";
 
 export function StudentsTab() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { AlertComponent } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
@@ -52,7 +53,12 @@ export function StudentsTab() {
     handleClearProgramFilter,
     handleClearSectionFilter,
     handleBatchUploadComplete,
+    AlertComponent: StudentsAlertComponent,
   } = useStudents();
+
+  const handleViewEssayHistory = (student: { id: string }) => {
+    navigate(`/Teacher/Gradebook?studentId=${encodeURIComponent(student.id)}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -177,6 +183,7 @@ export function StudentsTab() {
           urlSectionFilter={urlSectionFilter}
           onEditStudent={handleEditStudent}
           onDeleteStudent={handleDeleteStudent}
+          onViewEssayHistory={handleViewEssayHistory}
         />
       ) : (
         <StudentsTableView
@@ -185,6 +192,7 @@ export function StudentsTab() {
           urlSectionFilter={urlSectionFilter}
           onEditStudent={handleEditStudent}
           onDeleteStudent={handleDeleteStudent}
+          onViewEssayHistory={handleViewEssayHistory}
         />
       )}
 
@@ -218,8 +226,9 @@ export function StudentsTab() {
         urlSectionFilter={urlSectionFilter}
       />
 
-      {/* Alert Modal */}
+      {/* Alert Modals */}
       <AlertComponent />
+      <StudentsAlertComponent />
     </div>
   );
 }

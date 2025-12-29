@@ -24,6 +24,7 @@ interface StudentsTableViewProps {
   urlSectionFilter: string | null;
   onEditStudent: (student: Student) => void;
   onDeleteStudent: (student: Student) => void;
+  onViewEssayHistory?: (student: Student) => void;
 }
 
 export function StudentsTableView({
@@ -32,6 +33,7 @@ export function StudentsTableView({
   urlSectionFilter,
   onEditStudent,
   onDeleteStudent,
+  onViewEssayHistory,
 }: StudentsTableViewProps) {
   return (
     <Card>
@@ -132,7 +134,11 @@ export function StudentsTableView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        onViewEssayHistory && onViewEssayHistory(student)
+                      }
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       View Essay History
                     </DropdownMenuItem>

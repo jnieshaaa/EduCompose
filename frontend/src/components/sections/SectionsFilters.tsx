@@ -1,8 +1,8 @@
-import { Search, LayoutGrid, List, X } from "lucide-react";
+import { Search, LayoutGrid, List } from "lucide-react";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Badge from "../ui/Badge";
-import Button from "../ui/Button";
+// import Button from "../ui/Button";
 
 interface SectionsFiltersProps {
   searchQuery: string;
@@ -29,7 +29,6 @@ export function SectionsFilters({
   onTermFilterChange,
   availablePrograms,
   isDrillDown,
-  onClearProgramFilter,
   viewMode,
   onViewModeChange,
   loadError,
@@ -37,21 +36,15 @@ export function SectionsFilters({
 }: SectionsFiltersProps) {
   return (
     <>
-      {/* Active filter indicator when in drill-down mode */}
+      {/* Active filter indicator when in drill-down mode (no inline clear, breadcrumbs handle navigation) */}
       {isDrillDown && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-neutral-500">Filtered by:</span>
           <Badge
             variant="outline"
-            className="bg-primary/10 text-primary border-primary/30 px-3 py-1 flex items-center gap-2"
+            className="bg-primary/10 text-primary border-primary/30 px-3 py-1"
           >
             {urlProgramFilter}
-            <button
-              onClick={onClearProgramFilter}
-              className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-            >
-              <X className="w-3 h-3" />
-            </button>
           </Badge>
         </div>
       )}
@@ -130,4 +123,3 @@ export function SectionsFilters({
     </>
   );
 }
-

@@ -25,6 +25,7 @@ interface StudentsCardViewProps {
   urlSectionFilter: string | null;
   onEditStudent: (student: Student) => void;
   onDeleteStudent: (student: Student) => void;
+  onViewEssayHistory?: (student: Student) => void;
 }
 
 export function StudentsCardView({
@@ -33,6 +34,7 @@ export function StudentsCardView({
   urlSectionFilter,
   onEditStudent,
   onDeleteStudent,
+  onViewEssayHistory,
 }: StudentsCardViewProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -89,7 +91,11 @@ export function StudentsCardView({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onViewEssayHistory && onViewEssayHistory(student)
+                          }
+                        >
                           <Eye className="w-4 h-4 mr-2" />
                           View Essay History
                         </DropdownMenuItem>

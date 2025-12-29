@@ -30,7 +30,7 @@ export const parseName = (
 
 export function useStudents() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { showError, showSuccess, showWarning } = useAlert();
+  const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
 
   // Read filters from URL params (for drill-down from Sections)
   const urlProgramFilter = searchParams.get("program");
@@ -667,6 +667,8 @@ export function useStudents() {
     handleClearProgramFilter,
     handleClearSectionFilter,
     handleBatchUploadComplete,
+    // Alert Component (needed for delete confirmation modal)
+    AlertComponent,
   };
 }
 

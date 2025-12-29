@@ -2,8 +2,6 @@ import { Search, LayoutGrid, List } from "lucide-react";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Badge from "../ui/Badge";
-import Button from "../ui/Button";
-import { X } from "lucide-react";
 
 interface StudentsFiltersProps {
   searchQuery: string;
@@ -37,58 +35,32 @@ export function StudentsFilters({
   urlProgramFilter,
   urlSectionFilter,
   hasActiveFilters,
-  onClearFilters,
-  onClearProgramFilter,
-  onClearSectionFilter,
   viewMode,
   onViewModeChange,
   loadError,
 }: StudentsFiltersProps) {
   return (
     <>
-      {/* Active filter indicators */}
+      {/* Active filter summary (no inline clear buttons to avoid duplicate UX with breadcrumbs) */}
       {hasActiveFilters && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-neutral-500">Filtered by:</span>
           {programFilter !== "All Programs" && (
             <Badge
               variant="outline"
-              className="bg-primary/10 text-primary border-primary/30 px-3 py-1 flex items-center gap-2"
+              className="bg-primary/10 text-primary border-primary/30 px-3 py-1"
             >
               Program: {programFilter}
-              <button
-                onClick={onClearProgramFilter}
-                className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
             </Badge>
           )}
           {sectionFilter !== "All Sections" && (
             <Badge
               variant="outline"
-              className="bg-secondary/10 text-secondary border-secondary/30 px-3 py-1 flex items-center gap-2"
+              className="bg-secondary/10 text-secondary border-secondary/30 px-3 py-1"
             >
               Section: {sectionFilter}
-              <button
-                onClick={onClearSectionFilter}
-                className="hover:bg-secondary/20 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
             </Badge>
           )}
-          {programFilter !== "All Programs" &&
-            sectionFilter !== "All Sections" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearFilters}
-                className="text-neutral-500 hover:text-neutral-700"
-              >
-                Clear all
-              </Button>
-            )}
         </div>
       )}
 
@@ -171,4 +143,3 @@ export function StudentsFilters({
     </>
   );
 }
-

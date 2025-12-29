@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -35,6 +36,7 @@ interface GradebookEntry {
 }
 
 const Gradebook: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [essays, setEssays] = useState<Essay[]>([]);
@@ -68,6 +70,26 @@ const Gradebook: React.FC = () => {
 
     loadData();
   }, []);
+
+  const [hasOpenedFromUrl, setHasOpenedFromUrl] = useState(false);
+
+  // If navigated from StudentsTab with a studentId in the URL, open that student's essay history
+  useEffect(() => {
+    const studentIdFromUrl = searchParams.get("studentId");
+    if (!studentIdFromUrl || hasOpenedFromUrl || students.length === 0) {
+      return;
+    }
+
+    const targetStudent = students.find(
+      (s) => s.student_id === studentIdFromUrl
+    );
+
+    if (targetStudent) {
+      setSelectedStudent(targetStudent);
+      setShowStudentModal(true);
+      setHasOpenedFromUrl(true);
+    }
+  }, [searchParams, students, hasOpenedFromUrl]);
 
   useEffect(() => {
     if (students.length > 0 && essays.length > 0) {
