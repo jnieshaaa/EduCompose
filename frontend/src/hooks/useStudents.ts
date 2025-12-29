@@ -260,7 +260,8 @@ export function useStudents() {
 
     // 1. Validation
     if (
-      !newStudent.name ||
+      !newStudent.firstName ||
+      !newStudent.lastName ||
       !newStudent.id ||
       !newStudent.email ||
       newStudent.program === "Select Program" ||
@@ -268,7 +269,7 @@ export function useStudents() {
     ) {
       setIsAddDialogOpen(false);
       setTimeout(() => {
-        showError("Please fill in all required fields.");
+        showError("Please fill in all required fields (First Name, Last Name, Student ID, Email, Program, and Section).");
       }, 100);
       setIsCreatingStudent(false);
       return;
@@ -299,8 +300,10 @@ export function useStudents() {
       return;
     }
 
-    // 3. Parse name into first, middle, last
-    const { first_name, middle_name, last_name } = parseName(newStudent.name);
+    // 3. Use separate name fields directly
+    const first_name = newStudent.firstName.trim();
+    const middle_name = newStudent.middleName.trim() || null;
+    const last_name = newStudent.lastName.trim();
 
     try {
       // 4. Insert into Supabase
@@ -329,9 +332,12 @@ export function useStudents() {
       }
 
       // 5. Map Supabase response to Student type and add to the list
+      const fullName = [first_name, middle_name, last_name]
+        .filter((part) => part)
+        .join(" ");
       const newStudentObject: Student = {
         id: data.student_code,
-        name: data.full_name ?? newStudent.name,
+        name: data.full_name ?? fullName,
         email: data.email ?? "",
         program: newStudent.program,
         section: newStudent.section,
@@ -415,7 +421,7 @@ export function useStudents() {
       return;
     }
 
-    // 3. Parse name into first, middle, last
+    // 3. Parse name into first, middle, last (from the full name string)
     const { first_name, middle_name, last_name } = parseName(
       editingStudent.name
     );

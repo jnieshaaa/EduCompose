@@ -9,7 +9,9 @@ interface AddStudentDialogProps {
   onClose: () => void;
   newStudent: {
     id: string;
-    name: string;
+    firstName: string;
+    middleName: string;
+    lastName: string;
     email: string;
     program: string;
     section: string;
@@ -41,44 +43,46 @@ export function AddStudentDialog({
 }: AddStudentDialogProps) {
   const [nameError, setNameError] = useState<string>("");
 
-  // Helper function to validate name
-  const validateName = (name: string): string | null => {
-    if (!name || name.trim().length < 3) {
-      return "Name must be at least 3 characters long.";
+  // Helper function to validate name field
+  const validateNameField = (name: string, fieldName: string): string | null => {
+    if (!name || name.trim().length === 0) {
+      return `${fieldName} is required.`;
+    }
+    if (name.trim().length < 2) {
+      return `${fieldName} must be at least 2 characters long.`;
     }
     if (!NAME_REGEX.test(name)) {
-      return "Invalid characters. Only letters, spaces, commas, and periods are allowed.";
+      return `Invalid characters in ${fieldName}. Only letters, spaces, commas, and periods are allowed.`;
     }
     return null;
   };
 
   // Triggered when user clicks "Add Student"
   const handleSave = () => {
-    // 1. Validate Name
-    const error = validateName(newStudent.name);
+    // 1. Validate Name Fields
+    const firstNameError = validateNameField(newStudent.firstName, "First name");
+    const lastNameError = validateNameField(newStudent.lastName, "Last name");
+    const middleNameError = newStudent.middleName.trim() 
+      ? validateNameField(newStudent.middleName, "Middle name")
+      : null;
 
-    // 2. If error, set it and stop submission
-    if (error) {
-      setNameError(error);
+    // 2. If any error, set it and stop submission
+    if (firstNameError) {
+      setNameError(firstNameError);
+      return;
+    }
+    if (lastNameError) {
+      setNameError(lastNameError);
+      return;
+    }
+    if (middleNameError) {
+      setNameError(middleNameError);
       return;
     }
 
     // 3. If no error, clear error state and submit
     setNameError("");
     onSubmit();
-  };
-
-  // Triggered when typing in the name field
-  const handleNameChange = (value: string) => {
-    onInputChange("name", value);
-
-    // If there was an error previously, check if the new value fixes it
-    if (nameError) {
-      const error = validateName(value);
-      if (!error) {
-        setNameError("");
-      }
-    }
   };
 
   return (
@@ -103,20 +107,64 @@ export function AddStudentDialog({
           </div>
 
           <div>
-            <Label htmlFor='student-name'>Full Name</Label>
+            <Label htmlFor='student-first-name'>First Name <span className='text-red-500'>*</span></Label>
             <Input
-              id='student-name'
-              placeholder='e.g., John Doe'
-              // Add red border if error exists
+              id='student-first-name'
+              placeholder='e.g., John'
               className={`mt-1 ${
-                nameError ? "border-red-500 focus:ring-red-500" : ""
+                nameError && nameError.includes("First name") ? "border-red-500 focus:ring-red-500" : ""
               }`}
-              value={newStudent.name}
-              // FIX IS HERE: Explicitly extract the value from the event
-              onChange={(e: any) => {
-                // This handles both standard inputs (Event object) and custom inputs (Direct string)
-                const val = e && e.target ? e.target.value : e;
-                handleNameChange(val);
+              value={newStudent.firstName}
+              onChange={(value: string) => {
+                onInputChange("firstName", value);
+                if (nameError && nameError.includes("First name")) {
+                  const error = validateNameField(value, "First name");
+                  if (!error) {
+                    setNameError("");
+                  }
+                }
+              }}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor='student-middle-name'>Middle Name</Label>
+            <Input
+              id='student-middle-name'
+              placeholder='e.g., Mark (optional)'
+              className={`mt-1 ${
+                nameError && nameError.includes("Middle name") ? "border-red-500 focus:ring-red-500" : ""
+              }`}
+              value={newStudent.middleName}
+              onChange={(value: string) => {
+                onInputChange("middleName", value);
+                if (nameError && nameError.includes("Middle name")) {
+                  const error = validateNameField(value, "Middle name");
+                  if (!error) {
+                    setNameError("");
+                  }
+                }
+              }}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor='student-last-name'>Last Name <span className='text-red-500'>*</span></Label>
+            <Input
+              id='student-last-name'
+              placeholder='e.g., Doe'
+              className={`mt-1 ${
+                nameError && nameError.includes("Last name") ? "border-red-500 focus:ring-red-500" : ""
+              }`}
+              value={newStudent.lastName}
+              onChange={(value: string) => {
+                onInputChange("lastName", value);
+                if (nameError && nameError.includes("Last name")) {
+                  const error = validateNameField(value, "Last name");
+                  if (!error) {
+                    setNameError("");
+                  }
+                }
               }}
             />
             {/* Show error message if it exists */}

@@ -26,7 +26,9 @@ export interface Student {
   // Initial State for the "Add Student" Form
   export const initialNewStudentState = {
       id: '',
-      name: '',
+      firstName: '',
+      middleName: '',
+      lastName: '',
       email: '',
       program: 'Select Program',
       section: 'Select Section',
