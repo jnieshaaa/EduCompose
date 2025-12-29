@@ -1,3 +1,4 @@
+import React from "react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
@@ -45,25 +46,25 @@ export function StudentsTableView({
             {!urlProgramFilter && <TableHead>Program</TableHead>}
             {!urlSectionFilter && <TableHead>Section</TableHead>}
             <TableHead>Email</TableHead>
-            <TableHead className="text-center">Submitted</TableHead>
-            <TableHead className="text-center">Pending</TableHead>
-            <TableHead className="text-center">Missing</TableHead>
-            <TableHead className="text-center">Avg Score</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className='text-center'>Submitted</TableHead>
+            <TableHead className='text-center'>Pending</TableHead>
+            <TableHead className='text-center'>Missing</TableHead>
+            <TableHead className='text-center'>Avg Score</TableHead>
+            <TableHead className='text-right'>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {students.map((student) => (
             <TableRow key={student.id}>
               <TableCell>
-                <div className="text-sm text-neutral-600">{student.id}</div>
+                <div className='text-sm text-neutral-600'>{student.id}</div>
               </TableCell>
               <TableCell>
-                <div className="text-neutral-900">{student.name}</div>
+                <div className='text-neutral-900'>{student.name}</div>
               </TableCell>
               {!urlProgramFilter && (
                 <TableCell>
-                  <div className="text-sm text-neutral-600">
+                  <div className='text-sm text-neutral-600'>
                     {student.program}
                   </div>
                 </TableCell>
@@ -71,27 +72,27 @@ export function StudentsTableView({
               {!urlSectionFilter && (
                 <TableCell>
                   <Badge
-                    variant="outline"
-                    className="bg-secondary/10 text-secondary border-secondary/20"
+                    variant='outline'
+                    className='bg-secondary/10 text-secondary border-secondary/20'
                   >
                     {student.section}
                   </Badge>
                 </TableCell>
               )}
               <TableCell>
-                <div className="text-sm text-neutral-600">{student.email}</div>
+                <div className='text-sm text-neutral-600'>{student.email}</div>
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className='text-center'>
                 <Badge
-                  variant="outline"
-                  className="bg-success-default/10 text-success-default border-success-default/20"
+                  variant='outline'
+                  className='bg-success-default/10 text-success-default border-success-default/20'
                 >
                   {student.submitted}
                 </Badge>
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className='text-center'>
                 <Badge
-                  variant="outline"
+                  variant='outline'
                   className={
                     student.pending > 2
                       ? "bg-error-default/10 text-error-default border-error-default/20"
@@ -101,9 +102,9 @@ export function StudentsTableView({
                   {student.pending}
                 </Badge>
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className='text-center'>
                 <Badge
-                  variant="outline"
+                  variant='outline'
                   className={
                     student.missing > 0
                       ? "bg-error-default/10 text-error-default border-error-default/20"
@@ -113,7 +114,7 @@ export function StudentsTableView({
                   {student.missing}
                 </Badge>
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className='text-center'>
                 <Badge
                   className={
                     student.avgScore >= 85
@@ -126,31 +127,40 @@ export function StudentsTableView({
                   {student.avgScore}%
                 </Badge>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className='text-right'>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="w-4 h-4" />
+                    <Button variant='ghost' size='sm'>
+                      <MoreVertical className='w-4 h-4' />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align='end'>
                     <DropdownMenuItem
-                      onClick={() =>
-                        onViewEssayHistory && onViewEssayHistory(student)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click event if you add one later
+                        if (onViewEssayHistory) onViewEssayHistory(student);
+                      }}
                     >
-                      <Eye className="w-4 h-4 mr-2" />
+                      <Eye className='w-4 h-4 mr-2' />
                       View Essay History
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEditStudent(student)}>
-                      <Edit className="w-4 h-4 mr-2" />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click event
+                        onEditStudent(student);
+                      }}
+                    >
+                      <Edit className='w-4 h-4 mr-2' />
                       Edit Student
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="text-error-default"
-                      onClick={() => onDeleteStudent(student)}
+                      className='text-error-default'
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click event
+                        onDeleteStudent(student);
+                      }}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className='w-4 h-4 mr-2' />
                       Remove Student
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -163,4 +173,3 @@ export function StudentsTableView({
     </Card>
   );
 }
-
