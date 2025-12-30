@@ -58,6 +58,11 @@ CREATE TABLE IF NOT EXISTS students (
   UNIQUE (student_code)
 );
 
+-- Add unique constraint on email (allows multiple NULL values but prevents duplicate non-null emails)
+CREATE UNIQUE INDEX IF NOT EXISTS students_email_unique_idx 
+ON students (email) 
+WHERE email IS NOT NULL;
+
 --------------------------------------------------------------------------------
 -- 3. Rubrics
 --------------------------------------------------------------------------------

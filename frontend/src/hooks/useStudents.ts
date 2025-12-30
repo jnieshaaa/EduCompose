@@ -300,13 +300,49 @@ export function useStudents() {
       return;
     }
 
-    // 3. Use separate name fields directly
+    // 3. Check for duplicate email (case-insensitive)
+    const emailToCheck = newStudent.email.trim().toLowerCase();
+    const existingStudentWithEmail = students.find(
+      (s) => s.email.toLowerCase() === emailToCheck
+    );
+    if (existingStudentWithEmail) {
+      setIsAddDialogOpen(false);
+      setTimeout(() => {
+        showError(
+          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
+        );
+      }, 100);
+      setIsCreatingStudent(false);
+      return;
+    }
+
+    // 4. Also check in database to catch any duplicates not in local state
+    const { data: existingEmailCheck, error: checkError } = await supabase
+      .from("students")
+      .select("id, email")
+      .ilike("email", newStudent.email.trim());
+
+    if (checkError) {
+      console.error("Error checking for duplicate email:", checkError);
+      // Continue anyway, let the insert handle it
+    } else if (existingEmailCheck && existingEmailCheck.length > 0) {
+      setIsAddDialogOpen(false);
+      setTimeout(() => {
+        showError(
+          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
+        );
+      }, 100);
+      setIsCreatingStudent(false);
+      return;
+    }
+
+    // 5. Use separate name fields directly
     const first_name = newStudent.firstName.trim();
     const middle_name = newStudent.middleName.trim() || null;
     const last_name = newStudent.lastName.trim();
 
     try {
-      // 4. Insert into Supabase
+      // 6. Insert into Supabase
       const { data, error } = await supabase
         .from("students")
         .insert({
@@ -314,7 +350,7 @@ export function useStudents() {
           first_name: first_name,
           middle_name: middle_name,
           last_name: last_name,
-          email: newStudent.email,
+          email: newStudent.email.trim(),
           program_id: programId,
           section_id: sectionId,
         })
@@ -324,14 +360,27 @@ export function useStudents() {
       if (error) {
         console.error("Error creating student:", error);
         setIsAddDialogOpen(false);
-        setTimeout(() => {
-          showError(`Failed to create student: ${error.message}`);
-        }, 100);
+        // Check if it's a duplicate email error
+        if (
+          error.message?.toLowerCase().includes("duplicate") ||
+          error.message?.toLowerCase().includes("unique") ||
+          error.code === "23505" // PostgreSQL unique violation error code
+        ) {
+          setTimeout(() => {
+            showError(
+              `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
+            );
+          }, 100);
+        } else {
+          setTimeout(() => {
+            showError(`Failed to create student: ${error.message}`);
+          }, 100);
+        }
         setIsCreatingStudent(false);
         return;
       }
 
-      // 5. Map Supabase response to Student type and add to the list
+      // 7. Map Supabase response to Student type and add to the list
       const fullName = [first_name, middle_name, last_name]
         .filter((part) => part)
         .join(" ");
@@ -356,7 +405,7 @@ export function useStudents() {
 
       setStudents((prevStudents) => [newStudentObject, ...prevStudents]);
 
-      // 6. Reset form and close dialog
+      // 8. Reset form and close dialog
       setNewStudent(initialNewStudentState);
       setIsAddDialogOpen(false);
       setIsCreatingStudent(false);
@@ -438,8 +487,43 @@ export function useStudents() {
       return;
     }
 
+    // 5. Check for duplicate email (case-insensitive), excluding current student
+    const emailToCheck = editingStudent.email.trim().toLowerCase();
+    const existingStudentWithEmail = students.find(
+      (s) => s.id !== editingStudent.id && s.email.toLowerCase() === emailToCheck
+    );
+    if (existingStudentWithEmail) {
+      setIsEditDialogOpen(false);
+      setTimeout(() => {
+        showError(
+          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+        );
+      }, 100);
+      return;
+    }
+
+    // 6. Also check in database to catch any duplicates not in local state
+    const { data: existingEmailCheck, error: checkError } = await supabase
+      .from("students")
+      .select("id, email")
+      .ilike("email", editingStudent.email.trim())
+      .neq("id", dbId);
+
+    if (checkError) {
+      console.error("Error checking for duplicate email:", checkError);
+      // Continue anyway, let the update handle it
+    } else if (existingEmailCheck && existingEmailCheck.length > 0) {
+      setIsEditDialogOpen(false);
+      setTimeout(() => {
+        showError(
+          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+        );
+      }, 100);
+      return;
+    }
+
     try {
-      // 5. Update in Supabase
+      // 7. Update in Supabase
       const { error } = await supabase
         .from("students")
         .update({
@@ -447,7 +531,7 @@ export function useStudents() {
           first_name: first_name,
           middle_name: middle_name,
           last_name: last_name,
-          email: editingStudent.email,
+          email: editingStudent.email.trim(),
           program_id: programId,
           section_id: sectionId,
         })
@@ -456,20 +540,33 @@ export function useStudents() {
       if (error) {
         console.error("Error updating student:", error);
         setIsEditDialogOpen(false);
-        setTimeout(() => {
-          showError(`Failed to update student: ${error.message}`);
-        }, 100);
+        // Check if it's a duplicate email error
+        if (
+          error.message?.toLowerCase().includes("duplicate") ||
+          error.message?.toLowerCase().includes("unique") ||
+          error.code === "23505" // PostgreSQL unique violation error code
+        ) {
+          setTimeout(() => {
+            showError(
+              `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+            );
+          }, 100);
+        } else {
+          setTimeout(() => {
+            showError(`Failed to update student: ${error.message}`);
+          }, 100);
+        }
         return;
       }
 
-      // 6. Update local state
+      // 8. Update local state
       setStudents((prevStudents) =>
         prevStudents.map((s) =>
           s.id === editingStudent.id ? editingStudent : s
         )
       );
 
-      // 7. Reset and close dialog
+      // 9. Reset and close dialog
       setEditingStudent(null);
       setIsEditDialogOpen(false);
       setTimeout(() => {
@@ -554,6 +651,33 @@ export function useStudents() {
             continue;
           }
 
+          // Check for duplicate email (case-insensitive)
+          if (student.email) {
+            const emailToCheck = student.email.trim().toLowerCase();
+            const existingStudentWithEmail = students.find(
+              (s) => s.email.toLowerCase() === emailToCheck
+            );
+            if (existingStudentWithEmail) {
+              errors.push(
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+              );
+              continue;
+            }
+
+            // Also check in database
+            const { data: existingEmailCheck } = await supabase
+              .from("students")
+              .select("id, email")
+              .ilike("email", student.email.trim());
+
+            if (existingEmailCheck && existingEmailCheck.length > 0) {
+              errors.push(
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+              );
+              continue;
+            }
+          }
+
           // Parse name into first, middle, last
           const { first_name, middle_name, last_name } = parseName(
             student.name
@@ -567,7 +691,7 @@ export function useStudents() {
               first_name: first_name,
               middle_name: middle_name,
               last_name: last_name,
-              email: student.email,
+              email: student.email?.trim() || null,
               program_id: programId,
               section_id: sectionId,
             })
@@ -575,7 +699,18 @@ export function useStudents() {
             .single();
 
           if (error) {
-            errors.push(`Student ${student.id}: ${error.message}`);
+            // Check if it's a duplicate email error
+            if (
+              error.message?.toLowerCase().includes("duplicate") ||
+              error.message?.toLowerCase().includes("unique") ||
+              error.code === "23505"
+            ) {
+              errors.push(
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+              );
+            } else {
+              errors.push(`Student ${student.id}: ${error.message}`);
+            }
             continue;
           }
 
