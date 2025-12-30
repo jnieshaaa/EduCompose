@@ -13,7 +13,7 @@ import { ProgramsTableView } from "../../components/programs/ProgramsTableView";
 import type { Program } from "../../data/programsData";
 
 export function ProgramsTab() {
-  const { AlertComponent, showAlert } = useAlert();
+  const { AlertComponent, showSuccess } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // State to toggle the "Select to Delete" mode
@@ -40,17 +40,8 @@ export function ProgramsTab() {
 
   // --- Selection Handlers ---
 
-  const handleToggleSelect = (id: string) => {
-    // Automatically enter selection mode if a user manually checks a box
-    if (!isSelectionMode) setIsSelectionMode(true);
-
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
   const handleSelectAll = () => {
-    setSelectedIds(programs.map((p) => p.id));
+    setSelectedIds(programs.map((p) => String(p.id)));
   };
 
   const handleDeselectAll = () => {
@@ -73,10 +64,7 @@ export function ProgramsTab() {
       )
     ) {
       // In a real app, call your API here
-      showAlert(
-        "success",
-        `Deleted ${selectedIds.length} programs successfully`
-      );
+      showSuccess(`Deleted ${selectedIds.length} programs successfully`);
       handleCancelSelectionMode();
     }
   };
@@ -86,12 +74,12 @@ export function ProgramsTab() {
   };
 
   const handleArchiveProgram = (program: Program) => {
-    showAlert("success", `Archived program: ${program.name}`);
+    showSuccess(`Archived program: ${program.name}`);
   };
 
   const handleDeleteProgram = (program: Program) => {
     if (window.confirm(`Are you sure you want to delete ${program.name}?`)) {
-      showAlert("success", `Deleted program: ${program.name}`);
+      showSuccess(`Deleted program: ${program.name}`);
     }
   };
 
@@ -100,46 +88,46 @@ export function ProgramsTab() {
     programs.length > 0 && selectedIds.length === programs.length;
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       {/* Header */}
-      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className='text-2xl text-neutral-900 font-semibold'>Programs</h1>
-          <p className='text-sm text-neutral-500 mt-1'>
+          <h1 className="text-2xl text-neutral-900 font-semibold">Programs</h1>
+          <p className="text-sm text-neutral-500 mt-1">
             Click on a program to view its sections and students
           </p>
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className='flex items-center gap-2'>
+        <div className="flex items-center gap-2">
           {/* 1. SELECTION MODE ACTIONS (Visible when "Select to Delete" is active) */}
           {isSelectionMode ? (
             <>
               {/* Select All Button */}
               <Button
-                variant='outline'
+                variant="outline"
                 onClick={isAllSelected ? handleDeselectAll : handleSelectAll}
-                className='text-neutral-700 border-neutral-300'
+                className="text-neutral-700 border-neutral-300"
               >
-                <CheckSquare className='w-4 h-4 mr-2' />
+                <CheckSquare className="w-4 h-4 mr-2" />
                 {isAllSelected ? "Deselect All" : "Select All"}
               </Button>
 
               <Button
-                variant='ghost'
+                variant="ghost"
                 onClick={handleCancelSelectionMode}
-                className='text-neutral-600'
+                className="text-neutral-600"
               >
-                <X className='w-4 h-4 mr-2' />
+                <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
 
               <Button
-                className='bg-error-default hover:bg-error-dark text-white border-none animate-in fade-in zoom-in duration-200'
+                className="bg-error-default hover:bg-error-dark text-white border-none animate-in fade-in zoom-in duration-200"
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.length === 0}
               >
-                <Trash2 className='w-4 h-4 mr-2' />
+                <Trash2 className="w-4 h-4 mr-2" />
                 Delete ({selectedIds.length})
               </Button>
             </>
@@ -147,24 +135,24 @@ export function ProgramsTab() {
             /* 2. NORMAL ACTIONS (Visible by default) */
             <>
               <Button
-                className='bg-primary hover:bg-primary-300'
+                className="bg-primary hover:bg-primary-300"
                 onClick={() => setIsAddDialogOpen(true)}
               >
-                <Plus className='w-4 h-4 mr-2' />
+                <Plus className="w-4 h-4 mr-2" />
                 Add Program
               </Button>
 
               <BatchUploadDialog
-                type='programs'
+                type="programs"
                 existingPrograms={allPrograms}
                 onUploadComplete={handleBatchUploadComplete}
               />
               <Button
-                variant='outline'
-                className='text-error-default border-error-default/30 hover:bg-error-default/5'
+                variant="outline"
+                className="text-error-default border-error-default/30 hover:bg-error-default/5"
                 onClick={() => setIsSelectionMode(true)}
               >
-                <Trash2 className='w-4 h-4 mr-2' />
+                <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
             </>
@@ -190,31 +178,31 @@ export function ProgramsTab() {
 
       {/* Programs Display */}
       {isLoading ? (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className='h-48 bg-neutral-200 rounded-lg animate-pulse'
+              className="h-48 bg-neutral-200 rounded-lg animate-pulse"
             />
           ))}
         </div>
       ) : programs.length === 0 ? (
-        <Card className='p-12 text-center'>
-          <BookOpen className='w-12 h-12 text-neutral-300 mx-auto mb-4' />
-          <h3 className='text-lg font-medium text-neutral-700 mb-2'>
+        <Card className="p-12 text-center">
+          <BookOpen className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-neutral-700 mb-2">
             No programs found
           </h3>
-          <p className='text-sm text-neutral-500 mb-4'>
+          <p className="text-sm text-neutral-500 mb-4">
             {allPrograms.length === 0
               ? "Get started by adding your first program."
               : "Try adjusting your search query."}
           </p>
           {allPrograms.length === 0 && (
             <Button
-              className='bg-primary hover:bg-primary-300'
+              className="bg-primary hover:bg-primary-300"
               onClick={() => setIsAddDialogOpen(true)}
             >
-              <Plus className='w-4 h-4 mr-2' />
+              <Plus className="w-4 h-4 mr-2" />
               Add Program
             </Button>
           )}
@@ -222,14 +210,7 @@ export function ProgramsTab() {
       ) : viewMode === "cards" ? (
         <ProgramsCardView
           programs={programs}
-          selectedIds={selectedIds}
-          // Pass the mode prop so CardView knows to show checkboxes
-          isSelectionMode={isSelectionMode}
           onProgramClick={handleProgramClick}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onDeleteSelected={handleDeleteSelected}
           onEditProgram={handleEditProgram}
           onArchiveProgram={handleArchiveProgram}
           onDeleteProgram={handleDeleteProgram}

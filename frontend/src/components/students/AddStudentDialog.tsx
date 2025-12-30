@@ -3,6 +3,7 @@ import { Label } from "../ui/label";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { useState } from "react";
+import type { ChangeEvent } from "react";
 
 interface AddStudentDialogProps {
   isOpen: boolean;
@@ -44,7 +45,10 @@ export function AddStudentDialog({
   const [nameError, setNameError] = useState<string>("");
 
   // Helper function to validate name field
-  const validateNameField = (name: string, fieldName: string): string | null => {
+  const validateNameField = (
+    name: string,
+    fieldName: string
+  ): string | null => {
     if (!name || name.trim().length === 0) {
       return `${fieldName} is required.`;
     }
@@ -60,9 +64,12 @@ export function AddStudentDialog({
   // Triggered when user clicks "Add Student"
   const handleSave = () => {
     // 1. Validate Name Fields
-    const firstNameError = validateNameField(newStudent.firstName, "First name");
+    const firstNameError = validateNameField(
+      newStudent.firstName,
+      "First name"
+    );
     const lastNameError = validateNameField(newStudent.lastName, "Last name");
-    const middleNameError = newStudent.middleName.trim() 
+    const middleNameError = newStudent.middleName.trim()
       ? validateNameField(newStudent.middleName, "Middle name")
       : null;
 
@@ -91,28 +98,33 @@ export function AddStudentDialog({
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
         </DialogHeader>
-        <div className='space-y-4 mt-4'>
+        <div className="space-y-4 mt-4">
           <div>
-            <Label htmlFor='student-id'>Student ID</Label>
+            <Label htmlFor="student-id">Student ID</Label>
             <Input
-              id='student-id'
-              placeholder='e.g., STU009'
-              className='mt-1'
+              id="student-id"
+              placeholder="e.g., STU009"
+              className="mt-1"
               value={newStudent.id}
-              // Added safety check: use e.target.value if it's an event
-              onChange={(e: any) =>
-                onInputChange("id", e.target ? e.target.value : e)
-              }
+              // Accept either a string value or a ChangeEvent from native input
+              onChange={(e: ChangeEvent<HTMLInputElement> | string) => {
+                const value = typeof e === "string" ? e : e.target?.value ?? "";
+                onInputChange("id", value);
+              }}
             />
           </div>
 
           <div>
-            <Label htmlFor='student-first-name'>First Name <span className='text-red-500'>*</span></Label>
+            <Label htmlFor="student-first-name">
+              First Name <span className="text-red-500">*</span>
+            </Label>
             <Input
-              id='student-first-name'
-              placeholder='e.g., John'
+              id="student-first-name"
+              placeholder="e.g., John"
               className={`mt-1 ${
-                nameError && nameError.includes("First name") ? "border-red-500 focus:ring-red-500" : ""
+                nameError && nameError.includes("First name")
+                  ? "border-red-500 focus:ring-red-500"
+                  : ""
               }`}
               value={newStudent.firstName}
               onChange={(value: string) => {
@@ -128,12 +140,14 @@ export function AddStudentDialog({
           </div>
 
           <div>
-            <Label htmlFor='student-middle-name'>Middle Name</Label>
+            <Label htmlFor="student-middle-name">Middle Name</Label>
             <Input
-              id='student-middle-name'
-              placeholder='e.g., Mark (optional)'
+              id="student-middle-name"
+              placeholder="e.g., Mark (optional)"
               className={`mt-1 ${
-                nameError && nameError.includes("Middle name") ? "border-red-500 focus:ring-red-500" : ""
+                nameError && nameError.includes("Middle name")
+                  ? "border-red-500 focus:ring-red-500"
+                  : ""
               }`}
               value={newStudent.middleName}
               onChange={(value: string) => {
@@ -149,12 +163,16 @@ export function AddStudentDialog({
           </div>
 
           <div>
-            <Label htmlFor='student-last-name'>Last Name <span className='text-red-500'>*</span></Label>
+            <Label htmlFor="student-last-name">
+              Last Name <span className="text-red-500">*</span>
+            </Label>
             <Input
-              id='student-last-name'
-              placeholder='e.g., Doe'
+              id="student-last-name"
+              placeholder="e.g., Doe"
               className={`mt-1 ${
-                nameError && nameError.includes("Last name") ? "border-red-500 focus:ring-red-500" : ""
+                nameError && nameError.includes("Last name")
+                  ? "border-red-500 focus:ring-red-500"
+                  : ""
               }`}
               value={newStudent.lastName}
               onChange={(value: string) => {
@@ -169,41 +187,42 @@ export function AddStudentDialog({
             />
             {/* Show error message if it exists */}
             {nameError && (
-              <p className='text-red-500 text-xs mt-1'>{nameError}</p>
+              <p className="text-red-500 text-xs mt-1">{nameError}</p>
             )}
           </div>
 
           <div>
-            <Label htmlFor='student-email'>Email</Label>
+            <Label htmlFor="student-email">Email</Label>
             <Input
-              id='student-email'
-              type='email'
-              placeholder='student@example.com'
-              className='mt-1'
+              id="student-email"
+              type="email"
+              placeholder="student@example.com"
+              className="mt-1"
               value={newStudent.email}
-              // Added safety check here too
-              onChange={(e: any) =>
-                onInputChange("email", e.target ? e.target.value : e)
-              }
+              // Accept either a string value or a ChangeEvent from native input
+              onChange={(e: ChangeEvent<HTMLInputElement> | string) => {
+                const value = typeof e === "string" ? e : e.target?.value ?? "";
+                onInputChange("email", value);
+              }}
             />
           </div>
           <div>
-            <Label htmlFor='student-program'>Program</Label>
+            <Label htmlFor="student-program">Program</Label>
             {urlProgramFilter ? (
               <Input
-                id='student-program'
-                className='mt-1'
+                id="student-program"
+                className="mt-1"
                 value={newStudent.program || urlProgramFilter}
                 readOnly
               />
             ) : (
               <select
-                id='student-program'
-                className='w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md'
+                id="student-program"
+                className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md"
                 value={newStudent.program}
                 onChange={(e) => onInputChange("program", e.target.value)}
               >
-                <option value='Select Program'>Select Program</option>
+                <option value="Select Program">Select Program</option>
                 {availablePrograms.map((program) => (
                   <option key={program} value={program}>
                     {program}
@@ -213,22 +232,22 @@ export function AddStudentDialog({
             )}
           </div>
           <div>
-            <Label htmlFor='student-section'>Section</Label>
+            <Label htmlFor="student-section">Section</Label>
             {urlSectionFilter ? (
               <Input
-                id='student-section'
-                className='mt-1'
+                id="student-section"
+                className="mt-1"
                 value={newStudent.section || urlSectionFilter}
                 readOnly
               />
             ) : (
               <select
-                id='student-section'
-                className='w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md'
+                id="student-section"
+                className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md"
                 value={newStudent.section}
                 onChange={(e) => onInputChange("section", e.target.value)}
               >
-                <option value='Select Section'>Select Section</option>
+                <option value="Select Section">Select Section</option>
                 {availableSections.map((section) => (
                   <option key={section} value={section}>
                     {section}
@@ -237,12 +256,12 @@ export function AddStudentDialog({
               </select>
             )}
           </div>
-          <div className='flex justify-end gap-2 pt-4'>
-            <Button variant='outline' onClick={onClose}>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button
-              className='bg-primary hover:bg-primary-300'
+              className="bg-primary hover:bg-primary-300"
               // We use handleSave here instead of direct onSubmit
               onClick={handleSave}
               // Only disable if currently loading (sending to backend)

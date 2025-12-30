@@ -28,7 +28,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
   cancelText = "Cancel",
 }) => {
   const getIcon = () => {
-    const iconClass = "w-6 h-6";
+    const iconClass = "w-8 h-8";
     switch (type) {
       case "error":
         return <AlertCircle className={`${iconClass} text-error-default`} />;
@@ -107,7 +107,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className="relative bg-white rounded-rl shadow-xl w-full max-w-md"
+            className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -116,45 +116,46 @@ const AlertModal: React.FC<AlertModalProps> = ({
             {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1 rounded-rs hover:bg-neutral-100 transition-colors duration-200 z-10"
+              className="absolute top-5 right-5 p-2 rounded-lg hover:bg-neutral-100 transition-colors duration-200 z-10"
+              aria-label="Close"
             >
               <X className="w-5 h-5 text-neutral-500" />
             </button>
 
             {/* Content */}
-            <div className="p-6">
-              <div className="flex items-start gap-4">
+            <div className="p-8">
+              <div className="flex items-start gap-5">
                 {/* Icon */}
                 <div
-                  className={`flex-shrink-0 w-12 h-12 rounded-full ${colors.iconBg} flex items-center justify-center`}
+                  className={`flex-shrink-0 w-16 h-16 rounded-full ${colors.iconBg} flex items-center justify-center shadow-sm`}
                 >
                   {getIcon()}
                 </div>
 
                 {/* Text Content */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                <div className="flex-1 min-w-0 pt-1">
+                  <h3 className="text-xl font-semibold text-neutral-900 mb-3 leading-tight">
                     {defaultTitle}
                   </h3>
-                  <p className="text-sm text-neutral-700 whitespace-pre-wrap">
+                  <p className="text-base text-neutral-700 whitespace-pre-wrap leading-relaxed">
                     {message}
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-neutral-200">
                 {showCancel && (
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-rd hover:bg-neutral-50 transition-colors"
+                    className="px-6 py-2.5 text-base font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors duration-200"
                   >
                     {cancelText}
                   </button>
                 )}
                 <button
                   onClick={handleConfirm}
-                  className={`px-4 py-2 text-sm font-medium text-white rounded-rd transition-colors ${
+                  className={`px-6 py-2.5 text-base font-medium text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md ${
                     type === "error"
                       ? "bg-error-default hover:bg-error-600"
                       : type === "success"

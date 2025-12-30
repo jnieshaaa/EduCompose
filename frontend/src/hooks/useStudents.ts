@@ -269,7 +269,9 @@ export function useStudents() {
     ) {
       setIsAddDialogOpen(false);
       setTimeout(() => {
-        showError("Please fill in all required fields (First Name, Last Name, Student ID, Email, Program, and Section).");
+        showError(
+          "Please fill in all required fields (First Name, Last Name, Student ID, Email, Program, and Section)."
+        );
       }, 100);
       setIsCreatingStudent(false);
       return;
@@ -490,7 +492,8 @@ export function useStudents() {
     // 5. Check for duplicate email (case-insensitive), excluding current student
     const emailToCheck = editingStudent.email.trim().toLowerCase();
     const existingStudentWithEmail = students.find(
-      (s) => s.id !== editingStudent.id && s.email.toLowerCase() === emailToCheck
+      (s) =>
+        s.id !== editingStudent.id && s.email.toLowerCase() === emailToCheck
     );
     if (existingStudentWithEmail) {
       setIsEditDialogOpen(false);
@@ -769,8 +772,7 @@ export function useStudents() {
     }
   };
 
-  // Check if we're in drill-down mode
-  const isDrillDown = urlProgramFilter !== null || urlSectionFilter !== null;
+  // Check if we have active filters
   const hasActiveFilters =
     programFilter !== "All Programs" || sectionFilter !== "All Sections";
 
@@ -812,4 +814,3 @@ export function useStudents() {
     AlertComponent,
   };
 }
-
