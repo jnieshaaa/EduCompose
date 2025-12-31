@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Upload, FileText, Eye, BookOpen } from "lucide-react";
+import { Upload, FileText, Eye, BookOpen, Info } from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
 import { supabase } from "../lib/supabaseClient";
-import { platformRubrics } from "../data/rubricData";
+import { platformRubrics, getTypeBadgeColor } from "../data/rubricData";
+import type { PlatformRubric } from "../components/rubrics/types";
 
 const MIN_WORDS = 150;
 
@@ -55,6 +56,10 @@ const AnalyzeEssay: React.FC = () => {
   >([]);
   const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   const [isLoadingRubrics, setIsLoadingRubrics] = useState(false);
+  const [showRubricPreview, setShowRubricPreview] = useState(false);
+  const [previewRubric, setPreviewRubric] = useState<PlatformRubric | null>(
+    null
+  );
 
   // Essay box animation
   const essayBoxRef = React.useRef<HTMLDivElement>(null);
@@ -142,6 +147,19 @@ const AnalyzeEssay: React.FC = () => {
     }
   };
 
+  const handlePreviewRubric = () => {
+    if (!selectedRubricId) return;
+
+    // Find the rubric from platform rubrics
+    const rubric = platformRubrics.find(
+      (r) => `platform-${r.id}` === selectedRubricId
+    );
+    if (rubric) {
+      setPreviewRubric(rubric);
+      setShowRubricPreview(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <HeaderPublic onLoginClick={() => setShowLogin(true)} />
@@ -219,6 +237,15 @@ const AnalyzeEssay: React.FC = () => {
                           </>
                         )}
                       </select>
+                      {selectedRubricId && (
+                        <button
+                          onClick={handlePreviewRubric}
+                          className="p-1.5 text-gray-600 hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                          title="Preview rubric details"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex gap-3">
@@ -281,6 +308,113 @@ const AnalyzeEssay: React.FC = () => {
         text={text}
         title="Essay Analysis"
       />
+
+      {/* Rubric Preview Modal */}
+      {showRubricPreview && previewRubric && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {previewRubric.name}
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    {previewRubric.description}
+                  </p>
+                  <div className="flex items-center gap-3 mt-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium border ${getTypeBadgeColor(
+                        previewRubric.type
+                      )}`}
+                    >
+                      {previewRubric.type}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {previewRubric.criteria.length} criteria
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowRubricPreview(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                <table className="min-w-full divide-y divide-neutral-200">
+                  <thead>
+                    <tr className="bg-neutral-50 text-neutral-600">
+                      <th className="px-4 py-3 text-left text-sm font-semibold uppercase w-1/4">
+                        Criteria
+                      </th>
+                      <th
+                        colSpan={4}
+                        className="px-4 py-3 text-left text-sm font-semibold uppercase"
+                      >
+                        Grade and Descriptors
+                      </th>
+                    </tr>
+                    <tr className="bg-neutral-50 text-neutral-600">
+                      <th className="px-4 py-1 text-left text-xs font-medium uppercase w-1/4"></th>
+                      <th className="px-4 py-1 text-center text-xs font-medium uppercase border-l border-neutral-200">
+                        4 pts
+                      </th>
+                      <th className="px-4 py-1 text-center text-xs font-medium uppercase border-l border-neutral-200">
+                        3 pts
+                      </th>
+                      <th className="px-4 py-1 text-center text-xs font-medium uppercase border-l border-neutral-200">
+                        2 pts
+                      </th>
+                      <th className="px-4 py-1 text-center text-xs font-medium uppercase border-l border-neutral-200">
+                        1 pts
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 bg-white">
+                    {previewRubric.criteria.map((criteria) => (
+                      <tr key={criteria.id}>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 w-1/4">
+                          {criteria.title}
+                        </td>
+                        {[4, 3, 2, 1].map((point) => {
+                          const scoreMatch = criteria.scores.find(
+                            (score) => score.points === point
+                          );
+                          return (
+                            <td
+                              key={`${criteria.id}-${point}`}
+                              className="px-4 py-4 text-sm text-neutral-500 border-l border-neutral-200"
+                            >
+                              {scoreMatch ? (
+                                <div>
+                                  <span className="font-medium text-neutral-700">
+                                    {scoreMatch.title}
+                                  </span>
+                                  {scoreMatch.description && (
+                                    <p className="text-xs text-neutral-400 mt-1 line-clamp-2">
+                                      {scoreMatch.description}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-neutral-300">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section Description */}
       <motion.div
