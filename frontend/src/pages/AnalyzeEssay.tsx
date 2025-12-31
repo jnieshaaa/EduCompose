@@ -1,12 +1,48 @@
 import React, { useState, useEffect } from "react";
-import { Upload, FileText, Eye } from "lucide-react";
+import { Upload, FileText, Eye, BookOpen } from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
+import { supabase } from "../lib/supabaseClient";
+import { platformRubrics } from "../data/rubricData";
 
 const MIN_WORDS = 150;
+
+// Function to fetch platform rubrics (works without authentication)
+const fetchPlatformRubrics = async (): Promise<
+  { id: string; name: string }[]
+> => {
+  try {
+    // Try to fetch from Supabase (public read access)
+    const { data: platformData, error } = await supabase
+      .from("rubrics")
+      .select("id, name")
+      .is("created_by", null)
+      .order("name", { ascending: true });
+
+    if (!error && platformData && platformData.length > 0) {
+      return platformData.map((r) => ({
+        id: String(r.id),
+        name: r.name,
+      }));
+    }
+
+    // Fallback to hardcoded platform rubrics
+    return (platformRubrics || []).map((r) => ({
+      id: `platform-${r.id}`,
+      name: r.name,
+    }));
+  } catch (err) {
+    console.error("Error loading platform rubrics:", err);
+    // Fallback to hardcoded platform rubrics
+    return (platformRubrics || []).map((r) => ({
+      id: `platform-${r.id}`,
+      name: r.name,
+    }));
+  }
+};
 
 const AnalyzeEssay: React.FC = () => {
   const location = useLocation();
@@ -14,11 +50,36 @@ const AnalyzeEssay: React.FC = () => {
   const [text, setText] = useState("");
   const [showLogin, setShowLogin] = useState(false);
   const [showTextAnalysisModal, setShowTextAnalysisModal] = useState(false);
+  const [availableRubrics, setAvailableRubrics] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [selectedRubricId, setSelectedRubricId] = useState<string>("");
+  const [isLoadingRubrics, setIsLoadingRubrics] = useState(false);
 
   // Essay box animation
   const essayBoxRef = React.useRef<HTMLDivElement>(null);
   const essayBoxControls = useAnimation();
   const isEssayBoxInView = useInView(essayBoxRef, { once: false, amount: 0.3 });
+
+  // Load platform rubrics on mount
+  useEffect(() => {
+    const loadRubrics = async () => {
+      setIsLoadingRubrics(true);
+      try {
+        const rubrics = await fetchPlatformRubrics();
+        setAvailableRubrics(rubrics);
+        // Default to first platform rubric if available
+        if (rubrics.length > 0 && !selectedRubricId) {
+          setSelectedRubricId(rubrics[0].id);
+        }
+      } catch (error) {
+        console.error("Error loading rubrics:", error);
+      } finally {
+        setIsLoadingRubrics(false);
+      }
+    };
+    loadRubrics();
+  }, [selectedRubricId]);
 
   // Show login modal if redirected from a protected route
   useEffect(() => {
@@ -28,6 +89,10 @@ const AnalyzeEssay: React.FC = () => {
     // Restore text if navigating back from AnalysisResults
     if (location.state?.text) {
       setText(location.state.text);
+    }
+    // Restore rubric if provided
+    if (location.state?.rubricId) {
+      setSelectedRubricId(location.state.rubricId);
     }
   }, [location.state]);
 
@@ -65,6 +130,7 @@ const AnalyzeEssay: React.FC = () => {
       state: {
         text: text,
         title: "Essay Analysis",
+        rubricId: selectedRubricId || undefined, // Pass rubric ID if selected
       },
     });
   };
@@ -126,86 +192,114 @@ const AnalyzeEssay: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex gap-3">
-                    <label className="hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm">
-                      <Upload className="w-4 h-4" />
-                      Upload
-                      <input
-                        type="file"
-                        accept=".txt,.doc,.docx"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
+                  <div className="flex gap-3 items-center">
+                    {/* Rubric Selector */}
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-gray-600" />
+                      <select
+                        value={selectedRubricId}
+                        onChange={(e) => setSelectedRubricId(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        disabled={
+                          isLoadingRubrics || availableRubrics.length === 0
+                        }
+                      >
+                        {isLoadingRubrics ? (
+                          <option value="">Loading rubrics...</option>
+                        ) : availableRubrics.length === 0 ? (
+                          <option value="">No rubrics available</option>
+                        ) : (
+                          <>
+                            <option value="">None (Default Analysis)</option>
+                            {availableRubrics.map((rubric) => (
+                              <option key={rubric.id} value={rubric.id}>
+                                {rubric.name}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
+                    </div>
 
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const content = event.target?.result as string;
-                            setText(content);
-                          };
-                          reader.readAsText(file);
-                        }}
-                      />
-                    </label>
+                    <div className="flex gap-3">
+                      <label className="hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm">
+                        <Upload className="w-4 h-4" />
+                        Upload
+                        <input
+                          type="file"
+                          accept=".txt,.doc,.docx"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
 
-                    <button
-                      onClick={
-                        showViewResult ? handleViewResult : handleAnalyze
-                      }
-                      className={`font-semibold px-6 py-2.5 rounded-full transition-all duration-300 flex items-center gap-2 text-sm ${
-                        !showViewResult && wordCount < MIN_WORDS
-                          ? "bg-neutral-300/50"
-                          : "bg-primary text-white transform hover:bg-primary-100 hover:shadow-lg "
-                      }`}
-                    >
-                      {showViewResult ? (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          View Result
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          Analyze Essay
-                        </>
-                      )}
-                    </button>
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const content = event.target?.result as string;
+                              setText(content);
+                            };
+                            reader.readAsText(file);
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        onClick={
+                          showViewResult ? handleViewResult : handleAnalyze
+                        }
+                        className={`font-semibold px-6 py-2.5 rounded-full transition-all duration-300 flex items-center gap-2 text-sm ${
+                          !showViewResult && wordCount < MIN_WORDS
+                            ? "bg-neutral-300/50"
+                            : "bg-primary text-white transform hover:bg-primary-100 hover:shadow-lg "
+                        }`}
+                      >
+                        {showViewResult ? (
+                          <>
+                            <Eye className="w-4 h-4" />
+                            View Result
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-4 h-4" />
+                            Analyze Essay
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-
-              {/* Text Analysis Modal for word requirement guide */}
-              <TextAnalysisModal
-                isOpen={showTextAnalysisModal}
-                onClose={() => setShowTextAnalysisModal(false)}
-                text={text}
-                title="Essay Analysis"
-              />
-
-              {/* Hero Section Description */}
-              <motion.div
-                id="hero-bottom"
-                className="container mx-auto px-6 text-center mt-6"
-                initial={{ opacity: 0 }}
-                animate={essayBoxControls}
-              >
-                <p className="text-xl md:text-2xl">
-                  Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay
-                  Evaluation
-                </p>
-                <p className="mt-4 max-w-3xl mx-auto text-lg">
-                  Empowering educators with AI-driven insights to provide
-                  deeper, more effective feedback on student writing, without
-                  replacing the human touch.
-                </p>
               </motion.div>
             </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Text Analysis Modal for word requirement guide */}
+      <TextAnalysisModal
+        isOpen={showTextAnalysisModal}
+        onClose={() => setShowTextAnalysisModal(false)}
+        text={text}
+        title="Essay Analysis"
+      />
+
+      {/* Hero Section Description */}
+      <motion.div
+        id="hero-bottom"
+        className="container mx-auto px-6 text-center mt-6"
+        initial={{ opacity: 0 }}
+        animate={essayBoxControls}
+      >
+        <p className="text-xl md:text-2xl">
+          Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay Evaluation
+        </p>
+        <p className="mt-4 max-w-3xl mx-auto text-lg">
+          Empowering educators with AI-driven insights to provide deeper, more
+          effective feedback on student writing, without replacing the human
+          touch.
+        </p>
+      </motion.div>
     </div>
   );
 };
 
 export default AnalyzeEssay;
-

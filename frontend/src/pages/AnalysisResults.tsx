@@ -257,7 +257,8 @@ const AnalysisResults: React.FC = () => {
       if (essayId) {
         result = await analysisApi.analyzeEssay(essayId, 'comprehensive');
       } else {
-        result = await analysisApi.analyzeText(text, title, 'comprehensive');
+        const rubricId = (location.state as { rubricId?: string })?.rubricId;
+        result = await analysisApi.analyzeText(text, title, 'comprehensive', rubricId);
       }
       const analysisResult = result as Omit<AnalysisResponse, 'essay_id'>;
 
@@ -296,6 +297,7 @@ const AnalysisResults: React.FC = () => {
     if (analysis && originalText) return;
 
     const state = location.state as {
+      rubricId?: string;
       analysis?: Omit<AnalysisResponse, 'essay_id'>;
       text?: string;
       title?: string;

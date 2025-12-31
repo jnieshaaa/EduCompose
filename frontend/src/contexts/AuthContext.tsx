@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useInactivityLogout } from "../hooks/useInactivityLogout";
+import AlertModal from "../components/ui/AlertModal";
 
 // Design/demo mode is now disabled so Supabase auth is used.
 export const DESIGN_MODE_ENABLED = false;
@@ -51,6 +53,9 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const countdownIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Map Supabase user object into our local User shape
   const mapSupabaseUser = (supabaseUser: unknown): User => {
@@ -158,6 +163,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  // Cleanup countdown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
+
   const login = (token: string, userData?: User) => {
     localStorage.setItem("auth_token", token);
     if (userData) {
@@ -180,8 +194,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
+      setShowInactivityWarning(false);
     }
   };
+
+  // Handle inactivity warning
+  const handleInactivityWarning = (seconds: number) => {
+    setRemainingSeconds(seconds);
+    setShowInactivityWarning(true);
+    
+    // Clear any existing countdown interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    
+    // Start countdown timer
+    let currentSeconds = seconds;
+    countdownIntervalRef.current = setInterval(() => {
+      currentSeconds -= 1;
+      setRemainingSeconds(currentSeconds);
+      
+      if (currentSeconds <= 0) {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+      }
+    }, 1000);
+  };
+
+  // Handle inactivity logout
+  const handleInactivityLogout = () => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setShowInactivityWarning(false);
+    logout();
+  };
+
+  // Use inactivity logout hook (only when user is authenticated)
+  useInactivityLogout({
+    timeout: 60 * 60 * 1000, // 1 hour
+    warningTime: 5 * 60 * 1000, // 5 minutes before logout
+    onLogout: handleInactivityLogout,
+    onWarning: handleInactivityWarning,
+    onWarningDismissed: () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      setShowInactivityWarning(false);
+    },
+    enabled: !!user && !!localStorage.getItem("auth_token"),
+  });
 
   const value: AuthContextType = {
     user,
@@ -192,5 +258,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {/* Inactivity Warning Modal */}
+      <AlertModal
+        isOpen={showInactivityWarning}
+        onClose={() => setShowInactivityWarning(false)}
+        type="warning"
+        title="Session Timeout Warning"
+        message={`You have been inactive for a while. You will be automatically logged out in ${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'} for security reasons. Please interact with the page to stay logged in.`}
+        confirmText="Stay Logged In"
+        onConfirm={() => {
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          setShowInactivityWarning(false);
+          // Activity will reset the timer automatically
+        }}
+        showCancel={false}
+      />
+    </AuthContext.Provider>
+  );
 };

@@ -107,7 +107,8 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
       const result = await analysisApi.analyzeText(
         text,
         title,
-        "comprehensive"
+        "comprehensive",
+        undefined // No rubric for modal analysis
       );
       // Navigate to AnalysisResults page with the analysis data
       navigate("/AnalysisResults", {

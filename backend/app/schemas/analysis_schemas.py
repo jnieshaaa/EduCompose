@@ -15,6 +15,7 @@ class TextAnalysisRequest(BaseModel):
     text: str
     title: Optional[str] = "Untitled Essay"
     analysis_type: str = "comprehensive"  # grammar, readability, coherence, argument, comprehensive
+    rubric_id: Optional[str] = None  # Optional rubric ID for rubric-based analysis
 
 class TextAnalysisResponse(BaseModel):
     analysis_type: str

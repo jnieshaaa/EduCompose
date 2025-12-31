@@ -325,7 +325,8 @@ export const analysisApi = {
       | "readability"
       | "coherence"
       | "argument"
-      | "comprehensive" = "comprehensive"
+      | "comprehensive" = "comprehensive",
+    rubricId?: string
   ) => {
     // This endpoint doesn't require authentication, so we make a direct fetch call
     const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
@@ -337,6 +338,7 @@ export const analysisApi = {
         text,
         title,
         analysis_type: analysisType,
+        rubric_id: rubricId || null,
       }),
     });
 

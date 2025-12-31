@@ -141,10 +141,11 @@ async def analyze_text(
     
     # Log processing time
     word_count = analysis_result.get("word_count", 0)
+    rubric_info = f", Rubric: {request.rubric_id}" if request.rubric_id else ""
     logger.info(
         f"Analysis completed - Type: {request.analysis_type}, "
         f"Words: {word_count}, Time: {processing_time:.2f}s "
-        f"({processing_time/60:.2f} min)"
+        f"({processing_time/60:.2f} min){rubric_info}"
     )
     
     return TextAnalysisResponse(
