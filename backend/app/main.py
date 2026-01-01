@@ -14,7 +14,7 @@ from .controllers import (
     essays_router,
     analysis_router
 )
-from .controllers import kg_controller
+from .controllers import kg_controller, ocr_controller
 
 app = FastAPI(
     title="EduCompose API",
@@ -44,6 +44,7 @@ app.include_router(students_router, prefix="/api/students", tags=["Students"])
 app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
 app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(kg_controller.kg_router, prefix="/api/kg", tags=["Knowledge Graph"])
+app.include_router(ocr_controller.ocr_router, prefix="/api/ocr", tags=["OCR"])
 
 @app.on_event("startup")
 async def startup_event():

@@ -4,11 +4,13 @@ import type {
   Class,
   User,
   AnalysisResponse,
+  TextAnalysisResponse,
   DashboardStats,
 } from "./types/Essay";
 import dummyDataJson from "./data/dummyData.json";
 
-const API_BASE_URL = "http://localhost:8000/api";
+// Get API base URL from environment variable, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 class ApiError extends Error {
   status: number;
@@ -327,7 +329,7 @@ export const analysisApi = {
       | "argument"
       | "comprehensive" = "comprehensive",
     rubricId?: string
-  ) => {
+  ): Promise<TextAnalysisResponse> => {
     // This endpoint doesn't require authentication, so we make a direct fetch call
     const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
       method: "POST",
@@ -340,6 +342,34 @@ export const analysisApi = {
         analysis_type: analysisType,
         rubric_id: rubricId || null,
       }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json() as Promise<TextAnalysisResponse>;
+  },
+};
+
+// OCR API
+export const ocrApi = {
+  extractTextFromFile: async (file: File): Promise<{
+    text: string;
+    word_count: number;
+    confidence: number;
+    page_count: number;
+    filename: string;
+  }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
+      method: "POST",
+      body: formData,
     });
 
     if (!response.ok) {

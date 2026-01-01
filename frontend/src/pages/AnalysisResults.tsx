@@ -13,7 +13,7 @@ import Card from '../components/ui/Card';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, type HighlightError } from '../components/grading';
-import type { AnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
+import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi } from '../api';
 
 const STORAGE_KEY = 'essay_analysis_results';
@@ -253,14 +253,22 @@ const AnalysisResults: React.FC = () => {
     setAnalysis(null);
 
     try {
-      let result;
+      let result: AnalysisResponse | TextAnalysisResponse;
       if (essayId) {
         result = await analysisApi.analyzeEssay(essayId, 'comprehensive');
       } else {
         const rubricId = (location.state as { rubricId?: string })?.rubricId;
         result = await analysisApi.analyzeText(text, title, 'comprehensive', rubricId);
       }
-      const analysisResult = result as Omit<AnalysisResponse, 'essay_id'>;
+      // Convert both response types to the format expected by the component
+      // TextAnalysisResponse is already without essay_id, AnalysisResponse needs it removed
+      const analysisResult: Omit<AnalysisResponse, 'essay_id'> = 
+        'essay_id' in result 
+          ? (() => {
+              const { essay_id, ...rest } = result;
+              return rest;
+            })()
+          : result;
 
       const stableAnalysis = JSON.parse(JSON.stringify(analysisResult));
       const stableText = text;

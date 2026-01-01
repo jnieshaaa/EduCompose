@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Upload, FileText, Eye, BookOpen, Info } from "lucide-react";
+import { Upload, FileText, Eye, BookOpen, Info, Loader2 } from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import HeaderPublic from "../components/HeaderPublic";
@@ -8,6 +8,7 @@ import TextAnalysisModal from "../components/essay/TextAnalysisModal";
 import { supabase } from "../lib/supabaseClient";
 import { platformRubrics, getTypeBadgeColor } from "../data/rubricData";
 import type { PlatformRubric } from "../components/rubrics/types";
+import { ocrApi } from "../api";
 
 const MIN_WORDS = 150;
 
@@ -60,6 +61,8 @@ const AnalyzeEssay: React.FC = () => {
   const [previewRubric, setPreviewRubric] = useState<PlatformRubric | null>(
     null
   );
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
 
   // Essay box animation
   const essayBoxRef = React.useRef<HTMLDivElement>(null);
@@ -191,20 +194,27 @@ const AnalyzeEssay: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center pt-2 border-t border-neutral-100">
-                  <div className="px-3 py-2 rounded text-sm">
-                    <span
-                      className={`font-semibold ${
-                        wordCount >= MIN_WORDS
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {wordCount}
-                    </span>
-                    <span className="text-gray-500"> Words </span>
-                    <span className="text-gray-500">
-                      {charCount} Characters
-                    </span>
+                  <div className="flex flex-col gap-1">
+                    <div className="px-3 py-2 rounded text-sm">
+                      <span
+                        className={`font-semibold ${
+                          wordCount >= MIN_WORDS
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {wordCount}
+                      </span>
+                      <span className="text-gray-500"> Words </span>
+                      <span className="text-gray-500">
+                        {charCount} Characters
+                      </span>
+                    </div>
+                    {ocrError && (
+                      <div className="px-3 text-xs text-red-600 bg-red-50 rounded py-1">
+                        {ocrError}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 items-center">
@@ -246,23 +256,72 @@ const AnalyzeEssay: React.FC = () => {
                     </div>
 
                     <div className="flex gap-3">
-                      <label className="hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm">
-                        <Upload className="w-4 h-4" />
-                        Upload
+                      <label className={`hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm ${
+                        isProcessingOCR ? "opacity-50 cursor-not-allowed" : ""
+                      }`}>
+                        {isProcessingOCR ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4" />
+                            Upload
+                          </>
+                        )}
                         <input
                           type="file"
-                          accept=".txt,.doc,.docx"
+                          accept=".txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.bmp,.tiff"
                           className="hidden"
-                          onChange={(e) => {
+                          disabled={isProcessingOCR}
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
 
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const content = event.target?.result as string;
-                              setText(content);
-                            };
-                            reader.readAsText(file);
+                            // Reset error
+                            setOcrError(null);
+
+                            // Check file type
+                            const isTextFile = file.name.toLowerCase().endsWith('.txt') || 
+                                             file.name.toLowerCase().endsWith('.doc') || 
+                                             file.name.toLowerCase().endsWith('.docx');
+                            const isPdfOrImage = file.name.toLowerCase().endsWith('.pdf') ||
+                                                file.type.startsWith('image/');
+
+                            if (isTextFile) {
+                              // Handle text files directly
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const content = event.target?.result as string;
+                                setText(content);
+                              };
+                              reader.readAsText(file);
+                            } else if (isPdfOrImage) {
+                              // Handle PDF/image files with OCR
+                              setIsProcessingOCR(true);
+                              try {
+                                const result = await ocrApi.extractTextFromFile(file);
+                                if (result.text && result.text.trim()) {
+                                  setText(result.text);
+                                  // Show success message
+                                  console.log(`OCR completed: ${result.word_count} words extracted (confidence: ${result.confidence})`);
+                                } else {
+                                  setOcrError("No text could be extracted from the file. Please ensure the file contains readable text.");
+                                }
+                              } catch (error) {
+                                const errorMessage = error instanceof Error ? error.message : "Failed to extract text from file";
+                                setOcrError(errorMessage);
+                                console.error("OCR error:", error);
+                              } finally {
+                                setIsProcessingOCR(false);
+                                // Reset input
+                                e.target.value = "";
+                              }
+                            } else {
+                              setOcrError("Unsupported file type. Please upload a text file (.txt, .doc, .docx), PDF, or image file.");
+                              e.target.value = "";
+                            }
                           }}
                         />
                       </label>

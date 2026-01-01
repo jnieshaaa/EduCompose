@@ -356,6 +356,24 @@ export interface AnalysisResponse {
   generated_at: string;
 }
 
+export interface TextAnalysisResponse {
+  analysis_type: string;
+  scores: {
+    grammar: number;
+    readability: number;
+    coherence: number;
+    argument_strength: number;
+    knowledge_graph: number;
+    overall: number;
+  };
+  detailed_analysis: DetailedAnalysis;
+  recommendations: DiagnosticRecommendation[];
+  diagnostic_summary?: DiagnosticSummary;
+  word_count?: number;
+  generated_at: string;
+  processing_time_seconds?: number;
+}
+
 export interface BatchAnalysisRequest {
   essay_ids: number[];
   analysis_type:

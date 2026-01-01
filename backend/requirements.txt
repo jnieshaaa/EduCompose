@@ -86,3 +86,15 @@ pyvis
 
 # Google Gemini API for grammar checking (optional)
 google-generativeai
+
+# ============================================
+# OCR Support (for PDF and image text extraction)
+# ============================================
+# PDF to image conversion
+pdf2image
+# OCR library
+easyocr
+# Image processing (Pillow is usually already installed)
+Pillow
+
+#sudo apt-get install poppler-utils
