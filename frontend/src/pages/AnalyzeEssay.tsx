@@ -73,10 +73,7 @@ const AnalyzeEssay: React.FC = () => {
       try {
         const rubrics = await fetchPlatformRubrics();
         setAvailableRubrics(rubrics);
-        // Default to first platform rubric if available
-        if (rubrics.length > 0 && !selectedRubricId) {
-          setSelectedRubricId(rubrics[0].id);
-        }
+        // Don't auto-select any rubric - let user choose
       } catch (error) {
         console.error("Error loading rubrics:", error);
       } finally {
@@ -84,7 +81,7 @@ const AnalyzeEssay: React.FC = () => {
       }
     };
     loadRubrics();
-  }, [selectedRubricId]);
+  }, []); // Remove selectedRubricId dependency
 
   // Show login modal if redirected from a protected route
   useEffect(() => {
