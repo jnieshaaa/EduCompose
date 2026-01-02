@@ -6,7 +6,9 @@ import nltk
 import logging
 import time
 import re
+import json
 from typing import Dict, List, Any, Tuple, Optional
+from sqlalchemy import text
 
 from ..models import Essay
 from ..nlp_modules import (
@@ -16,6 +18,8 @@ from ..nlp_modules import (
     ArgumentMiner,
     KnowledgeGraphBuilder
 )
+from .rubric_scoring_service import rubric_scoring_service
+from ..database import engine
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +53,7 @@ class EssayAnalysisService:
         )
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
     
-    async def analyze_text(self, text: str, title: str = "Untitled Essay", analysis_type: str = "comprehensive") -> Dict[str, Any]:
+    async def analyze_text(self, text: str, title: str = "Untitled Essay", analysis_type: str = "comprehensive", rubric_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Analyze raw text directly without requiring an essay in the database
         
@@ -57,12 +61,27 @@ class EssayAnalysisService:
             text: Essay content as string
             title: Optional essay title
             analysis_type: Type of analysis (grammar, readability, coherence, argument, comprehensive)
+            rubric_id: Optional rubric ID to apply rubric-based scoring
         
         Returns:
             Dictionary containing scores, detailed analysis, and recommendations
         """
         content = text
-        return await self._perform_analysis(content, analysis_type)
+        analysis_result = await self._perform_analysis(content, analysis_type)
+        
+        # Apply rubric scoring if rubric_id is provided
+        if rubric_id:
+            rubric_data = await self._fetch_rubric(rubric_id)
+            if rubric_data:
+                rubric_scores = rubric_scoring_service.score_with_rubric(
+                    rubric_data,
+                    analysis_result
+                )
+                analysis_result["rubric_scores"] = rubric_scores
+            else:
+                logger.warning(f"Rubric {rubric_id} not found, proceeding without rubric scoring")
+        
+        return analysis_result
     
     async def analyze_essay(self, essay: Essay, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """
@@ -741,6 +760,75 @@ class EssayAnalysisService:
                 })
         
         return results
+    
+    async def _fetch_rubric(self, rubric_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch rubric from database by ID
+        
+        Args:
+            rubric_id: Rubric ID (can be database ID or platform-{id} format)
+        
+        Returns:
+            Rubric data dictionary or None if not found
+        """
+        try:
+            # Handle platform rubrics (prefixed with "platform-")
+            if rubric_id.startswith("platform-"):
+                # For platform rubrics, we'd need to load from hardcoded data
+                # For now, try to find in database with the numeric ID
+                numeric_id = rubric_id.replace("platform-", "")
+                try:
+                    rubric_id_int = int(numeric_id)
+                except ValueError:
+                    logger.warning(f"Invalid platform rubric ID format: {rubric_id}")
+                    return None
+            else:
+                try:
+                    rubric_id_int = int(rubric_id)
+                except ValueError:
+                    logger.warning(f"Invalid rubric ID format: {rubric_id}")
+                    return None
+            
+            # Query database for rubric
+            with engine.connect() as connection:
+                result = connection.execute(
+                    text("""
+                        SELECT id, name, description, criteria, programs, grading_intensity
+                        FROM rubrics
+                        WHERE id = :rubric_id
+                    """),
+                    {"rubric_id": rubric_id_int}
+                )
+                row = result.fetchone()
+                
+                if row:
+                    # Convert row to dictionary
+                    rubric_data = {
+                        "id": row[0],
+                        "name": row[1],
+                        "description": row[2],
+                        "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
+                        "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
+                        "grading_intensity": row[5]
+                    }
+                    
+                    # Ensure criteria is a list
+                    if isinstance(rubric_data["criteria"], dict):
+                        # If criteria is wrapped in an object, extract it
+                        if "criteria" in rubric_data["criteria"]:
+                            rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
+                        else:
+                            # Convert dict to list if needed
+                            rubric_data["criteria"] = [rubric_data["criteria"]]
+                    
+                    return rubric_data
+                else:
+                    logger.warning(f"Rubric {rubric_id} not found in database")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error fetching rubric {rubric_id}: {e}")
+            return None
 
 # Singleton instance
 essay_analysis_service = EssayAnalysisService()

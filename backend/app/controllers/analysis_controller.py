@@ -127,7 +127,8 @@ async def analyze_text(
     analysis_result = await essay_analysis_service.analyze_text(
         request.text, 
         request.title, 
-        request.analysis_type
+        request.analysis_type,
+        request.rubric_id
     )
     
     processing_time = time.time() - start_time

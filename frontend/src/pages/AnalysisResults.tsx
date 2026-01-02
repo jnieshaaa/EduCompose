@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import Card from '../components/ui/Card';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
-import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, type HighlightError } from '../components/grading';
+import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi } from '../api';
 
@@ -677,14 +677,7 @@ const AnalysisResults: React.FC = () => {
               {activeTab === 'feedback' && <FeedbackPanel recommendations={recommendations} />}
 
               {activeTab === 'rubric' && (
-                <Card className="text-center py-12">
-                  <ClipboardList className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">Manual Grading</h3>
-                  <p className="text-sm text-neutral-600 max-w-xs mx-auto">
-                    Manual grading interface with custom rubrics coming soon. Teachers will be able
-                    to apply rubrics and provide personalized feedback.
-                  </p>
-                </Card>
+                <RubricScores analysis={analysis} />
               )}
             </div>
           </div>

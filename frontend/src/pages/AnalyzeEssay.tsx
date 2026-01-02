@@ -256,9 +256,11 @@ const AnalyzeEssay: React.FC = () => {
                     </div>
 
                     <div className="flex gap-3">
-                      <label className={`hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm ${
-                        isProcessingOCR ? "opacity-50 cursor-not-allowed" : ""
-                      }`}>
+                      <label
+                        className={`hover:bg-support/20 text-gray-700 font-semibold px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2 text-sm ${
+                          isProcessingOCR ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
                         {isProcessingOCR ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -283,11 +285,18 @@ const AnalyzeEssay: React.FC = () => {
                             setOcrError(null);
 
                             // Check file type
-                            const isTextFile = file.name.toLowerCase().endsWith('.txt') || 
-                                             file.name.toLowerCase().endsWith('.doc') || 
-                                             file.name.toLowerCase().endsWith('.docx');
-                            const isPdfOrImage = file.name.toLowerCase().endsWith('.pdf') ||
-                                                file.type.startsWith('image/');
+                            const isTextFile =
+                              file.name.toLowerCase().endsWith(".txt") ||
+                              file.name.toLowerCase().endsWith(".doc") ||
+                              file.name.toLowerCase().endsWith(".docx");
+
+                            const isPdfOrImage =
+                              file.name.toLowerCase().endsWith(".pdf") ||
+                              file.name.toLowerCase().endsWith(".jpg") ||
+                              file.name.toLowerCase().endsWith(".jpeg") ||
+                              file.name.toLowerCase().endsWith(".png") ||
+                              file.name.toLowerCase().endsWith(".bmp") ||
+                              file.name.toLowerCase().endsWith(".tiff");
 
                             if (isTextFile) {
                               // Handle text files directly
@@ -298,28 +307,29 @@ const AnalyzeEssay: React.FC = () => {
                               };
                               reader.readAsText(file);
                             } else if (isPdfOrImage) {
-                              // Handle PDF/image files with OCR
+                              // Use OCR for PDF and image files
                               setIsProcessingOCR(true);
                               try {
-                                const result = await ocrApi.extractTextFromFile(file);
-                                if (result.text && result.text.trim()) {
-                                  setText(result.text);
-                                  // Show success message
-                                  console.log(`OCR completed: ${result.word_count} words extracted (confidence: ${result.confidence})`);
-                                } else {
-                                  setOcrError("No text could be extracted from the file. Please ensure the file contains readable text.");
-                                }
+                                const result = await ocrApi.extractTextFromFile(
+                                  file
+                                );
+                                setText(result.text);
+                                setOcrError(null);
                               } catch (error) {
-                                const errorMessage = error instanceof Error ? error.message : "Failed to extract text from file";
-                                setOcrError(errorMessage);
                                 console.error("OCR error:", error);
+                                setOcrError(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Failed to extract text from file. Please try a text file instead."
+                                );
                               } finally {
                                 setIsProcessingOCR(false);
-                                // Reset input
-                                e.target.value = "";
+                                e.target.value = ""; // Reset file input
                               }
                             } else {
-                              setOcrError("Unsupported file type. Please upload a text file (.txt, .doc, .docx), PDF, or image file.");
+                              setOcrError(
+                                "Unsupported file type. Please upload a text file (.txt, .doc, .docx), PDF, or image file."
+                              );
                               e.target.value = "";
                             }
                           }}

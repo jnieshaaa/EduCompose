@@ -1,0 +1,6157 @@
+{
+  "timestamp": "2026-01-02T13:33:52.588013",
+  "summary": {
+    "total_tested": 500,
+    "successful": 500,
+    "failed": 0
+  },
+  "dimensions": {
+    "grammar": {
+      "sample_size": 500,
+      "human_scores": {
+        "mean": 56.64,
+        "std": 17.01500514252053,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 60.0
+      },
+      "system_scores": {
+        "mean": 96.16411856296105,
+        "std": 8.084655071864645,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 100.0
+      },
+      "correlation": {
+        "pearson": 0.021928991141039935,
+        "pearson_p_value": 0.6247151911833106,
+        "spearman": -0.12621256872892592,
+        "spearman_p_value": 0.004706769488753103
+      },
+      "regression_metrics": {
+        "mae": 39.87197372056415,
+        "rmse": 43.71492733764351,
+        "mse": 1910.994872135452,
+        "r_squared": -5.600781430081447,
+        "mean_error": 39.52411856296105
+      },
+      "agreement": {
+        "exact_match": 1.2,
+        "within_10": 5.0,
+        "within_20": 21.8,
+        "within_30": 25.2
+      }
+    },
+    "readability": {
+      "sample_size": 500,
+      "human_scores": {
+        "mean": 56.64,
+        "std": 17.01500514252053,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 60.0
+      },
+      "system_scores": {
+        "mean": 90.4681,
+        "std": 8.532229121982134,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 91.845
+      },
+      "correlation": {
+        "pearson": 0.2085415783972127,
+        "pearson_p_value": 2.5602892737076806e-06,
+        "spearman": 0.13630836239507893,
+        "spearman_p_value": 0.002253702013275088
+      },
+      "regression_metrics": {
+        "mae": 34.327180000000006,
+        "rmse": 38.027611697291746,
+        "mse": 1446.0992514,
+        "r_squared": -3.9949820503857545,
+        "mean_error": 33.828100000000006
+      },
+      "agreement": {
+        "exact_match": 0.0,
+        "within_10": 6.4,
+        "within_20": 23.599999999999998,
+        "within_30": 41.6
+      }
+    },
+    "argument_strength": {
+      "sample_size": 500,
+      "human_scores": {
+        "mean": 56.64,
+        "std": 17.01500514252053,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 60.0
+      },
+      "system_scores": {
+        "mean": 93.36,
+        "std": 9.41698731017516,
+        "min": 0.0,
+        "max": 99.0,
+        "median": 93.75
+      },
+      "correlation": {
+        "pearson": 0.14978210630104025,
+        "pearson_p_value": 0.0007799352594558755,
+        "spearman": 0.08352780658272362,
+        "spearman_p_value": 0.061995728227362955
+      },
+      "regression_metrics": {
+        "mae": 37.224,
+        "rmse": 40.97010190370534,
+        "mse": 1678.54925,
+        "r_squared": -4.797889298622778,
+        "mean_error": 36.72
+      },
+      "agreement": {
+        "exact_match": 1.0,
+        "within_10": 3.8,
+        "within_20": 23.400000000000002,
+        "within_30": 26.6
+      }
+    },
+    "overall": {
+      "sample_size": 500,
+      "human_scores": {
+        "mean": 56.64,
+        "std": 17.01500514252053,
+        "min": 0.0,
+        "max": 100.0,
+        "median": 60.0
+      },
+      "system_scores": {
+        "mean": 87.8645,
+        "std": 6.115458049075311,
+        "min": 0.0,
+        "max": 94.34,
+        "median": 89.02
+      },
+      "correlation": {
+        "pearson": 0.13081523085602223,
+        "pearson_p_value": 0.00338527861017786,
+        "spearman": 0.0223065735498711,
+        "spearman_p_value": 0.6187634271928522
+      },
+      "regression_metrics": {
+        "mae": 31.894779999999997,
+        "rmse": 35.70230787218104,
+        "mse": 1274.6547874,
+        "r_squared": -3.402794467487178,
+        "mean_error": 31.224499999999995
+      },
+      "agreement": {
+        "exact_match": 0.0,
+        "within_10": 14.399999999999999,
+        "within_20": 22.0,
+        "within_30": 50.2
+      }
+    }
+  },
+  "results": [
+    {
+      "essay_id": "423A1CA112E2",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 59.75,
+        "overall": 68.35
+      },
+      "word_count": 379,
+      "success": true
+    },
+    {
+      "essay_id": "BC75783F96E3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 98.2,
+        "argument_strength": 96.0,
+        "overall": 91.88
+      },
+      "word_count": 366,
+      "success": true
+    },
+    {
+      "essay_id": "74C8BC7417DE",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 94.38202247191012,
+        "readability": 92.0,
+        "argument_strength": 90.75,
+        "overall": 88.2
+      },
+      "word_count": 178,
+      "success": true
+    },
+    {
+      "essay_id": "A8445CABFECE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 92.75
+      },
+      "word_count": 212,
+      "success": true
+    },
+    {
+      "essay_id": "6B4F7A0165B9",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.65
+      },
+      "word_count": 332,
+      "success": true
+    },
+    {
+      "essay_id": "97C1CFD04E4B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.96747967479675,
+        "readability": 95.85,
+        "argument_strength": 99.0,
+        "overall": 91.72
+      },
+      "word_count": 492,
+      "success": true
+    },
+    {
+      "essay_id": "2CE1FE38D0E7",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.34437086092716,
+        "readability": 96.82,
+        "argument_strength": 99.0,
+        "overall": 91.83
+      },
+      "word_count": 604,
+      "success": true
+    },
+    {
+      "essay_id": "30A8FB981469",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 91.47121535181236,
+        "readability": 85.97,
+        "argument_strength": 99.0,
+        "overall": 88.48
+      },
+      "word_count": 469,
+      "success": true
+    },
+    {
+      "essay_id": "E05C7F5C1156",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.76,
+        "argument_strength": 97.0,
+        "overall": 91.54
+      },
+      "word_count": 592,
+      "success": true
+    },
+    {
+      "essay_id": "50B3435E475B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 90.75,
+        "overall": 89.08
+      },
+      "word_count": 353,
+      "success": true
+    },
+    {
+      "essay_id": "595801A6D808",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.2153110047847,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.29
+      },
+      "word_count": 209,
+      "success": true
+    },
+    {
+      "essay_id": "2E0A63554A2C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 87.68,
+        "argument_strength": 99.0,
+        "overall": 90.64
+      },
+      "word_count": 336,
+      "success": true
+    },
+    {
+      "essay_id": "EF6A87BE6D9F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.10894941634241,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.69
+      },
+      "word_count": 257,
+      "success": true
+    },
+    {
+      "essay_id": "DBF7EB6A9E02",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.14,
+        "argument_strength": 91.75,
+        "overall": 87.98
+      },
+      "word_count": 525,
+      "success": true
+    },
+    {
+      "essay_id": "810B70E80E1D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 74.44,
+        "argument_strength": 99.0,
+        "overall": 87.77
+      },
+      "word_count": 438,
+      "success": true
+    },
+    {
+      "essay_id": "CE98789F502B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.94,
+        "argument_strength": 93.75,
+        "overall": 89.08
+      },
+      "word_count": 532,
+      "success": true
+    },
+    {
+      "essay_id": "4FD61EB5AA60",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.71,
+        "argument_strength": 99.0,
+        "overall": 91.68
+      },
+      "word_count": 410,
+      "success": true
+    },
+    {
+      "essay_id": "84D2807D35C7",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.65
+      },
+      "word_count": 272,
+      "success": true
+    },
+    {
+      "essay_id": "DAF93C36D655",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 96.0,
+        "overall": 91.67
+      },
+      "word_count": 267,
+      "success": true
+    },
+    {
+      "essay_id": "A97DE0D49AEA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 75.13812154696133,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 85.01
+      },
+      "word_count": 362,
+      "success": true
+    },
+    {
+      "essay_id": "30E68BC17525",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.49240780911063,
+        "readability": 86.55,
+        "argument_strength": 93.75,
+        "overall": 86.55
+      },
+      "word_count": 461,
+      "success": true
+    },
+    {
+      "essay_id": "48D3F4243F0F",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 90.75,
+        "overall": 87.62
+      },
+      "word_count": 395,
+      "success": true
+    },
+    {
+      "essay_id": "0B2E6B68B571",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.47511312217195,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 91.75
+      },
+      "word_count": 221,
+      "success": true
+    },
+    {
+      "essay_id": "AC594194F01C",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 95.04950495049505,
+        "readability": 80.0,
+        "argument_strength": 96.0,
+        "overall": 88.36
+      },
+      "word_count": 202,
+      "success": true
+    },
+    {
+      "essay_id": "45A33DB5C7F7",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.17,
+        "argument_strength": 93.75,
+        "overall": 89.8
+      },
+      "word_count": 508,
+      "success": true
+    },
+    {
+      "essay_id": "4F0E197053FF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.8902953586498,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.18
+      },
+      "word_count": 474,
+      "success": true
+    },
+    {
+      "essay_id": "C3811E7F1750",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.88473520249221,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.03
+      },
+      "word_count": 321,
+      "success": true
+    },
+    {
+      "essay_id": "86C1ED49C35F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 90.75,
+        "overall": 90.7
+      },
+      "word_count": 201,
+      "success": true
+    },
+    {
+      "essay_id": "019328A0D7A3",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 98.38449111470113,
+        "readability": 93.04,
+        "argument_strength": 93.75,
+        "overall": 88.44
+      },
+      "word_count": 619,
+      "success": true
+    },
+    {
+      "essay_id": "4B6C254FEE39",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.29
+      },
+      "word_count": 520,
+      "success": true
+    },
+    {
+      "essay_id": "F054050F442F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 59.75,
+        "overall": 72.71
+      },
+      "word_count": 335,
+      "success": true
+    },
+    {
+      "essay_id": "D07F55A0F5DB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 83.56164383561644,
+        "readability": 100.0,
+        "argument_strength": 90.75,
+        "overall": 86.65
+      },
+      "word_count": 365,
+      "success": true
+    },
+    {
+      "essay_id": "4C30EEDA3A8F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.89,
+        "argument_strength": 99.0,
+        "overall": 90.09
+      },
+      "word_count": 441,
+      "success": true
+    },
+    {
+      "essay_id": "20FD63F49519",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.74,
+        "argument_strength": 93.75,
+        "overall": 88.55
+      },
+      "word_count": 662,
+      "success": true
+    },
+    {
+      "essay_id": "7C66D3531735",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.25287356321839,
+        "readability": 88.55,
+        "argument_strength": 99.0,
+        "overall": 89.32
+      },
+      "word_count": 696,
+      "success": true
+    },
+    {
+      "essay_id": "79E5179D5BB6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.69,
+        "argument_strength": 96.0,
+        "overall": 90.64
+      },
+      "word_count": 386,
+      "success": true
+    },
+    {
+      "essay_id": "2B5C3B92116E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 82.40469208211144,
+        "readability": 96.0,
+        "argument_strength": 85.5,
+        "overall": 82.66
+      },
+      "word_count": 341,
+      "success": true
+    },
+    {
+      "essay_id": "21730F71662E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 91.75,
+        "overall": 90.95
+      },
+      "word_count": 410,
+      "success": true
+    },
+    {
+      "essay_id": "09CB9D5CDDDD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.44,
+        "argument_strength": 57.75,
+        "overall": 69.15
+      },
+      "word_count": 384,
+      "success": true
+    },
+    {
+      "essay_id": "A783D3241786",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.16,
+        "argument_strength": 99.0,
+        "overall": 89.54
+      },
+      "word_count": 588,
+      "success": true
+    },
+    {
+      "essay_id": "173969D5E8D1",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.22064056939502,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 89.88
+      },
+      "word_count": 562,
+      "success": true
+    },
+    {
+      "essay_id": "E4FA060FF3E3",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 83.71335504885994,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 86.04
+      },
+      "word_count": 614,
+      "success": true
+    },
+    {
+      "essay_id": "DE628D1F2F9D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.80804953560371,
+        "readability": 86.0,
+        "argument_strength": 91.75,
+        "overall": 86.44
+      },
+      "word_count": 323,
+      "success": true
+    },
+    {
+      "essay_id": "77FED8E1CCB3",
+      "human_score": 1.0,
+      "system_scores": {
+        "grammar": 96.07843137254902,
+        "readability": 90.0,
+        "argument_strength": 56.75,
+        "overall": 69.77
+      },
+      "word_count": 255,
+      "success": true
+    },
+    {
+      "essay_id": "56C848AE510E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.15,
+        "argument_strength": 88.5,
+        "overall": 87.73
+      },
+      "word_count": 496,
+      "success": true
+    },
+    {
+      "essay_id": "3BA036097EA8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.01
+      },
+      "word_count": 278,
+      "success": true
+    },
+    {
+      "essay_id": "B1301A75356A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.8592132505176,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 88.64
+      },
+      "word_count": 483,
+      "success": true
+    },
+    {
+      "essay_id": "1B1FA8C3F4F9",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.8902953586498,
+        "readability": 87.47,
+        "argument_strength": 93.75,
+        "overall": 87.29
+      },
+      "word_count": 474,
+      "success": true
+    },
+    {
+      "essay_id": "2E98ECF2CA61",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.84,
+        "argument_strength": 93.75,
+        "overall": 89.37
+      },
+      "word_count": 491,
+      "success": true
+    },
+    {
+      "essay_id": "D0CBBD43827C",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.95501022494888,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.43
+      },
+      "word_count": 489,
+      "success": true
+    },
+    {
+      "essay_id": "E34D7384EE70",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.03,
+        "argument_strength": 99.0,
+        "overall": 92.47
+      },
+      "word_count": 293,
+      "success": true
+    },
+    {
+      "essay_id": "10F1B47C95E6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.9035639412998,
+        "readability": 86.67,
+        "argument_strength": 93.75,
+        "overall": 87.28
+      },
+      "word_count": 477,
+      "success": true
+    },
+    {
+      "essay_id": "CC296299ABA4",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.22,
+        "argument_strength": 93.75,
+        "overall": 89.81
+      },
+      "word_count": 540,
+      "success": true
+    },
+    {
+      "essay_id": "62644C50869C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 78.43137254901961,
+        "readability": 90.0,
+        "argument_strength": 97.0,
+        "overall": 85.9
+      },
+      "word_count": 510,
+      "success": true
+    },
+    {
+      "essay_id": "8FC32905197E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 87.76758409785933,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 87.34
+      },
+      "word_count": 327,
+      "success": true
+    },
+    {
+      "essay_id": "D7D83D1EBFDB",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 79.89,
+        "argument_strength": 96.0,
+        "overall": 88.54
+      },
+      "word_count": 284,
+      "success": true
+    },
+    {
+      "essay_id": "7E29804EE125",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 89.98
+      },
+      "word_count": 346,
+      "success": true
+    },
+    {
+      "essay_id": "1CCC2C060AA2",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 99.0,
+        "overall": 88.56
+      },
+      "word_count": 232,
+      "success": true
+    },
+    {
+      "essay_id": "0421128DEE6C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 87.87878787878788,
+        "readability": 90.0,
+        "argument_strength": 85.5,
+        "overall": 82.8
+      },
+      "word_count": 330,
+      "success": true
+    },
+    {
+      "essay_id": "42048FB6EC2B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.41,
+        "argument_strength": 96.0,
+        "overall": 90.93
+      },
+      "word_count": 418,
+      "success": true
+    },
+    {
+      "essay_id": "DB7115C8CC39",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 80.0,
+        "argument_strength": 93.75,
+        "overall": 87.58
+      },
+      "word_count": 313,
+      "success": true
+    },
+    {
+      "essay_id": "205129A8CFDE",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 91.75,
+        "overall": 91.2
+      },
+      "word_count": 204,
+      "success": true
+    },
+    {
+      "essay_id": "7FF6281EC288",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.23
+      },
+      "word_count": 292,
+      "success": true
+    },
+    {
+      "essay_id": "5B8AD3907163",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 99.0,
+        "overall": 92.12
+      },
+      "word_count": 239,
+      "success": true
+    },
+    {
+      "essay_id": "89808E74DDC5",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 93.80804953560371,
+        "readability": 96.84,
+        "argument_strength": 93.75,
+        "overall": 88.27
+      },
+      "word_count": 646,
+      "success": true
+    },
+    {
+      "essay_id": "7D3A3CA3C604",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 91.75,
+        "overall": 89.82
+      },
+      "word_count": 371,
+      "success": true
+    },
+    {
+      "essay_id": "EC004A98A1AB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.76785714285714,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 89.87
+      },
+      "word_count": 448,
+      "success": true
+    },
+    {
+      "essay_id": "37F1E30D445D",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.23,
+        "argument_strength": 93.75,
+        "overall": 89.36
+      },
+      "word_count": 497,
+      "success": true
+    },
+    {
+      "essay_id": "77FADB16D0F4",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 98.82,
+        "argument_strength": 96.0,
+        "overall": 92.39
+      },
+      "word_count": 306,
+      "success": true
+    },
+    {
+      "essay_id": "2B1C7B1875A0",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 82.65895953757226,
+        "readability": 96.0,
+        "argument_strength": 87.0,
+        "overall": 82.71
+      },
+      "word_count": 173,
+      "success": true
+    },
+    {
+      "essay_id": "233F592248DF",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.94
+      },
+      "word_count": 281,
+      "success": true
+    },
+    {
+      "essay_id": "2F2607C7D8F7",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.2153110047847,
+        "readability": 84.69,
+        "argument_strength": 88.5,
+        "overall": 83.74
+      },
+      "word_count": 627,
+      "success": true
+    },
+    {
+      "essay_id": "DF3129DC1969",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.1590909090909,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.63
+      },
+      "word_count": 352,
+      "success": true
+    },
+    {
+      "essay_id": "B7F586D0260C",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.74
+      },
+      "word_count": 303,
+      "success": true
+    },
+    {
+      "essay_id": "BCAD86B8E5AA",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 91.75,
+        "overall": 87.45
+      },
+      "word_count": 393,
+      "success": true
+    },
+    {
+      "essay_id": "A86B97324E7F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 88.5,
+        "overall": 86.62
+      },
+      "word_count": 330,
+      "success": true
+    },
+    {
+      "essay_id": "69975DF9F871",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.29642248722317,
+        "readability": 96.47,
+        "argument_strength": 93.75,
+        "overall": 89.17
+      },
+      "word_count": 587,
+      "success": true
+    },
+    {
+      "essay_id": "326B272D36A0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.11,
+        "argument_strength": 99.0,
+        "overall": 89.16
+      },
+      "word_count": 464,
+      "success": true
+    },
+    {
+      "essay_id": "E9C903DB3C85",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 71.71,
+        "argument_strength": 97.0,
+        "overall": 87.09
+      },
+      "word_count": 455,
+      "success": true
+    },
+    {
+      "essay_id": "4B30291A725D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.01593625498008,
+        "readability": 93.25,
+        "argument_strength": 90.75,
+        "overall": 87.36
+      },
+      "word_count": 502,
+      "success": true
+    },
+    {
+      "essay_id": "9EBCB1646B90",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 90.17681728880157,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 85.35
+      },
+      "word_count": 509,
+      "success": true
+    },
+    {
+      "essay_id": "79CF96537246",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.3753280839895,
+        "readability": 72.0,
+        "argument_strength": 99.0,
+        "overall": 86.87
+      },
+      "word_count": 381,
+      "success": true
+    },
+    {
+      "essay_id": "4662057D0A77",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.64,
+        "argument_strength": 93.75,
+        "overall": 90.27
+      },
+      "word_count": 496,
+      "success": true
+    },
+    {
+      "essay_id": "57705DB763FB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.0,
+        "readability": 99.88,
+        "argument_strength": 93.75,
+        "overall": 89.97
+      },
+      "word_count": 500,
+      "success": true
+    },
+    {
+      "essay_id": "E527586F851C",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 90.75,
+        "overall": 87.52
+      },
+      "word_count": 283,
+      "success": true
+    },
+    {
+      "essay_id": "3765714464BA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 85.5,
+        "overall": 85.47
+      },
+      "word_count": 212,
+      "success": true
+    },
+    {
+      "essay_id": "5F1CF4B91975",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 93.38
+      },
+      "word_count": 274,
+      "success": true
+    },
+    {
+      "essay_id": "DE48528A900D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.46485260770974,
+        "readability": 88.3,
+        "argument_strength": 99.0,
+        "overall": 89.78
+      },
+      "word_count": 441,
+      "success": true
+    },
+    {
+      "essay_id": "F425F44374DD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.28301886792453,
+        "readability": 89.15,
+        "argument_strength": 93.75,
+        "overall": 87.52
+      },
+      "word_count": 424,
+      "success": true
+    },
+    {
+      "essay_id": "ABAE2E36B9D0",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.9839357429719,
+        "readability": 83.47,
+        "argument_strength": 97.0,
+        "overall": 89.13
+      },
+      "word_count": 249,
+      "success": true
+    },
+    {
+      "essay_id": "5613F9FB2154",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.44,
+        "argument_strength": 99.0,
+        "overall": 91.07
+      },
+      "word_count": 599,
+      "success": true
+    },
+    {
+      "essay_id": "9AFCA29B5608",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 93.54
+      },
+      "word_count": 282,
+      "success": true
+    },
+    {
+      "essay_id": "D14A82EE41BF",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 87.01298701298701,
+        "readability": 97.1,
+        "argument_strength": 99.0,
+        "overall": 89.54
+      },
+      "word_count": 693,
+      "success": true
+    },
+    {
+      "essay_id": "8BFC5B17C5AF",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.65,
+        "argument_strength": 90.75,
+        "overall": 87.23
+      },
+      "word_count": 289,
+      "success": true
+    },
+    {
+      "essay_id": "912B8D2E3228",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.29,
+        "argument_strength": 96.0,
+        "overall": 92.01
+      },
+      "word_count": 592,
+      "success": true
+    },
+    {
+      "essay_id": "077DD935321C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 99.0,
+        "overall": 90.93
+      },
+      "word_count": 424,
+      "success": true
+    },
+    {
+      "essay_id": "F959259025C9",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 93.12714776632302,
+        "readability": 90.0,
+        "argument_strength": 86.5,
+        "overall": 84.25
+      },
+      "word_count": 291,
+      "success": true
+    },
+    {
+      "essay_id": "AA994A6CAF65",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.72727272727273,
+        "readability": 84.0,
+        "argument_strength": 88.5,
+        "overall": 84.6
+      },
+      "word_count": 440,
+      "success": true
+    },
+    {
+      "essay_id": "D15D74E790E7",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.97590361445783,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 88.97
+      },
+      "word_count": 498,
+      "success": true
+    },
+    {
+      "essay_id": "6A2F708CAA8B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 91.8200408997955,
+        "readability": 93.12,
+        "argument_strength": 93.75,
+        "overall": 87.57
+      },
+      "word_count": 489,
+      "success": true
+    },
+    {
+      "essay_id": "E80FFE6779BE",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.9,
+        "argument_strength": 93.75,
+        "overall": 88.41
+      },
+      "word_count": 551,
+      "success": true
+    },
+    {
+      "essay_id": "D59E1F10092B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.28260869565217,
+        "readability": 90.0,
+        "argument_strength": 59.75,
+        "overall": 70.68
+      },
+      "word_count": 368,
+      "success": true
+    },
+    {
+      "essay_id": "354946A1CA46",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.33887043189368,
+        "readability": 94.5,
+        "argument_strength": 99.0,
+        "overall": 91.5
+      },
+      "word_count": 602,
+      "success": true
+    },
+    {
+      "essay_id": "F3E71A1A4F8B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.26
+      },
+      "word_count": 328,
+      "success": true
+    },
+    {
+      "essay_id": "2D79B0F85A62",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.2,
+        "argument_strength": 96.0,
+        "overall": 89.74
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "DB48F47BB981",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 91.75,
+        "overall": 88.13
+      },
+      "word_count": 387,
+      "success": true
+    },
+    {
+      "essay_id": "DA1C845AB04A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.35036496350365,
+        "readability": 96.0,
+        "argument_strength": 88.5,
+        "overall": 86.34
+      },
+      "word_count": 274,
+      "success": true
+    },
+    {
+      "essay_id": "8A080035DEFF",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 93.28859060402685,
+        "readability": 88.98,
+        "argument_strength": 91.75,
+        "overall": 86.32
+      },
+      "word_count": 447,
+      "success": true
+    },
+    {
+      "essay_id": "743904BAD7E5",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 81.89134808853119,
+        "readability": 86.0,
+        "argument_strength": 97.0,
+        "overall": 85.76
+      },
+      "word_count": 497,
+      "success": true
+    },
+    {
+      "essay_id": "101A38A3B543",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 73.9,
+        "argument_strength": 99.0,
+        "overall": 87.92
+      },
+      "word_count": 286,
+      "success": true
+    },
+    {
+      "essay_id": "3828201E7783",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 57.75,
+        "overall": 71.01
+      },
+      "word_count": 227,
+      "success": true
+    },
+    {
+      "essay_id": "C30B52D6E340",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 57.75,
+        "overall": 71.21
+      },
+      "word_count": 266,
+      "success": true
+    },
+    {
+      "essay_id": "5084AD34C9AB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 90.80882352941177,
+        "readability": 88.35,
+        "argument_strength": 93.75,
+        "overall": 86.65
+      },
+      "word_count": 544,
+      "success": true
+    },
+    {
+      "essay_id": "57E2E8E20B45",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 97.0,
+        "overall": 87.77
+      },
+      "word_count": 240,
+      "success": true
+    },
+    {
+      "essay_id": "0DF5A1D691B6",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.38,
+        "argument_strength": 97.0,
+        "overall": 91.19
+      },
+      "word_count": 475,
+      "success": true
+    },
+    {
+      "essay_id": "1D35A6980E7F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.83
+      },
+      "word_count": 386,
+      "success": true
+    },
+    {
+      "essay_id": "33C456F1E14B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.66,
+        "argument_strength": 99.0,
+        "overall": 92.28
+      },
+      "word_count": 463,
+      "success": true
+    },
+    {
+      "essay_id": "41EF348E3016",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.01593625498008,
+        "readability": 78.0,
+        "argument_strength": 96.0,
+        "overall": 87.79
+      },
+      "word_count": 251,
+      "success": true
+    },
+    {
+      "essay_id": "9F5A37599E7B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.3342776203966,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 89.21
+      },
+      "word_count": 353,
+      "success": true
+    },
+    {
+      "essay_id": "40CC76613B2D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.51
+      },
+      "word_count": 478,
+      "success": true
+    },
+    {
+      "essay_id": "4000B8222A07",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.64,
+        "argument_strength": 99.0,
+        "overall": 89.23
+      },
+      "word_count": 354,
+      "success": true
+    },
+    {
+      "essay_id": "DE3138DC4E9C",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 96.0,
+        "overall": 90.88
+      },
+      "word_count": 289,
+      "success": true
+    },
+    {
+      "essay_id": "2022539CFE3E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.52,
+        "argument_strength": 99.0,
+        "overall": 92.41
+      },
+      "word_count": 521,
+      "success": true
+    },
+    {
+      "essay_id": "43AD4997B098",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.99,
+        "argument_strength": 99.0,
+        "overall": 90.54
+      },
+      "word_count": 358,
+      "success": true
+    },
+    {
+      "essay_id": "15128715053E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 72.29219143576826,
+        "readability": 86.0,
+        "argument_strength": 97.0,
+        "overall": 83.9
+      },
+      "word_count": 397,
+      "success": true
+    },
+    {
+      "essay_id": "E3830AB95CD7",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.17114568599717,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.11
+      },
+      "word_count": 707,
+      "success": true
+    },
+    {
+      "essay_id": "E92185894096",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.76,
+        "argument_strength": 93.75,
+        "overall": 88.65
+      },
+      "word_count": 566,
+      "success": true
+    },
+    {
+      "essay_id": "9B45D0A9E4C0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.09,
+        "argument_strength": 99.0,
+        "overall": 88.37
+      },
+      "word_count": 437,
+      "success": true
+    },
+    {
+      "essay_id": "603291BC5AD4",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.67,
+        "argument_strength": 95.5,
+        "overall": 90.17
+      },
+      "word_count": 249,
+      "success": true
+    },
+    {
+      "essay_id": "43256DAA7C40",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.71,
+        "argument_strength": 99.0,
+        "overall": 91.16
+      },
+      "word_count": 644,
+      "success": true
+    },
+    {
+      "essay_id": "12CE3C521284",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.28767123287672,
+        "readability": 96.4,
+        "argument_strength": 93.75,
+        "overall": 89.15
+      },
+      "word_count": 584,
+      "success": true
+    },
+    {
+      "essay_id": "3DCD0C034E88",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.87,
+        "argument_strength": 96.0,
+        "overall": 90.78
+      },
+      "word_count": 393,
+      "success": true
+    },
+    {
+      "essay_id": "C7A316555DF7",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 93.06
+      },
+      "word_count": 379,
+      "success": true
+    },
+    {
+      "essay_id": "8D3CBD2EC1A1",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 88.54
+      },
+      "word_count": 367,
+      "success": true
+    },
+    {
+      "essay_id": "6AEADAEF843C",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.19
+      },
+      "word_count": 556,
+      "success": true
+    },
+    {
+      "essay_id": "C161EEA83234",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.35,
+        "argument_strength": 99.0,
+        "overall": 93.12
+      },
+      "word_count": 276,
+      "success": true
+    },
+    {
+      "essay_id": "04EEA41029A0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 97.0,
+        "overall": 91.8
+      },
+      "word_count": 381,
+      "success": true
+    },
+    {
+      "essay_id": "6B2C2AFDFC90",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.27288428324698,
+        "readability": 78.81,
+        "argument_strength": 59.75,
+        "overall": 68.0
+      },
+      "word_count": 579,
+      "success": true
+    },
+    {
+      "essay_id": "554706B9063F",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.68,
+        "argument_strength": 93.75,
+        "overall": 88.35
+      },
+      "word_count": 705,
+      "success": true
+    },
+    {
+      "essay_id": "35C4FD4561B5",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.22,
+        "argument_strength": 99.0,
+        "overall": 93.46
+      },
+      "word_count": 335,
+      "success": true
+    },
+    {
+      "essay_id": "017F500BBE44",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.19,
+        "argument_strength": 99.0,
+        "overall": 89.3
+      },
+      "word_count": 424,
+      "success": true
+    },
+    {
+      "essay_id": "0A7C6741FEAA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 88.5
+      },
+      "word_count": 398,
+      "success": true
+    },
+    {
+      "essay_id": "2C42788D171D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 82.03592814371257,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 85.21
+      },
+      "word_count": 334,
+      "success": true
+    },
+    {
+      "essay_id": "714946B2A918",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.14,
+        "argument_strength": 97.0,
+        "overall": 88.28
+      },
+      "word_count": 307,
+      "success": true
+    },
+    {
+      "essay_id": "30FC788A063D",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.5
+      },
+      "word_count": 276,
+      "success": true
+    },
+    {
+      "essay_id": "D5D31918A943",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 71.55049786628734,
+        "readability": 94.42,
+        "argument_strength": 93.75,
+        "overall": 83.32
+      },
+      "word_count": 703,
+      "success": true
+    },
+    {
+      "essay_id": "B0E93CC3E195",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.3,
+        "argument_strength": 93.75,
+        "overall": 87.49
+      },
+      "word_count": 358,
+      "success": true
+    },
+    {
+      "essay_id": "0E39D7B44ACD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 77.22960151802657,
+        "readability": 97.21,
+        "argument_strength": 93.75,
+        "overall": 85.16
+      },
+      "word_count": 527,
+      "success": true
+    },
+    {
+      "essay_id": "66BD5DA864C8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.9,
+        "argument_strength": 93.75,
+        "overall": 88.28
+      },
+      "word_count": 436,
+      "success": true
+    },
+    {
+      "essay_id": "5FD1A8FB7F6C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.63,
+        "argument_strength": 86.5,
+        "overall": 86.05
+      },
+      "word_count": 392,
+      "success": true
+    },
+    {
+      "essay_id": "29F3D2561639",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.0674486803519,
+        "readability": 90.0,
+        "argument_strength": 97.0,
+        "overall": 90.16
+      },
+      "word_count": 341,
+      "success": true
+    },
+    {
+      "essay_id": "CB86EB780CF1",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 86.09179415855354,
+        "readability": 99.29,
+        "argument_strength": 99.0,
+        "overall": 89.76
+      },
+      "word_count": 719,
+      "success": true
+    },
+    {
+      "essay_id": "A5463FA03A2B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 82.6302729528536,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 89.34
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "9FCC32B37608",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.71,
+        "argument_strength": 93.75,
+        "overall": 87.49
+      },
+      "word_count": 301,
+      "success": true
+    },
+    {
+      "essay_id": "86B9BB21E8DA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.63299663299664,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 89.83
+      },
+      "word_count": 297,
+      "success": true
+    },
+    {
+      "essay_id": "46425944AD00",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.96,
+        "argument_strength": 90.75,
+        "overall": 88.34
+      },
+      "word_count": 483,
+      "success": true
+    },
+    {
+      "essay_id": "B1782A2455FB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.01492537313433,
+        "readability": 90.0,
+        "argument_strength": 90.75,
+        "overall": 87.34
+      },
+      "word_count": 335,
+      "success": true
+    },
+    {
+      "essay_id": "EC9DBC253BE7",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 88.88888888888889,
+        "readability": 94.42,
+        "argument_strength": 93.75,
+        "overall": 86.77
+      },
+      "word_count": 720,
+      "success": true
+    },
+    {
+      "essay_id": "08FB106BC96D",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 96.17590822179733,
+        "readability": 98.68,
+        "argument_strength": 93.75,
+        "overall": 89.24
+      },
+      "word_count": 523,
+      "success": true
+    },
+    {
+      "essay_id": "FAE31B5D596D",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.45454545454545,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.08
+      },
+      "word_count": 440,
+      "success": true
+    },
+    {
+      "essay_id": "C658668D91DD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.9633401221996,
+        "readability": 98.59,
+        "argument_strength": 93.75,
+        "overall": 89.77
+      },
+      "word_count": 491,
+      "success": true
+    },
+    {
+      "essay_id": "5E00448C4088",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 85.13011152416357,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 89.68
+      },
+      "word_count": 269,
+      "success": true
+    },
+    {
+      "essay_id": "7105F0C9585F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.73,
+        "argument_strength": 97.0,
+        "overall": 92.01
+      },
+      "word_count": 476,
+      "success": true
+    },
+    {
+      "essay_id": "77739C1E1A8A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.09
+      },
+      "word_count": 363,
+      "success": true
+    },
+    {
+      "essay_id": "4B361B943DFD",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 73.11827956989248,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 83.97
+      },
+      "word_count": 372,
+      "success": true
+    },
+    {
+      "essay_id": "1EB67FF9F298",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 90.75,
+        "overall": 89.17
+      },
+      "word_count": 185,
+      "success": true
+    },
+    {
+      "essay_id": "DE01C3FDCA0A",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.52724594992637,
+        "readability": 90.57,
+        "argument_strength": 93.75,
+        "overall": 87.93
+      },
+      "word_count": 679,
+      "success": true
+    },
+    {
+      "essay_id": "9CBED6B7B4D6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 85.74821852731591,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 89.93
+      },
+      "word_count": 421,
+      "success": true
+    },
+    {
+      "essay_id": "9DD7A21F7329",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.01,
+        "argument_strength": 93.75,
+        "overall": 87.17
+      },
+      "word_count": 512,
+      "success": true
+    },
+    {
+      "essay_id": "F5F95B08A719",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.55,
+        "argument_strength": 97.0,
+        "overall": 91.8
+      },
+      "word_count": 522,
+      "success": true
+    },
+    {
+      "essay_id": "570D8769BE33",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.19,
+        "argument_strength": 99.0,
+        "overall": 92.72
+      },
+      "word_count": 370,
+      "success": true
+    },
+    {
+      "essay_id": "44C4C0319940",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 88.5,
+        "overall": 85.82
+      },
+      "word_count": 246,
+      "success": true
+    },
+    {
+      "essay_id": "04FFE910FB43",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 99.0,
+        "overall": 88.58
+      },
+      "word_count": 282,
+      "success": true
+    },
+    {
+      "essay_id": "B06AEEC15A5C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 90.58823529411765,
+        "readability": 84.66,
+        "argument_strength": 91.75,
+        "overall": 84.95
+      },
+      "word_count": 425,
+      "success": true
+    },
+    {
+      "essay_id": "63E8EF40EF1D",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.02,
+        "argument_strength": 93.75,
+        "overall": 88.82
+      },
+      "word_count": 564,
+      "success": true
+    },
+    {
+      "essay_id": "B7B5F75DD7BB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 98.11676082862523,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.46
+      },
+      "word_count": 531,
+      "success": true
+    },
+    {
+      "essay_id": "AC71A062B952",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.7983193277311,
+        "readability": 85.08,
+        "argument_strength": 93.75,
+        "overall": 86.61
+      },
+      "word_count": 476,
+      "success": true
+    },
+    {
+      "essay_id": "97CF45004451",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.0,
+        "readability": 96.0,
+        "argument_strength": 91.75,
+        "overall": 89.73
+      },
+      "word_count": 250,
+      "success": true
+    },
+    {
+      "essay_id": "52C9F455F3E1",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.43,
+        "argument_strength": 93.75,
+        "overall": 87.46
+      },
+      "word_count": 460,
+      "success": true
+    },
+    {
+      "essay_id": "3B73C1DE679A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.34
+      },
+      "word_count": 435,
+      "success": true
+    },
+    {
+      "essay_id": "E3ED7398948E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.7
+      },
+      "word_count": 495,
+      "success": true
+    },
+    {
+      "essay_id": "2DFFBEFF2B10",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.6140350877193,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 91.7
+      },
+      "word_count": 228,
+      "success": true
+    },
+    {
+      "essay_id": "E5E3385C072A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.84542586750788,
+        "readability": 92.78,
+        "argument_strength": 99.0,
+        "overall": 90.61
+      },
+      "word_count": 634,
+      "success": true
+    },
+    {
+      "essay_id": "2E2C32380220",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.71,
+        "argument_strength": 93.75,
+        "overall": 87.11
+      },
+      "word_count": 491,
+      "success": true
+    },
+    {
+      "essay_id": "1466E37DEA76",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.36,
+        "argument_strength": 96.0,
+        "overall": 90.05
+      },
+      "word_count": 386,
+      "success": true
+    },
+    {
+      "essay_id": "6926AE8EDFD6",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 88.5
+      },
+      "word_count": 624,
+      "success": true
+    },
+    {
+      "essay_id": "FCBDD091C02A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.6470588235294,
+        "readability": 84.85,
+        "argument_strength": 93.75,
+        "overall": 87.13
+      },
+      "word_count": 425,
+      "success": true
+    },
+    {
+      "essay_id": "98CFBE2CE6E0",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 93.13
+      },
+      "word_count": 281,
+      "success": true
+    },
+    {
+      "essay_id": "9AC0CC34E3DA",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.93,
+        "argument_strength": 99.0,
+        "overall": 92.92
+      },
+      "word_count": 439,
+      "success": true
+    },
+    {
+      "essay_id": "006FCE4404E3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.52051835853132,
+        "readability": 99.03,
+        "argument_strength": 93.75,
+        "overall": 88.76
+      },
+      "word_count": 463,
+      "success": true
+    },
+    {
+      "essay_id": "C9BBE894F43E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.0,
+        "argument_strength": 99.0,
+        "overall": 92.24
+      },
+      "word_count": 480,
+      "success": true
+    },
+    {
+      "essay_id": "F068FD4A28D5",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 53.31,
+        "argument_strength": 95.5,
+        "overall": 82.33
+      },
+      "word_count": 512,
+      "success": true
+    },
+    {
+      "essay_id": "B82D35F3571D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 80.4772234273319,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 88.29
+      },
+      "word_count": 461,
+      "success": true
+    },
+    {
+      "essay_id": "3EE7CF68EFAA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 85.66,
+        "argument_strength": 99.0,
+        "overall": 90.33
+      },
+      "word_count": 346,
+      "success": true
+    },
+    {
+      "essay_id": "ED84F6785533",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.71299871299871,
+        "readability": 97.8,
+        "argument_strength": 93.75,
+        "overall": 89.43
+      },
+      "word_count": 777,
+      "success": true
+    },
+    {
+      "essay_id": "3C5FF86E8D90",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.81,
+        "argument_strength": 99.0,
+        "overall": 91.79
+      },
+      "word_count": 630,
+      "success": true
+    },
+    {
+      "essay_id": "B8EB9AC4606F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 93.75,
+        "overall": 86.65
+      },
+      "word_count": 310,
+      "success": true
+    },
+    {
+      "essay_id": "9996C0482579",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.03,
+        "argument_strength": 97.0,
+        "overall": 88.73
+      },
+      "word_count": 580,
+      "success": true
+    },
+    {
+      "essay_id": "31A49E961FBB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.70642201834862,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 92.5
+      },
+      "word_count": 436,
+      "success": true
+    },
+    {
+      "essay_id": "F52B67B7E04E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.63574351978171,
+        "readability": 89.33,
+        "argument_strength": 93.75,
+        "overall": 87.78
+      },
+      "word_count": 733,
+      "success": true
+    },
+    {
+      "essay_id": "D75762E19FF1",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 88.89
+      },
+      "word_count": 405,
+      "success": true
+    },
+    {
+      "essay_id": "3B463A4C358F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 59.75,
+        "overall": 73.02
+      },
+      "word_count": 355,
+      "success": true
+    },
+    {
+      "essay_id": "D42CF21B028E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.33699633699634,
+        "readability": 88.0,
+        "argument_strength": 97.0,
+        "overall": 89.74
+      },
+      "word_count": 273,
+      "success": true
+    },
+    {
+      "essay_id": "75A181667B98",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 79.75708502024291,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 87.87
+      },
+      "word_count": 741,
+      "success": true
+    },
+    {
+      "essay_id": "17B78F731950",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.9,
+        "argument_strength": 96.0,
+        "overall": 92.28
+      },
+      "word_count": 357,
+      "success": true
+    },
+    {
+      "essay_id": "D036DAA5DC63",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 86.20689655172414,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 90.3
+      },
+      "word_count": 290,
+      "success": true
+    },
+    {
+      "essay_id": "EC74C3370379",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.76,
+        "argument_strength": 93.75,
+        "overall": 89.3
+      },
+      "word_count": 491,
+      "success": true
+    },
+    {
+      "essay_id": "8B145217B17B",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 91.75,
+        "overall": 90.65
+      },
+      "word_count": 240,
+      "success": true
+    },
+    {
+      "essay_id": "D6AAE9DC566D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.43,
+        "argument_strength": 93.75,
+        "overall": 89.95
+      },
+      "word_count": 608,
+      "success": true
+    },
+    {
+      "essay_id": "D1C348E61565",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.81,
+        "argument_strength": 91.75,
+        "overall": 88.0
+      },
+      "word_count": 494,
+      "success": true
+    },
+    {
+      "essay_id": "7354F01036AF",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 88.5,
+        "overall": 86.19
+      },
+      "word_count": 289,
+      "success": true
+    },
+    {
+      "essay_id": "CBEEDF9495E2",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 96.0,
+        "overall": 91.49
+      },
+      "word_count": 217,
+      "success": true
+    },
+    {
+      "essay_id": "47185B1F5C2A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 74.72,
+        "argument_strength": 96.0,
+        "overall": 88.06
+      },
+      "word_count": 234,
+      "success": true
+    },
+    {
+      "essay_id": "A77F36DE0241",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 71.57,
+        "argument_strength": 93.75,
+        "overall": 86.37
+      },
+      "word_count": 281,
+      "success": true
+    },
+    {
+      "essay_id": "57F714310914",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 77.90055248618785,
+        "readability": 91.83,
+        "argument_strength": 93.75,
+        "overall": 84.22
+      },
+      "word_count": 362,
+      "success": true
+    },
+    {
+      "essay_id": "FA7D9F6BE973",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.61904761904762,
+        "readability": 85.86,
+        "argument_strength": 91.75,
+        "overall": 86.74
+      },
+      "word_count": 420,
+      "success": true
+    },
+    {
+      "essay_id": "28C8E3DAA252",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.54545454545455,
+        "readability": 97.27,
+        "argument_strength": 97.0,
+        "overall": 90.77
+      },
+      "word_count": 550,
+      "success": true
+    },
+    {
+      "essay_id": "159FF32192C1",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.34883720930233,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 86.37
+      },
+      "word_count": 645,
+      "success": true
+    },
+    {
+      "essay_id": "EE58AD6297E3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 92.38578680203045,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 91.36
+      },
+      "word_count": 394,
+      "success": true
+    },
+    {
+      "essay_id": "5E538C8612E2",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 91.80327868852459,
+        "readability": 92.19,
+        "argument_strength": 99.0,
+        "overall": 90.33
+      },
+      "word_count": 488,
+      "success": true
+    },
+    {
+      "essay_id": "45FB831B9EFA",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.93388429752066,
+        "readability": 86.0,
+        "argument_strength": 91.75,
+        "overall": 86.66
+      },
+      "word_count": 484,
+      "success": true
+    },
+    {
+      "essay_id": "372F4B66B279",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.69,
+        "argument_strength": 93.75,
+        "overall": 89.28
+      },
+      "word_count": 710,
+      "success": true
+    },
+    {
+      "essay_id": "48B53DA766D3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.72,
+        "argument_strength": 93.75,
+        "overall": 87.08
+      },
+      "word_count": 586,
+      "success": true
+    },
+    {
+      "essay_id": "722C2FA2FA0E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.61,
+        "argument_strength": 99.0,
+        "overall": 92.18
+      },
+      "word_count": 385,
+      "success": true
+    },
+    {
+      "essay_id": "80A47F12C215",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.58
+      },
+      "word_count": 384,
+      "success": true
+    },
+    {
+      "essay_id": "9CDD382C7FD0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 84.49612403100775,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 87.19
+      },
+      "word_count": 516,
+      "success": true
+    },
+    {
+      "essay_id": "812B06A6EFC4",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 90.75,
+        "overall": 89.71
+      },
+      "word_count": 294,
+      "success": true
+    },
+    {
+      "essay_id": "8DB4751C05A1",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 87.17948717948718,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 90.17
+      },
+      "word_count": 312,
+      "success": true
+    },
+    {
+      "essay_id": "D77718CCDFCC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.12403100775194,
+        "readability": 99.77,
+        "argument_strength": 88.5,
+        "overall": 86.89
+      },
+      "word_count": 516,
+      "success": true
+    },
+    {
+      "essay_id": "07CCB6A394DE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 56.75,
+        "overall": 71.53
+      },
+      "word_count": 201,
+      "success": true
+    },
+    {
+      "essay_id": "B6572CED6B2E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.91,
+        "argument_strength": 93.75,
+        "overall": 88.07
+      },
+      "word_count": 446,
+      "success": true
+    },
+    {
+      "essay_id": "0300455258CB",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 86.5,
+        "overall": 86.24
+      },
+      "word_count": 200,
+      "success": true
+    },
+    {
+      "essay_id": "1DEA97747B2D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.58
+      },
+      "word_count": 474,
+      "success": true
+    },
+    {
+      "essay_id": "BFA4685DCDC6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 89.4291754756871,
+        "readability": 97.4,
+        "argument_strength": 91.75,
+        "overall": 87.12
+      },
+      "word_count": 473,
+      "success": true
+    },
+    {
+      "essay_id": "B564956269E3",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.80511182108626,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 89.21
+      },
+      "word_count": 313,
+      "success": true
+    },
+    {
+      "essay_id": "A55DFE962B8D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.06,
+        "argument_strength": 90.75,
+        "overall": 88.56
+      },
+      "word_count": 402,
+      "success": true
+    },
+    {
+      "essay_id": "62D067D4A2C0",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 94.1972920696325,
+        "readability": 98.55,
+        "argument_strength": 93.75,
+        "overall": 88.95
+      },
+      "word_count": 517,
+      "success": true
+    },
+    {
+      "essay_id": "B67C452749B8",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.24564183835182,
+        "readability": 91.86,
+        "argument_strength": 99.0,
+        "overall": 90.22
+      },
+      "word_count": 631,
+      "success": true
+    },
+    {
+      "essay_id": "FF31066811BF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.96,
+        "argument_strength": 93.75,
+        "overall": 86.48
+      },
+      "word_count": 520,
+      "success": true
+    },
+    {
+      "essay_id": "6CC267680CD2",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.62,
+        "argument_strength": 93.75,
+        "overall": 87.22
+      },
+      "word_count": 626,
+      "success": true
+    },
+    {
+      "essay_id": "65CD7CF594DB",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 86.66666666666667,
+        "readability": 76.0,
+        "argument_strength": 99.0,
+        "overall": 85.37
+      },
+      "word_count": 375,
+      "success": true
+    },
+    {
+      "essay_id": "E075E7025EF4",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.91891891891892,
+        "readability": 93.42,
+        "argument_strength": 93.75,
+        "overall": 88.6
+      },
+      "word_count": 925,
+      "success": true
+    },
+    {
+      "essay_id": "07E4962801FC",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 77.03,
+        "argument_strength": 90.75,
+        "overall": 85.29
+      },
+      "word_count": 293,
+      "success": true
+    },
+    {
+      "essay_id": "D1A58FA70FBB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.98,
+        "argument_strength": 99.0,
+        "overall": 89.73
+      },
+      "word_count": 483,
+      "success": true
+    },
+    {
+      "essay_id": "E86C6679AAF2",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 99.0,
+        "overall": 92.02
+      },
+      "word_count": 217,
+      "success": true
+    },
+    {
+      "essay_id": "A99553A47BC6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.73755656108597,
+        "readability": 83.01,
+        "argument_strength": 57.75,
+        "overall": 68.48
+      },
+      "word_count": 442,
+      "success": true
+    },
+    {
+      "essay_id": "102491185DE3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 70.58,
+        "argument_strength": 90.75,
+        "overall": 83.71
+      },
+      "word_count": 449,
+      "success": true
+    },
+    {
+      "essay_id": "76CA2B3BCAEF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.3,
+        "argument_strength": 90.75,
+        "overall": 86.28
+      },
+      "word_count": 583,
+      "success": true
+    },
+    {
+      "essay_id": "60E368CF51B8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 79.63,
+        "argument_strength": 97.0,
+        "overall": 88.74
+      },
+      "word_count": 419,
+      "success": true
+    },
+    {
+      "essay_id": "6DE03443CD95",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 93.42105263157895,
+        "readability": 100.0,
+        "argument_strength": 91.75,
+        "overall": 88.77
+      },
+      "word_count": 304,
+      "success": true
+    },
+    {
+      "essay_id": "C2135455106D",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 85.5,
+        "overall": 87.07
+      },
+      "word_count": 249,
+      "success": true
+    },
+    {
+      "essay_id": "07E0FFD2F98A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 91.75,
+        "overall": 87.39
+      },
+      "word_count": 346,
+      "success": true
+    },
+    {
+      "essay_id": "6E7209B35D34",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.2,
+        "argument_strength": 99.0,
+        "overall": 91.93
+      },
+      "word_count": 263,
+      "success": true
+    },
+    {
+      "essay_id": "DFADF4684C43",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.54901960784314,
+        "readability": 96.32,
+        "argument_strength": 99.0,
+        "overall": 91.65
+      },
+      "word_count": 408,
+      "success": true
+    },
+    {
+      "essay_id": "8130CB6CCD46",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.87,
+        "argument_strength": 93.75,
+        "overall": 87.89
+      },
+      "word_count": 900,
+      "success": true
+    },
+    {
+      "essay_id": "D8A6A717C7A3",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 92.6470588235294,
+        "readability": 89.56,
+        "argument_strength": 99.0,
+        "overall": 89.75
+      },
+      "word_count": 408,
+      "success": true
+    },
+    {
+      "essay_id": "D0B25FD48780",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 90.8883826879271,
+        "readability": 81.83,
+        "argument_strength": 93.75,
+        "overall": 84.84
+      },
+      "word_count": 439,
+      "success": true
+    },
+    {
+      "essay_id": "E7C2FE6B860D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 78.6535303776683,
+        "readability": 95.36,
+        "argument_strength": 99.0,
+        "overall": 87.55
+      },
+      "word_count": 609,
+      "success": true
+    },
+    {
+      "essay_id": "D5F73CFE97CC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.68034557235421,
+        "readability": 92.95,
+        "argument_strength": 99.0,
+        "overall": 91.26
+      },
+      "word_count": 463,
+      "success": true
+    },
+    {
+      "essay_id": "42BCE55192A0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.08454810495627,
+        "readability": 82.94,
+        "argument_strength": 99.0,
+        "overall": 89.15
+      },
+      "word_count": 343,
+      "success": true
+    },
+    {
+      "essay_id": "F92664C55FBB",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 0.0,
+        "readability": 0.0,
+        "argument_strength": 0.0,
+        "overall": 0.0
+      },
+      "word_count": 756,
+      "success": true
+    },
+    {
+      "essay_id": "6CD55BD836C3",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 91.58
+      },
+      "word_count": 214,
+      "success": true
+    },
+    {
+      "essay_id": "F91704A35E31",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 87.7
+      },
+      "word_count": 330,
+      "success": true
+    },
+    {
+      "essay_id": "CD41DCF9A13D",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 53.125,
+        "readability": 72.0,
+        "argument_strength": 93.75,
+        "overall": 75.13
+      },
+      "word_count": 320,
+      "success": true
+    },
+    {
+      "essay_id": "BB1C72987417",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 63.96396396396396,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 81.32
+      },
+      "word_count": 666,
+      "success": true
+    },
+    {
+      "essay_id": "0B7734BF8C3E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 70.37037037037037,
+        "readability": 97.26,
+        "argument_strength": 96.0,
+        "overall": 85.61
+      },
+      "word_count": 405,
+      "success": true
+    },
+    {
+      "essay_id": "A89E289BE3EC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.17,
+        "argument_strength": 91.75,
+        "overall": 88.31
+      },
+      "word_count": 409,
+      "success": true
+    },
+    {
+      "essay_id": "A710318DB215",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 93.5
+      },
+      "word_count": 318,
+      "success": true
+    },
+    {
+      "essay_id": "3D1C987B7AB2",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.26386233269598,
+        "readability": 89.25,
+        "argument_strength": 93.75,
+        "overall": 87.1
+      },
+      "word_count": 523,
+      "success": true
+    },
+    {
+      "essay_id": "27365668689C",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 88.27
+      },
+      "word_count": 315,
+      "success": true
+    },
+    {
+      "essay_id": "2B49B48C3B2C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.76785714285714,
+        "readability": 91.18,
+        "argument_strength": 93.75,
+        "overall": 88.01
+      },
+      "word_count": 448,
+      "success": true
+    },
+    {
+      "essay_id": "CED57435BA0B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 72.3991507430998,
+        "readability": 95.68,
+        "argument_strength": 93.75,
+        "overall": 83.73
+      },
+      "word_count": 471,
+      "success": true
+    },
+    {
+      "essay_id": "37334F0182B8",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.0059880239521,
+        "readability": 78.3,
+        "argument_strength": 99.0,
+        "overall": 89.68
+      },
+      "word_count": 334,
+      "success": true
+    },
+    {
+      "essay_id": "4F308AFCC759",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.39,
+        "argument_strength": 99.0,
+        "overall": 89.87
+      },
+      "word_count": 497,
+      "success": true
+    },
+    {
+      "essay_id": "7866D13F418A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 81.69336384439359,
+        "readability": 97.46,
+        "argument_strength": 91.75,
+        "overall": 85.79
+      },
+      "word_count": 437,
+      "success": true
+    },
+    {
+      "essay_id": "5E0A963CC199",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 91.45
+      },
+      "word_count": 266,
+      "success": true
+    },
+    {
+      "essay_id": "8FE8D9C4D122",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 73.14049586776859,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 84.37
+      },
+      "word_count": 484,
+      "success": true
+    },
+    {
+      "essay_id": "4229BE9A3599",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.83549783549783,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 89.97
+      },
+      "word_count": 462,
+      "success": true
+    },
+    {
+      "essay_id": "D7CB63615884",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 88.89
+      },
+      "word_count": 436,
+      "success": true
+    },
+    {
+      "essay_id": "D236B403D7EE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.81528662420382,
+        "readability": 84.55,
+        "argument_strength": 95.5,
+        "overall": 87.56
+      },
+      "word_count": 314,
+      "success": true
+    },
+    {
+      "essay_id": "BCDD31180F50",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 57.75,
+        "overall": 71.21
+      },
+      "word_count": 266,
+      "success": true
+    },
+    {
+      "essay_id": "434E715DC9BE",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 92.97423887587821,
+        "readability": 82.84,
+        "argument_strength": 96.0,
+        "overall": 87.25
+      },
+      "word_count": 427,
+      "success": true
+    },
+    {
+      "essay_id": "3A608246043A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.64,
+        "argument_strength": 93.75,
+        "overall": 88.7
+      },
+      "word_count": 442,
+      "success": true
+    },
+    {
+      "essay_id": "4A74582152C2",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.12,
+        "argument_strength": 99.0,
+        "overall": 90.2
+      },
+      "word_count": 384,
+      "success": true
+    },
+    {
+      "essay_id": "BA8A33501B62",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.94
+      },
+      "word_count": 230,
+      "success": true
+    },
+    {
+      "essay_id": "6721CB9E8407",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.08610567514677,
+        "readability": 99.82,
+        "argument_strength": 99.0,
+        "overall": 92.09
+      },
+      "word_count": 511,
+      "success": true
+    },
+    {
+      "essay_id": "88808F360054",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.73,
+        "argument_strength": 93.75,
+        "overall": 89.33
+      },
+      "word_count": 476,
+      "success": true
+    },
+    {
+      "essay_id": "ECC8BCB25965",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 97.0,
+        "overall": 90.83
+      },
+      "word_count": 172,
+      "success": true
+    },
+    {
+      "essay_id": "FA5CE3A393CF",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.07602339181287,
+        "readability": 88.05,
+        "argument_strength": 93.75,
+        "overall": 87.45
+      },
+      "word_count": 684,
+      "success": true
+    },
+    {
+      "essay_id": "75AADDF98A77",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 96.57924743443557,
+        "readability": 84.97,
+        "argument_strength": 99.0,
+        "overall": 89.01
+      },
+      "word_count": 877,
+      "success": true
+    },
+    {
+      "essay_id": "548A0120A1CA",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.8401727861771,
+        "readability": 89.42,
+        "argument_strength": 99.0,
+        "overall": 90.99
+      },
+      "word_count": 463,
+      "success": true
+    },
+    {
+      "essay_id": "BEDE9BA3773B",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.60917941585535,
+        "readability": 96.29,
+        "argument_strength": 99.0,
+        "overall": 91.67
+      },
+      "word_count": 719,
+      "success": true
+    },
+    {
+      "essay_id": "E3C8416D1A46",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 62.83783783783784,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 82.31
+      },
+      "word_count": 296,
+      "success": true
+    },
+    {
+      "essay_id": "36675E8BD1D8",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 87.91,
+        "argument_strength": 97.0,
+        "overall": 90.01
+      },
+      "word_count": 531,
+      "success": true
+    },
+    {
+      "essay_id": "F468F20B31EE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.6958525345622,
+        "readability": 95.17,
+        "argument_strength": 90.75,
+        "overall": 88.25
+      },
+      "word_count": 434,
+      "success": true
+    },
+    {
+      "essay_id": "6B8BA96DAE7D",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.94
+      },
+      "word_count": 293,
+      "success": true
+    },
+    {
+      "essay_id": "952F78B59D87",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 88.5,
+        "overall": 88.41
+      },
+      "word_count": 296,
+      "success": true
+    },
+    {
+      "essay_id": "C5DFE64B6709",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 83.30241187384044,
+        "readability": 83.05,
+        "argument_strength": 97.0,
+        "overall": 85.73
+      },
+      "word_count": 539,
+      "success": true
+    },
+    {
+      "essay_id": "5836F167C056",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 75.54,
+        "argument_strength": 99.0,
+        "overall": 88.74
+      },
+      "word_count": 404,
+      "success": true
+    },
+    {
+      "essay_id": "4C69F84BA485",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 96.0,
+        "overall": 92.32
+      },
+      "word_count": 186,
+      "success": true
+    },
+    {
+      "essay_id": "F83073754B6E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.06172839506173,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 91.33
+      },
+      "word_count": 405,
+      "success": true
+    },
+    {
+      "essay_id": "C85366379E6E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.3974358974359,
+        "readability": 86.63,
+        "argument_strength": 99.0,
+        "overall": 89.8
+      },
+      "word_count": 624,
+      "success": true
+    },
+    {
+      "essay_id": "D7CA38DCCAF5",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 87.34,
+        "argument_strength": 99.0,
+        "overall": 90.72
+      },
+      "word_count": 474,
+      "success": true
+    },
+    {
+      "essay_id": "8EBE7046DC7E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.65
+      },
+      "word_count": 258,
+      "success": true
+    },
+    {
+      "essay_id": "32F5DA058C62",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.67,
+        "argument_strength": 93.75,
+        "overall": 86.97
+      },
+      "word_count": 374,
+      "success": true
+    },
+    {
+      "essay_id": "C2E33FCEC470",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 92.1259842519685,
+        "readability": 93.39,
+        "argument_strength": 99.0,
+        "overall": 89.88
+      },
+      "word_count": 762,
+      "success": true
+    },
+    {
+      "essay_id": "0ADC131806BB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 86.25429553264605,
+        "readability": 99.79,
+        "argument_strength": 93.75,
+        "overall": 87.41
+      },
+      "word_count": 582,
+      "success": true
+    },
+    {
+      "essay_id": "9E377C4B6248",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.3436928702011,
+        "readability": 90.0,
+        "argument_strength": 59.75,
+        "overall": 70.57
+      },
+      "word_count": 547,
+      "success": true
+    },
+    {
+      "essay_id": "2FAD5F89D267",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.18,
+        "argument_strength": 93.75,
+        "overall": 87.65
+      },
+      "word_count": 313,
+      "success": true
+    },
+    {
+      "essay_id": "D8C0C228682B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.38
+      },
+      "word_count": 373,
+      "success": true
+    },
+    {
+      "essay_id": "E341A9A188EB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.45
+      },
+      "word_count": 457,
+      "success": true
+    },
+    {
+      "essay_id": "AE4F952C9227",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 91.54929577464789,
+        "readability": 91.61,
+        "argument_strength": 91.75,
+        "overall": 86.25
+      },
+      "word_count": 710,
+      "success": true
+    },
+    {
+      "essay_id": "4B9EE24A57EB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 91.75,
+        "overall": 89.33
+      },
+      "word_count": 421,
+      "success": true
+    },
+    {
+      "essay_id": "8D26E9ABC857",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 88.18897637795276,
+        "readability": 86.0,
+        "argument_strength": 90.75,
+        "overall": 84.98
+      },
+      "word_count": 254,
+      "success": true
+    },
+    {
+      "essay_id": "367111CA290A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 98.46390168970814,
+        "readability": 83.96,
+        "argument_strength": 90.75,
+        "overall": 86.01
+      },
+      "word_count": 651,
+      "success": true
+    },
+    {
+      "essay_id": "88B8F8666DA0",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.23,
+        "argument_strength": 99.0,
+        "overall": 92.04
+      },
+      "word_count": 474,
+      "success": true
+    },
+    {
+      "essay_id": "C2842810D3F4",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 79.43444730077121,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 86.43
+      },
+      "word_count": 389,
+      "success": true
+    },
+    {
+      "essay_id": "FE20030D3420",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 97.60479041916167,
+        "readability": 84.68,
+        "argument_strength": 93.75,
+        "overall": 86.59
+      },
+      "word_count": 835,
+      "success": true
+    },
+    {
+      "essay_id": "0BED0C651932",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.3739837398374,
+        "readability": 88.88,
+        "argument_strength": 99.0,
+        "overall": 90.14
+      },
+      "word_count": 615,
+      "success": true
+    },
+    {
+      "essay_id": "49D008420FDE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 70.76023391812865,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 86.31
+      },
+      "word_count": 342,
+      "success": true
+    },
+    {
+      "essay_id": "740969A36CE1",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.289972899729,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.41
+      },
+      "word_count": 369,
+      "success": true
+    },
+    {
+      "essay_id": "780F45FB6F2D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 80.67,
+        "argument_strength": 99.0,
+        "overall": 89.77
+      },
+      "word_count": 433,
+      "success": true
+    },
+    {
+      "essay_id": "F1860C4149BF",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.64,
+        "argument_strength": 97.0,
+        "overall": 92.58
+      },
+      "word_count": 330,
+      "success": true
+    },
+    {
+      "essay_id": "72617860DDFE",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.0,
+        "argument_strength": 99.0,
+        "overall": 89.15
+      },
+      "word_count": 157,
+      "success": true
+    },
+    {
+      "essay_id": "277A6E7AB0F3",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 92.58
+      },
+      "word_count": 276,
+      "success": true
+    },
+    {
+      "essay_id": "F2FA6B69F481",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 71.75141242937853,
+        "readability": 85.83,
+        "argument_strength": 96.0,
+        "overall": 86.36
+      },
+      "word_count": 177,
+      "success": true
+    },
+    {
+      "essay_id": "B883B02C3638",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.0,
+        "argument_strength": 97.0,
+        "overall": 90.34
+      },
+      "word_count": 209,
+      "success": true
+    },
+    {
+      "essay_id": "EC34891E7A1D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 85.88,
+        "argument_strength": 99.0,
+        "overall": 90.2
+      },
+      "word_count": 466,
+      "success": true
+    },
+    {
+      "essay_id": "4E9232ABC7B2",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.05,
+        "argument_strength": 99.0,
+        "overall": 91.87
+      },
+      "word_count": 400,
+      "success": true
+    },
+    {
+      "essay_id": "ECCCE5302B19",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 89.48475289169295,
+        "readability": 91.11,
+        "argument_strength": 99.0,
+        "overall": 88.8
+      },
+      "word_count": 951,
+      "success": true
+    },
+    {
+      "essay_id": "038FFF3D7750",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 86.55913978494624,
+        "readability": 84.06,
+        "argument_strength": 91.75,
+        "overall": 83.97
+      },
+      "word_count": 372,
+      "success": true
+    },
+    {
+      "essay_id": "67FF8B6CE8B4",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.51861042183623,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.13
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "4E1C636ABEAD",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.78,
+        "argument_strength": 97.0,
+        "overall": 89.71
+      },
+      "word_count": 319,
+      "success": true
+    },
+    {
+      "essay_id": "96949F04874D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 85.7,
+        "argument_strength": 99.0,
+        "overall": 90.24
+      },
+      "word_count": 400,
+      "success": true
+    },
+    {
+      "essay_id": "0F41A81D8290",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 95.7983193277311,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 87.54
+      },
+      "word_count": 238,
+      "success": true
+    },
+    {
+      "essay_id": "85B22ACB7FBC",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.4
+      },
+      "word_count": 354,
+      "success": true
+    },
+    {
+      "essay_id": "C0EF97669300",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 96.0,
+        "overall": 88.54
+      },
+      "word_count": 204,
+      "success": true
+    },
+    {
+      "essay_id": "9E2872BCE836",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.78,
+        "argument_strength": 99.0,
+        "overall": 90.15
+      },
+      "word_count": 410,
+      "success": true
+    },
+    {
+      "essay_id": "29DD536C98FA",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.34
+      },
+      "word_count": 399,
+      "success": true
+    },
+    {
+      "essay_id": "D30E609DA439",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.08,
+        "argument_strength": 93.75,
+        "overall": 87.45
+      },
+      "word_count": 391,
+      "success": true
+    },
+    {
+      "essay_id": "3A2DF1C23374",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.2363315696649,
+        "readability": 98.78,
+        "argument_strength": 93.75,
+        "overall": 89.6
+      },
+      "word_count": 567,
+      "success": true
+    },
+    {
+      "essay_id": "568E8CFD0153",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.62,
+        "argument_strength": 97.0,
+        "overall": 90.53
+      },
+      "word_count": 325,
+      "success": true
+    },
+    {
+      "essay_id": "81F537995AC6",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 97.0,
+        "overall": 91.64
+      },
+      "word_count": 217,
+      "success": true
+    },
+    {
+      "essay_id": "6F101B276EB1",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 59.75,
+        "overall": 72.28
+      },
+      "word_count": 371,
+      "success": true
+    },
+    {
+      "essay_id": "CBB6B78B7E7D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 92.88
+      },
+      "word_count": 287,
+      "success": true
+    },
+    {
+      "essay_id": "F4A2ED61E8CA",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 76.0,
+        "argument_strength": 91.75,
+        "overall": 85.39
+      },
+      "word_count": 422,
+      "success": true
+    },
+    {
+      "essay_id": "FBF22F9543ED",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.750656167979,
+        "readability": 100.0,
+        "argument_strength": 59.75,
+        "overall": 72.1
+      },
+      "word_count": 381,
+      "success": true
+    },
+    {
+      "essay_id": "4886EA04CCB8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 72.0,
+        "argument_strength": 99.0,
+        "overall": 87.5
+      },
+      "word_count": 326,
+      "success": true
+    },
+    {
+      "essay_id": "28E2327785FC",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.91836734693878,
+        "readability": 94.65,
+        "argument_strength": 93.75,
+        "overall": 88.41
+      },
+      "word_count": 735,
+      "success": true
+    },
+    {
+      "essay_id": "BD75DE5E2312",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 93.5,
+        "overall": 88.73
+      },
+      "word_count": 262,
+      "success": true
+    },
+    {
+      "essay_id": "B36AC1539899",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 86.63101604278074,
+        "readability": 95.04,
+        "argument_strength": 97.0,
+        "overall": 88.74
+      },
+      "word_count": 374,
+      "success": true
+    },
+    {
+      "essay_id": "02DD203E0599",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.45390070921985,
+        "readability": 96.0,
+        "argument_strength": 96.0,
+        "overall": 91.37
+      },
+      "word_count": 282,
+      "success": true
+    },
+    {
+      "essay_id": "2D49C0B1DE8E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 98.78,
+        "argument_strength": 93.75,
+        "overall": 90.34
+      },
+      "word_count": 442,
+      "success": true
+    },
+    {
+      "essay_id": "7ACEACD37436",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.9879759519038,
+        "readability": 83.17,
+        "argument_strength": 99.0,
+        "overall": 88.25
+      },
+      "word_count": 499,
+      "success": true
+    },
+    {
+      "essay_id": "C0A366974394",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.46835443037975,
+        "readability": 98.56,
+        "argument_strength": 99.0,
+        "overall": 92.52
+      },
+      "word_count": 395,
+      "success": true
+    },
+    {
+      "essay_id": "10B14FD9E811",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.39,
+        "argument_strength": 96.0,
+        "overall": 91.79
+      },
+      "word_count": 449,
+      "success": true
+    },
+    {
+      "essay_id": "821AA03C5F97",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 91.78644763860369,
+        "readability": 99.94,
+        "argument_strength": 93.75,
+        "overall": 88.66
+      },
+      "word_count": 487,
+      "success": true
+    },
+    {
+      "essay_id": "B7EF8F40B761",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 59.75,
+        "overall": 70.03
+      },
+      "word_count": 341,
+      "success": true
+    },
+    {
+      "essay_id": "CA78C2D08935",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 91.20234604105572,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 87.9
+      },
+      "word_count": 341,
+      "success": true
+    },
+    {
+      "essay_id": "A6579F0B5AD6",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 87.97,
+        "argument_strength": 99.0,
+        "overall": 90.3
+      },
+      "word_count": 781,
+      "success": true
+    },
+    {
+      "essay_id": "A237B06D5FFF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 90.17
+      },
+      "word_count": 392,
+      "success": true
+    },
+    {
+      "essay_id": "DD92C238873F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 59.75,
+        "overall": 73.91
+      },
+      "word_count": 261,
+      "success": true
+    },
+    {
+      "essay_id": "A55BB07B810F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 90.75,
+        "overall": 90.43
+      },
+      "word_count": 278,
+      "success": true
+    },
+    {
+      "essay_id": "295051C6487F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 62.328767123287676,
+        "readability": 92.0,
+        "argument_strength": 87.0,
+        "overall": 75.83
+      },
+      "word_count": 292,
+      "success": true
+    },
+    {
+      "essay_id": "C9A11B5CEEAD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 89.10675381263617,
+        "readability": 96.0,
+        "argument_strength": 97.0,
+        "overall": 89.32
+      },
+      "word_count": 459,
+      "success": true
+    },
+    {
+      "essay_id": "E5F929B40FB9",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.76,
+        "argument_strength": 93.75,
+        "overall": 86.72
+      },
+      "word_count": 680,
+      "success": true
+    },
+    {
+      "essay_id": "1AEA362DB4A3",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 93.75,
+        "overall": 88.94
+      },
+      "word_count": 417,
+      "success": true
+    },
+    {
+      "essay_id": "2C66292169DC",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 78.52760736196319,
+        "readability": 96.0,
+        "argument_strength": 91.75,
+        "overall": 84.99
+      },
+      "word_count": 326,
+      "success": true
+    },
+    {
+      "essay_id": "5B9D21C6B379",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.32,
+        "argument_strength": 91.75,
+        "overall": 88.51
+      },
+      "word_count": 485,
+      "success": true
+    },
+    {
+      "essay_id": "2FB13DEA0047",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.57,
+        "argument_strength": 93.75,
+        "overall": 87.44
+      },
+      "word_count": 609,
+      "success": true
+    },
+    {
+      "essay_id": "72E99FD177CC",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 85.72,
+        "argument_strength": 99.0,
+        "overall": 90.6
+      },
+      "word_count": 317,
+      "success": true
+    },
+    {
+      "essay_id": "571F81ED5EC3",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.18,
+        "argument_strength": 93.75,
+        "overall": 88.89
+      },
+      "word_count": 532,
+      "success": true
+    },
+    {
+      "essay_id": "BD4630F23F27",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 75.83,
+        "argument_strength": 97.0,
+        "overall": 88.68
+      },
+      "word_count": 418,
+      "success": true
+    },
+    {
+      "essay_id": "6C8D8C5145DB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.57281553398059,
+        "readability": 85.49,
+        "argument_strength": 97.0,
+        "overall": 89.14
+      },
+      "word_count": 412,
+      "success": true
+    },
+    {
+      "essay_id": "A6527612255D",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.66666666666667,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 88.08
+      },
+      "word_count": 300,
+      "success": true
+    },
+    {
+      "essay_id": "83674707FB23",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.34,
+        "argument_strength": 93.75,
+        "overall": 88.81
+      },
+      "word_count": 887,
+      "success": true
+    },
+    {
+      "essay_id": "186E0113C127",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 88.5,
+        "overall": 86.91
+      },
+      "word_count": 489,
+      "success": true
+    },
+    {
+      "essay_id": "646F2F3D2BAF",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.13,
+        "argument_strength": 93.75,
+        "overall": 89.7
+      },
+      "word_count": 564,
+      "success": true
+    },
+    {
+      "essay_id": "03BE0ACDC8D2",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.11,
+        "argument_strength": 99.0,
+        "overall": 88.82
+      },
+      "word_count": 301,
+      "success": true
+    },
+    {
+      "essay_id": "5FCB4D130441",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.2,
+        "argument_strength": 88.5,
+        "overall": 86.53
+      },
+      "word_count": 451,
+      "success": true
+    },
+    {
+      "essay_id": "BF845A6C39D4",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 89.36170212765957,
+        "readability": 76.0,
+        "argument_strength": 56.75,
+        "overall": 65.92
+      },
+      "word_count": 188,
+      "success": true
+    },
+    {
+      "essay_id": "7EA3E3CAB822",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.26,
+        "argument_strength": 99.0,
+        "overall": 92.51
+      },
+      "word_count": 394,
+      "success": true
+    },
+    {
+      "essay_id": "2513771E4659",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 95.4233409610984,
+        "readability": 57.93,
+        "argument_strength": 93.75,
+        "overall": 81.17
+      },
+      "word_count": 437,
+      "success": true
+    },
+    {
+      "essay_id": "9.68E+11",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.57,
+        "argument_strength": 99.0,
+        "overall": 91.22
+      },
+      "word_count": 381,
+      "success": true
+    },
+    {
+      "essay_id": "36BE571760C0",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.49,
+        "argument_strength": 59.75,
+        "overall": 71.97
+      },
+      "word_count": 478,
+      "success": true
+    },
+    {
+      "essay_id": "F64E9813C64A",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 88.01
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "A77A02D1BD00",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.54,
+        "argument_strength": 91.75,
+        "overall": 87.18
+      },
+      "word_count": 281,
+      "success": true
+    },
+    {
+      "essay_id": "E362A8296E6F",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 93.2975871313673,
+        "readability": 98.63,
+        "argument_strength": 99.0,
+        "overall": 91.12
+      },
+      "word_count": 746,
+      "success": true
+    },
+    {
+      "essay_id": "8E4D2C7A75EF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.72,
+        "argument_strength": 99.0,
+        "overall": 90.4
+      },
+      "word_count": 376,
+      "success": true
+    },
+    {
+      "essay_id": "4724B541A98F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.09,
+        "argument_strength": 99.0,
+        "overall": 90.15
+      },
+      "word_count": 512,
+      "success": true
+    },
+    {
+      "essay_id": "838BAD699C4E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 91.31
+      },
+      "word_count": 302,
+      "success": true
+    },
+    {
+      "essay_id": "AD228D5A4FAC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 88.91352549889135,
+        "readability": 95.27,
+        "argument_strength": 93.75,
+        "overall": 87.38
+      },
+      "word_count": 451,
+      "success": true
+    },
+    {
+      "essay_id": "A2A4548C52DA",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.71,
+        "argument_strength": 93.75,
+        "overall": 87.08
+      },
+      "word_count": 510,
+      "success": true
+    },
+    {
+      "essay_id": "29B2F3331792",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.66666666666667,
+        "readability": 93.6,
+        "argument_strength": 56.75,
+        "overall": 70.52
+      },
+      "word_count": 300,
+      "success": true
+    },
+    {
+      "essay_id": "16FE5612C66E",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 87.86039453717754,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 87.43
+      },
+      "word_count": 659,
+      "success": true
+    },
+    {
+      "essay_id": "62185A8460AB",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.96,
+        "argument_strength": 99.0,
+        "overall": 91.73
+      },
+      "word_count": 324,
+      "success": true
+    },
+    {
+      "essay_id": "2F5CC78714C6",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 85.33,
+        "argument_strength": 97.0,
+        "overall": 89.59
+      },
+      "word_count": 356,
+      "success": true
+    },
+    {
+      "essay_id": "5A6CB7ABED51",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 88.45,
+        "argument_strength": 93.75,
+        "overall": 88.01
+      },
+      "word_count": 542,
+      "success": true
+    },
+    {
+      "essay_id": "548AD745CE58",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.25,
+        "argument_strength": 93.75,
+        "overall": 88.19
+      },
+      "word_count": 609,
+      "success": true
+    },
+    {
+      "essay_id": "B60A2DC4B93C",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.95501022494888,
+        "readability": 99.45,
+        "argument_strength": 93.75,
+        "overall": 89.75
+      },
+      "word_count": 489,
+      "success": true
+    },
+    {
+      "essay_id": "B130A56A969C",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 59.75,
+        "overall": 70.93
+      },
+      "word_count": 204,
+      "success": true
+    },
+    {
+      "essay_id": "D6D8305B85C3",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.07,
+        "argument_strength": 99.0,
+        "overall": 92.03
+      },
+      "word_count": 840,
+      "success": true
+    },
+    {
+      "essay_id": "EE3DDDA7F1B7",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.55172413793103,
+        "readability": 90.0,
+        "argument_strength": 96.0,
+        "overall": 89.94
+      },
+      "word_count": 290,
+      "success": true
+    },
+    {
+      "essay_id": "9520819E35C3",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.96747967479675,
+        "readability": 97.2,
+        "argument_strength": 97.0,
+        "overall": 91.31
+      },
+      "word_count": 492,
+      "success": true
+    },
+    {
+      "essay_id": "AD887B08C14A",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 81.13207547169812,
+        "readability": 91.9,
+        "argument_strength": 99.0,
+        "overall": 87.29
+      },
+      "word_count": 901,
+      "success": true
+    },
+    {
+      "essay_id": "4BC315571C9C",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 97.51243781094527,
+        "readability": 80.0,
+        "argument_strength": 96.0,
+        "overall": 88.62
+      },
+      "word_count": 402,
+      "success": true
+    },
+    {
+      "essay_id": "A2B0C80404FD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 77.85,
+        "argument_strength": 99.0,
+        "overall": 89.02
+      },
+      "word_count": 362,
+      "success": true
+    },
+    {
+      "essay_id": "C9138DC25FD6",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 98.01192842942346,
+        "readability": 82.96,
+        "argument_strength": 99.0,
+        "overall": 89.01
+      },
+      "word_count": 503,
+      "success": true
+    },
+    {
+      "essay_id": "03676B73C27B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 89.71,
+        "argument_strength": 93.75,
+        "overall": 88.24
+      },
+      "word_count": 459,
+      "success": true
+    },
+    {
+      "essay_id": "F144729AD2D8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.83,
+        "argument_strength": 97.0,
+        "overall": 91.53
+      },
+      "word_count": 348,
+      "success": true
+    },
+    {
+      "essay_id": "9E6B2BAD86E8",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.03722084367246,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 91.02
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "BB2744686A59",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 88.37209302325581,
+        "readability": 96.79,
+        "argument_strength": 99.0,
+        "overall": 90.34
+      },
+      "word_count": 430,
+      "success": true
+    },
+    {
+      "essay_id": "860CB3A4935E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.33,
+        "argument_strength": 93.75,
+        "overall": 88.98
+      },
+      "word_count": 529,
+      "success": true
+    },
+    {
+      "essay_id": "EF82941481F2",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.26,
+        "argument_strength": 88.5,
+        "overall": 87.07
+      },
+      "word_count": 430,
+      "success": true
+    },
+    {
+      "essay_id": "D463648AA673",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.02325581395348,
+        "readability": 96.0,
+        "argument_strength": 96.0,
+        "overall": 90.05
+      },
+      "word_count": 430,
+      "success": true
+    },
+    {
+      "essay_id": "A9406C031440",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 79.98,
+        "argument_strength": 99.0,
+        "overall": 90.14
+      },
+      "word_count": 363,
+      "success": true
+    },
+    {
+      "essay_id": "44FA8A8A18F0",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.72,
+        "argument_strength": 59.75,
+        "overall": 71.05
+      },
+      "word_count": 485,
+      "success": true
+    },
+    {
+      "essay_id": "C513C3C93AFB",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.25,
+        "argument_strength": 97.0,
+        "overall": 92.42
+      },
+      "word_count": 361,
+      "success": true
+    },
+    {
+      "essay_id": "5DD3A198CF10",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 95.92668024439918,
+        "readability": 98.72,
+        "argument_strength": 93.75,
+        "overall": 89.08
+      },
+      "word_count": 491,
+      "success": true
+    },
+    {
+      "essay_id": "7D1D5A567625",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 93.3184855233853,
+        "readability": 82.99,
+        "argument_strength": 93.75,
+        "overall": 85.58
+      },
+      "word_count": 449,
+      "success": true
+    },
+    {
+      "essay_id": "B0A19F407570",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 77.44360902255639,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 82.84
+      },
+      "word_count": 532,
+      "success": true
+    },
+    {
+      "essay_id": "992FC1053CE0",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 89.79591836734694,
+        "readability": 88.86,
+        "argument_strength": 99.0,
+        "overall": 88.66
+      },
+      "word_count": 588,
+      "success": true
+    },
+    {
+      "essay_id": "C4A76D5B4DDF",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 98.47,
+        "argument_strength": 83.75,
+        "overall": 83.37
+      },
+      "word_count": 451,
+      "success": true
+    },
+    {
+      "essay_id": "A7E8BA809063",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.53801169590643,
+        "readability": 96.14,
+        "argument_strength": 93.75,
+        "overall": 89.09
+      },
+      "word_count": 684,
+      "success": true
+    },
+    {
+      "essay_id": "A43D4896E15A",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.65,
+        "argument_strength": 97.0,
+        "overall": 91.88
+      },
+      "word_count": 245,
+      "success": true
+    },
+    {
+      "essay_id": "26216362C2EA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 94.5578231292517,
+        "readability": 83.67,
+        "argument_strength": 99.0,
+        "overall": 88.5
+      },
+      "word_count": 735,
+      "success": true
+    },
+    {
+      "essay_id": "F0A3FF9AF244",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.15,
+        "argument_strength": 93.75,
+        "overall": 87.29
+      },
+      "word_count": 574,
+      "success": true
+    },
+    {
+      "essay_id": "76CE958B4DA1",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 92.49
+      },
+      "word_count": 266,
+      "success": true
+    },
+    {
+      "essay_id": "05AADBB637D5",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.55,
+        "argument_strength": 99.0,
+        "overall": 90.19
+      },
+      "word_count": 504,
+      "success": true
+    },
+    {
+      "essay_id": "B240AC102237",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.11,
+        "argument_strength": 93.75,
+        "overall": 86.96
+      },
+      "word_count": 324,
+      "success": true
+    },
+    {
+      "essay_id": "D1D38775CCFC",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.27,
+        "argument_strength": 93.75,
+        "overall": 89.51
+      },
+      "word_count": 322,
+      "success": true
+    },
+    {
+      "essay_id": "1AECCF34818F",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 58.0,
+        "argument_strength": 99.0,
+        "overall": 84.48
+      },
+      "word_count": 250,
+      "success": true
+    },
+    {
+      "essay_id": "DBFDE71814F3",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 93.31
+      },
+      "word_count": 295,
+      "success": true
+    },
+    {
+      "essay_id": "242180B4B196",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 84.73,
+        "argument_strength": 99.0,
+        "overall": 89.72
+      },
+      "word_count": 672,
+      "success": true
+    },
+    {
+      "essay_id": "12BD6AF88485",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.74,
+        "argument_strength": 99.0,
+        "overall": 90.25
+      },
+      "word_count": 543,
+      "success": true
+    },
+    {
+      "essay_id": "4.46E+11",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 98.3974358974359,
+        "readability": 74.75,
+        "argument_strength": 93.75,
+        "overall": 84.74
+      },
+      "word_count": 624,
+      "success": true
+    },
+    {
+      "essay_id": "C20A6EB7FBCA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 91.75,
+        "overall": 90.19
+      },
+      "word_count": 210,
+      "success": true
+    },
+    {
+      "essay_id": "A0481D628BFA",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 69.92481203007519,
+        "readability": 82.0,
+        "argument_strength": 96.0,
+        "overall": 82.29
+      },
+      "word_count": 532,
+      "success": true
+    },
+    {
+      "essay_id": "30322476D63B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.03722084367246,
+        "readability": 90.0,
+        "argument_strength": 99.0,
+        "overall": 89.86
+      },
+      "word_count": 403,
+      "success": true
+    },
+    {
+      "essay_id": "418FD8432CBB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 93.75,
+        "overall": 89.54
+      },
+      "word_count": 408,
+      "success": true
+    },
+    {
+      "essay_id": "46EF30E5DD3B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 93.75,
+        "overall": 87.95
+      },
+      "word_count": 401,
+      "success": true
+    },
+    {
+      "essay_id": "A846B232FB69",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 95.11,
+        "argument_strength": 93.75,
+        "overall": 89.27
+      },
+      "word_count": 507,
+      "success": true
+    },
+    {
+      "essay_id": "89A3CA39A31F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 72.83,
+        "argument_strength": 97.0,
+        "overall": 87.09
+      },
+      "word_count": 407,
+      "success": true
+    },
+    {
+      "essay_id": "1E85D46252A4",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 89.32384341637011,
+        "readability": 86.16,
+        "argument_strength": 93.75,
+        "overall": 85.73
+      },
+      "word_count": 562,
+      "success": true
+    },
+    {
+      "essay_id": "1CF02A1B3659",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 91.75,
+        "overall": 89.35
+      },
+      "word_count": 331,
+      "success": true
+    },
+    {
+      "essay_id": "7422D711C2FC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.5,
+        "argument_strength": 99.0,
+        "overall": 92.36
+      },
+      "word_count": 428,
+      "success": true
+    },
+    {
+      "essay_id": "D0D7E09A5578",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 93.04
+      },
+      "word_count": 306,
+      "success": true
+    },
+    {
+      "essay_id": "D8013F49DE51",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 96.16858237547893,
+        "readability": 86.0,
+        "argument_strength": 97.0,
+        "overall": 90.08
+      },
+      "word_count": 261,
+      "success": true
+    },
+    {
+      "essay_id": "44D71C1389EB",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 88.5,
+        "overall": 87.53
+      },
+      "word_count": 406,
+      "success": true
+    },
+    {
+      "essay_id": "984C5B4DDD83",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 83.82,
+        "argument_strength": 90.75,
+        "overall": 88.87
+      },
+      "word_count": 251,
+      "success": true
+    },
+    {
+      "essay_id": "7DEC605167EB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 81.44712430426716,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 88.39
+      },
+      "word_count": 539,
+      "success": true
+    },
+    {
+      "essay_id": "2F5359616C2B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 98.12734082397004,
+        "readability": 94.43,
+        "argument_strength": 99.0,
+        "overall": 91.39
+      },
+      "word_count": 534,
+      "success": true
+    },
+    {
+      "essay_id": "9678506FBD4F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.61016949152543,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 91.63
+      },
+      "word_count": 295,
+      "success": true
+    },
+    {
+      "essay_id": "1.09E+17",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.16,
+        "argument_strength": 93.75,
+        "overall": 89.23
+      },
+      "word_count": 441,
+      "success": true
+    },
+    {
+      "essay_id": "29812665BEAE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 87.47,
+        "argument_strength": 97.0,
+        "overall": 90.1
+      },
+      "word_count": 297,
+      "success": true
+    },
+    {
+      "essay_id": "C887E63C503F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 94.84536082474227,
+        "readability": 77.68,
+        "argument_strength": 93.75,
+        "overall": 85.05
+      },
+      "word_count": 388,
+      "success": true
+    },
+    {
+      "essay_id": "D26391BAE72E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 97.0,
+        "overall": 92.65
+      },
+      "word_count": 337,
+      "success": true
+    },
+    {
+      "essay_id": "9741343661EE",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.51,
+        "argument_strength": 93.75,
+        "overall": 89.8
+      },
+      "word_count": 530,
+      "success": true
+    },
+    {
+      "essay_id": "0F1B167D414E",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.18,
+        "argument_strength": 93.75,
+        "overall": 88.89
+      },
+      "word_count": 532,
+      "success": true
+    },
+    {
+      "essay_id": "6FA60DAF689D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 90.76923076923077,
+        "readability": 84.98,
+        "argument_strength": 91.75,
+        "overall": 85.19
+      },
+      "word_count": 325,
+      "success": true
+    },
+    {
+      "essay_id": "7567AEC970A5",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 96.47266313932981,
+        "readability": 88.89,
+        "argument_strength": 93.75,
+        "overall": 87.57
+      },
+      "word_count": 567,
+      "success": true
+    },
+    {
+      "essay_id": "70ADE92E9C5D",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 93.37,
+        "argument_strength": 97.0,
+        "overall": 91.24
+      },
+      "word_count": 434,
+      "success": true
+    },
+    {
+      "essay_id": "EA8B2F944034",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.02,
+        "argument_strength": 97.0,
+        "overall": 89.08
+      },
+      "word_count": 551,
+      "success": true
+    },
+    {
+      "essay_id": "C31520FB6759",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 99.0,
+        "overall": 94.34
+      },
+      "word_count": 195,
+      "success": true
+    },
+    {
+      "essay_id": "AF7AF3770E23",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 82.18,
+        "argument_strength": 96.0,
+        "overall": 88.94
+      },
+      "word_count": 357,
+      "success": true
+    },
+    {
+      "essay_id": "1EA2EA9CB8FB",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 97.46,
+        "argument_strength": 96.0,
+        "overall": 91.47
+      },
+      "word_count": 520,
+      "success": true
+    },
+    {
+      "essay_id": "04408EE0F34B",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 88.15566835871404,
+        "readability": 98.93,
+        "argument_strength": 99.0,
+        "overall": 90.48
+      },
+      "word_count": 591,
+      "success": true
+    },
+    {
+      "essay_id": "236C5B5C92CB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 79.7,
+        "argument_strength": 99.0,
+        "overall": 89.04
+      },
+      "word_count": 557,
+      "success": true
+    },
+    {
+      "essay_id": "C23E6BC49E84",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 91.64345403899722,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 91.39
+      },
+      "word_count": 359,
+      "success": true
+    },
+    {
+      "essay_id": "01CBAA1AD692",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 96.17590822179733,
+        "readability": 76.0,
+        "argument_strength": 93.75,
+        "overall": 84.58
+      },
+      "word_count": 523,
+      "success": true
+    },
+    {
+      "essay_id": "E671CF93C1FD",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.71,
+        "argument_strength": 99.0,
+        "overall": 89.88
+      },
+      "word_count": 287,
+      "success": true
+    },
+    {
+      "essay_id": "4025A22C57CD",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 98.0952380952381,
+        "readability": 86.17,
+        "argument_strength": 88.5,
+        "overall": 84.69
+      },
+      "word_count": 525,
+      "success": true
+    },
+    {
+      "essay_id": "46F64048E5F5",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.48743718592965,
+        "readability": 78.34,
+        "argument_strength": 93.75,
+        "overall": 85.8
+      },
+      "word_count": 398,
+      "success": true
+    },
+    {
+      "essay_id": "8BBA4BC818BA",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.38,
+        "argument_strength": 86.0,
+        "overall": 82.39
+      },
+      "word_count": 182,
+      "success": true
+    },
+    {
+      "essay_id": "3D16AB37AA84",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 94.44,
+        "argument_strength": 99.0,
+        "overall": 91.79
+      },
+      "word_count": 540,
+      "success": true
+    },
+    {
+      "essay_id": "4174F28C32FC",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.66,
+        "argument_strength": 93.75,
+        "overall": 89.02
+      },
+      "word_count": 332,
+      "success": true
+    },
+    {
+      "essay_id": "BD608B2E9079",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 89.39929328621908,
+        "readability": 90.0,
+        "argument_strength": 93.75,
+        "overall": 87.33
+      },
+      "word_count": 283,
+      "success": true
+    },
+    {
+      "essay_id": "14F71871BF94",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.76785714285714,
+        "readability": 92.52,
+        "argument_strength": 97.0,
+        "overall": 90.71
+      },
+      "word_count": 448,
+      "success": true
+    },
+    {
+      "essay_id": "BC94F15A8ADB",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.22991689750693,
+        "readability": 84.75,
+        "argument_strength": 99.0,
+        "overall": 89.59
+      },
+      "word_count": 361,
+      "success": true
+    },
+    {
+      "essay_id": "19FE6C3E37A6",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 81.87311178247734,
+        "readability": 95.73,
+        "argument_strength": 93.75,
+        "overall": 85.63
+      },
+      "word_count": 662,
+      "success": true
+    },
+    {
+      "essay_id": "2.67E+11",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 98.34983498349835,
+        "readability": 90.26,
+        "argument_strength": 99.0,
+        "overall": 90.68
+      },
+      "word_count": 606,
+      "success": true
+    },
+    {
+      "essay_id": "45D478F57CA1",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 97.27520435967303,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.29
+      },
+      "word_count": 367,
+      "success": true
+    },
+    {
+      "essay_id": "72677430EC9A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 90.0,
+        "argument_strength": 90.75,
+        "overall": 88.14
+      },
+      "word_count": 283,
+      "success": true
+    },
+    {
+      "essay_id": "2C44C3912AC9",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 95.63318777292577,
+        "readability": 90.0,
+        "argument_strength": 59.75,
+        "overall": 69.8
+      },
+      "word_count": 458,
+      "success": true
+    },
+    {
+      "essay_id": "04B73738C4B5",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.01,
+        "argument_strength": 91.75,
+        "overall": 87.07
+      },
+      "word_count": 323,
+      "success": true
+    },
+    {
+      "essay_id": "C2FD2B14609F",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 96.0,
+        "argument_strength": 88.5,
+        "overall": 87.39
+      },
+      "word_count": 381,
+      "success": true
+    },
+    {
+      "essay_id": "A73DDFFFA74E",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 85.8356940509915,
+        "readability": 100.0,
+        "argument_strength": 99.0,
+        "overall": 90.19
+      },
+      "word_count": 353,
+      "success": true
+    },
+    {
+      "essay_id": "5D9E0DFDFCA4",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 86.63101604278074,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 87.7
+      },
+      "word_count": 374,
+      "success": true
+    },
+    {
+      "essay_id": "35C22C35F80C",
+      "human_score": 2.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 92.0,
+        "argument_strength": 97.0,
+        "overall": 91.99
+      },
+      "word_count": 217,
+      "success": true
+    },
+    {
+      "essay_id": "C74A8A9D2914",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 91.53,
+        "argument_strength": 99.0,
+        "overall": 90.99
+      },
+      "word_count": 574,
+      "success": true
+    },
+    {
+      "essay_id": "654CDF72C8C8",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 79.29606625258799,
+        "readability": 90.0,
+        "argument_strength": 59.75,
+        "overall": 66.46
+      },
+      "word_count": 483,
+      "success": true
+    },
+    {
+      "essay_id": "91C1E1BA845E",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 99.64,
+        "argument_strength": 97.0,
+        "overall": 92.28
+      },
+      "word_count": 413,
+      "success": true
+    },
+    {
+      "essay_id": "4D4A2F5E1948",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 98.52,
+        "argument_strength": 93.75,
+        "overall": 90.05
+      },
+      "word_count": 467,
+      "success": true
+    },
+    {
+      "essay_id": "32BA5D58DE5C",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 98.94514767932489,
+        "readability": 87.52,
+        "argument_strength": 93.75,
+        "overall": 87.4
+      },
+      "word_count": 948,
+      "success": true
+    },
+    {
+      "essay_id": "5D31D73FD806",
+      "human_score": 4.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 100.0,
+        "argument_strength": 93.75,
+        "overall": 90.5
+      },
+      "word_count": 477,
+      "success": true
+    },
+    {
+      "essay_id": "980B1B6E8B1A",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 92.4812030075188,
+        "readability": 90.0,
+        "argument_strength": 88.5,
+        "overall": 85.39
+      },
+      "word_count": 266,
+      "success": true
+    },
+    {
+      "essay_id": "270432D0189A",
+      "human_score": 5.0,
+      "system_scores": {
+        "grammar": 86.79471788715486,
+        "readability": 93.7,
+        "argument_strength": 99.0,
+        "overall": 88.79
+      },
+      "word_count": 833,
+      "success": true
+    },
+    {
+      "essay_id": "C3422BCCE00F",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 78.0,
+        "argument_strength": 99.0,
+        "overall": 88.75
+      },
+      "word_count": 377,
+      "success": true
+    },
+    {
+      "essay_id": "BAB09C6813DE",
+      "human_score": 3.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 86.0,
+        "argument_strength": 99.0,
+        "overall": 90.69
+      },
+      "word_count": 184,
+      "success": true
+    },
+    {
+      "essay_id": "9B21F354EAE6",
+      "human_score": 6.0,
+      "system_scores": {
+        "grammar": 100.0,
+        "readability": 81.7,
+        "argument_strength": 99.0,
+        "overall": 89.33
+      },
+      "word_count": 611,
+      "success": true
+    }
+  ],
+  "errors": []
+}

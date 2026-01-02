@@ -372,6 +372,24 @@ export interface TextAnalysisResponse {
   word_count?: number;
   generated_at: string;
   processing_time_seconds?: number;
+  rubric_scores?: {
+    rubric_id?: string | number;
+    rubric_name: string;
+    total_points: number;
+    max_points: number;
+    rubric_score: number;
+    criterion_scores: Array<{
+      criterion_id: number;
+      criterion_title: string;
+      points_earned: number;
+      max_points: number;
+      score_level: string;
+      score_level_description: string;
+      analysis_score: number;
+      feedback: string;
+    }>;
+    rubric_applied: boolean;
+  };
 }
 
 export interface BatchAnalysisRequest {

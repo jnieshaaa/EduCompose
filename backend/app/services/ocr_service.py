@@ -6,10 +6,15 @@ Based on ocr.ipynb implementation
 import logging
 import tempfile
 import os
+import warnings
 from typing import Dict, Any, Optional
 from io import BytesIO
 from PIL import Image, ImageEnhance, ImageFilter, ExifTags
 import numpy as np
+
+# Suppress known warnings from EasyOCR and PyTorch
+warnings.filterwarnings('ignore', category=RuntimeWarning, module='easyocr')
+warnings.filterwarnings('ignore', message='.*pin_memory.*', category=UserWarning)
 
 try:
     from pdf2image import convert_from_path, convert_from_bytes
@@ -17,6 +22,13 @@ try:
 except ImportError:
     PDF2IMAGE_AVAILABLE = False
     logging.warning("pdf2image not available. PDF OCR will not work.")
+
+try:
+    import PyPDF2
+    PYPDF2_AVAILABLE = True
+except ImportError:
+    PYPDF2_AVAILABLE = False
+    logging.warning("PyPDF2 not available. Direct text extraction from PDFs will not work.")
 
 try:
     import easyocr
@@ -91,9 +103,41 @@ class OCRService:
         
         return binarized_image
     
+    def _extract_text_directly_from_pdf(self, pdf_bytes: bytes) -> Optional[str]:
+        """
+        Try to extract text directly from PDF (for text-based PDFs)
+        Returns None if extraction fails or PDF is image-based
+        """
+        if not PYPDF2_AVAILABLE:
+            return None
+        
+        try:
+            pdf_file = BytesIO(pdf_bytes)
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            
+            text_parts = []
+            for page in pdf_reader.pages:
+                page_text = page.extract_text()
+                if page_text and page_text.strip():
+                    text_parts.append(page_text)
+            
+            if text_parts:
+                combined_text = '\n\n'.join(text_parts)
+                # Check if we got meaningful text (more than just whitespace/formatting)
+                if len(combined_text.strip()) > 50:  # At least 50 characters
+                    logger.info(f"Successfully extracted {len(combined_text)} characters directly from PDF")
+                    return combined_text
+            
+            return None
+        except Exception as e:
+            logger.debug(f"Direct text extraction failed (likely image-based PDF): {e}")
+            return None
+    
     def extract_text_from_pdf(self, pdf_bytes: bytes, filename: str = "document.pdf") -> Dict[str, Any]:
         """
-        Extract text from PDF file using OCR
+        Extract text from PDF file
+        First tries direct text extraction (for text-based PDFs)
+        Falls back to OCR (for scanned/image-based PDFs)
         
         Args:
             pdf_bytes: PDF file content as bytes
@@ -102,6 +146,22 @@ class OCRService:
         Returns:
             Dictionary with extracted text and metadata
         """
+        # First, try direct text extraction (faster and more accurate for text-based PDFs)
+        direct_text = self._extract_text_directly_from_pdf(pdf_bytes)
+        if direct_text:
+            word_count = len(direct_text.split())
+            return {
+                "text": direct_text,
+                "word_count": word_count,
+                "page_count": 1,  # We don't count pages in direct extraction
+                "confidence": 100.0,  # Direct extraction is 100% accurate
+                "detections": 1,
+                "extraction_method": "direct"
+            }
+        
+        # If direct extraction failed, use OCR (for scanned PDFs)
+        logger.info(f"Direct text extraction failed for {filename}, falling back to OCR...")
+        
         if not PDF2IMAGE_AVAILABLE:
             return {
                 "error": "PDF processing not available",
@@ -117,7 +177,50 @@ class OCRService:
         try:
             # Convert PDF to images
             logger.info(f"Converting PDF to images: {filename}")
-            images = convert_from_bytes(pdf_bytes, dpi=300)  # Higher DPI for better quality
+            
+            # Try to find Poppler path on Windows
+            poppler_path = None
+            if os.name == 'nt':  # Windows
+                import shutil
+                # First, try to find pdftoppm in PATH
+                pdftoppm_path = shutil.which("pdftoppm")
+                if pdftoppm_path:
+                    poppler_path = os.path.dirname(pdftoppm_path)
+                    logger.info(f"Found Poppler in PATH at: {poppler_path}")
+                else:
+                    # Common Poppler installation paths (fallback)
+                    username = os.getenv('USERNAME', '')
+                    possible_paths = [
+                        os.path.expanduser(rf"~\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin"),
+                        r"C:\Program Files\poppler\bin",
+                        r"C:\poppler\bin",
+                    ]
+                    for path in possible_paths:
+                        if os.path.exists(path) and os.path.exists(os.path.join(path, "pdftoppm.exe")):
+                            poppler_path = path
+                            logger.info(f"Found Poppler at: {poppler_path}")
+                            break
+            
+            # Convert PDF to images with Poppler path if found
+            try:
+                if poppler_path:
+                    images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=poppler_path)
+                else:
+                    images = convert_from_bytes(pdf_bytes, dpi=300)  # Higher DPI for better quality
+            except Exception as e:
+                error_msg = str(e)
+                if "poppler" in error_msg.lower() or "path" in error_msg.lower():
+                    # Poppler not found, try with explicit path
+                    logger.warning(f"Poppler not found in PATH: {e}. Trying explicit path...")
+                    username = os.getenv('USERNAME', os.getenv('USER', ''))
+                    explicit_path = os.path.expanduser(rf"~\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin")
+                    if os.path.exists(explicit_path):
+                        logger.info(f"Using explicit Poppler path: {explicit_path}")
+                        images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=explicit_path)
+                    else:
+                        raise Exception(f"Poppler not found. Please ensure Poppler is installed. Error: {error_msg}")
+                else:
+                    raise
             
             if not images:
                 return {
@@ -143,6 +246,7 @@ class OCRService:
                 
                 # Run OCR with optimized parameters
                 try:
+                    # First try with standard parameters
                     bounds = self.reader.readtext(
                         np.array(preprocessed_image),
                         min_size=0,
@@ -156,6 +260,30 @@ class OCRService:
                         text_threshold=0.5,
                         low_text=0.3
                     )
+                    
+                    # If no detections, try with more lenient parameters
+                    if len(bounds) == 0:
+                        logger.warning(f"No text detected with standard parameters on page {page_num}, trying lenient parameters...")
+                        bounds = self.reader.readtext(
+                            np.array(preprocessed_image),
+                            paragraph=True,
+                            text_threshold=0.3,  # Lower threshold
+                            low_text=0.2,  # Lower threshold
+                            width_ths=0.5,  # More lenient
+                            height_ths=0.5  # More lenient
+                        )
+                        logger.info(f"Lenient parameters found {len(bounds)} text regions")
+                    
+                    # If still no detections, try without preprocessing
+                    if len(bounds) == 0:
+                        logger.warning(f"No text detected with preprocessing on page {page_num}, trying original image...")
+                        bounds = self.reader.readtext(
+                            np.array(image),
+                            paragraph=True,
+                            text_threshold=0.3,
+                            low_text=0.2
+                        )
+                        logger.info(f"Original image found {len(bounds)} text regions")
                     
                     # Extract text and calculate confidence
                     page_text = []

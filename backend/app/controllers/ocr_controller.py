@@ -59,12 +59,15 @@ async def extract_text_from_file(
             )
         
         # Extract text using OCR
+        # Note: OCR processing is CPU-intensive, so we run it in a thread pool
+        # to avoid blocking the async event loop
+        import asyncio
         if is_pdf:
             logger.info(f"Processing PDF file: {filename}")
-            result = ocr_service.extract_text_from_pdf(file_bytes, filename)
+            result = await asyncio.to_thread(ocr_service.extract_text_from_pdf, file_bytes, filename)
         else:
             logger.info(f"Processing image file: {filename}")
-            result = ocr_service.extract_text_from_image(file_bytes, filename)
+            result = await asyncio.to_thread(ocr_service.extract_text_from_image, file_bytes, filename)
         
         # Check for errors
         if "error" in result:

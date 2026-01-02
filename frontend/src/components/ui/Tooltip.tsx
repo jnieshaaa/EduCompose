@@ -13,7 +13,7 @@ interface TooltipProps {
 const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
-  position = "right",
+  position = "bottom",
   delay = 300,
   disabled = false,
 }) => {
@@ -56,26 +56,28 @@ const Tooltip: React.FC<TooltipProps> = ({
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const gap = 8;
-    let top = rect.top + window.scrollY;
-    let left = rect.left + window.scrollX;
+    const gap = 4; // Reduced gap to make tooltip closer
+    // Use getBoundingClientRect directly since we're using fixed positioning
+    // Fixed positioning is relative to viewport, not document
+    let top = rect.top;
+    let left = rect.left;
     switch (position) {
       case "top":
-        top = rect.top + window.scrollY - gap;
-        left = rect.left + window.scrollX + rect.width / 2;
+        top = rect.top - gap;
+        left = rect.left + rect.width / 2;
         break;
       case "bottom":
-        top = rect.bottom + window.scrollY + gap;
-        left = rect.left + window.scrollX + rect.width / 2;
+        top = rect.bottom + gap;
+        left = rect.left + rect.width / 2;
         break;
       case "left":
-        top = rect.top + window.scrollY + rect.height / 2;
-        left = rect.left + window.scrollX - gap;
+        top = rect.top + rect.height / 2;
+        left = rect.left - gap;
         break;
       case "right":
       default:
-        top = rect.top + window.scrollY + rect.height / 2;
-        left = rect.right + window.scrollX + gap;
+        top = rect.top + rect.height / 2;
+        left = rect.right + gap;
         break;
     }
     setCoords({ top, left });
@@ -120,8 +122,10 @@ const Tooltip: React.FC<TooltipProps> = ({
                   top: coords.top,
                   left: coords.left,
                   transform:
-                    position === "top" || position === "bottom"
+                    position === "top"
                       ? "translate(-50%, -100%)"
+                      : position === "bottom"
+                      ? "translateX(-50%)"
                       : position === "left"
                       ? "translate(-100%, -50%)"
                       : "translate(0, -50%)",

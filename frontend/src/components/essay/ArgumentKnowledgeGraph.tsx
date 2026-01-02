@@ -40,7 +40,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   const [dimensions, setDimensions] = useState({ width: 600, height: 320 });
   const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
   const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
-  const [linkTooltipPos, setLinkTooltipPos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (!containerRef.current || typeof ResizeObserver === "undefined") {
@@ -194,6 +194,10 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
           <div
             ref={containerRef}
             className="w-full h-[600px] md:h-[700px] bg-neutral-50 border border-neutral-200 rounded-rd"
+            onMouseMove={(e) => {
+              // Track mouse position for tooltip positioning
+              setMousePos({ x: e.clientX, y: e.clientY });
+            }}
           >
             {graphData.nodes.length > 0 ? (
               <ForceGraph2D
@@ -214,18 +218,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 onLinkHover={(link: ForceLink | null) => {
                   setHoveredLink(link);
                   setHoveredNode(null);
-                  // Calculate midpoint of link for tooltip positioning
-                  if (link && link.source && link.target) {
-                    const source = link.source as ForceNode;
-                    const target = link.target as ForceNode;
-                    const midX =
-                      dimensions.width / 2 +
-                      ((source.x as number) + (target.x as number)) / 2;
-                    const midY =
-                      dimensions.height / 2 +
-                      ((source.y as number) + (target.y as number)) / 2;
-                    setLinkTooltipPos({ x: midX, y: midY });
-                  }
                 }}
                 onBackgroundClick={() => {
                   setHoveredNode(null);
@@ -335,15 +327,13 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               </div>
             )}
 
-            {/* Tooltip for nodes - appears next to node (similar to LandingPage style) */}
+            {/* Tooltip for nodes - appears next to mouse cursor */}
             {hoveredNode && (
               <div
-                className="absolute z-50 pointer-events-none transition-opacity duration-300"
+                className="fixed z-50 pointer-events-none transition-opacity duration-300"
                 style={{
-                  left: `${
-                    dimensions.width / 2 + (hoveredNode.x as number) + 15
-                  }px`,
-                  top: `${dimensions.height / 2 + (hoveredNode.y as number) + 15}px`,
+                  left: `${mousePos.x + 10}px`,
+                  top: `${mousePos.y + 10}px`,
                 }}
               >
                 <div className="bg-black bg-opacity-75 text-white text-sm rounded-md p-2 max-w-xs border border-neutral-700 shadow-xl">
@@ -357,14 +347,13 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               </div>
             )}
 
-            {/* Tooltip for links - appears at link midpoint */}
+            {/* Tooltip for links - appears next to mouse cursor */}
             {hoveredLink && !hoveredNode && (
               <div
-                className="absolute z-50 pointer-events-none transition-opacity duration-200"
+                className="fixed z-50 pointer-events-none transition-opacity duration-200"
                 style={{
-                  left: `${linkTooltipPos.x + 15}px`,
-                  top: `${linkTooltipPos.y}px`,
-                  transform: "translateY(-50%)",
+                  left: `${mousePos.x + 10}px`,
+                  top: `${mousePos.y + 10}px`,
                 }}
               >
                 <div className="bg-neutral-800 text-white text-xs rounded-md shadow-xl px-3 py-2 border border-neutral-600">

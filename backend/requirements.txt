@@ -50,6 +50,7 @@ textstat
 scikit-learn
 pandas
 numpy
+scipy
 
 # ============================================
 # Graph and Network Analysis
@@ -90,11 +91,16 @@ google-generativeai
 # ============================================
 # OCR Support (for PDF and image text extraction)
 # ============================================
-# PDF to image conversion
+# PDF text extraction (for text-based PDFs)
+PyPDF2
+# PDF to image conversion (for scanned PDFs)
 pdf2image
 # OCR library
 easyocr
 # Image processing (Pillow is usually already installed)
 Pillow
 
-#sudo apt-get install poppler-utils
+# Poppler installation (required for pdf2image):
+#   Windows: winget install oschwartz10612.Poppler
+#   Linux: sudo apt-get install poppler-utils
+#   macOS: brew install poppler
