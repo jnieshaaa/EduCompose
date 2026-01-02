@@ -409,46 +409,147 @@ export const fetchStudentsByProgramAndSection = async (
   }[]
 > => {
   try {
+    // Trim whitespace from names
+    const trimmedProgramName = programName.trim();
+    const trimmedSectionName = sectionName.trim();
+
+    console.log(
+      `[fetchStudentsByProgramAndSection] Fetching students for program: "${trimmedProgramName}", section: "${trimmedSectionName}", activityId: ${activityId}`
+    );
+
     // First, get program and section IDs from names
-    const { data: programData, error: programError } = await supabase
+    // Try exact match first
+    let { data: programData, error: programError } = await supabase
       .from("programs")
-      .select("id")
-      .eq("name", programName)
+      .select("id, name")
+      .eq("name", trimmedProgramName)
       .single();
+
+    // If exact match fails, try case-insensitive
+    if (programError || !programData) {
+      console.log(
+        `[fetchStudentsByProgramAndSection] Exact match failed, trying case-insensitive search for program`
+      );
+      const { data: programsData } = await supabase
+        .from("programs")
+        .select("id, name")
+        .ilike("name", trimmedProgramName);
+      
+      if (programsData && programsData.length > 0) {
+        programData = programsData[0];
+        programError = null;
+        console.log(
+          `[fetchStudentsByProgramAndSection] Found program with case-insensitive match: "${programData.name}" (ID: ${programData.id})`
+        );
+      }
+    }
 
     if (programError || !programData) {
-      console.error("Error finding program:", programError);
+      console.error(
+        `[fetchStudentsByProgramAndSection] Error finding program "${trimmedProgramName}":`,
+        programError
+      );
+      // Let's also list all available programs for debugging
+      const { data: allPrograms } = await supabase
+        .from("programs")
+        .select("id, name");
+      console.log(
+        `[fetchStudentsByProgramAndSection] Available programs:`,
+        allPrograms
+      );
       return [];
     }
 
-    const { data: sectionData, error: sectionError } = await supabase
+    console.log(
+      `[fetchStudentsByProgramAndSection] Found program "${programData.name}" with ID: ${programData.id}`
+    );
+
+    // Try exact match first for section
+    // Note: Sections can have the same name for different terms, so we might get multiple results
+    let { data: sectionsData, error: sectionError } = await supabase
       .from("sections")
-      .select("id")
-      .eq("name", sectionName)
-      .eq("program_id", programData.id)
-      .single();
+      .select("id, name, term")
+      .eq("name", trimmedSectionName)
+      .eq("program_id", programData.id);
 
-    if (sectionError || !sectionData) {
-      console.error("Error finding section:", sectionError);
+    // If exact match fails, try case-insensitive
+    if (sectionError || !sectionsData || sectionsData.length === 0) {
+      console.log(
+        `[fetchStudentsByProgramAndSection] Exact match failed, trying case-insensitive search for section`
+      );
+      const { data: sectionsDataCaseInsensitive } = await supabase
+        .from("sections")
+        .select("id, name, term")
+        .ilike("name", trimmedSectionName)
+        .eq("program_id", programData.id);
+      
+      if (sectionsDataCaseInsensitive && sectionsDataCaseInsensitive.length > 0) {
+        sectionsData = sectionsDataCaseInsensitive;
+        sectionError = null;
+        console.log(
+          `[fetchStudentsByProgramAndSection] Found ${sectionsData.length} section(s) with case-insensitive match`
+        );
+      }
+    }
+
+    if (sectionError || !sectionsData || sectionsData.length === 0) {
+      console.error(
+        `[fetchStudentsByProgramAndSection] Error finding section "${trimmedSectionName}" in program "${trimmedProgramName}":`,
+        sectionError
+      );
+      // Let's also list all available sections for this program for debugging
+      const { data: allSections } = await supabase
+        .from("sections")
+        .select("id, name, term, program_id")
+        .eq("program_id", programData.id);
+      console.log(
+        `[fetchStudentsByProgramAndSection] Available sections for program "${trimmedProgramName}":`,
+        allSections
+      );
       return [];
     }
 
-    // Fetch students for this program and section
+    // If multiple sections found, we need to get all of them to find students
+    // Students can be in any of these sections (same name, different terms)
+    const sectionIds = sectionsData.map((s) => s.id);
+    const sectionData = sectionsData[0]; // Use first one for logging
+
+    console.log(
+      `[fetchStudentsByProgramAndSection] Found ${sectionsData.length} section(s) with name "${sectionData.name}":`,
+      sectionsData.map((s) => `ID: ${s.id}, Term: ${s.term || "null"}`)
+    );
+
+    console.log(
+      `[fetchStudentsByProgramAndSection] Found section "${sectionData.name}" with ID: ${sectionData.id}`
+    );
+
+    // Fetch students for this program and any of the matching sections
+    // Since sections can have the same name for different terms, we need to check all matching section IDs
     const { data: studentsData, error: studentsError } = await supabase
       .from("students")
       .select("id, student_code, full_name")
       .eq("program_id", programData.id)
-      .eq("section_id", sectionData.id)
+      .in("section_id", sectionIds)
       .order("full_name", { ascending: true });
 
     if (studentsError) {
-      console.error("Error loading students:", studentsError);
+      console.error(
+        `[fetchStudentsByProgramAndSection] Error loading students:`,
+        studentsError
+      );
       return [];
     }
 
     if (!studentsData || studentsData.length === 0) {
+      console.log(
+        `[fetchStudentsByProgramAndSection] No students found for program "${programName}" and section "${sectionName}"`
+      );
       return [];
     }
+
+    console.log(
+      `[fetchStudentsByProgramAndSection] Found ${studentsData.length} students`
+    );
 
     // If activityId is provided, fetch essay submissions for this activity
     const essaySubmissions = new Map<
@@ -501,7 +602,7 @@ export const fetchStudentsByProgramAndSection = async (
     }
 
     // Map students to the expected format
-    return studentsData.map((student) => {
+    const mappedStudents = studentsData.map((student) => {
       const submission = essaySubmissions.get(student.id);
       const hasSubmission = !!submission;
 
@@ -516,8 +617,16 @@ export const fetchStudentsByProgramAndSection = async (
         score: submission?.score,
       };
     });
+
+    console.log(
+      `[fetchStudentsByProgramAndSection] Returning ${mappedStudents.length} students`
+    );
+    return mappedStudents;
   } catch (err) {
-    console.error("Unexpected error loading students:", err);
+    console.error(
+      `[fetchStudentsByProgramAndSection] Unexpected error loading students:`,
+      err
+    );
     return [];
   }
 };

@@ -28,16 +28,23 @@ export const useAlert = () => {
 
   const showAlert = useCallback(
     (message: string, options: AlertOptions = {}) => {
-      setAlertState({
-        isOpen: true,
-        type: options.type || "info",
-        title: options.title,
-        message,
-        onConfirm: options.onConfirm,
-        confirmText: options.confirmText,
-        showCancel: options.showCancel,
-        cancelText: options.cancelText,
-      });
+      // Close any existing alert first to prevent duplicates
+      setAlertState((prev) => ({ ...prev, isOpen: false }));
+      
+      // Use a small delay to ensure the previous modal closes before opening the new one
+      // This prevents multiple modals from appearing simultaneously
+      setTimeout(() => {
+        setAlertState({
+          isOpen: true,
+          type: options.type || "info",
+          title: options.title,
+          message,
+          onConfirm: options.onConfirm,
+          confirmText: options.confirmText,
+          showCancel: options.showCancel,
+          cancelText: options.cancelText,
+        });
+      }, 150);
     },
     []
   );

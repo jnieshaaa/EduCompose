@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -92,13 +93,13 @@ const AlertModal: React.FC<AlertModalProps> = ({
     onClose();
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -107,11 +108,12 @@ const AlertModal: React.FC<AlertModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200"
+            className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200 pointer-events-auto"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
             <button
@@ -174,6 +176,12 @@ const AlertModal: React.FC<AlertModalProps> = ({
       )}
     </AnimatePresence>
   );
+
+  // Render in a portal to ensure it's outside any Dialog overlays
+  if (typeof window !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 };
 
 export default AlertModal;

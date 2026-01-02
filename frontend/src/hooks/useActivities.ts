@@ -68,11 +68,17 @@ export function useActivities() {
   // Fetch students for selected program-section
   useEffect(() => {
     if (!programSection || !programName) {
+      console.log(
+        "[useActivities] Missing programSection or programName, clearing students"
+      );
       setStudents([]);
       return;
     }
 
     const loadStudents = async () => {
+      console.log(
+        `[useActivities] Loading students for program: "${programName}", section: "${programSection}", activityId: ${activityId}`
+      );
       setIsLoadingStudents(true);
       try {
         const studentsData = await fetchStudentsByProgramAndSection(
@@ -80,9 +86,13 @@ export function useActivities() {
           programSection,
           activityId || undefined
         );
+        console.log(
+          `[useActivities] Loaded ${studentsData.length} students`,
+          studentsData
+        );
         setStudents(studentsData);
       } catch (err) {
-        console.error("Error loading students:", err);
+        console.error("[useActivities] Error loading students:", err);
         setStudents([]);
       } finally {
         setIsLoadingStudents(false);

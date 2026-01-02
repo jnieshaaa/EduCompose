@@ -13,7 +13,7 @@ import { ProgramsTableView } from "../../components/programs/ProgramsTableView";
 import type { Program } from "../../data/programsData";
 
 export function ProgramsTab() {
-  const { AlertComponent, showSuccess } = useAlert();
+  const { showSuccess } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // State to toggle the "Select to Delete" mode
@@ -36,6 +36,7 @@ export function ProgramsTab() {
     handleCreateProgram,
     handleProgramClick,
     handleBatchUploadComplete,
+    AlertComponent,
   } = usePrograms();
 
   // --- Selection Handlers ---

@@ -9,7 +9,7 @@ import type { UploadResult } from "../services/BatchUploadController";
 export function usePrograms() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { showError, showSuccess } = useAlert();
+  const { showError, showSuccess, AlertComponent } = useAlert();
 
   // Read search query from URL params
   const urlSearchQuery = searchParams.get("search");
@@ -127,11 +127,50 @@ export function usePrograms() {
     }
 
     try {
-      // 2. Insert into Supabase
+      // 2. Check for duplicate program name (case-insensitive)
+      const trimmedProgramName = newProgram.name.trim();
+      const { data: existingPrograms, error: checkError } = await supabase
+        .from("programs")
+        .select("id, name")
+        .ilike("name", trimmedProgramName);
+
+      if (checkError) {
+        console.error("Error checking for duplicate program:", checkError);
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError(`Failed to verify program name: ${checkError.message}`);
+        }, 100);
+        setIsCreating(false);
+        return;
+      }
+
+      if (existingPrograms && existingPrograms.length > 0) {
+        // Duplicate found - close AddProgramModal and show error modal
+        console.log("[usePrograms] Duplicate program found:", existingPrograms);
+        setIsCreating(false);
+        // Close the AddProgramModal temporarily
+        setIsAddDialogOpen(false);
+        // Show error modal immediately
+        setTimeout(() => {
+          showError(
+            `A program with the name "${trimmedProgramName}" already exists. Please choose a different name.`,
+            {
+              title: "Duplicate Program",
+              onConfirm: () => {
+                // When OK is clicked, reopen the AddProgramModal so user can edit
+                setIsAddDialogOpen(true);
+              },
+            }
+          );
+        }, 100);
+        return;
+      }
+
+      // 3. Insert into Supabase
       const { data, error } = await supabase
         .from("programs")
         .insert({
-          name: newProgram.name,
+          name: trimmedProgramName,
           description: newProgram.description,
           tracks: parseInt(newProgram.tracks, 10),
           courses: 0,
@@ -143,15 +182,38 @@ export function usePrograms() {
 
       if (error) {
         console.error("Error creating program:", error);
-        setIsAddDialogOpen(false);
-        setTimeout(() => {
-          showError(`Failed to create program: ${error.message}`);
-        }, 100);
         setIsCreating(false);
+        // Check if it's a unique constraint violation (database-level protection)
+        if (
+          error.code === "23505" || // PostgreSQL unique violation error code
+          error.message?.toLowerCase().includes("duplicate") ||
+          error.message?.toLowerCase().includes("unique")
+        ) {
+          // Close the AddProgramModal temporarily
+          setIsAddDialogOpen(false);
+          // Show error modal immediately
+          setTimeout(() => {
+            showError(
+              `A program with the name "${trimmedProgramName}" already exists. Please choose a different name.`,
+              {
+                title: "Duplicate Program",
+                onConfirm: () => {
+                  // When OK is clicked, reopen the AddProgramModal so user can edit
+                  setIsAddDialogOpen(true);
+                },
+              }
+            );
+          }, 100);
+        } else {
+          setIsAddDialogOpen(false);
+          setTimeout(() => {
+            showError(`Failed to create program: ${error.message}`);
+          }, 100);
+        }
         return;
       }
 
-      // 3. Map Supabase response to Program type and add to the list
+      // 4. Map Supabase response to Program type and add to the list
       const newProgramObject: Program = {
         id: data.id,
         name: data.name,
@@ -164,7 +226,7 @@ export function usePrograms() {
 
       setPrograms((prevPrograms) => [newProgramObject, ...prevPrograms]);
 
-      // 4. Reset form and close dialog
+      // 5. Reset form and close dialog
       setNewProgram(initialNewProgramState);
       setIsAddDialogOpen(false);
       setIsCreating(false);
@@ -217,6 +279,7 @@ export function usePrograms() {
     handleCreateProgram,
     handleProgramClick,
     handleBatchUploadComplete,
+    // Alert Component
+    AlertComponent,
   };
 }
-
