@@ -25,11 +25,9 @@ const Tooltip: React.FC<TooltipProps> = ({
   );
 
   const showTooltip = () => {
-    console.log("showTooltip called, disabled:", disabled, "content:", content);
     if (disabled) return;
 
     const id = setTimeout(() => {
-      console.log("Setting tooltip visible");
       computeCoords();
       setIsVisible(true);
     }, delay);
@@ -109,35 +107,32 @@ const Tooltip: React.FC<TooltipProps> = ({
 
       <AnimatePresence>
         {isVisible && coords && (
-          <>
-            {console.log("Rendering tooltip:", { isVisible, coords, content })}
-            {createPortal(
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.12 }}
-                className='fixed z-[1000]'
-                style={{
-                  top: coords.top,
-                  left: coords.left,
-                  transform:
-                    position === "top"
-                      ? "translate(-50%, -100%)"
-                      : position === "bottom"
-                      ? "translateX(-50%)"
-                      : position === "left"
-                      ? "translate(-100%, -50%)"
-                      : "translate(0, -50%)",
-                }}
-              >
-                <div className='bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap'>
-                  {content}
-                </div>
-              </motion.div>,
-              document.body
-            )}
-          </>
+          createPortal(
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.12 }}
+              className='fixed z-[1000]'
+              style={{
+                top: coords.top,
+                left: coords.left,
+                transform:
+                  position === "top"
+                    ? "translate(-50%, -100%)"
+                    : position === "bottom"
+                    ? "translateX(-50%)"
+                    : position === "left"
+                    ? "translate(-100%, -50%)"
+                    : "translate(0, -50%)",
+              }}
+            >
+              <div className='bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap'>
+                {content}
+              </div>
+            </motion.div>,
+            document.body
+          )
         )}
       </AnimatePresence>
     </div>

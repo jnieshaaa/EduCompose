@@ -41,7 +41,7 @@ def warmup_all_models() -> Dict[str, Any]:
         "errors": []
     }
     
-    logger.info("🔥 Starting NLP model warmup...")
+    logger.info("Starting NLP model warmup...")
     
     # Use a dummy essay text for warmup (150+ words to pass validation)
     dummy_text = """
@@ -71,7 +71,7 @@ def warmup_all_models() -> Dict[str, Any]:
             essay_analysis_service.grammar_analyzer._ensure_llm_loaded()
             if essay_analysis_service.grammar_analyzer.available_llm:
                 warmup_results["grammar_llm"] = True
-                logger.info("      ✓ GrammarAnalyzer LLM ready")
+                logger.info("      GrammarAnalyzer LLM ready")
             else:
                 logger.info("      ℹ GrammarAnalyzer LLM not available (no API keys)")
         except Exception as e:
@@ -84,7 +84,7 @@ def warmup_all_models() -> Dict[str, Any]:
             essay_analysis_service.coherence_analyzer._ensure_sentence_model_loaded()
             warmup_results["spacy"] = True
             warmup_results["sentence_transformer"] = True
-            logger.info("      ✓ CoherenceAnalyzer ready")
+            logger.info("      CoherenceAnalyzer ready")
         except Exception as e:
             warmup_results["errors"].append(f"CoherenceAnalyzer: {str(e)}")
             logger.warning(f"      ✗ CoherenceAnalyzer: {e}")
@@ -94,7 +94,7 @@ def warmup_all_models() -> Dict[str, Any]:
             # Trigger lazy loading by analyzing dummy text
             _ = essay_analysis_service.argument_miner.analyze(dummy_text[:200])
             warmup_results["argument_miner"] = True
-            logger.info("      ✓ ArgumentMiner ready")
+            logger.info("      ArgumentMiner ready")
         except Exception as e:
             warmup_results["errors"].append(f"ArgumentMiner: {str(e)}")
             logger.warning(f"      ✗ ArgumentMiner: {e}")
@@ -102,7 +102,7 @@ def warmup_all_models() -> Dict[str, Any]:
         logger.info("    → KnowledgeGraphBuilder...")
         try:
             essay_analysis_service.knowledge_graph_builder._ensure_nlp_loaded()
-            logger.info("      ✓ KnowledgeGraphBuilder ready")
+            logger.info("      KnowledgeGraphBuilder ready")
         except Exception as e:
             warmup_results["errors"].append(f"KnowledgeGraphBuilder: {str(e)}")
             logger.warning(f"      ✗ KnowledgeGraphBuilder: {e}")
@@ -124,8 +124,8 @@ def warmup_all_models() -> Dict[str, Any]:
         warmup_results["grammar_llm"]
     ])
     
-    logger.info(f"🔥 Model warmup complete in {_warmup_duration:.2f}s")
-    logger.info(f"  ✓ {success_count} core models warmed up successfully")
+    logger.info(f"Model warmup complete in {_warmup_duration:.2f}s")
+    logger.info(f"  {success_count} core models warmed up successfully")
     if warmup_results["errors"]:
         logger.warning(f"  ⚠ {len(warmup_results['errors'])} warnings/errors")
     

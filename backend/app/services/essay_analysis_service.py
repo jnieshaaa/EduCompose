@@ -774,57 +774,95 @@ class EssayAnalysisService:
         try:
             # Handle platform rubrics (prefixed with "platform-")
             if rubric_id.startswith("platform-"):
-                # For platform rubrics, we'd need to load from hardcoded data
-                # For now, try to find in database with the numeric ID
+                # Extract numeric ID from platform-{id} format
                 numeric_id = rubric_id.replace("platform-", "")
                 try:
                     rubric_id_int = int(numeric_id)
                 except ValueError:
                     logger.warning(f"Invalid platform rubric ID format: {rubric_id}")
                     return None
+                
+                # Platform rubrics should be in database with created_by = NULL
+                # Query database for platform rubric (created_by IS NULL)
+                with engine.connect() as connection:
+                    result = connection.execute(
+                        text("""
+                            SELECT id, name, description, criteria, programs, grading_intensity
+                            FROM rubrics
+                            WHERE id = :rubric_id AND created_by IS NULL
+                        """),
+                        {"rubric_id": rubric_id_int}
+                    )
+                    row = result.fetchone()
+                    
+                    if row:
+                        # Convert row to dictionary
+                        rubric_data = {
+                            "id": row[0],
+                            "name": row[1],
+                            "description": row[2],
+                            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
+                            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
+                            "grading_intensity": row[5]
+                        }
+                        
+                        # Ensure criteria is a list
+                        if isinstance(rubric_data["criteria"], dict):
+                            # If criteria is wrapped in an object, extract it
+                            if "criteria" in rubric_data["criteria"]:
+                                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
+                            else:
+                                # Convert dict to list if needed
+                                rubric_data["criteria"] = [rubric_data["criteria"]]
+                        
+                        return rubric_data
+                    else:
+                        logger.warning(f"Platform rubric {rubric_id} (ID: {rubric_id_int}) not found in database. Platform rubrics should have created_by = NULL.")
+                        return None
             else:
+                # Regular database rubrics - could be platform (created_by IS NULL) or teacher-created
                 try:
                     rubric_id_int = int(rubric_id)
                 except ValueError:
                     logger.warning(f"Invalid rubric ID format: {rubric_id}")
                     return None
-            
-            # Query database for rubric
-            with engine.connect() as connection:
-                result = connection.execute(
-                    text("""
-                        SELECT id, name, description, criteria, programs, grading_intensity
-                        FROM rubrics
-                        WHERE id = :rubric_id
-                    """),
-                    {"rubric_id": rubric_id_int}
-                )
-                row = result.fetchone()
                 
-                if row:
-                    # Convert row to dictionary
-                    rubric_data = {
-                        "id": row[0],
-                        "name": row[1],
-                        "description": row[2],
-                        "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
-                        "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
-                        "grading_intensity": row[5]
-                    }
+                # Query database for rubric (check both platform and teacher-created)
+                with engine.connect() as connection:
+                    result = connection.execute(
+                        text("""
+                            SELECT id, name, description, criteria, programs, grading_intensity
+                            FROM rubrics
+                            WHERE id = :rubric_id
+                        """),
+                        {"rubric_id": rubric_id_int}
+                    )
+                    row = result.fetchone()
                     
-                    # Ensure criteria is a list
-                    if isinstance(rubric_data["criteria"], dict):
-                        # If criteria is wrapped in an object, extract it
-                        if "criteria" in rubric_data["criteria"]:
-                            rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
-                        else:
-                            # Convert dict to list if needed
-                            rubric_data["criteria"] = [rubric_data["criteria"]]
-                    
-                    return rubric_data
-                else:
-                    logger.warning(f"Rubric {rubric_id} not found in database")
-                    return None
+                    if row:
+                        # Convert row to dictionary
+                        rubric_data = {
+                            "id": row[0],
+                            "name": row[1],
+                            "description": row[2],
+                            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
+                            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
+                            "grading_intensity": row[5]
+                        }
+                        
+                        # Ensure criteria is a list
+                        if isinstance(rubric_data["criteria"], dict):
+                            # If criteria is wrapped in an object, extract it
+                            if "criteria" in rubric_data["criteria"]:
+                                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
+                            else:
+                                # Convert dict to list if needed
+                                rubric_data["criteria"] = [rubric_data["criteria"]]
+                        
+                        return rubric_data
+                    else:
+                        logger.warning(f"Rubric {rubric_id} not found in database")
+                        return None
                     
         except Exception as e:
             logger.error(f"Error fetching rubric {rubric_id}: {e}")

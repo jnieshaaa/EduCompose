@@ -76,19 +76,12 @@ export function useActivities() {
     }
 
     const loadStudents = async () => {
-      console.log(
-        `[useActivities] Loading students for program: "${programName}", section: "${programSection}", activityId: ${activityId}`
-      );
       setIsLoadingStudents(true);
       try {
         const studentsData = await fetchStudentsByProgramAndSection(
           programName,
           programSection,
           activityId || undefined
-        );
-        console.log(
-          `[useActivities] Loaded ${studentsData.length} students`,
-          studentsData
         );
         setStudents(studentsData);
       } catch (err) {

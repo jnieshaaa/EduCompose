@@ -57,8 +57,29 @@ export function NotificationDropdown({
       onMarkAsRead(notification.id);
     }
     setIsOpen(false);
-    // Navigate to related item if needed
-    // navigate(`/essay/${notification.relatedId}`);
+    
+    // Navigate based on notification type and related_id
+    if (notification.relatedId) {
+      try {
+        // Parse related_id if it's JSON (for essay_graded notifications)
+        const relatedData = JSON.parse(notification.relatedId);
+        if (relatedData.studentId && relatedData.activityId && relatedData.studentName) {
+          // Navigate to AnalysisResults with student data
+          navigate("/AnalysisResults", {
+            state: {
+              studentId: relatedData.studentId,
+              studentName: relatedData.studentName,
+              activityId: relatedData.activityId,
+              essayId: relatedData.essayId,
+            },
+          });
+          return;
+        }
+      } catch {
+        // If parsing fails, relatedId might be a simple string
+        // Handle other notification types here if needed
+      }
+    }
   };
 
   const formatTime = (timestamp: string) => {

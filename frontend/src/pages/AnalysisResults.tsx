@@ -320,6 +320,9 @@ const AnalysisResults: React.FC = () => {
       essayId?: number;
       error?: string;
       preview?: boolean;
+      studentId?: string;
+      studentName?: string;
+      activityId?: string;
     } | null;
 
     if (state?.error) {
@@ -361,6 +364,41 @@ const AnalysisResults: React.FC = () => {
       setAnalysis(MOCK_ANALYSIS);
       setOriginalText(MOCK_ESSAY_TEXT);
       setAnalysisKey(`preview-${Date.now()}`);
+      return;
+    }
+
+    // If studentId and activityId are provided (from notification), fetch analysis from Supabase
+    if (state?.studentId && state?.activityId && !state?.analysis && !state?.text) {
+      setLoading(true);
+      // Create async function to handle the fetch
+      const fetchAnalysis = async () => {
+        try {
+          // Dynamic import to avoid potential circular dependencies
+          const { fetchEssayAnalysis } = await import('../services/activityService');
+          const analysisData = await fetchEssayAnalysis(state.studentId, state.activityId);
+          if (analysisData) {
+            const stableAnalysis = JSON.parse(JSON.stringify(analysisData.analysis));
+            const stableText = analysisData.text || '';
+            const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
+
+            stableAnalysisRef.current = stableAnalysis;
+            stableTextRef.current = stableText;
+
+            setAnalysis(stableAnalysis);
+            setOriginalText(stableText);
+            setAnalysisKey(newAnalysisKey);
+          } else {
+            setError("Analysis results not found. The essay may not have been graded yet.");
+          }
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis results';
+          setError(errorMessage);
+          console.error('Error loading analysis from notification:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAnalysis();
       return;
     }
 
@@ -572,13 +610,13 @@ const AnalysisResults: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-6">
         <div className="max-w-4xl mx-auto">
           <button
-            onClick={() => navigate('/', { state: { text: originalText } })}
+            onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 mb-6 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Home</span>
+            <span className="font-medium">Back</span>
           </button>
-          <Modal isOpen={true} onClose={() => navigate('/', { state: { text: originalText } })} size="md">
+          <Modal isOpen={true} onClose={() => navigate(-1)} size="md">
             <div className="flex flex-col items-center text-center p-8">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -586,7 +624,7 @@ const AnalysisResults: React.FC = () => {
               <h3 className="text-xl font-semibold text-neutral-900 mb-3">Analysis Error</h3>
               <p className="text-neutral-600">{error}</p>
               <button
-                onClick={() => navigate('/', { state: { text: originalText } })}
+                onClick={() => navigate(-1)}
                 className="mt-6 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
               >
                 Close
@@ -612,7 +650,7 @@ const AnalysisResults: React.FC = () => {
         <div className="max-w-[1920px] mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate('/', { state: { text: originalText } })}
+              onClick={() => navigate(-1)}
               className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

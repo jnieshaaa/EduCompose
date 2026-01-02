@@ -52,7 +52,7 @@ async def startup_event():
     # Initialize database
     try:
         models.Base.metadata.create_all(bind=engine)
-        print("✓ Database tables initialized successfully")
+        print("Database tables initialized successfully")
 
         # Ensure legacy schemas have password_hash column nullable
         try:
@@ -66,26 +66,26 @@ async def startup_event():
         except Exception:
             pass  # Ignore if column doesn't exist or already nullable
     except Exception as e:
-        print(f"⚠ Warning: Could not initialize database tables: {e}")
+        print(f"Warning: Could not initialize database tables: {e}")
         print("  The app will continue, but database operations may fail.")
         print("  Please check your DATABASE_URL in the .env file.")
     
     # Warm up NLP models to avoid cold start delays
     # This runs synchronously to ensure models are loaded before server accepts requests
-    print("\n🔥 Warming up NLP models (this may take 30-60 seconds)...")
+    print("\nWarming up NLP models (this may take 30-60 seconds)...")
     print("   Please wait - this ensures fast analysis responses...")
     try:
         from .services.model_warmup import warmup_all_models
         warmup_result = warmup_all_models()
         if warmup_result.get("status") == "complete":
-            print(f"✓ Model warmup complete in {warmup_result.get('duration', 0):.2f}s")
+            print(f"Model warmup complete in {warmup_result.get('duration', 0):.2f}s")
             print(f"  {warmup_result.get('success_count', 0)} models ready")
             if warmup_result.get("errors"):
-                print(f"  ⚠ {len(warmup_result['errors'])} warnings (non-critical)")
+                print(f"  {len(warmup_result['errors'])} warnings (non-critical)")
         else:
-            print("⚠ Model warmup skipped (already warmed)")
+            print("Model warmup skipped (already warmed)")
     except Exception as e:
-        print(f"⚠ Warning: Model warmup failed: {e}")
+        print(f"Warning: Model warmup failed: {e}")
         print("  The app will continue, but first analysis may be slow.")
     print()
 

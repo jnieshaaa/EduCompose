@@ -1,23 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { Bell, Check } from "lucide-react";
-import { teacherNotifications, type Notification } from "../../data/notificationsData";
+import { fetchTeacherNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
+import { fetchTeacherId } from "../../services/rubricService";
+import type { Notification } from "../../data/notificationsData";
 
 export function NotificationsTab() {
-  const [notifications, setNotifications] = useState<Notification[]>(teacherNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch notifications from Supabase
+  useEffect(() => {
+    const loadNotifications = async () => {
+      setIsLoading(true);
+      const teacherId = await fetchTeacherId();
+      if (teacherId) {
+        const fetchedNotifications = await fetchTeacherNotifications(teacherId);
+        setNotifications(fetchedNotifications);
+      }
+      setIsLoading(false);
+    };
+
+    loadNotifications();
+    // Refresh notifications every 30 seconds
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAsRead = (id: string) => {
+  const handleMarkAsRead = async (id: string) => {
+    // Optimistically update UI
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    // Update in Supabase
+    const teacherId = await fetchTeacherId();
+    if (teacherId) {
+      await markNotificationAsRead(id, teacherId);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
+    // Optimistically update UI
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+
+    // Update in Supabase
+    const teacherId = await fetchTeacherId();
+    if (teacherId) {
+      await markAllNotificationsAsRead(teacherId);
+    }
   };
 
   const getNotificationIcon = (type: Notification["type"]) => {
@@ -50,7 +85,12 @@ export function NotificationsTab() {
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-12 text-center">
+            <Bell className="w-16 h-16 mx-auto mb-4 text-neutral-300 animate-pulse" />
+            <p className="text-neutral-500">Loading notifications...</p>
+          </Card>
+        ) : notifications.length === 0 ? (
           <Card className="p-12 text-center">
             <Bell className="w-16 h-16 mx-auto mb-4 text-neutral-300" />
             <p className="text-neutral-500">No notifications</p>

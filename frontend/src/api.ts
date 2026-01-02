@@ -366,10 +366,18 @@ export const ocrApi = {
   }> => {
     const formData = new FormData();
     formData.append("file", file);
+    
+    // Debug: Log file info
+    console.log("Uploading file:", {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
 
     const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
       method: "POST",
       body: formData,
+      // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
     });
 
     if (!response.ok) {
@@ -379,7 +387,17 @@ export const ocrApi = {
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    // Debug: Log the response to check what we're receiving
+    console.log("OCR API Response:", result);
+    
+    // Ensure word_count is valid - calculate if missing
+    if (result.text && result.text.trim() && (!result.word_count || result.word_count === 0)) {
+      result.word_count = result.text.trim().split(/\s+/).length;
+      console.log("Calculated word_count:", result.word_count);
+    }
+    
+    return result;
   },
 };
 

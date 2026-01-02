@@ -55,11 +55,6 @@ export function RubricsListView({
   onPreviewRubric,
   onPreviewMyRubric,
 }: RubricsListViewProps) {
-  // Debug: Log platform rubrics count
-  if (process.env.NODE_ENV === "development") {
-    console.log("Platform rubrics count:", platformRubrics?.length || 0);
-  }
-
   const filteredPlatformRubrics = (platformRubrics || []).filter(
     (rubric) =>
       rubric.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

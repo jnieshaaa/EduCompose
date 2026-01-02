@@ -11,7 +11,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
-import { teacherNotifications } from "../data/notificationsData";
+import { fetchTeacherNotifications, markNotificationAsRead } from "../services/notificationService";
+import { fetchTeacherId } from "../services/rubricService";
+import type { Notification } from "../data/notificationsData";
 
 // Updated interface to include the user's role
 interface TeacherHeaderProps {
@@ -28,7 +30,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notifications, setNotifications] = useState(teacherNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
@@ -38,6 +40,22 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
   // New state for search input
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch notifications from Supabase
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const teacherId = await fetchTeacherId();
+      if (teacherId) {
+        const fetchedNotifications = await fetchTeacherNotifications(teacherId);
+        setNotifications(fetchedNotifications);
+      }
+    };
+
+    loadNotifications();
+    // Refresh notifications every 30 seconds
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -59,10 +77,17 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAsRead = (id: string) => {
+  const handleMarkAsRead = async (id: string) => {
+    // Optimistically update UI
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    // Update in Supabase
+    const teacherId = await fetchTeacherId();
+    if (teacherId) {
+      await markNotificationAsRead(id, teacherId);
+    }
   };
 
   const routeLabels: Record<string, string> = {

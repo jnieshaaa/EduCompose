@@ -413,10 +413,6 @@ export const fetchStudentsByProgramAndSection = async (
     const trimmedProgramName = programName.trim();
     const trimmedSectionName = sectionName.trim();
 
-    console.log(
-      `[fetchStudentsByProgramAndSection] Fetching students for program: "${trimmedProgramName}", section: "${trimmedSectionName}", activityId: ${activityId}`
-    );
-
     // First, get program and section IDs from names
     // Try exact match first
     let { data: programData, error: programError } = await supabase
@@ -427,20 +423,14 @@ export const fetchStudentsByProgramAndSection = async (
 
     // If exact match fails, try case-insensitive
     if (programError || !programData) {
-      console.log(
-        `[fetchStudentsByProgramAndSection] Exact match failed, trying case-insensitive search for program`
-      );
       const { data: programsData } = await supabase
         .from("programs")
         .select("id, name")
         .ilike("name", trimmedProgramName);
-      
+
       if (programsData && programsData.length > 0) {
         programData = programsData[0];
         programError = null;
-        console.log(
-          `[fetchStudentsByProgramAndSection] Found program with case-insensitive match: "${programData.name}" (ID: ${programData.id})`
-        );
       }
     }
 
@@ -449,20 +439,8 @@ export const fetchStudentsByProgramAndSection = async (
         `[fetchStudentsByProgramAndSection] Error finding program "${trimmedProgramName}":`,
         programError
       );
-      // Let's also list all available programs for debugging
-      const { data: allPrograms } = await supabase
-        .from("programs")
-        .select("id, name");
-      console.log(
-        `[fetchStudentsByProgramAndSection] Available programs:`,
-        allPrograms
-      );
       return [];
     }
-
-    console.log(
-      `[fetchStudentsByProgramAndSection] Found program "${programData.name}" with ID: ${programData.id}`
-    );
 
     // Try exact match first for section
     // Note: Sections can have the same name for different terms, so we might get multiple results
@@ -474,21 +452,18 @@ export const fetchStudentsByProgramAndSection = async (
 
     // If exact match fails, try case-insensitive
     if (sectionError || !sectionsData || sectionsData.length === 0) {
-      console.log(
-        `[fetchStudentsByProgramAndSection] Exact match failed, trying case-insensitive search for section`
-      );
       const { data: sectionsDataCaseInsensitive } = await supabase
         .from("sections")
         .select("id, name, term")
         .ilike("name", trimmedSectionName)
         .eq("program_id", programData.id);
-      
-      if (sectionsDataCaseInsensitive && sectionsDataCaseInsensitive.length > 0) {
+
+      if (
+        sectionsDataCaseInsensitive &&
+        sectionsDataCaseInsensitive.length > 0
+      ) {
         sectionsData = sectionsDataCaseInsensitive;
         sectionError = null;
-        console.log(
-          `[fetchStudentsByProgramAndSection] Found ${sectionsData.length} section(s) with case-insensitive match`
-        );
       }
     }
 
@@ -497,31 +472,12 @@ export const fetchStudentsByProgramAndSection = async (
         `[fetchStudentsByProgramAndSection] Error finding section "${trimmedSectionName}" in program "${trimmedProgramName}":`,
         sectionError
       );
-      // Let's also list all available sections for this program for debugging
-      const { data: allSections } = await supabase
-        .from("sections")
-        .select("id, name, term, program_id")
-        .eq("program_id", programData.id);
-      console.log(
-        `[fetchStudentsByProgramAndSection] Available sections for program "${trimmedProgramName}":`,
-        allSections
-      );
       return [];
     }
 
     // If multiple sections found, we need to get all of them to find students
     // Students can be in any of these sections (same name, different terms)
     const sectionIds = sectionsData.map((s) => s.id);
-    const sectionData = sectionsData[0]; // Use first one for logging
-
-    console.log(
-      `[fetchStudentsByProgramAndSection] Found ${sectionsData.length} section(s) with name "${sectionData.name}":`,
-      sectionsData.map((s) => `ID: ${s.id}, Term: ${s.term || "null"}`)
-    );
-
-    console.log(
-      `[fetchStudentsByProgramAndSection] Found section "${sectionData.name}" with ID: ${sectionData.id}`
-    );
 
     // Fetch students for this program and any of the matching sections
     // Since sections can have the same name for different terms, we need to check all matching section IDs
@@ -541,15 +497,8 @@ export const fetchStudentsByProgramAndSection = async (
     }
 
     if (!studentsData || studentsData.length === 0) {
-      console.log(
-        `[fetchStudentsByProgramAndSection] No students found for program "${programName}" and section "${sectionName}"`
-      );
       return [];
     }
-
-    console.log(
-      `[fetchStudentsByProgramAndSection] Found ${studentsData.length} students`
-    );
 
     // If activityId is provided, fetch essay submissions for this activity
     const essaySubmissions = new Map<
@@ -609,7 +558,9 @@ export const fetchStudentsByProgramAndSection = async (
       return {
         id: String(student.id),
         name: student.full_name || student.student_code || "Unknown",
-        status: hasSubmission ? "submitted" : "not submitted",
+        status: (hasSubmission ? "submitted" : "not submitted") as
+          | "submitted"
+          | "not submitted",
         coherence: submission?.coherence,
         readability: submission?.readability,
         argumentative: submission?.argumentative,
@@ -618,9 +569,6 @@ export const fetchStudentsByProgramAndSection = async (
       };
     });
 
-    console.log(
-      `[fetchStudentsByProgramAndSection] Returning ${mappedStudents.length} students`
-    );
     return mappedStudents;
   } catch (err) {
     console.error(
@@ -1094,5 +1042,1266 @@ export const fetchEssayByStudentAndActivity = async (
   } catch (err) {
     console.error("Unexpected error fetching essay:", err);
     return null;
+  }
+};
+
+// Check if essay has been graded (has analysis results)
+export const checkEssayGraded = async (
+  studentId: string,
+  activityId: string
+): Promise<boolean> => {
+  try {
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return false;
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return false;
+    }
+
+    // First, get the essay ID
+    const { data: essayData, error: essayError } = await supabase
+      .from("essays")
+      .select("id")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (essayError || !essayData) {
+      return false;
+    }
+
+    // Check if analysis results exist in essay_analysis_results table
+    // If table doesn't exist yet (406 error), fall back to checking essays.analysis_payload
+    try {
+      const { data: analysisData, error: analysisError } = await supabase
+        .from("essay_analysis_results")
+        .select("id")
+        .eq("essay_id", essayData.id)
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error if not found
+
+      // If we got data, essay is graded
+      if (analysisData && !analysisError) {
+        return true;
+      }
+
+      // If error indicates table doesn't exist, fall through to fallback silently
+      if (analysisError) {
+        const errorCode = analysisError.code || "";
+        const errorMessage = String(analysisError.message || "");
+        // Check for various indicators that table doesn't exist
+        // 406 errors appear in the message, not as a status property
+        if (
+          errorCode === "PGRST116" ||
+          errorMessage.includes("406") ||
+          errorMessage.includes("does not exist") ||
+          errorMessage.includes("relation") ||
+          errorCode === "42P01" // PostgreSQL table doesn't exist
+        ) {
+          // Table doesn't exist - silently fall through to check essays.analysis_payload
+          // This is expected if migration hasn't been run
+        }
+        // For other errors, also fall through to fallback
+      }
+    } catch {
+      // Table might not exist yet - fall through to check essays.analysis_payload
+      // Don't log - this is expected if migration hasn't been run
+    }
+
+    // Fallback: check essays.analysis_payload for backwards compatibility
+    const { data: fallbackEssay, error: fallbackError } = await supabase
+      .from("essays")
+      .select("analysis_payload")
+      .eq("id", essayData.id)
+      .single();
+
+    if (fallbackError || !fallbackEssay) {
+      return false;
+    }
+
+    return !!fallbackEssay.analysis_payload;
+  } catch (err) {
+    console.error("Error checking if essay is graded:", err);
+    return false;
+  }
+};
+
+// Grade essay: OCR -> Analysis -> Save to Supabase -> Create notification
+export const gradeEssay = async (
+  studentId: string,
+  studentName: string,
+  activityId: string,
+  onProgress?: (progress: number, step: string) => void
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    onProgress?.(5, "Preparing...");
+
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return { success: false, error: "Student not found" };
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return { success: false, error: "Invalid activity ID" };
+    }
+
+    // Fetch essay record
+    const { data: essayData, error: essayError } = await supabase
+      .from("essays")
+      .select("id, file_path, title")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (essayError || !essayData) {
+      console.error("Error fetching essay:", essayError);
+      return {
+        success: false,
+        error:
+          essayError?.message ||
+          "Essay not found. Please ensure the essay has been submitted.",
+      };
+    }
+
+    // Get signed URL to download file
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from("essays")
+      .createSignedUrl(essayData.file_path, 3600);
+
+    if (urlError || !urlData?.signedUrl) {
+      return { success: false, error: "Failed to get file URL" };
+    }
+
+    onProgress?.(10, "Downloading PDF...");
+
+    // Download file
+    const response = await fetch(urlData.signedUrl);
+    if (!response.ok) {
+      return { success: false, error: "Failed to download file" };
+    }
+    const blob = await response.blob();
+    const file = new File(
+      [blob],
+      essayData.file_path.split("/").pop() || "essay.pdf",
+      {
+        type: blob.type,
+      }
+    );
+
+    onProgress?.(20, "Extracting text from PDF (OCR)...");
+
+    // Step 1: OCR - Extract text from PDF (automatic, no confirmation needed)
+    // Since all students submit PDFs, we always use OCR to extract text
+    const { ocrApi } = await import("../api");
+    let extractedText: string;
+    try {
+      const ocrResult = await ocrApi.extractTextFromFile(file);
+      extractedText = ocrResult.text;
+      if (!extractedText || extractedText.trim().length < 10) {
+        return {
+          success: false,
+          error:
+            "Failed to extract text from PDF. The file may be corrupted or unreadable.",
+        };
+      }
+      onProgress?.(40, "Text extracted successfully, analyzing essay...");
+    } catch (ocrErr) {
+      console.error("OCR error:", ocrErr);
+      return {
+        success: false,
+        error:
+          ocrErr instanceof Error
+            ? ocrErr.message
+            : "Failed to extract text from PDF",
+      };
+    }
+
+    onProgress?.(45, "Analyzing essay...");
+
+    // Step 2: Analyze text (automatic - proceeds immediately after OCR)
+    const { analysisApi } = await import("../api");
+    let analysisResult;
+    try {
+      // Get rubric_id from activity if available
+      const { data: activityData } = await supabase
+        .from("essay_activities")
+        .select("rubric_id")
+        .eq("id", activityDbId)
+        .single();
+
+      const rubricId = activityData?.rubric_id
+        ? String(activityData.rubric_id)
+        : undefined;
+
+      analysisResult = await analysisApi.analyzeText(
+        extractedText,
+        essayData.title || "Essay",
+        "comprehensive",
+        rubricId
+      );
+    } catch (analysisErr) {
+      console.error("Analysis error:", analysisErr);
+      return {
+        success: false,
+        error:
+          analysisErr instanceof Error
+            ? analysisErr.message
+            : "Failed to analyze essay",
+      };
+    }
+
+    onProgress?.(85, "Saving results to database...");
+
+    // Step 3: Save analysis results to Supabase
+    // First, update the essay record with basic scores
+    const { error: updateError } = await supabase
+      .from("essays")
+      .update({
+        grammar_score: analysisResult.scores?.grammar || null,
+        readability_score: analysisResult.scores?.readability || null,
+        coherence_score: analysisResult.scores?.coherence || null,
+        argument_strength_score:
+          analysisResult.scores?.argument_strength || null,
+        overall_score: analysisResult.scores?.overall || null,
+        grammar_errors:
+          analysisResult.detailed_analysis?.grammar?.errors || null,
+        style_issues:
+          analysisResult.detailed_analysis?.readability?.issues || null,
+        argument_analysis: {
+          argumentation: analysisResult.detailed_analysis?.argumentation,
+          knowledge_graph: analysisResult.detailed_analysis?.knowledge_graph,
+          coherence: analysisResult.detailed_analysis?.coherence,
+        },
+        status: "analyzed",
+      })
+      .eq("id", essayData.id);
+
+    if (updateError) {
+      console.error("Error updating essay:", updateError);
+      return {
+        success: false,
+        error: `Failed to update essay: ${updateError.message}`,
+      };
+    }
+
+    // Get teacher ID
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return { success: false, error: "Teacher ID not available" };
+    }
+
+    // Save complete analysis results to essay_analysis_results table
+    // This includes ALL data needed for the interactive AnalysisResults view:
+    // - Grammar errors with offset, errorLength, context for hover/highlighting
+    // - Readability metrics (Flesch Ease, Grade Level, etc.)
+    // - Argument structure (claims, evidence, warrants, rebuttals)
+    // - Knowledge graph visualization data
+    // - Coherence analysis with topic sentences, transitions, etc.
+    // - Original essay text for display with highlights
+
+    // Try to save to essay_analysis_results table (if it exists)
+    // If table doesn't exist, we'll still save to essays table as fallback
+    let analysisResultData;
+    try {
+      analysisResultData = {
+        essay_id: essayData.id,
+        student_id: studentDbId,
+        activity_id: activityDbId,
+        teacher_id: teacherId,
+        analysis_type: analysisResult.analysis_type || "comprehensive",
+        word_count: analysisResult.word_count || null,
+        generated_at: analysisResult.generated_at || new Date().toISOString(),
+        processing_time_seconds: analysisResult.processing_time_seconds || null,
+        grammar_score: analysisResult.scores?.grammar || null,
+        readability_score: analysisResult.scores?.readability || null,
+        coherence_score: analysisResult.scores?.coherence || null,
+        argument_strength_score:
+          analysisResult.scores?.argument_strength || null,
+        knowledge_graph_score: analysisResult.scores?.knowledge_graph || null,
+        overall_score: analysisResult.scores?.overall || null,
+        // Save complete detailed_analysis with ALL interactive data:
+        // - detailed_analysis.grammar.errors[] with offset, errorLength, context, message, suggestion
+        // - detailed_analysis.readability with flesch_reading_ease, flesch_kincaid_grade, issues[]
+        // - detailed_analysis.argumentation with claims, evidence, warrants, rebuttals, graph
+        // - detailed_analysis.knowledge_graph with concepts, relationships, graph_structure
+        // - detailed_analysis.coherence with topic_sentences, transitional_elements, coherence_issues
+        detailed_analysis: analysisResult.detailed_analysis || {},
+        // Save recommendations with priority, dimension, message, suggestion, action_items
+        recommendations: analysisResult.recommendations || [],
+        // Save diagnostic summary with strengths, weaknesses, critical_issues
+        diagnostic_summary: analysisResult.diagnostic_summary || null,
+        // Save rubric scores if rubric was applied
+        rubric_scores: analysisResult.rubric_scores || null,
+        // Save original essay text - CRITICAL for displaying with grammar error highlights
+        original_text: extractedText,
+      };
+
+      // Verify critical data is present before saving
+      if (
+        !analysisResultData.detailed_analysis ||
+        Object.keys(analysisResultData.detailed_analysis).length === 0
+      ) {
+        console.warn("Warning: detailed_analysis is empty or missing");
+      }
+      if (
+        !analysisResultData.original_text ||
+        analysisResultData.original_text.trim().length === 0
+      ) {
+        console.warn("Warning: original_text is empty or missing");
+      }
+      // Verify grammar errors have offset/errorLength for highlighting
+      const grammarErrors =
+        analysisResultData.detailed_analysis?.grammar?.errors || [];
+      const errorsWithOffsets = grammarErrors.filter(
+        (e: import("../types/Essay").GrammarError) =>
+          typeof e.offset === "number" && typeof e.errorLength === "number"
+      );
+      if (
+        grammarErrors.length > 0 &&
+        errorsWithOffsets.length < grammarErrors.length
+      ) {
+        console.warn(
+          `Warning: ${
+            grammarErrors.length - errorsWithOffsets.length
+          } grammar errors missing offset/errorLength for highlighting`
+        );
+      }
+
+      // Use upsert to handle both insert and update cases
+      const { error: analysisResultError } = await supabase
+        .from("essay_analysis_results")
+        .upsert(analysisResultData, {
+          onConflict: "essay_id",
+        });
+
+      if (analysisResultError) {
+        // If table doesn't exist (406) or other error, log but continue
+        // We'll still have saved to essays table above
+        if (
+          analysisResultError.code === "PGRST116" ||
+          analysisResultError.message?.includes("406")
+        ) {
+          console.warn(
+            "essay_analysis_results table not found. Please run the migration: supabase/create_essay_analysis_results_table.sql"
+          );
+          console.warn("Analysis results saved to essays table as fallback.");
+        } else {
+          console.error("Error saving analysis results:", analysisResultError);
+          // Don't fail the whole operation - results are still in essays table
+        }
+      }
+    } catch (tableError) {
+      // Table might not exist - that's okay, we saved to essays table
+      console.warn(
+        "Could not save to essay_analysis_results table:",
+        tableError
+      );
+      console.warn(
+        "Analysis results saved to essays table. Please run migration to enable full features."
+      );
+    }
+
+    onProgress?.(95, "Finalizing...");
+
+    // Step 4: Create notification for teacher
+    if (teacherId) {
+      // Get activity title
+      const { data: activityData } = await supabase
+        .from("essay_activities")
+        .select("title")
+        .eq("id", activityDbId)
+        .single();
+
+      const activityTitle = activityData?.title || "Essay";
+
+      // Create notification with metadata including studentId for fetching all results
+      await supabase.from("notifications").insert({
+        teacher_id: teacherId,
+        type: "essay_graded",
+        title: "Essay Graded",
+        message: `${studentName}'s essay for "${activityTitle}" has been graded successfully.`,
+        read: false,
+        related_id: JSON.stringify({
+          essayId: String(essayData.id),
+          studentId: String(studentDbId),
+          activityId: String(activityDbId),
+          studentName: studentName,
+        }),
+        related_type: "essay",
+      });
+    }
+
+    onProgress?.(100, "Complete!");
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error grading essay:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Fetch analysis results for an essay
+export const fetchEssayAnalysis = async (
+  studentId: string,
+  activityId: string
+): Promise<{
+  analysis: Omit<import("../types/Essay").AnalysisResponse, "essay_id">;
+  text: string;
+  title: string;
+} | null> => {
+  try {
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return null;
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Parse activity ID
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return null;
+    }
+
+    // First, get the essay ID
+    const { data: essayData, error: essayError } = await supabase
+      .from("essays")
+      .select("id, title")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (essayError || !essayData) {
+      return null;
+    }
+
+    // Fetch complete analysis results from essay_analysis_results table
+    // If table doesn't exist, fall back to essays.analysis_payload
+    let analysisData = null;
+    let analysisError = null;
+
+    try {
+      const result = await supabase
+        .from("essay_analysis_results")
+        .select("*")
+        .eq("essay_id", essayData.id)
+        .single();
+
+      analysisData = result.data;
+      analysisError = result.error;
+    } catch {
+      // Table might not exist - will fall back to essays.analysis_payload
+      console.log(
+        "essay_analysis_results table not accessible, using fallback"
+      );
+      analysisError = { code: "TABLE_NOT_FOUND" };
+    }
+
+    if (analysisError || !analysisData) {
+      // Fallback: try to get from essays.analysis_payload (for backwards compatibility)
+      const { data: fallbackEssay, error: fallbackError } = await supabase
+        .from("essays")
+        .select("id, title, file_path, analysis_payload")
+        .eq("id", essayData.id)
+        .single();
+
+      if (fallbackError || !fallbackEssay || !fallbackEssay.analysis_payload) {
+        return null;
+      }
+
+      // Get text from file if available
+      let text = "";
+      if (fallbackEssay.file_path) {
+        try {
+          const { data: urlData } = await supabase.storage
+            .from("essays")
+            .createSignedUrl(fallbackEssay.file_path, 3600);
+
+          if (urlData?.signedUrl) {
+            const response = await fetch(urlData.signedUrl);
+            if (response.ok) {
+              const blob = await response.blob();
+              const file = new File(
+                [blob],
+                fallbackEssay.file_path.split("/").pop() || "essay.pdf"
+              );
+              const { ocrApi } = await import("../api");
+              const ocrResult = await ocrApi.extractTextFromFile(file);
+              text = ocrResult.text;
+            }
+          }
+        } catch (err) {
+          console.error("Error extracting text for display:", err);
+        }
+      }
+
+      return {
+        analysis: fallbackEssay.analysis_payload,
+        text: text,
+        title: fallbackEssay.title || "Essay Analysis",
+      };
+    }
+
+    // Reconstruct the analysis response from the database record
+    // This preserves ALL interactive data including:
+    // - Grammar errors with offset/errorLength for hover/highlighting
+    // - Readability metrics for display
+    // - Argument structure for visualization
+    // - Knowledge graph data for graph display
+    // - Coherence analysis for feedback
+    const analysis: Omit<
+      import("../types/Essay").AnalysisResponse,
+      "essay_id"
+    > = {
+      analysis_type: analysisData.analysis_type || "comprehensive",
+      scores: {
+        grammar: analysisData.grammar_score || 0,
+        readability: analysisData.readability_score || 0,
+        coherence: analysisData.coherence_score || 0,
+        argument_strength: analysisData.argument_strength_score || 0,
+        knowledge_graph: analysisData.knowledge_graph_score || 0,
+        overall: analysisData.overall_score || 0,
+      },
+      // detailed_analysis contains ALL interactive data:
+      // - grammar.errors[] with offset, errorLength, context, message, suggestion
+      // - readability with flesch_reading_ease, flesch_kincaid_grade, issues[]
+      // - argumentation with claims, evidence, warrants, rebuttals, graph
+      // - knowledge_graph with concepts, relationships, graph_structure
+      // - coherence with topic_sentences, transitional_elements, coherence_issues
+      detailed_analysis: analysisData.detailed_analysis || {},
+      recommendations: analysisData.recommendations || [],
+      diagnostic_summary: analysisData.diagnostic_summary || undefined,
+      word_count: analysisData.word_count || undefined,
+      generated_at: analysisData.generated_at || new Date().toISOString(),
+    };
+
+    // Add rubric_scores if present (for TextAnalysisResponse compatibility)
+    if (analysisData.rubric_scores) {
+      (
+        analysis as import("../types/Essay").TextAnalysisResponse
+      ).rubric_scores = analysisData.rubric_scores;
+    }
+
+    return {
+      analysis: analysis,
+      // original_text is CRITICAL - needed for displaying essay with grammar error highlights
+      // The offset/errorLength in grammar.errors reference positions in this text
+      text: analysisData.original_text || "",
+      title: essayData.title || "Essay Analysis",
+    };
+  } catch (err) {
+    console.error("Error fetching essay analysis:", err);
+    return null;
+  }
+};
+
+// Fetch all analysis results for a student (useful for notifications)
+export const fetchStudentAnalysisResults = async (
+  studentId: string
+): Promise<
+  Array<{
+    analysis: import("../types/Essay").TextAnalysisResponse;
+    text: string;
+    title: string;
+    activityId: string;
+    generatedAt: string;
+  }>
+> => {
+  try {
+    // Parse student ID
+    let studentDbId = parseInt(studentId, 10);
+    if (isNaN(studentDbId)) {
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("id")
+        .eq("student_code", studentId)
+        .single();
+
+      if (studentError || !studentData) {
+        return [];
+      }
+      studentDbId = studentData.id;
+    }
+
+    // Fetch all analysis results for this student
+    const { data: analysisResults, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select(
+        `
+        *,
+        essays!inner(id, title, activity_id)
+      `
+      )
+      .eq("student_id", studentDbId)
+      .order("generated_at", { ascending: false });
+
+    if (analysisError || !analysisResults) {
+      return [];
+    }
+
+    // Map to the expected format
+    return analysisResults.map(
+      (result: {
+        analysis_type: string;
+        grammar_score: number | null;
+        readability_score: number | null;
+        coherence_score: number | null;
+        argument_strength_score: number | null;
+        knowledge_graph_score: number | null;
+        overall_score: number | null;
+        detailed_analysis: import("../types/Essay").DetailedAnalysis;
+        recommendations: import("../types/Essay").DiagnosticRecommendation[];
+        diagnostic_summary: import("../types/Essay").DiagnosticSummary | null;
+        rubric_scores:
+          | import("../types/Essay").TextAnalysisResponse["rubric_scores"]
+          | null;
+        word_count: number | null;
+        generated_at: string;
+        original_text: string | null;
+        essays: {
+          id: number;
+          title: string;
+          activity_id: number | null;
+        } | null;
+      }) => {
+        const essay = result.essays;
+        // Use TextAnalysisResponse type which has optional fields
+        const analysis: import("../types/Essay").TextAnalysisResponse = {
+          analysis_type: result.analysis_type || "comprehensive",
+          scores: {
+            grammar: result.grammar_score || 0,
+            readability: result.readability_score || 0,
+            coherence: result.coherence_score || 0,
+            argument_strength: result.argument_strength_score || 0,
+            knowledge_graph: result.knowledge_graph_score || 0,
+            overall: result.overall_score || 0,
+          },
+          detailed_analysis: result.detailed_analysis || {},
+          recommendations: result.recommendations || [],
+          diagnostic_summary: result.diagnostic_summary || undefined,
+          word_count: result.word_count || undefined,
+          generated_at: result.generated_at || new Date().toISOString(),
+          rubric_scores: result.rubric_scores || undefined,
+        };
+
+        return {
+          analysis: analysis,
+          text: result.original_text || "",
+          title: essay?.title || "Essay Analysis",
+          activityId: String(essay?.activity_id || ""),
+          generatedAt: result.generated_at || new Date().toISOString(),
+        };
+      }
+    );
+  } catch (err) {
+    console.error("Error fetching student analysis results:", err);
+    return [];
+  }
+};
+
+// Duplicate essay detection types
+export interface DuplicateEssayGroup {
+  contentHash: string; // Normalized content for grouping
+  essays: Array<{
+    essayId: number;
+    studentId: number;
+    studentName: string;
+    programName: string;
+    sectionName: string;
+    title: string;
+    submittedAt: string;
+  }>;
+}
+
+// Normalize text for comparison (remove extra whitespace, lowercase, remove punctuation)
+// Also attempts to strip common headers/names at the beginning
+const normalizeText = (text: string): string => {
+  let normalized = text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ") // Remove punctuation
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
+
+  // Try to strip common header patterns at the beginning
+  // Pattern: name + program/section info (e.g., "junie antopina bscs ds 4b")
+  // Look for patterns like: word word word (program code) (section) followed by essay content
+  // Common patterns: name + "bscs" or "bstm" or program codes + section numbers
+  const headerPatterns = [
+    /^[a-z]+\s+[a-z]+\s+(bscs|bstm|bsit|bsba|bsed|bsn|bsa|bs|ba|ma|phd)[\s\w]*?\s+/, // Name + program code
+    /^[a-z]+\s+[a-z]+\s+[a-z]+\s+(bscs|bstm|bsit|bsba|bsed|bsn|bsa)[\s\w]*?\s+/, // Full name + program
+    /^[a-z]+\s+[a-z]+\s+\d+[a-z]?\s+/, // Name + section (e.g., "john doe 1b")
+  ];
+
+  for (const pattern of headerPatterns) {
+    const match = normalized.match(pattern);
+    if (match) {
+      // Check if removing the header makes sense (essay should still be substantial)
+      const withoutHeader = normalized.substring(match[0].length).trim();
+      if (withoutHeader.length > normalized.length * 0.5) {
+        // Header is less than 50% of text, safe to remove
+        normalized = withoutHeader;
+        break;
+      }
+    }
+  }
+
+  return normalized;
+};
+
+// Calculate text similarity using simple word-based comparison
+// Returns a value between 0 and 1 (1 = identical, 0 = completely different)
+const calculateTextSimilarity = (text1: string, text2: string): number => {
+  const normalized1 = normalizeText(text1);
+  const normalized2 = normalizeText(text2);
+
+  // If texts are identical after normalization, return 1.0
+  if (normalized1 === normalized2) {
+    return 1.0;
+  }
+
+  // Split into words
+  const words1 = normalized1.split(/\s+/).filter((w) => w.length > 0);
+  const words2 = normalized2.split(/\s+/).filter((w) => w.length > 0);
+
+  if (words1.length === 0 || words2.length === 0) {
+    return 0;
+  }
+
+  // Calculate Jaccard similarity (intersection over union)
+  const set1 = new Set(words1);
+  const set2 = new Set(words2);
+
+  const intersection = new Set([...set1].filter((x) => set2.has(x)));
+  const union = new Set([...set1, ...set2]);
+
+  const jaccardSimilarity = intersection.size / union.size;
+
+  // Also calculate word order similarity (simple approach)
+  // Count how many words appear in the same relative position
+  const minLength = Math.min(words1.length, words2.length);
+  let positionMatches = 0;
+  for (let i = 0; i < minLength; i++) {
+    if (words1[i] === words2[i]) {
+      positionMatches++;
+    }
+  }
+  const orderSimilarity = minLength > 0 ? positionMatches / minLength : 0;
+
+  // Combine Jaccard and order similarity (weighted average)
+  return jaccardSimilarity * 0.7 + orderSimilarity * 0.3;
+};
+
+// Generate a simple hash for text comparison (for quick grouping)
+const generateContentHash = (text: string): string => {
+  const normalized = normalizeText(text);
+  // Use word count + first 50 words for quick grouping
+  const words = normalized.split(/\s+/).filter((w) => w.length > 0);
+  const firstWords = words.slice(0, 50).join(" ");
+  return `${words.length}-${firstWords.substring(0, 200)}`;
+};
+
+// Helper function to process similarity groups (defined before use)
+const processSimilarityGroups = (
+  groups: Map<string, DuplicateEssayGroup["essays"]>,
+  sourceData: Array<{
+    essay_id?: number;
+    original_text?: string | null;
+    content?: string | null;
+    essays?: unknown;
+    id?: number;
+  }>,
+  textField: "original_text" | "content"
+): DuplicateEssayGroup[] => {
+  // Get all texts
+  const essayTexts = new Map<number, string>();
+  for (const item of sourceData) {
+    const text =
+      textField === "original_text" ? item.original_text : item.content;
+    let essayId: number | undefined;
+
+    if (textField === "original_text") {
+      // For original_text, extract essay ID from nested structure
+      // Supabase returns essays as an object (not array) when using !inner
+      const essaysData = item.essays as { id?: number } | undefined;
+      essayId = essaysData?.id || item.essay_id;
+    } else {
+      essayId = item.id;
+    }
+
+    if (text && essayId) {
+      essayTexts.set(essayId, text);
+      console.log(
+        `[processSimilarityGroups] Mapped essay ${essayId} with text length ${text.length}`
+      );
+    } else {
+      console.log(
+        `[processSimilarityGroups] Skipping item - text: ${!!text}, essayId: ${essayId}, essay_id: ${
+          item.essay_id
+        }`
+      );
+    }
+  }
+
+  console.log(
+    `[processSimilarityGroups] Total essays in text map: ${essayTexts.size}, total groups: ${groups.size}`
+  );
+
+  const duplicateGroups: DuplicateEssayGroup[] = [];
+  // Lower threshold to catch essays with headers/formatting differences
+  // 60% is reasonable for detecting same content with different headers
+  const SIMILARITY_THRESHOLD = 0.6;
+
+  // Collect all essays from all hash groups for cross-group comparison
+  const allEssays: Array<{ essayId: number; hash: string }> = [];
+  for (const [hash, essays] of groups.entries()) {
+    for (const essay of essays) {
+      allEssays.push({ essayId: essay.essayId, hash });
+    }
+  }
+
+  console.log(
+    `[processSimilarityGroups] Collected ${allEssays.length} essays from ${groups.size} hash groups for comparison`
+  );
+
+  // Group essays by similarity (compare across hash groups too)
+  const similarityGroups: Array<DuplicateEssayGroup["essays"]> = [];
+  const processedEssays = new Set<number>();
+
+  for (let i = 0; i < allEssays.length; i++) {
+    if (processedEssays.has(allEssays[i].essayId)) {
+      continue;
+    }
+
+    const text1 = essayTexts.get(allEssays[i].essayId) || "";
+    if (!text1) continue;
+
+    // Find the essay info from groups
+    let currentEssay: DuplicateEssayGroup["essays"][0] | null = null;
+    for (const [, essays] of groups.entries()) {
+      const found = essays.find((e) => e.essayId === allEssays[i].essayId);
+      if (found) {
+        currentEssay = found;
+        break;
+      }
+    }
+
+    if (!currentEssay) continue;
+
+    const similarEssays: DuplicateEssayGroup["essays"] = [currentEssay];
+    processedEssays.add(allEssays[i].essayId);
+
+    // Compare with all other essays (including those in different hash groups)
+    for (let j = i + 1; j < allEssays.length; j++) {
+      if (processedEssays.has(allEssays[j].essayId)) {
+        continue;
+      }
+
+      const text2 = essayTexts.get(allEssays[j].essayId) || "";
+      if (!text2) continue;
+
+      // Skip if texts are too different in length (likely not duplicates)
+      const lengthDiff = Math.abs(text1.length - text2.length);
+      const avgLength = (text1.length + text2.length) / 2;
+      if (avgLength > 0 && lengthDiff / avgLength > 0.3) {
+        // More than 30% length difference, likely not duplicates
+        continue;
+      }
+
+      const similarity = calculateTextSimilarity(text1, text2);
+      console.log(
+        `[fetchDuplicateEssays] Comparing essay ${allEssays[i].essayId} vs ${
+          allEssays[j].essayId
+        }: similarity = ${(similarity * 100).toFixed(1)}%`
+      );
+      if (similarity >= SIMILARITY_THRESHOLD) {
+        // Find the essay info from groups
+        let foundEssay: DuplicateEssayGroup["essays"][0] | null = null;
+        for (const [, essays] of groups.entries()) {
+          const found = essays.find((e) => e.essayId === allEssays[j].essayId);
+          if (found) {
+            foundEssay = found;
+            break;
+          }
+        }
+        if (foundEssay) {
+          similarEssays.push(foundEssay);
+          processedEssays.add(allEssays[j].essayId);
+        }
+      }
+    }
+
+    if (similarEssays.length >= 2) {
+      similarityGroups.push(similarEssays);
+    }
+  }
+
+  // Add similarity groups to duplicate groups
+  for (const similarGroup of similarityGroups) {
+    // Use a combined hash for the group
+    const combinedHash = similarGroup
+      .map((e) => e.essayId)
+      .sort()
+      .join("-");
+    duplicateGroups.push({
+      contentHash: combinedHash,
+      essays: similarGroup,
+    });
+  }
+
+  return duplicateGroups;
+};
+
+// Detect duplicate essays across different programs for an activity
+export const fetchDuplicateEssays = async (
+  activityId: string
+): Promise<DuplicateEssayGroup[]> => {
+  try {
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return [];
+    }
+
+    // Fetch all essays for this activity with their analysis results
+    const { data: analysisResults, error } = await supabase
+      .from("essay_analysis_results")
+      .select(
+        `
+        essay_id,
+        student_id,
+        original_text,
+        essays!inner(
+          id,
+          title,
+          submitted_at,
+          students!inner(
+            id,
+            full_name,
+            sections!inner(
+              id,
+              name,
+              programs!inner(
+                id,
+                name
+              )
+            )
+          )
+        )
+      `
+      )
+      .eq("activity_id", activityDbId);
+
+    if (error) {
+      console.error(
+        "[fetchDuplicateEssays] Error fetching analysis results:",
+        error
+      );
+    }
+
+    if (!analysisResults || analysisResults.length === 0) {
+      console.log(
+        `[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`
+      );
+      // Try fallback: fetch from essays table if essay_analysis_results doesn't exist
+      const { data: essaysData, error: essaysError } = await supabase
+        .from("essays")
+        .select(
+          `
+          id,
+          title,
+          submitted_at,
+          content,
+          students!inner(
+            id,
+            full_name,
+            sections!inner(
+              id,
+              name,
+              programs!inner(
+                id,
+                name
+              )
+            )
+          )
+        `
+        )
+        .eq("activity_id", activityDbId);
+
+      if (essaysError) {
+        console.error(
+          "[fetchDuplicateEssays] Error fetching essays:",
+          essaysError
+        );
+      }
+
+      if (!essaysData || essaysData.length === 0) {
+        console.log(
+          `[fetchDuplicateEssays] No essays found for activity ${activityDbId}`
+        );
+        return [];
+      }
+
+      console.log(
+        `[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`
+      );
+
+      // Try to use essays.content if available
+      type EssayWithNested = {
+        id: number;
+        title: string;
+        submitted_at: string;
+        content?: string | null;
+        students?: {
+          id: number;
+          full_name: string;
+          sections?: {
+            id: number;
+            name: string;
+            programs?: {
+              id: number;
+              name: string;
+            };
+          };
+        };
+      };
+
+      const essaysWithContent = (
+        essaysData as unknown as EssayWithNested[]
+      ).filter((e) => e.content && e.content.trim().length >= 50);
+
+      if (essaysWithContent.length < 2) {
+        console.log(
+          `[fetchDuplicateEssays] Not enough essays with content for comparison (need at least 2, found ${essaysWithContent.length})`
+        );
+        return [];
+      }
+
+      // Process essays with content field
+      const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
+
+      for (const essay of essaysWithContent) {
+        const essayText = essay.content;
+        if (!essayText || essayText.trim().length < 50) {
+          continue;
+        }
+
+        const student = essay.students;
+        const section = student?.sections;
+        const program = section?.programs;
+
+        if (!student || !section || !program) {
+          continue;
+        }
+
+        const essayInfo = {
+          essayId: essay.id,
+          studentId: student.id,
+          studentName: student.full_name || "Unknown",
+          programName: program.name || "Unknown",
+          sectionName: section.name || "Unknown",
+          title: essay.title || "Untitled",
+          submittedAt: essay.submitted_at || new Date().toISOString(),
+        };
+
+        const contentHash = generateContentHash(essayText);
+        if (!contentGroups.has(contentHash)) {
+          contentGroups.set(contentHash, []);
+        }
+        contentGroups.get(contentHash)!.push(essayInfo);
+      }
+
+      // Continue with similarity matching
+      return processSimilarityGroups(
+        contentGroups,
+        essaysWithContent.map((e) => ({
+          id: e.id,
+          content: e.content || null,
+        })),
+        "content"
+      );
+    }
+
+    console.log(
+      `[fetchDuplicateEssays] Found ${analysisResults.length} analysis results`
+    );
+
+    // Group essays by content hash
+    const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
+    let validEssaysCount = 0;
+    let skippedCount = 0;
+
+    for (const result of analysisResults) {
+      const originalText = result.original_text;
+      if (!originalText || originalText.trim().length < 50) {
+        skippedCount++;
+        console.log(
+          `[fetchDuplicateEssays] Skipping essay ${result.essay_id}: ${
+            !originalText
+              ? "no original_text"
+              : `text too short (${originalText.trim().length} chars)`
+          }`
+        );
+        continue; // Skip essays without text or too short
+      }
+
+      // Supabase returns nested data - handle the structure
+      type EssayDataStructure = {
+        id: number;
+        title: string;
+        submitted_at: string;
+        students?: {
+          id: number;
+          full_name: string;
+          sections?: {
+            id: number;
+            name: string;
+            programs?: {
+              id: number;
+              name: string;
+            };
+          };
+        };
+      };
+
+      // Handle different possible structures from Supabase
+      // Supabase returns nested data as an object (not array) when using !inner
+      const essaysData = result.essays as unknown;
+      let essayData: EssayDataStructure | null = null;
+
+      if (Array.isArray(essaysData)) {
+        essayData = essaysData[0] as unknown as EssayDataStructure;
+      } else {
+        essayData = essaysData as unknown as EssayDataStructure;
+      }
+
+      if (!essayData) {
+        console.log(
+          `[fetchDuplicateEssays] Essay data is null for essay_id ${result.essay_id}`
+        );
+        skippedCount++;
+        continue;
+      }
+
+      // Type guard to ensure essayData is not null
+      const student = essayData.students;
+      const section = student?.sections;
+      const program = section?.programs;
+
+      if (!student || !section || !program) {
+        console.log(
+          `[fetchDuplicateEssays] Missing nested data for essay ${
+            essayData.id || result.essay_id
+          }:`,
+          {
+            hasEssay: !!essayData,
+            hasStudent: !!student,
+            hasSection: !!section,
+            hasProgram: !!program,
+          }
+        );
+        skippedCount++;
+        continue;
+      }
+
+      const essayInfo = {
+        essayId: essayData.id,
+        studentId: student.id,
+        studentName: student.full_name || "Unknown",
+        programName: program.name || "Unknown",
+        sectionName: section.name || "Unknown",
+        title: essayData.title || "Untitled",
+        submittedAt: essayData.submitted_at || new Date().toISOString(),
+      };
+
+      const contentHash = generateContentHash(originalText);
+      console.log(
+        `[fetchDuplicateEssays] Processing essay ${essayInfo.essayId} from ${
+          essayInfo.programName
+        } - ${essayInfo.sectionName} (${essayInfo.studentName}), text length: ${
+          originalText.length
+        }, hash: ${contentHash.substring(0, 50)}...`
+      );
+
+      if (!contentGroups.has(contentHash)) {
+        contentGroups.set(contentHash, []);
+      }
+      contentGroups.get(contentHash)!.push(essayInfo);
+      validEssaysCount++;
+    }
+
+    console.log(
+      `[fetchDuplicateEssays] Processed ${validEssaysCount} valid essays, skipped ${skippedCount}, created ${contentGroups.size} hash groups`
+    );
+
+    // Use the helper function to process similarity groups
+    const duplicateGroups = processSimilarityGroups(
+      contentGroups,
+      analysisResults.map((r) => ({
+        essay_id: r.essay_id,
+        original_text: r.original_text,
+        essays: r.essays,
+      })),
+      "original_text"
+    );
+
+    // Log for debugging
+    if (duplicateGroups.length > 0) {
+      console.log(
+        `[fetchDuplicateEssays] Found ${duplicateGroups.length} duplicate group(s) for activity ${activityId}`
+      );
+      duplicateGroups.forEach((group, idx) => {
+        console.log(
+          `  Group ${idx + 1}: ${
+            group.essays.length
+          } essays - Programs: ${Array.from(
+            new Set(group.essays.map((e) => e.programName))
+          ).join(", ")}`
+        );
+      });
+    } else {
+      console.log(
+        `[fetchDuplicateEssays] No duplicates found for activity ${activityId}. Total essays checked: ${analysisResults.length}`
+      );
+    }
+
+    return duplicateGroups;
+  } catch (err) {
+    console.error("Error fetching duplicate essays:", err);
+    return [];
   }
 };

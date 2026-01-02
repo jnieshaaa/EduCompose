@@ -115,11 +115,19 @@ class OCRService:
             pdf_file = BytesIO(pdf_bytes)
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             
+            logger.info(f"PDF has {len(pdf_reader.pages)} pages")
+            
             text_parts = []
-            for page in pdf_reader.pages:
-                page_text = page.extract_text()
-                if page_text and page_text.strip():
-                    text_parts.append(page_text)
+            for i, page in enumerate(pdf_reader.pages):
+                try:
+                    page_text = page.extract_text()
+                    if page_text and page_text.strip():
+                        text_parts.append(page_text)
+                        logger.debug(f"Page {i+1}: extracted {len(page_text)} characters")
+                    else:
+                        logger.debug(f"Page {i+1}: no text extracted")
+                except Exception as e:
+                    logger.warning(f"Error extracting text from page {i+1}: {e}")
             
             if text_parts:
                 combined_text = '\n\n'.join(text_parts)
@@ -127,10 +135,13 @@ class OCRService:
                 if len(combined_text.strip()) > 50:  # At least 50 characters
                     logger.info(f"Successfully extracted {len(combined_text)} characters directly from PDF")
                     return combined_text
+                else:
+                    logger.warning(f"Extracted text too short: {len(combined_text.strip())} characters")
             
+            logger.info("Direct extraction returned None - will fall back to OCR")
             return None
         except Exception as e:
-            logger.debug(f"Direct text extraction failed (likely image-based PDF): {e}")
+            logger.warning(f"Direct text extraction failed (likely image-based PDF): {e}", exc_info=True)
             return None
     
     def extract_text_from_pdf(self, pdf_bytes: bytes, filename: str = "document.pdf") -> Dict[str, Any]:
@@ -146,21 +157,46 @@ class OCRService:
         Returns:
             Dictionary with extracted text and metadata
         """
-        # First, try direct text extraction (faster and more accurate for text-based PDFs)
-        direct_text = self._extract_text_directly_from_pdf(pdf_bytes)
-        if direct_text:
-            word_count = len(direct_text.split())
+        logger.info(f"extract_text_from_pdf called for {filename}, received {len(pdf_bytes)} bytes")
+        
+        if not pdf_bytes or len(pdf_bytes) == 0:
+            logger.error(f"Empty PDF bytes received for {filename}")
             return {
-                "text": direct_text,
-                "word_count": word_count,
-                "page_count": 1,  # We don't count pages in direct extraction
-                "confidence": 100.0,  # Direct extraction is 100% accurate
-                "detections": 1,
-                "extraction_method": "direct"
+                "error": "Empty file",
+                "message": "Received empty PDF file"
             }
         
+        # Verify PDF bytes start with PDF magic bytes
+        pdf_header = pdf_bytes[:4] if len(pdf_bytes) >= 4 else b''
+        if not pdf_header.startswith(b'%PDF'):
+            logger.warning(f"File {filename} does not appear to be a valid PDF (header: {pdf_header!r}, expected: b'%PDF')")
+            logger.warning(f"First 100 bytes: {pdf_bytes[:100]!r}")
+            # Still try to process it in case it's a valid PDF with unusual encoding
+        else:
+            logger.info(f"PDF header verified: {pdf_header!r}")
+        
+        # First, try direct text extraction (faster and more accurate for text-based PDFs)
+        direct_text = None
+        try:
+            direct_text = self._extract_text_directly_from_pdf(pdf_bytes)
+            if direct_text and direct_text.strip():
+                word_count = len(direct_text.split())
+                logger.info(f"Direct extraction successful for {filename}: {word_count} words, {len(direct_text)} chars")
+                return {
+                    "text": direct_text,
+                    "word_count": word_count,
+                    "page_count": 1,  # We don't count pages in direct extraction
+                    "confidence": 100.0,  # Direct extraction is 100% accurate
+                    "detections": 1,
+                    "extraction_method": "direct"
+                }
+            else:
+                logger.info(f"Direct extraction returned empty text for {filename}")
+        except Exception as e:
+            logger.warning(f"Direct extraction exception for {filename}: {e}", exc_info=True)
+        
         # If direct extraction failed, use OCR (for scanned PDFs)
-        logger.info(f"Direct text extraction failed for {filename}, falling back to OCR...")
+        logger.info(f"Direct text extraction failed or returned empty for {filename}, falling back to OCR...")
         
         if not PDF2IMAGE_AVAILABLE:
             return {
@@ -322,7 +358,11 @@ class OCRService:
             # Word count
             word_count = len(extracted_text.split()) if extracted_text.strip() else 0
             
-            logger.info(f"OCR completed: {word_count} words extracted, avg confidence: {avg_confidence:.2f}")
+            logger.info(f"OCR completed: {word_count} words extracted from {len(images)} pages, avg confidence: {avg_confidence:.2f}")
+            
+            # If no text was extracted, log a warning
+            if not extracted_text or not extracted_text.strip():
+                logger.warning(f"OCR completed but no text was extracted from {filename}. Total detections: {total_detections}")
             
             return {
                 "text": extracted_text,
@@ -333,7 +373,7 @@ class OCRService:
             }
         
         except Exception as e:
-            logger.error(f"Error extracting text from PDF: {e}", exc_info=True)
+            logger.error(f"Error extracting text from PDF {filename}: {e}", exc_info=True)
             return {
                 "error": "OCR processing failed",
                 "message": f"Failed to extract text from PDF: {str(e)}"

@@ -1,10 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Upload, FileText, Eye, BookOpen, Info, Loader2 } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  Eye,
+  BookOpen,
+  Info,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
+import Modal from "../components/ui/Modal";
 import { supabase } from "../lib/supabaseClient";
 import { platformRubrics, getTypeBadgeColor } from "../data/rubricData";
 import type { PlatformRubric } from "../components/rubrics/types";
@@ -25,15 +35,17 @@ const fetchPlatformRubrics = async (): Promise<
       .order("name", { ascending: true });
 
     if (!error && platformData && platformData.length > 0) {
+      // Platform rubrics found in database - use actual database IDs
       return platformData.map((r) => ({
-        id: String(r.id),
+        id: String(r.id), // Use actual database ID, not "platform-" prefix
         name: r.name,
       }));
     }
 
-    // Fallback to hardcoded platform rubrics
+    // Fallback to hardcoded platform rubrics (these won't work with backend)
+    // These are only for display - backend can't use them
     return (platformRubrics || []).map((r) => ({
-      id: `platform-${r.id}`,
+      id: `platform-${r.id}`, // Keep prefix for hardcoded rubrics
       name: r.name,
     }));
   } catch (err) {
@@ -63,6 +75,15 @@ const AnalyzeEssay: React.FC = () => {
   );
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrResult, setOcrResult] = useState<{
+    text: string;
+    word_count: number;
+    confidence: number;
+    page_count: number;
+    filename: string;
+  } | null>(null);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [processingFileName, setProcessingFileName] = useState<string>("");
 
   // Essay box animation
   const essayBoxRef = React.useRef<HTMLDivElement>(null);
@@ -309,10 +330,31 @@ const AnalyzeEssay: React.FC = () => {
                             } else if (isPdfOrImage) {
                               // Use OCR for PDF and image files
                               setIsProcessingOCR(true);
+                              setShowOcrModal(true);
+                              setOcrError(null);
+                              setOcrResult(null);
+                              setProcessingFileName(file.name);
                               try {
                                 const result = await ocrApi.extractTextFromFile(
                                   file
                                 );
+                                // Debug log to check what we're receiving
+                                console.log("OCR Result:", result);
+
+                                // Ensure word_count is calculated if missing or 0 but text exists
+                                if (result.text && result.text.trim()) {
+                                  const calculatedWordCount = result.text
+                                    .trim()
+                                    .split(/\s+/).length;
+                                  if (
+                                    !result.word_count ||
+                                    result.word_count === 0
+                                  ) {
+                                    result.word_count = calculatedWordCount;
+                                  }
+                                }
+
+                                setOcrResult(result);
                                 setText(result.text);
                                 setOcrError(null);
                               } catch (error) {
@@ -324,6 +366,7 @@ const AnalyzeEssay: React.FC = () => {
                                 );
                               } finally {
                                 setIsProcessingOCR(false);
+                                setProcessingFileName("");
                                 e.target.value = ""; // Reset file input
                               }
                             } else {
@@ -374,6 +417,120 @@ const AnalyzeEssay: React.FC = () => {
         text={text}
         title="Essay Analysis"
       />
+
+      {/* OCR Processing Modal */}
+      <Modal
+        isOpen={showOcrModal}
+        onClose={() => {
+          if (!isProcessingOCR) {
+            setShowOcrModal(false);
+          }
+        }}
+        title="Processing File"
+        size="md"
+        closeOnBackdropClick={!isProcessingOCR}
+      >
+        <div className="flex flex-col items-center justify-center py-8 px-4">
+          {isProcessingOCR ? (
+            <>
+              <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                Extracting text from file...
+              </h3>
+              <p className="text-sm text-neutral-600 text-center">
+                This may take a few moments depending on the file size
+              </p>
+              {processingFileName && (
+                <p className="text-xs text-neutral-500 mt-2">
+                  Processing: {processingFileName}
+                </p>
+              )}
+            </>
+          ) : ocrResult ? (
+            <>
+              <CheckCircle2 className="w-12 h-12 text-green-600 mb-4" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                Text extracted successfully!
+              </h3>
+              <div className="w-full mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-600">Words extracted:</span>
+                  <span className="font-semibold text-neutral-900">
+                    {ocrResult.word_count}
+                  </span>
+                </div>
+                {ocrResult.page_count > 1 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Pages processed:</span>
+                    <span className="font-semibold text-neutral-900">
+                      {ocrResult.page_count}
+                    </span>
+                  </div>
+                )}
+                {ocrResult.confidence < 100 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Confidence:</span>
+                    <span className="font-semibold text-neutral-900">
+                      {ocrResult.confidence.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 mt-6 w-full">
+                <button
+                  onClick={() => {
+                    setShowOcrModal(false);
+                  }}
+                  className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors font-medium"
+                >
+                  Review Text
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOcrModal(false);
+                    // Automatically proceed to analysis
+                    handleAnalyze();
+                  }}
+                  disabled={ocrResult.word_count < MIN_WORDS}
+                  className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 ${
+                    ocrResult.word_count >= MIN_WORDS
+                      ? "bg-primary text-white hover:bg-primary-600"
+                      : "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Analyze Now
+                </button>
+              </div>
+              {ocrResult.word_count < MIN_WORDS && (
+                <p className="text-xs text-red-600 mt-2 text-center">
+                  Text must be at least {MIN_WORDS} words to analyze (extracted:{" "}
+                  {ocrResult.word_count} words)
+                </p>
+              )}
+            </>
+          ) : ocrError ? (
+            <>
+              <XCircle className="w-12 h-12 text-red-600 mb-4" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                Extraction Failed
+              </h3>
+              <p className="text-sm text-neutral-600 text-center mb-4">
+                {ocrError}
+              </p>
+              <button
+                onClick={() => {
+                  setShowOcrModal(false);
+                  setOcrError(null);
+                }}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </>
+          ) : null}
+        </div>
+      </Modal>
 
       {/* Rubric Preview Modal */}
       {showRubricPreview && previewRubric && (

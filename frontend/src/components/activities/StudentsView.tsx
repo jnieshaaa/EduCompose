@@ -6,8 +6,10 @@ import {
   MoreVertical,
   Upload,
   X,
+  Eye,
 } from "lucide-react";
 import { ViewEssayModal } from "./ViewEssayModal";
+import { GradingProgressIndicator } from "./GradingProgressIndicator";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -26,12 +28,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { CheckCircle2, XCircle, Trash2, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { EssayActivity, Student } from "../../types/activityTypes";
 import {
   uploadEssayFile,
   updateEssayFile,
   deleteEssay,
+  checkEssayGraded,
+  gradeEssay,
+  fetchEssayAnalysis,
 } from "../../services/activityService";
 
 interface StudentsViewProps {
@@ -85,19 +97,46 @@ export function StudentsView({
   const [updateFile, setUpdateFile] = useState<File | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Track grading progress per student (studentId -> { progress, step })
+  const [gradingStudents, setGradingStudents] = useState<
+    Map<string, { progress: number; step: string }>
+  >(new Map());
+  const [gradedStudents, setGradedStudents] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
-  // Debug logging
+  // Check which students have been graded
   useEffect(() => {
-    console.log("[StudentsView] Component props:", {
-      activityId: activity.id,
-      activityTitle: activity.title,
-      programName,
-      programSection,
-      studentsCount: students.length,
-      isLoading,
-      students: students,
-    });
-  }, [activity, programName, programSection, students, isLoading]);
+    const checkGradedStatus = async () => {
+      const gradedSet = new Set<string>();
+      // Check all students in parallel but handle errors gracefully
+      const checkPromises = students
+        .filter((student) => student.status === "submitted")
+        .map(async (student) => {
+          try {
+            const isGraded = await checkEssayGraded(student.id, activity.id);
+            if (isGraded) {
+              return student.id;
+            }
+          } catch {
+            // Silently handle errors (table might not exist yet)
+            // The fallback in checkEssayGraded will handle it
+          }
+          return null;
+        });
+
+      const results = await Promise.all(checkPromises);
+      results.forEach((studentId) => {
+        if (studentId) {
+          gradedSet.add(studentId);
+        }
+      });
+      setGradedStudents(gradedSet);
+    };
+
+    if (students.length > 0 && activity.id) {
+      checkGradedStatus();
+    }
+  }, [students, activity.id]);
 
   // Filter out students who have already submitted
   const availableStudents = useMemo(() => {
@@ -485,7 +524,21 @@ export function StudentsView({
                 <TableRow key={student.id}>
                   <TableCell className="font-medium">{student.name}</TableCell>
                   <TableCell className="text-center">
-                    {student.status === "submitted" ? (
+                    {gradingStudents.has(student.id) ? (
+                      // Show progress indicator when grading
+                      <div className="flex items-center justify-center gap-2">
+                        <GradingProgressIndicator
+                          progress={
+                            gradingStudents.get(student.id)?.progress || 0
+                          }
+                          currentStep={gradingStudents.get(student.id)?.step}
+                          size="sm"
+                        />
+                        <span className="text-xs text-neutral-500">
+                          Grading...
+                        </span>
+                      </div>
+                    ) : student.status === "submitted" ? (
                       <Badge className="bg-success-default/10 text-success-default border-success-default/20">
                         <CheckCircle2 className="w-3 h-3 mr-1 inline" />
                         Submitted
@@ -575,15 +628,117 @@ export function StudentsView({
                           View Essay
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            // Grade Essay functionality - placeholder for future implementation
-                            alert("Grade Essay feature coming soon!");
+                            if (student.status === "submitted") {
+                              // Check if already grading
+                              if (gradingStudents.has(student.id)) {
+                                return; // Already grading, do nothing
+                              }
+
+                              const isGraded = await checkEssayGraded(
+                                student.id,
+                                activity.id
+                              );
+                              if (isGraded) {
+                                // Show result
+                                const analysisData = await fetchEssayAnalysis(
+                                  student.id,
+                                  activity.id
+                                );
+                                if (analysisData) {
+                                  navigate("/AnalysisResults", {
+                                    state: {
+                                      analysis: analysisData.analysis,
+                                      text: analysisData.text,
+                                      title: analysisData.title,
+                                      studentId: student.id,
+                                      studentName: student.name,
+                                    },
+                                  });
+                                } else {
+                                  alert("Failed to load analysis results");
+                                }
+                              } else {
+                                // Grade essay - automatic process: OCR -> Analysis -> Save
+                                // Process: OCR (extract text from PDF) -> Analyze Essay -> Save Results
+                                // No confirmation needed - automatically proceeds
+
+                                // Start grading (show progress indicator in table)
+                                setGradingStudents((prev) => {
+                                  const newMap = new Map(prev);
+                                  newMap.set(student.id, {
+                                    progress: 0,
+                                    step: "Starting...",
+                                  });
+                                  return newMap;
+                                });
+
+                                // Run grading process automatically (no user confirmation)
+                                const result = await gradeEssay(
+                                  student.id,
+                                  student.name,
+                                  activity.id,
+                                  (progress, step) => {
+                                    // Update progress for this specific student
+                                    setGradingStudents((prev) => {
+                                      const newMap = new Map(prev);
+                                      newMap.set(student.id, {
+                                        progress,
+                                        step,
+                                      });
+                                      return newMap;
+                                    });
+                                  }
+                                );
+
+                                // Remove from grading map
+                                setGradingStudents((prev) => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(student.id);
+                                  return newMap;
+                                });
+
+                                if (result.success) {
+                                  // Update graded status
+                                  setGradedStudents((prev) => {
+                                    const newSet = new Set(prev);
+                                    newSet.add(student.id);
+                                    return newSet;
+                                  });
+                                } else {
+                                  alert(
+                                    `Failed to grade essay: ${result.error}`
+                                  );
+                                }
+                              }
+                            } else {
+                              alert(
+                                "This student has not submitted an essay yet."
+                              );
+                            }
                           }}
-                          disabled={student.status !== "submitted"}
+                          disabled={
+                            student.status !== "submitted" ||
+                            gradingStudents.has(student.id)
+                          }
                         >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Grade Essay
+                          {gradingStudents.has(student.id) ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Grading...
+                            </>
+                          ) : gradedStudents.has(student.id) ? (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Show Result
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Grade Essay
+                            </>
+                          )}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
