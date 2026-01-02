@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { MoreVertical, Edit, Archive, Layers, FileText, Users } from "lucide-react";
+import { MoreVertical, Edit, Archive } from "lucide-react";
 import type { Program } from "../../data/programsData";
 
 interface ProgramsTableViewProps {
@@ -49,7 +49,9 @@ export function ProgramsTableView({
               onClick={() => onProgramClick(program.name)}
             >
               <TableCell>
-                <div className="font-medium text-neutral-900">{program.name}</div>
+                <div className="font-medium text-neutral-900">
+                  {program.name}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="text-sm text-neutral-500 max-w-xs truncate">
@@ -57,20 +59,26 @@ export function ProgramsTableView({
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                <Badge className="bg-primary/10 text-primary border-primary/20">
-                  <Layers className="w-3 h-3 mr-1" />
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
                   {program.tracks}
                 </Badge>
               </TableCell>
               <TableCell className="text-center">
-                <Badge className="bg-secondary/10 text-secondary border-secondary/20">
-                  <FileText className="w-3 h-3 mr-1" />
+                <Badge
+                  variant="outline"
+                  className="bg-secondary/10 text-secondary border-secondary/20"
+                >
                   {program.courses}
                 </Badge>
               </TableCell>
               <TableCell className="text-center">
-                <Badge className="bg-success-default/10 text-success-default border-success-default/20">
-                  <Users className="w-3 h-3 mr-1" />
+                <Badge
+                  variant="outline"
+                  className="bg-info-default/10 text-info-default border-info-default/20"
+                >
                   {program.avgClassSize}
                 </Badge>
               </TableCell>
@@ -114,4 +122,3 @@ export function ProgramsTableView({
     </Card>
   );
 }
-

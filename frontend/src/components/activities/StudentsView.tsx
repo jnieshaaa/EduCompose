@@ -539,7 +539,7 @@ export function StudentsView({
                         </span>
                       </div>
                     ) : student.status === "submitted" ? (
-                      <Badge className="bg-success-default/10 text-success-default border-success-default/20">
+                      <Badge className="bg-success-default/90 text-success-default border-success-default/20">
                         <CheckCircle2 className="w-3 h-3 mr-1 inline" />
                         Submitted
                       </Badge>

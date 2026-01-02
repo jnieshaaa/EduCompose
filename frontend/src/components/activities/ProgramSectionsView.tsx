@@ -125,13 +125,13 @@ export function ProgramSectionsView({
           <p className="text-neutral-600 mb-4">{activity.description}</p>
         )}
         <div className="flex flex-wrap gap-2">
-          <Badge className="bg-support/20 text-neutral-900/70 border-primary/90 font-light">
+          <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
             {getProgramLabel(
               activity.programId,
               programs.map((p) => ({ id: p.id, name: p.name }))
             )}
           </Badge>
-          <Badge className="bg-support/20 text-neutral-900/70 border-primary/90 font-light">
+          <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
             {getBlockLabel(
               activity.blockId,
               sections.map((s) => ({
@@ -191,12 +191,16 @@ export function ProgramSectionsView({
                       {section.name}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge className="bg-primary/10 text-primary border-primary/20">
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/10 text-primary border-primary/20"
+                      >
                         {section.studentCount}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge
+                        variant="outline"
                         className={
                           section.submissionCount > 0
                             ? "bg-success-default/10 text-success-default border-success-default/20"
@@ -237,7 +241,7 @@ export function ProgramSectionsView({
                             <div className="text-xs font-medium text-neutral-900">
                               Group #{index + 1}
                             </div>
-                            <Badge className="bg-warning-default/10 text-warning-default border-warning-default/20 text-xs px-1.5 py-0.5">
+                            <Badge className="bg-warning-default/70 text-warning-default border-warning-default/20 text-xs px-1.5 py-0.5">
                               {group.essays.length} essays
                             </Badge>
                           </div>
@@ -252,7 +256,7 @@ export function ProgramSectionsView({
                                   className="text-xs text-neutral-600"
                                 >
                                   <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                                    <Badge className="bg-warning-default/10 text-warning-default border-warning-default/20 text-xs px-1 py-0">
+                                    <Badge className="bg-warning-default/90 text-warning-default border-warning-default/20 text-xs px-1 py-0">
                                       {essay.programName} - {essay.sectionName}
                                     </Badge>
                                   </div>
