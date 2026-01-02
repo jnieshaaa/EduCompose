@@ -1866,21 +1866,8 @@ const processSimilarityGroups = (
 
     if (text && essayId) {
       essayTexts.set(essayId, text);
-      console.log(
-        `[processSimilarityGroups] Mapped essay ${essayId} with text length ${text.length}`
-      );
-    } else {
-      console.log(
-        `[processSimilarityGroups] Skipping item - text: ${!!text}, essayId: ${essayId}, essay_id: ${
-          item.essay_id
-        }`
-      );
     }
   }
-
-  console.log(
-    `[processSimilarityGroups] Total essays in text map: ${essayTexts.size}, total groups: ${groups.size}`
-  );
 
   const duplicateGroups: DuplicateEssayGroup[] = [];
   // Lower threshold to catch essays with headers/formatting differences
@@ -1894,10 +1881,6 @@ const processSimilarityGroups = (
       allEssays.push({ essayId: essay.essayId, hash });
     }
   }
-
-  console.log(
-    `[processSimilarityGroups] Collected ${allEssays.length} essays from ${groups.size} hash groups for comparison`
-  );
 
   // Group essays by similarity (compare across hash groups too)
   const similarityGroups: Array<DuplicateEssayGroup["essays"]> = [];
@@ -1944,11 +1927,6 @@ const processSimilarityGroups = (
       }
 
       const similarity = calculateTextSimilarity(text1, text2);
-      console.log(
-        `[fetchDuplicateEssays] Comparing essay ${allEssays[i].essayId} vs ${
-          allEssays[j].essayId
-        }: similarity = ${(similarity * 100).toFixed(1)}%`
-      );
       if (similarity >= SIMILARITY_THRESHOLD) {
         // Find the essay info from groups
         let foundEssay: DuplicateEssayGroup["essays"][0] | null = null;
@@ -2156,26 +2134,12 @@ export const fetchDuplicateEssays = async (
       );
     }
 
-    console.log(
-      `[fetchDuplicateEssays] Found ${analysisResults.length} analysis results`
-    );
-
     // Group essays by content hash
     const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
-    let validEssaysCount = 0;
-    let skippedCount = 0;
 
     for (const result of analysisResults) {
       const originalText = result.original_text;
       if (!originalText || originalText.trim().length < 50) {
-        skippedCount++;
-        console.log(
-          `[fetchDuplicateEssays] Skipping essay ${result.essay_id}: ${
-            !originalText
-              ? "no original_text"
-              : `text too short (${originalText.trim().length} chars)`
-          }`
-        );
         continue; // Skip essays without text or too short
       }
 
@@ -2210,10 +2174,6 @@ export const fetchDuplicateEssays = async (
       }
 
       if (!essayData) {
-        console.log(
-          `[fetchDuplicateEssays] Essay data is null for essay_id ${result.essay_id}`
-        );
-        skippedCount++;
         continue;
       }
 
@@ -2223,18 +2183,6 @@ export const fetchDuplicateEssays = async (
       const program = section?.programs;
 
       if (!student || !section || !program) {
-        console.log(
-          `[fetchDuplicateEssays] Missing nested data for essay ${
-            essayData.id || result.essay_id
-          }:`,
-          {
-            hasEssay: !!essayData,
-            hasStudent: !!student,
-            hasSection: !!section,
-            hasProgram: !!program,
-          }
-        );
-        skippedCount++;
         continue;
       }
 
@@ -2249,24 +2197,12 @@ export const fetchDuplicateEssays = async (
       };
 
       const contentHash = generateContentHash(originalText);
-      console.log(
-        `[fetchDuplicateEssays] Processing essay ${essayInfo.essayId} from ${
-          essayInfo.programName
-        } - ${essayInfo.sectionName} (${essayInfo.studentName}), text length: ${
-          originalText.length
-        }, hash: ${contentHash.substring(0, 50)}...`
-      );
 
       if (!contentGroups.has(contentHash)) {
         contentGroups.set(contentHash, []);
       }
       contentGroups.get(contentHash)!.push(essayInfo);
-      validEssaysCount++;
     }
-
-    console.log(
-      `[fetchDuplicateEssays] Processed ${validEssaysCount} valid essays, skipped ${skippedCount}, created ${contentGroups.size} hash groups`
-    );
 
     // Use the helper function to process similarity groups
     const duplicateGroups = processSimilarityGroups(
@@ -2278,26 +2214,6 @@ export const fetchDuplicateEssays = async (
       })),
       "original_text"
     );
-
-    // Log for debugging
-    if (duplicateGroups.length > 0) {
-      console.log(
-        `[fetchDuplicateEssays] Found ${duplicateGroups.length} duplicate group(s) for activity ${activityId}`
-      );
-      duplicateGroups.forEach((group, idx) => {
-        console.log(
-          `  Group ${idx + 1}: ${
-            group.essays.length
-          } essays - Programs: ${Array.from(
-            new Set(group.essays.map((e) => e.programName))
-          ).join(", ")}`
-        );
-      });
-    } else {
-      console.log(
-        `[fetchDuplicateEssays] No duplicates found for activity ${activityId}. Total essays checked: ${analysisResults.length}`
-      );
-    }
 
     return duplicateGroups;
   } catch (err) {

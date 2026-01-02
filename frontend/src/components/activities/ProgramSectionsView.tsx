@@ -85,13 +85,7 @@ export function ProgramSectionsView({
   useEffect(() => {
     const loadDuplicates = async () => {
       try {
-        console.log(
-          `[ProgramSectionsView] Loading duplicates for activity ${activity.id}`
-        );
         const duplicates = await fetchDuplicateEssays(activity.id);
-        console.log(
-          `[ProgramSectionsView] Found ${duplicates.length} duplicate groups`
-        );
         setDuplicateGroups(duplicates);
       } catch (error) {
         console.error("Error loading duplicate essays:", error);
