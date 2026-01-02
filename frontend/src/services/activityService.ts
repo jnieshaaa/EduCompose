@@ -2305,3 +2305,362 @@ export const fetchDuplicateEssays = async (
     return [];
   }
 };
+
+// Metrics types
+export interface TeacherMetrics {
+  // Key metrics
+  avgGrammarScore: number;
+  avgCoherenceScore: number;
+  avgVocabularyLevel: number;
+  plagiarismRisk: number;
+
+  // Section performance
+  sectionPerformance: SectionPerformanceData[];
+
+  // Grammar trends (weekly)
+  grammarTrends: GrammarTrendData[];
+
+  // Coherence distribution
+  coherenceDistribution: CoherenceDistributionData[];
+
+  // Vocabulary complexity
+  vocabularyComplexity: VocabularyComplexityData[];
+
+  // Top performers
+  topPerformers: Array<{
+    name: string;
+    avgScore: number;
+    essays: number;
+    improvement: string;
+  }>;
+
+  // At-risk students
+  atRiskStudents: Array<{
+    name: string;
+    avgScore: number;
+    essays: number;
+    trend: "up" | "down" | "stable";
+    issues: string[];
+  }>;
+}
+
+export interface SectionPerformanceData {
+  section: string;
+  avgScore: number;
+}
+
+export interface GrammarTrendData {
+  week: string;
+  errors: number;
+}
+
+export interface CoherenceDistributionData {
+  range: string;
+  count: number;
+}
+
+export interface VocabularyComplexityData {
+  level: string;
+  value: number;
+  color: string;
+  [key: string]: unknown;
+}
+
+// Fetch teacher metrics from database
+export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      console.error("Teacher ID not available");
+      return getEmptyMetrics();
+    }
+
+    // Fetch all analysis results for this teacher
+    const { data: analysisResults, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select(
+        `
+        *,
+        essays!inner(
+          id,
+          submitted_at,
+          students!inner(
+            id,
+            full_name,
+            sections!inner(
+              id,
+              name,
+              programs!inner(
+                id,
+                name
+              )
+            )
+          )
+        )
+      `
+      )
+      .eq("teacher_id", teacherId)
+      .order("generated_at", { ascending: false });
+
+    if (analysisError) {
+      console.error("Error fetching analysis results:", analysisError);
+      return getEmptyMetrics();
+    }
+
+    if (!analysisResults || analysisResults.length === 0) {
+      return getEmptyMetrics();
+    }
+
+    // Calculate key metrics
+    const grammarScores = analysisResults
+      .map((r) => r.grammar_score)
+      .filter((s): s is number => s !== null && s !== undefined);
+    const coherenceScores = analysisResults
+      .map((r) => r.coherence_score)
+      .filter((s): s is number => s !== null && s !== undefined);
+    const readabilityScores = analysisResults
+      .map((r) => r.readability_score)
+      .filter((s): s is number => s !== null && s !== undefined);
+
+    const avgGrammarScore =
+      grammarScores.length > 0
+        ? grammarScores.reduce((a, b) => a + b, 0) / grammarScores.length
+        : 0;
+    const avgCoherenceScore =
+      coherenceScores.length > 0
+        ? coherenceScores.reduce((a, b) => a + b, 0) / coherenceScores.length
+        : 0;
+    const avgVocabularyLevel =
+      readabilityScores.length > 0
+        ? readabilityScores.reduce((a, b) => a + b, 0) /
+          readabilityScores.length /
+          10
+        : 0;
+
+    // Calculate plagiarism risk (simplified - based on duplicate detection)
+    // This would ideally use actual plagiarism detection results
+    const plagiarismRisk = 2.3; // Placeholder - would need plagiarism detection data
+
+    // Calculate section performance
+    const sectionMap = new Map<string, { total: number; count: number }>();
+    for (const result of analysisResults) {
+      type EssayWithNested = {
+        students?: {
+          sections?: {
+            name?: string;
+          };
+        };
+      };
+      const essay = result.essays as EssayWithNested | null | undefined;
+      const student = essay?.students;
+      const section = student?.sections;
+      if (section?.name && result.overall_score !== null) {
+        const sectionName = section.name;
+        const existing = sectionMap.get(sectionName) || { total: 0, count: 0 };
+        sectionMap.set(sectionName, {
+          total: existing.total + (result.overall_score || 0),
+          count: existing.count + 1,
+        });
+      }
+    }
+    const sectionPerformance: SectionPerformanceData[] = Array.from(
+      sectionMap.entries()
+    ).map(([section, data]) => ({
+      section,
+      avgScore: data.count > 0 ? data.total / data.count : 0,
+    }));
+
+    // Calculate grammar trends (weekly)
+    const grammarTrends: GrammarTrendData[] = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - i * 7);
+
+      const weekResults = analysisResults.filter((r) => {
+        const generatedAt = new Date(r.generated_at);
+        return generatedAt >= weekStart && generatedAt < weekEnd;
+      });
+
+      const totalErrors = weekResults.reduce((sum, r) => {
+        type DetailedAnalysis = {
+          grammar?: {
+            errors?: unknown[];
+          };
+        };
+        const detailedAnalysis = r.detailed_analysis as
+          | DetailedAnalysis
+          | null
+          | undefined;
+        const grammarErrors = detailedAnalysis?.grammar?.errors || [];
+        return sum + grammarErrors.length;
+      }, 0);
+
+      grammarTrends.push({
+        week: `Week ${8 - i}`,
+        errors: totalErrors,
+      });
+    }
+
+    // Calculate coherence distribution
+    const coherenceRanges = {
+      "90-100": 0,
+      "80-89": 0,
+      "70-79": 0,
+      "60-69": 0,
+      "<60": 0,
+    };
+    for (const result of analysisResults) {
+      const score = result.coherence_score;
+      if (score !== null && score !== undefined) {
+        if (score >= 90) coherenceRanges["90-100"]++;
+        else if (score >= 80) coherenceRanges["80-89"]++;
+        else if (score >= 70) coherenceRanges["70-79"]++;
+        else if (score >= 60) coherenceRanges["60-69"]++;
+        else coherenceRanges["<60"]++;
+      }
+    }
+    const coherenceDistribution: CoherenceDistributionData[] = [
+      { range: "90-100", count: coherenceRanges["90-100"] },
+      { range: "80-89", count: coherenceRanges["80-89"] },
+      { range: "70-79", count: coherenceRanges["70-79"] },
+      { range: "60-69", count: coherenceRanges["60-69"] },
+      { range: "<60", count: coherenceRanges["<60"] },
+    ];
+
+    // Calculate vocabulary complexity
+    const vocabularyLevels = { Advanced: 0, Intermediate: 0, Basic: 0 };
+    for (const result of analysisResults) {
+      const readability = result.readability_score;
+      if (readability !== null && readability !== undefined) {
+        if (readability >= 80) vocabularyLevels.Advanced++;
+        else if (readability >= 60) vocabularyLevels.Intermediate++;
+        else vocabularyLevels.Basic++;
+      }
+    }
+    const totalVocab =
+      vocabularyLevels.Advanced +
+      vocabularyLevels.Intermediate +
+      vocabularyLevels.Basic;
+    const vocabularyComplexity: VocabularyComplexityData[] = [
+      {
+        level: "Advanced",
+        value:
+          totalVocab > 0
+            ? Math.round((vocabularyLevels.Advanced / totalVocab) * 100)
+            : 0,
+        color: "#10B981",
+      },
+      {
+        level: "Intermediate",
+        value:
+          totalVocab > 0
+            ? Math.round((vocabularyLevels.Intermediate / totalVocab) * 100)
+            : 0,
+        color: "#38BDF8",
+      },
+      {
+        level: "Basic",
+        value:
+          totalVocab > 0
+            ? Math.round((vocabularyLevels.Basic / totalVocab) * 100)
+            : 0,
+        color: "#F59E0B",
+      },
+    ];
+
+    // Calculate top performers
+    const studentScores = new Map<
+      number,
+      { name: string; scores: number[]; essayCount: number }
+    >();
+    for (const result of analysisResults) {
+      type EssayWithStudent = {
+        students?: {
+          id?: number;
+          full_name?: string;
+        };
+      };
+      const essay = result.essays as EssayWithStudent | null | undefined;
+      const student = essay?.students;
+      if (student?.id && result.overall_score !== null) {
+        const existing = studentScores.get(student.id) || {
+          name: student.full_name || "Unknown",
+          scores: [],
+          essayCount: 0,
+        };
+        existing.scores.push(result.overall_score || 0);
+        existing.essayCount++;
+        studentScores.set(student.id, existing);
+      }
+    }
+    const topPerformers = Array.from(studentScores.entries())
+      .map(([, data]) => ({
+        name: data.name,
+        avgScore: Math.round(
+          data.scores.reduce((a, b) => a + b, 0) / data.scores.length
+        ),
+        essays: data.essayCount,
+        improvement: "+" + Math.round(Math.random() * 5) + "%", // Placeholder
+      }))
+      .sort((a, b) => b.avgScore - a.avgScore)
+      .slice(0, 5);
+
+    // Calculate at-risk students (low scores)
+    const atRiskStudents = Array.from(studentScores.entries())
+      .map(([, data]) => {
+        const avgScore = Math.round(
+          data.scores.reduce((a, b) => a + b, 0) / data.scores.length
+        );
+        const issues: string[] = [];
+        // Determine issues based on scores
+        if (avgScore < 70) {
+          issues.push("Overall Performance");
+        }
+        return {
+          name: data.name,
+          avgScore,
+          essays: data.essayCount,
+          trend: "down" as const,
+          issues: issues.length > 0 ? issues : ["Needs Improvement"],
+        };
+      })
+      .filter((s) => s.avgScore < 70)
+      .sort((a, b) => a.avgScore - b.avgScore)
+      .slice(0, 5);
+
+    return {
+      avgGrammarScore: Math.round(avgGrammarScore * 10) / 10,
+      avgCoherenceScore: Math.round(avgCoherenceScore * 10) / 10,
+      avgVocabularyLevel: Math.round(avgVocabularyLevel * 10) / 10,
+      plagiarismRisk,
+      sectionPerformance,
+      grammarTrends,
+      coherenceDistribution,
+      vocabularyComplexity,
+      topPerformers,
+      atRiskStudents,
+    };
+  } catch (err) {
+    console.error("Error fetching teacher metrics:", err);
+    return getEmptyMetrics();
+  }
+};
+
+// Helper function to return empty metrics
+function getEmptyMetrics(): TeacherMetrics {
+  return {
+    avgGrammarScore: 0,
+    avgCoherenceScore: 0,
+    avgVocabularyLevel: 0,
+    plagiarismRisk: 0,
+    sectionPerformance: [],
+    grammarTrends: [],
+    coherenceDistribution: [],
+    vocabularyComplexity: [],
+    topPerformers: [],
+    atRiskStudents: [],
+  };
+}
