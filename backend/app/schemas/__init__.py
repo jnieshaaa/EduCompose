@@ -28,7 +28,10 @@ from .analysis_schemas import (
     BatchAnalysisRequest,
     DashboardStats,
     TextAnalysisRequest,
-    TextAnalysisResponse
+    TextAnalysisResponse,
+    PlagiarismCheckRequest,
+    PlagiarismCheckResponse,
+    PlagiarismMatch
 )
 
 __all__ = [
@@ -60,4 +63,7 @@ __all__ = [
     "DashboardStats",
     "TextAnalysisRequest",
     "TextAnalysisResponse",
+    "PlagiarismCheckRequest",
+    "PlagiarismCheckResponse",
+    "PlagiarismMatch",
 ]

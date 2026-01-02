@@ -7,6 +7,11 @@ import {
   TrendingUp,
   Lightbulb,
   ClipboardList,
+  Shield,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Card from '../components/ui/Card';
@@ -14,7 +19,7 @@ import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
-import { analysisApi } from '../api';
+import { analysisApi, plagiarismApi, type PlagiarismCheckResponse, type PlagiarismMatch } from '../api';
 
 const STORAGE_KEY = 'essay_analysis_results';
 
@@ -231,12 +236,15 @@ const AnalysisResults: React.FC = () => {
   const [analysis, setAnalysis] = useState<Omit<AnalysisResponse, 'essay_id'> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric'>('insights');
+  const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric' | 'plagiarism'>('insights');
   const [originalText, setOriginalText] = useState<string>('');
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
   const [selectedError, setSelectedError] = useState<HighlightError | null>(null);
   const [analysisKey, setAnalysisKey] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismCheckResponse | null>(null);
+  const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
+  const [plagiarismError, setPlagiarismError] = useState<string | null>(null);
 
   // Stable references to prevent recalculation
   const stableAnalysisRef = useRef<Omit<AnalysisResponse, 'essay_id'> | null>(null);
@@ -399,6 +407,29 @@ const AnalysisResults: React.FC = () => {
       setSelectedError(error);
     }
   }, [selectedErrorIndex]);
+
+  // Check for plagiarism
+  const handleCheckPlagiarism = async () => {
+    if (!originalText || originalText.trim().length < 10) {
+      setPlagiarismError('Text must be at least 10 characters long');
+      return;
+    }
+
+    setIsCheckingPlagiarism(true);
+    setPlagiarismError(null);
+    setPlagiarismResult(null);
+
+    try {
+      const result = await plagiarismApi.checkPlagiarism(originalText);
+      setPlagiarismResult(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check for plagiarism';
+      setPlagiarismError(errorMessage);
+      console.error('Error checking plagiarism:', err);
+    } finally {
+      setIsCheckingPlagiarism(false);
+    }
+  };
 
   // Export analysis results to PDF
   const handleExportPDF = () => {
@@ -643,13 +674,14 @@ const AnalysisResults: React.FC = () => {
                   { id: 'insights', label: 'Insights', icon: TrendingUp },
                   { id: 'feedback', label: 'Feedback', icon: Lightbulb },
                   { id: 'rubric', label: 'Rubric', icon: ClipboardList },
+                  { id: 'plagiarism', label: 'Plagiarism', icon: Shield },
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric')}
+                      onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric' | 'plagiarism')}
                       className={`flex-1 flex items-center justify-center space-x-2 px-4 py-4 text-sm font-medium transition-colors ${
                         isActive
                           ? 'text-primary border-b-2 border-primary bg-primary-50/50'
@@ -678,6 +710,164 @@ const AnalysisResults: React.FC = () => {
 
               {activeTab === 'rubric' && (
                 <RubricScores analysis={analysis} />
+              )}
+
+              {activeTab === 'plagiarism' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border border-neutral-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold text-neutral-900 mb-1">Plagiarism Check</h2>
+                        <p className="text-sm text-neutral-600">
+                          Check your essay for potential plagiarism using Copyscape
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {!plagiarismResult && !isCheckingPlagiarism && (
+                      <div className="space-y-4">
+                        <p className="text-sm text-neutral-600">
+                          Click the button below to check your essay for plagiarism. This will compare your text against billions of web pages.
+                        </p>
+                        <button
+                          onClick={handleCheckPlagiarism}
+                          className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                        >
+                          <Shield className="w-5 h-5" />
+                          <span>Check for Plagiarism</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {isCheckingPlagiarism && (
+                      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-neutral-600">Checking for plagiarism...</p>
+                        <p className="text-xs text-neutral-500">This may take a few moments</p>
+                      </div>
+                    )}
+
+                    {plagiarismError && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h3 className="font-semibold text-red-900 mb-1">Error</h3>
+                            <p className="text-sm text-red-700">{plagiarismError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {plagiarismResult && !isCheckingPlagiarism && (
+                      <div className="space-y-4 mt-4">
+                        {/* Overall Result */}
+                        <div className={`p-4 rounded-lg border-2 ${
+                          plagiarismResult.is_plagiarized
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-green-50 border-green-200'
+                        }`}>
+                          <div className="flex items-center space-x-3">
+                            {plagiarismResult.is_plagiarized ? (
+                              <XCircle className="w-6 h-6 text-red-600" />
+                            ) : (
+                              <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            )}
+                            <div>
+                              <h3 className={`font-bold text-lg ${
+                                plagiarismResult.is_plagiarized ? 'text-red-900' : 'text-green-900'
+                              }`}>
+                                {plagiarismResult.is_plagiarized
+                                  ? 'Potential Plagiarism Detected'
+                                  : 'No Plagiarism Detected'}
+                              </h3>
+                              <p className={`text-sm ${
+                                plagiarismResult.is_plagiarized ? 'text-red-700' : 'text-green-700'
+                              }`}>
+                                {plagiarismResult.is_plagiarized
+                                  ? `Found ${plagiarismResult.match_count} potential match${plagiarismResult.match_count !== 1 ? 'es' : ''} with ${plagiarismResult.plagiarism_percentage.toFixed(1)}% similarity`
+                                  : 'Your essay appears to be original'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Statistics */}
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="bg-neutral-50 rounded-lg p-4">
+                            <div className="text-2xl font-bold text-neutral-900">
+                              {plagiarismResult.plagiarism_percentage.toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-neutral-600 mt-1">Similarity</div>
+                          </div>
+                          <div className="bg-neutral-50 rounded-lg p-4">
+                            <div className="text-2xl font-bold text-neutral-900">
+                              {plagiarismResult.match_count}
+                            </div>
+                            <div className="text-xs text-neutral-600 mt-1">Matches Found</div>
+                          </div>
+                          <div className="bg-neutral-50 rounded-lg p-4">
+                            <div className="text-2xl font-bold text-neutral-900">
+                              {plagiarismResult.text_length}
+                            </div>
+                            <div className="text-xs text-neutral-600 mt-1">Characters Checked</div>
+                          </div>
+                        </div>
+
+                        {/* Matches */}
+                        {plagiarismResult.matches && plagiarismResult.matches.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="font-semibold text-neutral-900">Potential Matches</h3>
+                            {plagiarismResult.matches.map((match: PlagiarismMatch, index: number) => (
+                              <div
+                                key={index}
+                                className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 hover:bg-neutral-100 transition-colors"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <span className="text-sm font-semibold text-red-600">
+                                        {match.percent.toFixed(1)}% match
+                                      </span>
+                                      {match.words && (
+                                        <span className="text-xs text-neutral-500">
+                                          ({match.words} words)
+                                        </span>
+                                      )}
+                                    </div>
+                                    {match.title && (
+                                      <h4 className="font-medium text-neutral-900 mb-1">
+                                        {match.title}
+                                      </h4>
+                                    )}
+                                    <a
+                                      href={match.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-primary hover:text-primary-600 flex items-center space-x-1 group"
+                                    >
+                                      <span className="truncate max-w-md">{match.url}</span>
+                                      <ExternalLink className="w-3 h-3 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Check Again Button */}
+                        <button
+                          onClick={handleCheckPlagiarism}
+                          className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors font-medium mt-4"
+                        >
+                          <Shield className="w-5 h-5" />
+                          <span>Check Again</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>

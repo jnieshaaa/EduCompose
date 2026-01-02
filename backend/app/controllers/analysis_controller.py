@@ -11,10 +11,11 @@ import logging
 from ..models import User, Essay
 from ..schemas import (
     AnalysisRequest, AnalysisResponse, BatchAnalysisRequest,
-    TextAnalysisRequest, TextAnalysisResponse
+    TextAnalysisRequest, TextAnalysisResponse, PlagiarismCheckRequest, 
+    PlagiarismCheckResponse, PlagiarismMatch
 )
 from ..database import get_db
-from ..services import auth_service, essay_analysis_service
+from ..services import auth_service, essay_analysis_service, copyscape_service
 
 analysis_router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -198,4 +199,58 @@ async def get_dashboard_stats(
         "recent_essays": recent_essays,
         "class_stats": class_stats
     }
+
+@analysis_router.post("/check-plagiarism", response_model=PlagiarismCheckResponse)
+async def check_plagiarism(
+    request: PlagiarismCheckRequest
+):
+    """
+    Check essay text for plagiarism using Copyscape API.
+    This endpoint does not require authentication to allow use from the landing page.
+    """
+    if not request.text or len(request.text.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Text must be at least 10 characters long"
+        )
+    
+    # Check if Copyscape is configured
+    if not copyscape_service.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Plagiarism checking service is not configured. Please contact administrator."
+        )
+    
+    # Perform plagiarism check
+    result = await copyscape_service.check_plagiarism(request.text)
+    
+    # Check for errors
+    if "error" in result:
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("message", "Plagiarism check failed")
+        )
+    
+    # Convert matches to PlagiarismMatch objects
+    matches = []
+    for match_data in result.get("matches", []):
+        matches.append(PlagiarismMatch(
+            url=match_data.get("url", ""),
+            title=match_data.get("title"),
+            minwords=match_data.get("minwords"),
+            maxwords=match_data.get("maxwords"),
+            words=match_data.get("words"),
+            percent=match_data.get("percent", 0.0)
+        ))
+    
+    return PlagiarismCheckResponse(
+        is_plagiarized=result.get("is_plagiarized", False),
+        plagiarism_percentage=result.get("plagiarism_percentage", 0.0),
+        match_count=result.get("match_count", 0),
+        matches=matches,
+        text_length=result.get("text_length", len(request.text)),
+        checked=True,
+        error=result.get("error"),
+        message=result.get("message")
+    )
 

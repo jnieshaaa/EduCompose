@@ -62,3 +62,24 @@ class DashboardStats(BaseModel):
     recent_essays: List[EssayResponse]
     class_stats: List[Dict[str, Any]]
 
+class PlagiarismMatch(BaseModel):
+    url: str
+    title: Optional[str] = None
+    minwords: Optional[int] = None
+    maxwords: Optional[int] = None
+    words: Optional[int] = None
+    percent: float
+
+class PlagiarismCheckRequest(BaseModel):
+    text: str
+
+class PlagiarismCheckResponse(BaseModel):
+    is_plagiarized: bool
+    plagiarism_percentage: float
+    match_count: int
+    matches: List[PlagiarismMatch]
+    text_length: int
+    checked: bool
+    error: Optional[str] = None
+    message: Optional[str] = None
+

@@ -383,6 +383,48 @@ export const ocrApi = {
   },
 };
 
+// Plagiarism Check API
+export interface PlagiarismMatch {
+  url: string;
+  title?: string;
+  minwords?: number;
+  maxwords?: number;
+  words?: number;
+  percent: number;
+}
+
+export interface PlagiarismCheckResponse {
+  is_plagiarized: boolean;
+  plagiarism_percentage: number;
+  match_count: number;
+  matches: PlagiarismMatch[];
+  text_length: number;
+  checked: boolean;
+  error?: string;
+  message?: string;
+}
+
+export const plagiarismApi = {
+  checkPlagiarism: async (text: string): Promise<PlagiarismCheckResponse> => {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-plagiarism`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json() as Promise<PlagiarismCheckResponse>;
+  },
+};
+
 // Dummy data for development - loaded from JSON file
 export const dummyData = dummyDataJson as {
   essays: Essay[];
