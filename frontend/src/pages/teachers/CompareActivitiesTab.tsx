@@ -3,8 +3,8 @@ import {
   FileText,
   Users,
   Search,
-  ChevronDown,
-  X,
+  // ChevronDown,
+  // X,
   Eye,
   AlertCircle,
   CheckCircle2,
@@ -49,9 +49,9 @@ export function CompareActivitiesTab() {
     EssayActivity[]
   >([]);
   const [selectedActivityId, setSelectedActivityId] = useState<string>("");
-  const [duplicateGroups, setDuplicateGroups] = useState<
-    DuplicateEssayGroup[]
-  >([]);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>(
+    []
+  );
   const [allStudents, setAllStudents] = useState<
     Array<{
       id: string;
@@ -67,9 +67,6 @@ export function CompareActivitiesTab() {
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<DuplicateEssayGroup | null>(
-    null
-  );
   const [selectedStudents, setSelectedStudents] = useState<Set<number>>(
     new Set()
   );
@@ -79,12 +76,17 @@ export function CompareActivitiesTab() {
     name: string;
   } | null>(null);
   const [isViewEssayModalOpen, setIsViewEssayModalOpen] = useState(false);
-  
+
   // Comparison state
-  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [comparisonResult, setComparisonResult] =
+    useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "comparison" | "history">("list");
-  const [comparisonHistory, setComparisonHistory] = useState<ComparisonAnalysis[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "comparison" | "history">(
+    "list"
+  );
+  const [comparisonHistory, setComparisonHistory] = useState<
+    ComparisonAnalysis[]
+  >([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Load activities with duplicates
@@ -169,8 +171,7 @@ export function CompareActivitiesTab() {
     );
   }, [allStudents, studentSearchQuery]);
 
-  const handleOpenStudentModal = (group: DuplicateEssayGroup | null = null) => {
-    setSelectedGroup(group);
+  const handleOpenStudentModal = () => {
     setSelectedStudents(new Set());
     setStudentSearchQuery("");
     setIsStudentModalOpen(true);
@@ -199,7 +200,7 @@ export function CompareActivitiesTab() {
 
     try {
       const studentIdsArray = Array.from(selectedStudents);
-      
+
       // Fetch essay texts for selected students
       const essayData = await fetchEssayTextsForStudents(
         studentIdsArray,
@@ -207,7 +208,9 @@ export function CompareActivitiesTab() {
       );
 
       if (essayData.length < 2) {
-        alert("Could not fetch essays for selected students. Please ensure they have submitted essays.");
+        alert(
+          "Could not fetch essays for selected students. Please ensure they have submitted essays."
+        );
         setIsComparing(false);
         return;
       }
@@ -217,7 +220,10 @@ export function CompareActivitiesTab() {
       const studentNames = essayData.map((e) => e.studentName);
 
       // Call LLM analysis
-      const analysisResult = await analyzeEssaySimilarity(essayTexts, studentNames);
+      const analysisResult = await analyzeEssaySimilarity(
+        essayTexts,
+        studentNames
+      );
 
       // Create comparison result
       const result: ComparisonResult = {
@@ -266,7 +272,9 @@ export function CompareActivitiesTab() {
     setViewMode("history");
   };
 
-  const handleViewHistoryComparison = async (historyItem: ComparisonAnalysis) => {
+  const handleViewHistoryComparison = async (
+    historyItem: ComparisonAnalysis
+  ) => {
     // Fetch the essay texts for this history item
     const essayData = await fetchEssayTextsForStudents(
       historyItem.studentIds,
@@ -286,27 +294,35 @@ export function CompareActivitiesTab() {
 
   // Helper function to escape HTML
   const escapeHtml = (text: string): string => {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   };
 
   // Function to apply highlights to text
-  const applyHighlights = (text: string, studentIndex: number, highlights: ComparisonHighlight[]) => {
-    const studentHighlights = highlights.filter((h) => h.studentIndex === studentIndex);
+  const applyHighlights = (
+    text: string,
+    studentIndex: number,
+    highlights: ComparisonHighlight[]
+  ) => {
+    const studentHighlights = highlights.filter(
+      (h) => h.studentIndex === studentIndex
+    );
     if (studentHighlights.length === 0) return escapeHtml(text);
 
     // Sort highlights by start position (reverse to avoid index shifting)
-    const sortedHighlights = [...studentHighlights].sort((a, b) => b.start - a.start);
+    const sortedHighlights = [...studentHighlights].sort(
+      (a, b) => b.start - a.start
+    );
 
     let result = escapeHtml(text);
     for (const highlight of sortedHighlights) {
       // Ensure valid indices
       const start = Math.max(0, Math.min(highlight.start, result.length));
       const end = Math.max(start, Math.min(highlight.end, result.length));
-      
+
       if (start >= end) continue; // Skip invalid highlights
-      
+
       const before = result.substring(0, start);
       const highlighted = result.substring(start, end);
       const after = result.substring(end);
@@ -331,22 +347,29 @@ export function CompareActivitiesTab() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to List
             </Button>
-            <h1 className="text-2xl font-bold text-neutral-900">Comparison History</h1>
+            <h1 className="text-2xl font-bold text-neutral-900">
+              Comparison History
+            </h1>
             <p className="text-neutral-600 mt-1">
-              View past essay comparisons for {selectedActivity?.title || "this activity"}
+              View past essay comparisons for{" "}
+              {selectedActivity?.title || "this activity"}
             </p>
           </div>
         </div>
 
         {isLoadingHistory ? (
           <Card className="p-12">
-            <div className="text-center text-neutral-500">Loading history...</div>
+            <div className="text-center text-neutral-500">
+              Loading history...
+            </div>
           </Card>
         ) : comparisonHistory.length === 0 ? (
           <Card className="p-12">
             <div className="text-center">
               <History className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-              <p className="text-neutral-600 font-medium">No comparison history found</p>
+              <p className="text-neutral-600 font-medium">
+                No comparison history found
+              </p>
               <p className="text-sm text-neutral-500 mt-1">
                 Past comparisons will appear here
               </p>
@@ -355,7 +378,10 @@ export function CompareActivitiesTab() {
         ) : (
           <div className="space-y-4">
             {comparisonHistory.map((item) => (
-              <Card key={item.id} className="p-6 hover:shadow-md transition-shadow">
+              <Card
+                key={item.id}
+                className="p-6 hover:shadow-md transition-shadow"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -405,10 +431,7 @@ export function CompareActivitiesTab() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={handleBackToList}
-          >
+          <Button variant="outline" onClick={handleBackToList}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to List
           </Button>
@@ -427,11 +450,11 @@ export function CompareActivitiesTab() {
               <div className="flex items-center gap-4 mb-4">
                 <Badge
                   className={
-                    comparisonResult.similarityScore > 0.70
-                      ? "bg-red-100 text-red-700 border-red-200 text-lg px-4 py-1"
-                      : comparisonResult.similarityScore > 0.50
-                      ? "bg-yellow-100 text-yellow-700 border-yellow-200 text-lg px-4 py-1"
-                      : "bg-green-100 text-green-700 border-green-200 text-lg px-4 py-1"
+                    comparisonResult.similarityScore > 0.7
+                      ? "bg-red-500 text-red-700 border-red-200 text-lg px-4 py-1"
+                      : comparisonResult.similarityScore > 0.5
+                      ? "bg-yellow-500 text-yellow-700 border-yellow-200 text-lg px-4 py-1"
+                      : "bg-green-500 text-green-700 border-green-200 text-lg px-4 py-1"
                   }
                 >
                   {(comparisonResult.similarityScore * 100).toFixed(0)}% Similar
@@ -551,18 +574,21 @@ export function CompareActivitiesTab() {
                     </p>
                   )}
                   <div className="flex items-center gap-4 mt-2">
-                    <Badge className="bg-primary/10 text-primary border-primary/20">
+                    <Badge className="bg-primary/80 text-primary border-primary/20">
                       {selectedActivity.submissionCount} submissions
                     </Badge>
                     {selectedActivity.dueDate && (
                       <span className="text-sm text-neutral-500">
-                        Due: {new Date(selectedActivity.dueDate).toLocaleDateString()}
+                        Due:{" "}
+                        {new Date(
+                          selectedActivity.dueDate
+                        ).toLocaleDateString()}
                       </span>
                     )}
                   </div>
                 </div>
                 <Button
-                  onClick={() => handleOpenStudentModal(null)}
+                  onClick={handleOpenStudentModal}
                   className="flex items-center gap-2"
                 >
                   <Users className="w-4 h-4" />
@@ -614,7 +640,7 @@ export function CompareActivitiesTab() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge className="bg-warning-default/10 text-warning-default border-warning-default/20">
+                        <Badge className="bg-warning-default/80 text-warning-default border-warning-default/20">
                           Group {index + 1}
                         </Badge>
                         <span className="text-sm text-neutral-500">
@@ -646,7 +672,7 @@ export function CompareActivitiesTab() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleOpenStudentModal(group)}
+                      onClick={handleOpenStudentModal}
                       className="flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
@@ -704,7 +730,9 @@ export function CompareActivitiesTab() {
                     <div
                       key={student.studentId}
                       className={`p-4 hover:bg-neutral-50 transition-colors cursor-pointer ${
-                        isSelected ? "bg-primary/5 border-l-4 border-l-primary" : ""
+                        isSelected
+                          ? "bg-primary/5 border-l-4 border-l-primary"
+                          : ""
                       }`}
                       onClick={() => handleToggleStudent(student.studentId)}
                     >
@@ -713,7 +741,9 @@ export function CompareActivitiesTab() {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => handleToggleStudent(student.studentId)}
+                            onChange={() =>
+                              handleToggleStudent(student.studentId)
+                            }
                             onClick={(e) => e.stopPropagation()}
                             className="mt-1 w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary"
                           />
@@ -740,7 +770,7 @@ export function CompareActivitiesTab() {
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
-                              e.stopPropagation();
+                              e?.stopPropagation();
                               handleViewEssay(student.studentId, student.name);
                             }}
                             className="flex items-center gap-1"
@@ -786,9 +816,7 @@ export function CompareActivitiesTab() {
                     Analyzing...
                   </>
                 ) : (
-                  <>
-                    Compare ({selectedStudents.size})
-                  </>
+                  <>Compare ({selectedStudents.size})</>
                 )}
               </Button>
             </div>
