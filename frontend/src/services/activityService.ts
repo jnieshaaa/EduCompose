@@ -15,6 +15,10 @@ type SupabaseActivityRow = {
   due_date: string | null;
   instructions: string | null;
   created_at: string;
+  rubrics?:
+    | { id: number; name: string }
+    | { id: number; name: string }[]
+    | null;
 };
 
 // Load activities for the current teacher
@@ -26,11 +30,11 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
       return [];
     }
 
-    // Fetch activities
+    // Fetch activities with rubric names
     const { data: activitiesData, error: activitiesError } = await supabase
       .from("essay_activities")
       .select(
-        "id, title, program_id, section_id, rubric_id, due_date, instructions, created_at"
+        "id, teacher_id, title, program_id, section_id, rubric_id, due_date, instructions, created_at, rubrics(id, name)"
       )
       .eq("teacher_id", teacherId)
       .order("created_at", { ascending: false });
@@ -70,7 +74,7 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
 
     // Map Supabase rows to EssayActivity format
     const mappedActivities: EssayActivity[] = (
-      activitiesData as SupabaseActivityRow[]
+      activitiesData as unknown as SupabaseActivityRow[]
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
@@ -87,6 +91,135 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
   } catch (err) {
     console.error("Unexpected error loading activities:", err);
     return [];
+  }
+};
+
+// Initialize/sync all platform rubrics to Supabase database
+// This ensures all platform rubrics are available in the database
+// Returns the number of rubrics successfully synced
+export const initializePlatformRubrics = async (): Promise<number> => {
+  try {
+    const { platformRubrics } = await import("../data/rubricData");
+
+    // Get all existing platform rubrics from database
+    // Fetch all rubrics and filter in JavaScript to avoid 406 error
+    const { data: allRubrics, error: fetchError } = await supabase
+      .from("rubrics")
+      .select("id, name, created_by");
+
+    if (fetchError) {
+      console.error("Error fetching existing rubrics:", fetchError);
+      // If we can't fetch, we can't check what exists, so skip initialization
+      return 0;
+    }
+
+    const existingNames = new Set(
+      (allRubrics || [])
+        .filter((r) => r.created_by === null)
+        .map((r) => r.name.toLowerCase())
+    );
+
+    let syncedCount = 0;
+    // Sync each platform rubric
+    for (const template of platformRubrics) {
+      // Check if a platform rubric with this name already exists
+      const exists = existingNames.has(template.name.toLowerCase());
+
+      if (!exists) {
+        // Insert platform rubric (database will assign ID automatically)
+        const { data: newRubric, error } = await supabase
+          .from("rubrics")
+          .insert({
+            name: template.name,
+            description: template.description || "",
+            criteria: template.criteria,
+            programs: [], // Platform rubrics don't have specific programs
+            grading_intensity: template.type || "Basic",
+            created_by: null, // Platform rubric
+          })
+          .select("id")
+          .single();
+
+        if (error) {
+          console.error(
+            `Error creating platform rubric "${template.name}":`,
+            error
+          );
+        } else {
+          console.log(
+            `Synced platform rubric "${template.name}" with database ID ${newRubric.id}`
+          );
+          syncedCount++;
+        }
+      } else {
+        // Already exists, count as synced
+        syncedCount++;
+      }
+    }
+
+    return syncedCount;
+  } catch (err) {
+    console.error("Error initializing platform rubrics:", err);
+    return 0;
+  }
+};
+
+// Helper function to ensure platform rubric exists in database
+// Since platform rubrics are now synced via initializePlatformRubrics,
+// we find them by name (database IDs are different from template IDs)
+const ensurePlatformRubricExists = async (
+  templateId: number
+): Promise<number | null> => {
+  try {
+    // Import template to get the name
+    const { platformRubrics } = await import("../data/rubricData");
+    const template = platformRubrics.find((r) => r.id === templateId);
+
+    if (!template) {
+      console.warn(`Template rubric with ID ${templateId} not found`);
+      return null;
+    }
+
+    // Find platform rubric by name (since database IDs differ from template IDs)
+    // Fetch all rubrics with this name and filter in JavaScript
+    const { data: rubricsWithName } = await supabase
+      .from("rubrics")
+      .select("id, created_by")
+      .eq("name", template.name);
+
+    // Find the one that's a platform rubric (created_by is null)
+    const existing = rubricsWithName?.find((r) => r.created_by === null);
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // If not found, create it (shouldn't happen if initializePlatformRubrics ran, but just in case)
+    const { data: newRubric, error } = await supabase
+      .from("rubrics")
+      .insert({
+        name: template.name,
+        description: template.description || "",
+        criteria: template.criteria,
+        programs: [], // Platform rubrics don't have specific programs
+        grading_intensity: template.type || "Basic",
+        created_by: null, // Platform rubric
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Error creating platform rubric:", error);
+      return null;
+    }
+
+    console.log(
+      `Created platform rubric "${template.name}" with database ID ${newRubric.id}`
+    );
+    return newRubric.id;
+  } catch (err) {
+    console.error("Error ensuring platform rubric exists:", err);
+    return null;
   }
 };
 
@@ -115,18 +248,21 @@ export const createActivity = async (activity: {
       activity.sectionIds.length === 0
         ? null
         : parseInt(activity.sectionIds[0], 10) || null;
-    // Handle rubric ID - platform rubrics have "platform-" prefix and can't be used directly
-    // Only teacher-created rubrics from database can be assigned
+
+    // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
-    if (activity.rubricId && !activity.rubricId.startsWith("platform-")) {
-      rubricId = parseInt(activity.rubricId, 10) || null;
-    } else if (activity.rubricId?.startsWith("platform-")) {
-      // Platform rubric selected - this shouldn't happen as they're templates
-      // But if it does, we'll skip assigning it
-      console.warn(
-        "Platform rubric template selected - cannot assign template directly to activity"
-      );
-      rubricId = null;
+    if (activity.rubricId) {
+      if (activity.rubricId.startsWith("platform-")) {
+        // Template rubric - ensure it exists in database, then use its ID
+        const numericId = activity.rubricId.replace("platform-", "");
+        const templateId = parseInt(numericId, 10);
+        if (!isNaN(templateId)) {
+          rubricId = await ensurePlatformRubricExists(templateId);
+        }
+      } else {
+        // Platform rubric from database - use ID directly
+        rubricId = parseInt(activity.rubricId, 10) || null;
+      }
     }
 
     const { data, error } = await supabase
@@ -192,9 +328,21 @@ export const updateActivity = async (
       activityData.sectionIds.length > 0
         ? parseInt(activityData.sectionIds[0], 10)
         : null;
-    const rubricId = activityData.rubricId
-      ? parseInt(activityData.rubricId, 10)
-      : null;
+    // Handle rubric ID - ensure platform rubrics exist in database
+    let rubricId: number | null = null;
+    if (activityData.rubricId) {
+      if (activityData.rubricId.startsWith("platform-")) {
+        // Template rubric - ensure it exists in database, then use its ID
+        const numericId = activityData.rubricId.replace("platform-", "");
+        const templateId = parseInt(numericId, 10);
+        if (!isNaN(templateId)) {
+          rubricId = await ensurePlatformRubricExists(templateId);
+        }
+      } else {
+        // Platform rubric from database - use ID directly
+        rubricId = parseInt(activityData.rubricId, 10) || null;
+      }
+    }
 
     const updateData: {
       title: string;
@@ -335,12 +483,20 @@ export const fetchRubrics = async (): Promise<{
       return { platform: [], teacher: [] };
     }
 
+    // First, ensure all platform rubrics are synced to database
+    await initializePlatformRubrics();
+
     // Fetch platform rubrics from database (created_by is null - system/platform rubrics)
-    const { data: platformData, error: platformError } = await supabase
+    // Note: We fetch all rubrics and filter in JavaScript to avoid 406 error with .is() filter
+    const { data: allRubricsData, error: allRubricsError } = await supabase
       .from("rubrics")
-      .select("id, name")
-      .is("created_by", null)
+      .select("id, name, created_by")
       .order("name", { ascending: true });
+
+    // Filter platform rubrics (created_by is null) in JavaScript
+    const platformData =
+      allRubricsData?.filter((r) => r.created_by === null) || [];
+    const platformError = allRubricsError;
 
     // Fetch teacher rubrics from database
     const { data: teacherData, error: teacherError } = await supabase
@@ -356,17 +512,40 @@ export const fetchRubrics = async (): Promise<{
       console.error("Error loading teacher rubrics:", teacherError);
     }
 
-    // If no platform rubrics in database, import hardcoded platform rubrics as templates
+    // If no platform rubrics in database, initialize them from templates
     let platformRubricsList: { id: string; name: string }[] = [];
     if (!platformData || platformData.length === 0) {
-      try {
-        const { platformRubrics } = await import("../data/rubricData");
-        platformRubricsList = (platformRubrics || []).map((r) => ({
-          id: `platform-${r.id}`, // Prefix to distinguish from database IDs
+      // Initialize all platform rubrics to database
+      console.log("No platform rubrics found in database, initializing...");
+      await initializePlatformRubrics();
+
+      // Fetch again after initialization
+      const { data: refreshedAllRubrics } = await supabase
+        .from("rubrics")
+        .select("id, name, created_by")
+        .order("name", { ascending: true });
+
+      const refreshedPlatform = (refreshedAllRubrics || []).filter(
+        (r) => r.created_by === null
+      );
+
+      if (refreshedPlatform.length > 0) {
+        // Use platform rubrics from database
+        platformRubricsList = refreshedPlatform.map((r) => ({
+          id: String(r.id),
           name: r.name,
         }));
-      } catch (importError) {
-        console.error("Error importing platform rubrics:", importError);
+      } else {
+        // Fallback to hardcoded templates if initialization failed
+        try {
+          const { platformRubrics } = await import("../data/rubricData");
+          platformRubricsList = (platformRubrics || []).map((r) => ({
+            id: `platform-${r.id}`, // Prefix to distinguish from database IDs
+            name: r.name,
+          }));
+        } catch (importError) {
+          console.error("Error importing platform rubrics:", importError);
+        }
       }
     } else {
       // Use platform rubrics from database
@@ -1254,9 +1433,40 @@ export const gradeEssay = async (
         .eq("id", activityDbId)
         .single();
 
-      const rubricId = activityData?.rubric_id
-        ? String(activityData.rubric_id)
-        : undefined;
+      let rubricId: string | undefined = undefined;
+
+      if (activityData?.rubric_id) {
+        // Use the database ID directly (same as AnalyzeEssay.tsx does)
+        // The backend will query the database to fetch the rubric
+        rubricId = String(activityData.rubric_id);
+
+        // Verify rubric exists in database (for logging/debugging)
+        const { data: rubricData, error: rubricError } = await supabase
+          .from("rubrics")
+          .select("id, name, created_by")
+          .eq("id", activityData.rubric_id)
+          .single();
+
+        if (rubricError || !rubricData) {
+          console.warn(
+            `[gradeEssay] Rubric ${activityData.rubric_id} not found in Supabase database. Backend may not find it either.`,
+            rubricError
+          );
+        } else {
+          console.log(
+            `[gradeEssay] Rubric found: ID=${rubricData.id}, Name="${
+              rubricData.name
+            }", Platform=${rubricData.created_by === null}`
+          );
+        }
+      }
+
+      console.log(
+        "[gradeEssay] Activity rubric_id:",
+        activityData?.rubric_id,
+        "Passing to analysis:",
+        rubricId
+      );
 
       analysisResult = await analysisApi.analyzeText(
         extractedText,
@@ -1264,6 +1474,38 @@ export const gradeEssay = async (
         "comprehensive",
         rubricId
       );
+
+      console.log(
+        "[gradeEssay] Analysis result includes rubric_scores:",
+        !!analysisResult.rubric_scores
+      );
+      if (rubricId && !analysisResult.rubric_scores) {
+        console.error(
+          "[gradeEssay] ERROR: Rubric ID was provided but rubric_scores not in response.",
+          "This means the backend could not find or apply the rubric.",
+          "Rubric ID:",
+          rubricId,
+          "Check backend logs for details."
+        );
+        // Try to fetch the rubric again to verify it exists
+        const { data: verifyRubric } = await supabase
+          .from("rubrics")
+          .select("id, name, created_by")
+          .eq("id", parseInt(rubricId, 10))
+          .single();
+
+        if (verifyRubric) {
+          console.log(
+            "[gradeEssay] Rubric exists in Supabase:",
+            verifyRubric,
+            "Backend should be able to find it. Check backend database connection."
+          );
+        } else {
+          console.error(
+            "[gradeEssay] Rubric does not exist in Supabase! This is the problem."
+          );
+        }
+      }
     } catch (analysisErr) {
       console.error("Analysis error:", analysisErr);
       return {
@@ -1616,6 +1858,30 @@ export const fetchEssayAnalysis = async (
       (
         analysis as import("../types/Essay").TextAnalysisResponse
       ).rubric_scores = analysisData.rubric_scores;
+      console.log(
+        "[fetchEssayAnalysis] Found rubric_scores:",
+        analysisData.rubric_scores
+      );
+    } else {
+      console.log(
+        "[fetchEssayAnalysis] No rubric_scores in analysis data. Analysis data keys:",
+        Object.keys(analysisData)
+      );
+      // If rubric_scores is missing but we have a rubric_id, try to fetch it from the activity
+      if (analysisData.activity_id) {
+        const { data: activity } = await supabase
+          .from("essay_activities")
+          .select("rubric_id")
+          .eq("id", analysisData.activity_id)
+          .single();
+
+        if (activity?.rubric_id) {
+          console.log(
+            "[fetchEssayAnalysis] Activity has rubric_id but analysis missing rubric_scores. Rubric ID:",
+            activity.rubric_id
+          );
+        }
+      }
     }
 
     return {
@@ -2222,6 +2488,432 @@ export const fetchDuplicateEssays = async (
   }
 };
 
+// Get activities that have duplicate essays
+export const fetchActivitiesWithDuplicates = async (): Promise<
+  EssayActivity[]
+> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      console.error("Teacher ID not available");
+      return [];
+    }
+
+    // Fetch all activities
+    const activities = await fetchTeacherActivities();
+    if (activities.length === 0) {
+      return [];
+    }
+
+    // Check each activity for duplicates
+    const activitiesWithDuplicates: EssayActivity[] = [];
+    for (const activity of activities) {
+      const duplicates = await fetchDuplicateEssays(activity.id);
+      if (duplicates.length > 0) {
+        activitiesWithDuplicates.push(activity);
+      }
+    }
+
+    return activitiesWithDuplicates;
+  } catch (err) {
+    console.error("Error fetching activities with duplicates:", err);
+    return [];
+  }
+};
+
+// Comparison types
+export interface ComparisonHighlight {
+  start: number;
+  end: number;
+  text: string;
+  studentIndex: number;
+}
+
+export interface ComparisonAnalysis {
+  id?: number;
+  activityId: string;
+  studentIds: number[];
+  essayIds: number[];
+  insights: string;
+  highlights: ComparisonHighlight[];
+  similarityScore?: number;
+  createdAt?: string;
+}
+
+// Fetch all students who submitted essays for an activity
+export const fetchStudentsForActivity = async (
+  activityId: string
+): Promise<
+  Array<{
+    id: string;
+    studentId: number;
+    essayId: number;
+    name: string;
+    programName: string;
+    sectionName: string;
+    hasEssay: boolean;
+  }>
+> => {
+  try {
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return [];
+    }
+
+    // Fetch all essays for this activity with student and section info
+    const { data: essaysData, error } = await supabase
+      .from("essays")
+      .select(
+        `
+        id,
+        student_id,
+        students!inner(
+          id,
+          full_name,
+          sections!inner(
+            id,
+            name,
+            programs!inner(
+              id,
+              name
+            )
+          )
+        )
+      `
+      )
+      .eq("activity_id", activityDbId);
+
+    if (error || !essaysData) {
+      console.error("Error fetching students for activity:", error);
+      return [];
+    }
+
+    // Map to expected format
+    // Supabase returns nested data as an object (not array) when using !inner
+    type EssayWithStudentData = {
+      id: number;
+      student_id: number;
+      students: {
+        id: number;
+        full_name: string | null;
+        sections: {
+          id: number;
+          name: string;
+          programs: {
+            id: number;
+            name: string;
+          };
+        };
+      };
+    };
+
+    return (essaysData as unknown as EssayWithStudentData[]).map((essay) => {
+      const student = essay.students;
+      const section = student?.sections;
+      const program = section?.programs;
+
+      return {
+        id: String(student.id),
+        studentId: student.id,
+        essayId: essay.id,
+        name: student.full_name || "Unknown",
+        programName: program?.name || "Unknown",
+        sectionName: section?.name || "Unknown",
+        hasEssay: true,
+      };
+    });
+  } catch (err) {
+    console.error("Error fetching students for activity:", err);
+    return [];
+  }
+};
+
+// Fetch essay texts for multiple students at once (for comparison)
+export const fetchEssayTextsForStudents = async (
+  studentIds: number[],
+  activityId: string
+): Promise<
+  Array<{
+    studentId: number;
+    text: string;
+    essayId: number;
+    studentName: string;
+  }>
+> => {
+  try {
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId) || studentIds.length === 0) {
+      return [];
+    }
+
+    // Fetch essays for these students
+    const { data: essaysData, error: essaysError } = await supabase
+      .from("essays")
+      .select("id, student_id, students!inner(id, full_name)")
+      .eq("activity_id", activityDbId)
+      .in("student_id", studentIds);
+
+    if (essaysError || !essaysData || essaysData.length === 0) {
+      return [];
+    }
+
+    // Type definitions for Supabase query results
+    type EssayWithStudent = {
+      id: number;
+      student_id: number;
+      students: {
+        id: number;
+        full_name: string;
+      };
+    };
+
+    type AnalysisDataItem = {
+      essay_id: number;
+      original_text: string | null;
+    };
+
+    const essayIds = (essaysData as unknown as EssayWithStudent[]).map(
+      (e) => e.id
+    );
+
+    // Fetch original_text from essay_analysis_results
+    const { data: analysisData, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select("essay_id, original_text")
+      .in("essay_id", essayIds);
+
+    if (analysisError) {
+      console.error("Error fetching analysis data:", analysisError);
+    }
+
+    // Create a map of essay_id -> original_text
+    const textMap = new Map<number, string>();
+    if (analysisData) {
+      (analysisData as unknown as AnalysisDataItem[]).forEach((item) => {
+        if (item.original_text) {
+          textMap.set(item.essay_id, item.original_text);
+        }
+      });
+    }
+
+    // Combine data
+    const results = (essaysData as unknown as EssayWithStudent[]).map(
+      (essay) => {
+        const student = Array.isArray(essay.students)
+          ? essay.students[0]
+          : essay.students;
+        return {
+          studentId: essay.student_id,
+          text: textMap.get(essay.id) || "",
+          essayId: essay.id,
+          studentName: student?.full_name || "Unknown",
+        };
+      }
+    );
+
+    return results;
+  } catch (err) {
+    console.error("Error fetching essay texts for students:", err);
+    return [];
+  }
+};
+
+// Fetch essay text content for comparison
+export const fetchEssayText = async (
+  studentId: string,
+  activityId: string
+): Promise<{ text: string; essayId: number } | null> => {
+  try {
+    const studentDbId = parseInt(studentId, 10);
+    const activityDbId = parseInt(activityId, 10);
+
+    if (isNaN(studentDbId) || isNaN(activityDbId)) {
+      return null;
+    }
+
+    // First try to get from essay_analysis_results
+    const { data: essayData } = await supabase
+      .from("essays")
+      .select("id")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", activityDbId)
+      .single();
+
+    if (!essayData) {
+      return null;
+    }
+
+    const { data: analysisData } = await supabase
+      .from("essay_analysis_results")
+      .select("original_text, essay_id")
+      .eq("essay_id", essayData.id)
+      .single();
+
+    if (analysisData?.original_text) {
+      return {
+        text: analysisData.original_text,
+        essayId: essayData.id,
+      };
+    }
+
+    // Fallback: return empty (text extraction would need OCR)
+    return {
+      text: "",
+      essayId: essayData.id,
+    };
+  } catch (err) {
+    console.error("Error fetching essay text:", err);
+    return null;
+  }
+};
+
+// Save comparison analysis
+export const saveComparisonAnalysis = async (
+  comparison: ComparisonAnalysis
+): Promise<{ success: boolean; id?: number; error?: string }> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return { success: false, error: "Teacher ID not available" };
+    }
+
+    const activityDbId = parseInt(comparison.activityId, 10);
+    if (isNaN(activityDbId)) {
+      return { success: false, error: "Invalid activity ID" };
+    }
+
+    const { data, error } = await supabase
+      .from("essay_comparisons")
+      .insert({
+        activity_id: activityDbId,
+        teacher_id: teacherId,
+        student_ids: comparison.studentIds,
+        essay_ids: comparison.essayIds,
+        insights: comparison.insights,
+        similarity_highlights: comparison.highlights,
+        similarity_score: comparison.similarityScore || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error saving comparison:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, id: data.id };
+  } catch (err) {
+    console.error("Error saving comparison:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+};
+
+// Fetch comparison history for an activity
+export const fetchComparisonHistory = async (
+  activityId: string
+): Promise<ComparisonAnalysis[]> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return [];
+    }
+
+    const activityDbId = parseInt(activityId, 10);
+    if (isNaN(activityDbId)) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("essay_comparisons")
+      .select("*")
+      .eq("activity_id", activityDbId)
+      .eq("teacher_id", teacherId)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      console.error("Error fetching comparison history:", error);
+      return [];
+    }
+
+    type EssayComparisonRow = {
+      id: number;
+      activity_id: number;
+      teacher_id: number;
+      student_ids: number[];
+      essay_ids: number[];
+      insights: string;
+      similarity_highlights: ComparisonHighlight[];
+      similarity_score: number | null;
+      created_at: string;
+      updated_at: string;
+    };
+
+    return data.map((row: EssayComparisonRow) => ({
+      id: row.id,
+      activityId: String(row.activity_id),
+      studentIds: row.student_ids || [],
+      essayIds: row.essay_ids || [],
+      insights: row.insights || "",
+      highlights: row.similarity_highlights || [],
+      similarityScore: row.similarity_score ?? undefined,
+      createdAt: row.created_at,
+    }));
+  } catch (err) {
+    console.error("Error fetching comparison history:", err);
+    return [];
+  }
+};
+
+// Analyze essays for similarity using LLM (calls backend API)
+export const analyzeEssaySimilarity = async (
+  essayTexts: string[],
+  studentNames: string[]
+): Promise<{
+  insights: string;
+  highlights: ComparisonHighlight[];
+  similarityScore: number;
+}> => {
+  try {
+    // Call backend API for LLM analysis
+    // For now, using a mock - user should implement the backend endpoint
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+    const response = await fetch(`${API_URL}/api/analysis/comparison`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        essay_texts: essayTexts,
+        student_names: studentNames,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Analysis failed");
+    }
+
+    const data = await response.json();
+    return {
+      insights: data.insights || "Analysis completed",
+      highlights: data.highlights || [],
+      similarityScore: data.similarity_score || 0,
+    };
+  } catch (err) {
+    console.error("Error analyzing similarity:", err);
+    // Fallback: return basic analysis
+    return {
+      insights:
+        "Similarity analysis is currently unavailable. Please check your backend configuration.",
+      highlights: [],
+      similarityScore: 0,
+    };
+  }
+};
+
 // Metrics types
 export interface TeacherMetrics {
   // Key metrics
@@ -2580,3 +3272,209 @@ function getEmptyMetrics(): TeacherMetrics {
     atRiskStudents: [],
   };
 }
+
+// Save plagiarism check results to essay_analysis_results table
+// Can be called with either (studentId, activityId) or essayId
+export const savePlagiarismResult = async (
+  studentIdOrEssayId: string | number,
+  activityIdOrResult:
+    | string
+    | import("../api").PlagiarismCheckResponse
+    | undefined,
+  plagiarismResult?: import("../api").PlagiarismCheckResponse
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    let essayId: number;
+    let result: import("../api").PlagiarismCheckResponse;
+
+    // Determine which overload is being used
+    if (typeof activityIdOrResult === "object" && activityIdOrResult !== null) {
+      // Called with (essayId, plagiarismResult)
+      essayId =
+        typeof studentIdOrEssayId === "number"
+          ? studentIdOrEssayId
+          : parseInt(studentIdOrEssayId, 10);
+      result = activityIdOrResult;
+    } else if (plagiarismResult) {
+      // Called with (studentId, activityId, plagiarismResult)
+      const studentId = studentIdOrEssayId as string;
+      const activityId = activityIdOrResult as string;
+
+      // Parse student ID
+      let studentDbId = parseInt(studentId, 10);
+      if (isNaN(studentDbId)) {
+        const { data: studentData, error: studentError } = await supabase
+          .from("students")
+          .select("id")
+          .eq("student_code", studentId)
+          .single();
+
+        if (studentError || !studentData) {
+          return { success: false, error: "Student not found" };
+        }
+        studentDbId = studentData.id;
+      }
+
+      // Parse activity ID
+      const activityDbId = parseInt(activityId, 10);
+      if (isNaN(activityDbId)) {
+        return { success: false, error: "Invalid activity ID" };
+      }
+
+      // Get essay ID
+      const { data: essayData, error: essayError } = await supabase
+        .from("essays")
+        .select("id")
+        .eq("student_id", studentDbId)
+        .eq("activity_id", activityDbId)
+        .single();
+
+      if (essayError || !essayData) {
+        return { success: false, error: "Essay not found" };
+      }
+
+      essayId = essayData.id;
+      result = plagiarismResult;
+    } else {
+      return { success: false, error: "Invalid parameters" };
+    }
+
+    if (isNaN(essayId)) {
+      return { success: false, error: "Invalid essay ID" };
+    }
+
+    // Check if the row exists first
+    const { data: existingRow, error: checkError } = await supabase
+      .from("essay_analysis_results")
+      .select("id")
+      .eq("essay_id", essayId)
+      .single();
+
+    if (checkError || !existingRow) {
+      console.error(
+        "Essay analysis results row not found for essay_id:",
+        essayId,
+        checkError
+      );
+      return {
+        success: false,
+        error: "Analysis results not found. Please run analysis first.",
+      };
+    }
+
+    // Update essay_analysis_results with plagiarism results
+    const { data: updateData, error: updateError } = await supabase
+      .from("essay_analysis_results")
+      .update({
+        plagiarism_results: result,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("essay_id", essayId)
+      .select();
+
+    if (updateError) {
+      console.error("Error updating plagiarism results:", updateError);
+      return {
+        success: false,
+        error: updateError.message || "Failed to save plagiarism results",
+      };
+    }
+
+    if (!updateData || updateData.length === 0) {
+      console.error(
+        "Update succeeded but no rows were updated for essay_id:",
+        essayId
+      );
+      return {
+        success: false,
+        error: "Update completed but no rows were affected",
+      };
+    }
+
+    console.log("Successfully saved plagiarism results for essay_id:", essayId);
+    return { success: true };
+  } catch (err) {
+    console.error("Error saving plagiarism result:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+};
+
+// Load saved plagiarism check results from essay_analysis_results table
+// Can be called with either (studentId, activityId) or essayId
+export const loadPlagiarismResult = async (
+  studentIdOrEssayId: string | number,
+  activityId?: string
+): Promise<import("../api").PlagiarismCheckResponse | null> => {
+  try {
+    let essayId: number;
+
+    if (activityId !== undefined) {
+      // Called with (studentId, activityId)
+      const studentId = studentIdOrEssayId as string;
+
+      // Parse student ID
+      let studentDbId = parseInt(studentId, 10);
+      if (isNaN(studentDbId)) {
+        const { data: studentData, error: studentError } = await supabase
+          .from("students")
+          .select("id")
+          .eq("student_code", studentId)
+          .single();
+
+        if (studentError || !studentData) {
+          return null;
+        }
+        studentDbId = studentData.id;
+      }
+
+      // Parse activity ID
+      const activityDbId = parseInt(activityId, 10);
+      if (isNaN(activityDbId)) {
+        return null;
+      }
+
+      // Get essay ID
+      const { data: essayData, error: essayError } = await supabase
+        .from("essays")
+        .select("id")
+        .eq("student_id", studentDbId)
+        .eq("activity_id", activityDbId)
+        .single();
+
+      if (essayError || !essayData) {
+        return null;
+      }
+
+      essayId = essayData.id;
+    } else {
+      // Called with (essayId)
+      essayId =
+        typeof studentIdOrEssayId === "number"
+          ? studentIdOrEssayId
+          : parseInt(studentIdOrEssayId, 10);
+
+      if (isNaN(essayId)) {
+        return null;
+      }
+    }
+
+    // Fetch plagiarism results from essay_analysis_results
+    const { data: analysisData, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select("plagiarism_results")
+      .eq("essay_id", essayId)
+      .single();
+
+    if (analysisError || !analysisData?.plagiarism_results) {
+      return null;
+    }
+
+    return analysisData.plagiarism_results as import("../api").PlagiarismCheckResponse;
+  } catch (err) {
+    console.error("Error loading plagiarism result:", err);
+    return null;
+  }
+};

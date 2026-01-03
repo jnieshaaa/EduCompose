@@ -95,6 +95,8 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     "/Teacher/Programs": "Class Management",
     "/Teacher/Sections": "Class Management",
     "/Teacher/Students": "Class Management",
+    "/Teacher/Activities": "Activities",
+    "/Teacher/CompareActivities": "Compare Essays",
     "/Teacher/Essays": "Essay Submissions",
     "/Teacher/EssayManagement": "Essay Management",
     "/Teacher/Rubrics": "Rubrics / Criteria",

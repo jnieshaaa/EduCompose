@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
+  BookOpen,
+  Info,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Card from '../components/ui/Card';
@@ -20,6 +22,10 @@ import Modal from '../components/ui/Modal';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi, plagiarismApi, type PlagiarismCheckResponse, type PlagiarismMatch } from '../api';
+import { RubricPreviewModal } from '../components/rubrics/RubricPreviewModal';
+import { platformRubrics, getTypeBadgeColor } from '../data/rubricData';
+import type { PlatformRubric } from '../components/rubrics/types';
+import { savePlagiarismResult, loadPlagiarismResult } from '../services/activityService';
 
 const STORAGE_KEY = 'essay_analysis_results';
 
@@ -245,10 +251,25 @@ const AnalysisResults: React.FC = () => {
   const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismCheckResponse | null>(null);
   const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
   const [plagiarismError, setPlagiarismError] = useState<string | null>(null);
+  const [showRubricPreview, setShowRubricPreview] = useState(false);
+  const [previewRubric, setPreviewRubric] = useState<PlatformRubric | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [activityId, setActivityId] = useState<string | null>(null);
+  const [essayId, setEssayId] = useState<number | null>(null);
 
   // Stable references to prevent recalculation
   const stableAnalysisRef = useRef<Omit<AnalysisResponse, 'essay_id'> | null>(null);
   const stableTextRef = useRef<string>('');
+  
+  // Track if plagiarism result has been saved to avoid duplicate saves
+  const plagiarismResultSavedRef = useRef<boolean>(false);
+  const plagiarismResultRef = useRef<PlagiarismCheckResponse | null>(null);
+  
+  // Update ref when plagiarism result changes
+  useEffect(() => {
+    plagiarismResultRef.current = plagiarismResult;
+    plagiarismResultSavedRef.current = false; // Reset when new result is set
+  }, [plagiarismResult]);
 
   const handleAnalyze = async (text: string, title: string, essayId?: number) => {
     if (!text.trim() || text.trim().split(/\s+/).length < 150) {
@@ -369,6 +390,8 @@ const AnalysisResults: React.FC = () => {
 
     // If studentId and activityId are provided (from notification), fetch analysis from Supabase
     if (state?.studentId && state?.activityId && !state?.analysis && !state?.text) {
+      setStudentId(state.studentId);
+      setActivityId(state.activityId);
       setLoading(true);
       // Create async function to handle the fetch
       const fetchAnalysis = async () => {
@@ -400,6 +423,50 @@ const AnalysisResults: React.FC = () => {
       };
       fetchAnalysis();
       return;
+    }
+    
+    // Store studentId, activityId, and essayId if available from state
+    if (state?.studentId) setStudentId(state.studentId);
+    if (state?.activityId) setActivityId(state.activityId);
+    if (state?.essayId) setEssayId(state.essayId);
+    
+    // If we have studentId and activityId but no essayId, try to derive it
+    if (state?.studentId && state?.activityId && !state?.essayId) {
+      const deriveEssayId = async () => {
+        try {
+          const { supabase } = await import('../lib/supabaseClient');
+          
+          // Parse student ID
+          let studentDbId = parseInt(state.studentId, 10);
+          if (isNaN(studentDbId)) {
+            const { data: studentData } = await supabase
+              .from('students')
+              .select('id')
+              .eq('student_code', state.studentId)
+              .single();
+            if (studentData) studentDbId = studentData.id;
+          }
+          
+          const activityDbId = parseInt(state.activityId, 10);
+          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
+            // Get essay_id
+            const { data: essayData } = await supabase
+              .from('essays')
+              .select('id')
+              .eq('student_id', studentDbId)
+              .eq('activity_id', activityDbId)
+              .single();
+            
+            if (essayData?.id) {
+              setEssayId(essayData.id);
+              console.log(`Derived essayId: ${essayData.id} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
+            }
+          }
+        } catch (err) {
+          console.warn('Could not derive essayId from studentId and activityId:', err);
+        }
+      };
+      deriveEssayId();
     }
 
     if (state?.analysis) {
@@ -434,6 +501,156 @@ const AnalysisResults: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
+  // Load saved plagiarism results when component mounts (if essayId or studentId/activityId are available)
+  useEffect(() => {
+    if (plagiarismResult) return; // Don't load if already have a result
+
+    const loadSavedPlagiarism = async () => {
+      try {
+        let savedResult: PlagiarismCheckResponse | null = null;
+        
+        if (essayId) {
+          savedResult = await loadPlagiarismResult(essayId);
+        } else if (studentId && activityId) {
+          savedResult = await loadPlagiarismResult(studentId, activityId);
+        }
+        
+        if (savedResult) {
+          setPlagiarismResult(savedResult);
+        }
+      } catch (err) {
+        console.warn('Error loading saved plagiarism result:', err);
+        // Don't show error - just silently fail, user can still check manually
+      }
+    };
+
+    loadSavedPlagiarism();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [essayId, studentId, activityId]);
+
+  // Save plagiarism result when navigating away, refreshing, or switching tabs
+  useEffect(() => {
+    const savePlagiarismOnExit = async () => {
+      // Skip if already saved, in preview mode, or no result to save
+      if (plagiarismResultSavedRef.current || isPreviewMode || !plagiarismResultRef.current) {
+        return;
+      }
+
+      const result = plagiarismResultRef.current;
+      let currentEssayId = essayId;
+      let currentStudentId = studentId;
+      let currentActivityId = activityId;
+
+      // Fallback: check location.state if IDs aren't set
+      if (!currentEssayId && !currentStudentId && !currentActivityId) {
+        const state = location.state as {
+          essayId?: number;
+          studentId?: string;
+          activityId?: string;
+        } | null;
+        if (state) {
+          currentEssayId = state.essayId || currentEssayId;
+          currentStudentId = state.studentId || currentStudentId;
+          currentActivityId = state.activityId || currentActivityId;
+        }
+      }
+
+      // Try to derive essayId if we have studentId and activityId
+      if (!currentEssayId && currentStudentId && currentActivityId) {
+        try {
+          const { supabase } = await import('../lib/supabaseClient');
+          
+          let studentDbId = parseInt(currentStudentId, 10);
+          if (isNaN(studentDbId)) {
+            const { data: studentData } = await supabase
+              .from('students')
+              .select('id')
+              .eq('student_code', currentStudentId)
+              .single();
+            if (studentData) studentDbId = studentData.id;
+          }
+          
+          const activityDbId = parseInt(currentActivityId, 10);
+          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
+            const { data: essayData } = await supabase
+              .from('essays')
+              .select('id')
+              .eq('student_id', studentDbId)
+              .eq('activity_id', activityDbId)
+              .single();
+            
+            if (essayData?.id) {
+              currentEssayId = essayData.id;
+            }
+          }
+        } catch (err) {
+          console.warn('Could not derive essayId for saving plagiarism result:', err);
+        }
+      }
+
+      // Save the result
+      if (currentEssayId) {
+        try {
+          const saveResult = await savePlagiarismResult(currentEssayId, result);
+          if (saveResult.success) {
+            plagiarismResultSavedRef.current = true;
+            console.log('Saved plagiarism result on exit for essayId:', currentEssayId);
+          } else {
+            console.warn('Failed to save plagiarism result on exit:', saveResult.error);
+          }
+        } catch (err) {
+          console.warn('Error saving plagiarism result on exit:', err);
+        }
+      } else if (currentStudentId && currentActivityId) {
+        try {
+          const saveResult = await savePlagiarismResult(currentStudentId, currentActivityId, result);
+          if (saveResult.success) {
+            plagiarismResultSavedRef.current = true;
+            console.log('Saved plagiarism result on exit for studentId:', currentStudentId, 'activityId:', currentActivityId);
+          } else {
+            console.warn('Failed to save plagiarism result on exit:', saveResult.error);
+          }
+        } catch (err) {
+          console.warn('Error saving plagiarism result on exit:', err);
+        }
+      }
+    };
+
+    // Save on component unmount (back button, navigation)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Use sendBeacon for reliable saving on page unload
+      if (!plagiarismResultSavedRef.current && !isPreviewMode && plagiarismResultRef.current) {
+        // For beforeunload, we can't use async, so we'll trigger a sync save
+        savePlagiarismOnExit();
+      }
+    };
+
+    // Save when tab becomes hidden (user switches tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        savePlagiarismOnExit();
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup: save on unmount
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Save on unmount (synchronous save attempt)
+      if (!plagiarismResultSavedRef.current && !isPreviewMode && plagiarismResultRef.current) {
+        // Use a synchronous-like approach for unmount
+        savePlagiarismOnExit().catch(err => {
+          console.warn('Error saving plagiarism result on unmount:', err);
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [essayId, studentId, activityId, isPreviewMode, location.state]);
+
   // Handle error click - toggle selection (inline details are handled in EssayTextDisplay)
   const handleErrorClick = useCallback((error: HighlightError, index: number) => {
     // Toggle: if same error is clicked, deselect it; otherwise select the new one
@@ -448,18 +665,153 @@ const AnalysisResults: React.FC = () => {
 
   // Check for plagiarism
   const handleCheckPlagiarism = async () => {
-    if (!originalText || originalText.trim().length < 10) {
-      setPlagiarismError('Text must be at least 10 characters long');
-      return;
-    }
-
     setIsCheckingPlagiarism(true);
     setPlagiarismError(null);
     setPlagiarismResult(null);
 
     try {
-      const result = await plagiarismApi.checkPlagiarism(originalText);
+      // Skip saving in preview mode
+      if (isPreviewMode) {
+        const result = await plagiarismApi.checkPlagiarism(originalText);
+        setPlagiarismResult(result);
+        setIsCheckingPlagiarism(false);
+        return;
+      }
+
+      // Get current IDs - check both state and location.state as fallback
+      let currentEssayId = essayId;
+      let currentStudentId = studentId;
+      let currentActivityId = activityId;
+      
+      // Fallback: check location.state if IDs aren't set yet
+      if (!currentEssayId && !currentStudentId && !currentActivityId) {
+        const state = location.state as {
+          essayId?: number;
+          studentId?: string;
+          activityId?: string;
+        } | null;
+        if (state) {
+          currentEssayId = state.essayId || currentEssayId;
+          currentStudentId = state.studentId || currentStudentId;
+          currentActivityId = state.activityId || currentActivityId;
+        }
+      }
+
+      // Try to get original_text from Supabase if essayId or studentId+activityId are available
+      let textToCheck = originalText;
+      let derivedEssayId = currentEssayId;
+      
+      if (currentEssayId) {
+        // Fetch original_text from essay_analysis_results using essayId
+        try {
+          const { supabase } = await import('../lib/supabaseClient');
+          const { data: analysisData, error } = await supabase
+            .from('essay_analysis_results')
+            .select('original_text')
+            .eq('essay_id', currentEssayId)
+            .single();
+          
+          if (!error && analysisData?.original_text) {
+            textToCheck = analysisData.original_text;
+            console.log(`Using original_text from Supabase for essay_id: ${currentEssayId}`);
+          }
+        } catch (err) {
+          console.warn('Could not fetch original_text from Supabase, using provided text:', err);
+        }
+      } else if (currentStudentId && currentActivityId) {
+        // Fetch original_text from essay_analysis_results using studentId and activityId
+        try {
+          // First get essay_id from essays table
+          const { supabase } = await import('../lib/supabaseClient');
+          
+          // Parse student ID
+          let studentDbId = parseInt(currentStudentId, 10);
+          if (isNaN(studentDbId)) {
+            const { data: studentData } = await supabase
+              .from('students')
+              .select('id')
+              .eq('student_code', currentStudentId)
+              .single();
+            if (studentData) studentDbId = studentData.id;
+          }
+          
+          const activityDbId = parseInt(currentActivityId, 10);
+          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
+            // Get essay_id
+            const { data: essayData } = await supabase
+              .from('essays')
+              .select('id')
+              .eq('student_id', studentDbId)
+              .eq('activity_id', activityDbId)
+              .single();
+            
+            if (essayData?.id) {
+              derivedEssayId = essayData.id;
+              // Update state for future use
+              setEssayId(essayData.id);
+              
+              // Get original_text from essay_analysis_results
+              const { data: analysisData, error } = await supabase
+                .from('essay_analysis_results')
+                .select('original_text')
+                .eq('essay_id', essayData.id)
+                .single();
+              
+              if (!error && analysisData?.original_text) {
+                textToCheck = analysisData.original_text;
+                console.log(`Using original_text from Supabase for studentId: ${currentStudentId}, activityId: ${currentActivityId}`);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Could not fetch original_text from Supabase, using provided text:', err);
+        }
+      }
+      
+      if (!textToCheck || textToCheck.trim().length < 10) {
+        setPlagiarismError('Text must be at least 10 characters long. Could not fetch original text from database.');
+        return;
+      }
+
+      const result = await plagiarismApi.checkPlagiarism(textToCheck);
       setPlagiarismResult(result);
+      
+      // Save plagiarism result to Supabase if essayId is available, or studentId and activityId
+      if (derivedEssayId) {
+        try {
+          console.log('Saving plagiarism result for essayId:', derivedEssayId);
+          const saveResult = await savePlagiarismResult(derivedEssayId, result);
+          if (saveResult.success) {
+            console.log('Successfully saved plagiarism result for essayId:', derivedEssayId);
+            plagiarismResultSavedRef.current = true; // Mark as saved
+          } else {
+            console.error('Failed to save plagiarism result for essayId:', derivedEssayId, saveResult.error);
+            // Show a non-blocking warning to the user
+            setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveResult.error}`);
+          }
+        } catch (saveErr) {
+          console.error('Error saving plagiarism result for essayId:', derivedEssayId, saveErr);
+          setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
+        }
+      } else if (currentStudentId && currentActivityId) {
+        try {
+          console.log('Saving plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
+          const saveResult = await savePlagiarismResult(currentStudentId, currentActivityId, result);
+          if (saveResult.success) {
+            console.log('Successfully saved plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
+            plagiarismResultSavedRef.current = true; // Mark as saved
+          } else {
+            console.error('Failed to save plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId, saveResult.error);
+            setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveResult.error}`);
+          }
+        } catch (saveErr) {
+          console.error('Error saving plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId, saveErr);
+          setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
+        }
+      } else {
+        // In preview mode or when no IDs are available, just show the result without saving
+        console.log('Plagiarism check completed. Results not saved (preview mode or no identifiers available).');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to check for plagiarism';
       setPlagiarismError(errorMessage);
@@ -642,6 +994,36 @@ const AnalysisResults: React.FC = () => {
 
   const recommendations: DiagnosticRecommendation[] = analysis.recommendations || [];
   const grammarErrors = analysis.detailed_analysis?.grammar?.errors || [];
+  const rubricData = (analysis as any).rubric_scores as { rubric_id?: string | number; rubric_name?: string } | undefined;
+
+  // Find the rubric for preview
+  const handlePreviewRubric = () => {
+    if (!rubricData?.rubric_id) return;
+
+    // Try to find in platform rubrics
+    // rubric_id might be a number or string like "platform-1"
+    let rubricId: number | null = null;
+    if (typeof rubricData.rubric_id === 'number') {
+      rubricId = rubricData.rubric_id;
+    } else if (typeof rubricData.rubric_id === 'string') {
+      // Handle "platform-1" format
+      if (rubricData.rubric_id.startsWith('platform-')) {
+        const numId = parseInt(rubricData.rubric_id.replace('platform-', ''));
+        if (!isNaN(numId)) rubricId = numId;
+      } else {
+        const numId = parseInt(rubricData.rubric_id);
+        if (!isNaN(numId)) rubricId = numId;
+      }
+    }
+
+    if (rubricId !== null) {
+      const rubric = platformRubrics.find((r) => r.id === rubricId);
+      if (rubric) {
+        setPreviewRubric(rubric);
+        setShowRubricPreview(true);
+      }
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
@@ -658,9 +1040,26 @@ const AnalysisResults: React.FC = () => {
             </button>
             <div className="h-6 w-px bg-neutral-300" />
             <div>
-              <h1 className="text-lg font-bold text-neutral-900">
-                {isPreviewMode ? 'Analysis Preview (Demo)' : 'Essay Analysis'}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg font-bold text-neutral-900">
+                  {isPreviewMode ? 'Analysis Preview (Demo)' : 'Essay Analysis'}
+                </h1>
+                {rubricData?.rubric_name && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-lg">
+                      <BookOpen className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">{rubricData.rubric_name}</span>
+                      <button
+                        onClick={handlePreviewRubric}
+                        className="p-0.5 text-primary hover:bg-primary/20 rounded transition-colors"
+                        title="Preview rubric details"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center space-x-3 text-xs text-neutral-500">
                 {analysis.word_count && <span>{analysis.word_count} words</span>}
                 <span>•</span>
@@ -911,6 +1310,15 @@ const AnalysisResults: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Rubric Preview Modal */}
+      {showRubricPreview && previewRubric && (
+        <RubricPreviewModal
+          rubric={previewRubric}
+          isOpen={showRubricPreview}
+          onClose={() => setShowRubricPreview(false)}
+        />
+      )}
     </div>
   );
 };

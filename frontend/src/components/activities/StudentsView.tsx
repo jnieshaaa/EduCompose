@@ -654,6 +654,7 @@ export function StudentsView({
                                       title: analysisData.title,
                                       studentId: student.id,
                                       studentName: student.name,
+                                      activityId: activity.id,
                                     },
                                   });
                                 } else {

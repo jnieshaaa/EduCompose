@@ -14,6 +14,7 @@ from ..schemas import (
     TextAnalysisRequest, TextAnalysisResponse, PlagiarismCheckRequest, 
     PlagiarismCheckResponse, PlagiarismMatch
 )
+from ..schemas.comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
 from ..database import get_db
 from ..services import auth_service, essay_analysis_service, copyscape_service
 
@@ -158,8 +159,159 @@ async def analyze_text(
         diagnostic_summary=analysis_result.get("diagnostic_summary"),
         word_count=word_count,
         generated_at=datetime.utcnow(),
-        processing_time_seconds=round(processing_time, 2)
+        processing_time_seconds=round(processing_time, 2),
+        rubric_scores=analysis_result.get("rubric_scores")
     )
+
+@analysis_router.post("/comparison", response_model=ComparisonAnalysisResponse)
+async def analyze_comparison(
+    request: ComparisonAnalysisRequest
+):
+    """
+    Analyze similarity between multiple essays using LLM
+    Returns insights and highlights showing similar sections
+    """
+    import os
+    import json
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Prepare prompt for LLM
+        essay_texts_formatted = "\n\n---\n\n".join([
+            f"Essay {i+1} (Student: {request.student_names[i]}):\n{text}"
+            for i, text in enumerate(request.essay_texts)
+        ])
+        
+        prompt = f"""Analyze the following {len(request.essay_texts)} essays for similarity and potential plagiarism.
+
+{essay_texts_formatted}
+
+Please provide:
+1. A similarity score (0-100) indicating how similar these essays are (where 100 = nearly identical, 0 = completely different)
+2. A brief professional explanation (2-3 sentences) explaining the key similarities
+3. Specific text segments that are suspiciously similar or identical between essays
+
+Return your response as a JSON object with this exact structure:
+{{
+    "similarity_score": <number between 0 and 100>,
+    "explanation": "<brief explanation>",
+    "highlights": [
+        {{
+            "text": "<the similar text segment from essay 1>",
+            "student_index": 0,
+            "start": <character position where this text starts in essay 1>,
+            "end": <character position where this text ends in essay 1>
+        }},
+        {{
+            "text": "<the matching similar text segment from essay 2>",
+            "student_index": 1,
+            "start": <character position where this text starts in essay 2>,
+            "end": <character position where this text ends in essay 2>
+        }}
+    ]
+}}
+
+CRITICAL INSTRUCTIONS:
+- For EACH similar text segment, you MUST include a highlight entry for EACH essay where it appears
+- If text appears in both essays, include TWO highlight entries (one with student_index: 0, one with student_index: 1)
+- The "text" field should contain the actual text segment from that specific essay (it may have minor differences like spacing)
+- The start/end positions are 0-based character indices in the ORIGINAL essay text
+- Be thorough - highlight ALL significant similar passages, not just a few
+- Focus on identifying identical or nearly-identical passages between essays"""
+
+        # Try Gemini first, then OpenAI, then fallback
+        llm_response = None
+        llm_provider = None
+        
+        # Try Gemini
+        if os.getenv("GEMINI_API_KEY"):
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+                
+                model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+                model = genai.GenerativeModel(model_name)
+                
+                response = model.generate_content(prompt)
+                llm_response = response.text
+                llm_provider = "gemini"
+                logger.info("Using Gemini for comparison analysis")
+            except Exception as e:
+                logger.warning(f"Gemini analysis failed: {e}")
+        
+        # Try OpenAI if Gemini failed
+        if not llm_response and os.getenv("OPENAI_API_KEY"):
+            try:
+                import openai
+                client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                
+                response = client.chat.completions.create(
+                    model=os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini"),
+                    messages=[
+                        {"role": "system", "content": "You are an expert essay analysis assistant. Always respond with valid JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                llm_response = response.choices[0].message.content
+                llm_provider = "openai"
+                logger.info("Using OpenAI for comparison analysis")
+            except Exception as e:
+                logger.warning(f"OpenAI analysis failed: {e}")
+        
+        # Parse LLM response
+        if llm_response:
+            try:
+                # Extract JSON from response (handle markdown code blocks)
+                json_text = llm_response.strip()
+                if "```json" in json_text:
+                    json_text = json_text.split("```json")[1].split("```")[0].strip()
+                elif "```" in json_text:
+                    json_text = json_text.split("```")[1].split("```")[0].strip()
+                
+                result = json.loads(json_text)
+                
+                # Extract and validate data
+                similarity_score = float(result.get("similarity_score", 0))
+                explanation = result.get("explanation", "Analysis completed.")
+                highlights_data = result.get("highlights", [])
+                
+                # Convert highlights to the expected format
+                highlights = []
+                for h in highlights_data:
+                    highlights.append({
+                        "start": int(h.get("start", 0)),
+                        "end": int(h.get("end", 0)),
+                        "text": str(h.get("text", "")),
+                        "student_index": int(h.get("student_index", 0))
+                    })
+                
+                return ComparisonAnalysisResponse(
+                    insights=explanation,
+                    highlights=highlights,
+                    similarity_score=similarity_score / 100.0  # Convert 0-100 to 0-1
+                )
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM JSON response: {e}")
+                logger.debug(f"LLM response was: {llm_response[:500]}")
+        
+        # Fallback: Basic analysis without LLM
+        logger.warning("No LLM available for comparison analysis, using fallback")
+        return ComparisonAnalysisResponse(
+            insights="Similarity analysis requires LLM configuration (GEMINI_API_KEY or OPENAI_API_KEY). Please configure one of these API keys to enable detailed analysis.",
+            highlights=[],
+            similarity_score=0.5
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in comparison analysis: {e}", exc_info=True)
+        return ComparisonAnalysisResponse(
+            insights=f"Error during analysis: {str(e)}",
+            highlights=[],
+            similarity_score=0.0
+        )
 
 @analysis_router.get("/dashboard-stats")
 async def get_dashboard_stats(
@@ -200,6 +352,27 @@ async def get_dashboard_stats(
         "class_stats": class_stats
     }
 
+@analysis_router.get("/check-plagiarism-status")
+async def check_plagiarism_status():
+    """
+    Check if Copyscape API is configured and test credentials.
+    Useful for debugging connection issues.
+    """
+    if not copyscape_service.is_configured():
+        return {
+            "configured": False,
+            "message": "Copyscape API credentials not configured. Please set COPYSCAPE_USERNAME and COPYSCAPE_API_KEY environment variables."
+        }
+    
+    # Try to validate credentials
+    validation_result = await copyscape_service.validate_credentials()
+    
+    return {
+        "configured": True,
+        "credentials_valid": validation_result.get("valid", False),
+        "message": validation_result.get("message", "Unknown status")
+    }
+
 @analysis_router.post("/check-plagiarism", response_model=PlagiarismCheckResponse)
 async def check_plagiarism(
     request: PlagiarismCheckRequest
@@ -218,7 +391,7 @@ async def check_plagiarism(
     if not copyscape_service.is_configured():
         raise HTTPException(
             status_code=503,
-            detail="Plagiarism checking service is not configured. Please contact administrator."
+            detail="Plagiarism checking service is not configured. Please set COPYSCAPE_USERNAME and COPYSCAPE_API_KEY environment variables."
         )
     
     # Perform plagiarism check
@@ -226,9 +399,19 @@ async def check_plagiarism(
     
     # Check for errors
     if "error" in result:
+        error_message = result.get("message", "Plagiarism check failed")
+        # Provide more helpful error message for timeouts
+        if "timeout" in error_message.lower():
+            error_message += (
+                "\n\nTroubleshooting:\n"
+                "1. Verify COPYSCAPE_USERNAME and COPYSCAPE_API_KEY are correct\n"
+                "2. Check your Copyscape account has active credits\n"
+                "3. Test connection: GET /api/analysis/check-plagiarism-status\n"
+                "4. Check network/firewall settings"
+            )
         raise HTTPException(
             status_code=400,
-            detail=result.get("message", "Plagiarism check failed")
+            detail=error_message
         )
     
     # Convert matches to PlagiarismMatch objects

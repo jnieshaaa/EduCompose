@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
-import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen } from "lucide-react";
+import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -20,6 +20,7 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   
   // Essay section
   "/Teacher/Activities": { label: "Activities", icon: <BookOpen className="w-4 h-4" /> },
+  "/Teacher/CompareActivities": { label: "Compare Essays", icon: <GitCompare className="w-4 h-4" /> },
   "/Teacher/Essays": { label: "Submissions", icon: <FileText className="w-4 h-4" /> },
   "/Teacher/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
   

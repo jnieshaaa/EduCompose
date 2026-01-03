@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   BarChart3,
   Settings,
+  GitCompare,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,6 +61,11 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         icon: <BookOpen className="w-5 h-5" />,
         label: "Activities",
         path: "/Teacher/Activities",
+      },
+      {
+        icon: <GitCompare className="w-5 h-5" />,
+        label: "Compare Essays",
+        path: "/Teacher/CompareActivities",
       },
       // {
       //   icon: <FileText className='w-5 h-5' />,

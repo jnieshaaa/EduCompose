@@ -176,11 +176,7 @@ export function EditActivityModal({
                     {rubrics.platform.map((rubric) => (
                       <label
                         key={rubric.id}
-                        className={`flex items-center gap-2 p-1 rounded cursor-pointer ${
-                          rubric.id.startsWith("platform-")
-                            ? "opacity-50 cursor-not-allowed"
-                            : "hover:bg-neutral-50"
-                        }`}
+                        className="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-neutral-50"
                       >
                         <input
                           type="radio"
@@ -188,21 +184,14 @@ export function EditActivityModal({
                           value={rubric.id}
                           checked={formData.rubricId === rubric.id}
                           onChange={(e) => {
-                            if (!rubric.id.startsWith("platform-")) {
-                              setFormData((prev) => ({
-                                ...prev,
-                                rubricId: e.target.value,
-                              }));
-                            }
+                            setFormData((prev) => ({
+                              ...prev,
+                              rubricId: e.target.value,
+                            }));
                           }}
-                          disabled={rubric.id.startsWith("platform-")}
                           className="w-4 h-4 text-primary border-neutral-300 focus:ring-primary"
                         />
-                        <span className="text-sm">
-                          {rubric.name}{" "}
-                          {rubric.id.startsWith("platform-") &&
-                            "(Template - Save to use)"}
-                        </span>
+                        <span className="text-sm">{rubric.name}</span>
                       </label>
                     ))}
                   </div>

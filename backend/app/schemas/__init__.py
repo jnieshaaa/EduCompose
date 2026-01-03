@@ -33,6 +33,7 @@ from .analysis_schemas import (
     PlagiarismCheckResponse,
     PlagiarismMatch
 )
+from .comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
 
 __all__ = [
     "LoginRequest",
@@ -66,4 +67,6 @@ __all__ = [
     "PlagiarismCheckRequest",
     "PlagiarismCheckResponse",
     "PlagiarismMatch",
+    "ComparisonAnalysisRequest",
+    "ComparisonAnalysisResponse",
 ]

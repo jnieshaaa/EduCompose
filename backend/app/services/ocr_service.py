@@ -78,28 +78,51 @@ class OCRService:
             pass
         return image
     
-    def _preprocess_image(self, image: Image.Image) -> Image.Image:
+    def _preprocess_image(self, image: Image.Image, aggressive: bool = False) -> Image.Image:
         """
         Preprocess image to improve OCR accuracy
         Applies contrast enhancement, sharpening, and binarization
+        
+        Args:
+            image: PIL Image to preprocess
+            aggressive: If True, applies more aggressive preprocessing for imperfect images
         """
         # Convert to RGB if needed
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
-        # 1. Enhance Contrast
+        # 1. Enhance Contrast (more aggressive for imperfect images)
+        contrast_factor = 2.0 if aggressive else 1.5
         contrast_enhancer = ImageEnhance.Contrast(image)
-        contrasted_image = contrast_enhancer.enhance(1.5)  # Factor 1.5 for moderate enhancement
+        contrasted_image = contrast_enhancer.enhance(contrast_factor)
         
-        # 2. Sharpen
+        # 2. Enhance Brightness if aggressive mode (helps with dark images)
+        if aggressive:
+            brightness_enhancer = ImageEnhance.Brightness(contrasted_image)
+            contrasted_image = brightness_enhancer.enhance(1.1)
+        
+        # 3. Sharpen (apply multiple times if aggressive)
         sharpened_image = contrasted_image.filter(ImageFilter.SHARPEN)
+        if aggressive:
+            sharpened_image = sharpened_image.filter(ImageFilter.SHARPEN)
         
-        # 3. Binarization (Thresholding)
+        # 4. Binarization (Thresholding)
         # Convert to grayscale first for binarization
         grayscale_image = sharpened_image.convert('L')
-        # Apply a binary threshold (128 for a common midpoint)
-        threshold_value = 128
-        binarized_image = grayscale_image.point(lambda p: p > threshold_value and 255)
+        
+        if aggressive:
+            # For aggressive mode, try adaptive thresholding approach
+            # First enhance contrast in grayscale
+            grayscale_enhancer = ImageEnhance.Contrast(grayscale_image)
+            grayscale_image = grayscale_enhancer.enhance(1.3)
+            
+            # Use a lower threshold for darker images
+            threshold_value = 110
+        else:
+            threshold_value = 128
+        
+        # Apply binary threshold
+        binarized_image = grayscale_image.point(lambda p: 255 if p > threshold_value else 0)
         
         return binarized_image
     
@@ -382,6 +405,11 @@ class OCRService:
     def extract_text_from_image(self, image_bytes: bytes, filename: str = "image.jpg") -> Dict[str, Any]:
         """
         Extract text from image file using OCR
+        Uses multiple strategies to handle imperfect images:
+        1. Standard preprocessing with standard OCR parameters
+        2. Aggressive preprocessing with standard parameters
+        3. Aggressive preprocessing with lenient OCR parameters
+        4. Original image with lenient OCR parameters
         
         Args:
             image_bytes: Image file content as bytes
@@ -403,10 +431,9 @@ class OCRService:
             # Correct orientation
             image = self._correct_orientation(image)
             
-            # Preprocess image
-            preprocessed_image = self._preprocess_image(image)
-            
-            # Run OCR
+            # Strategy 1: Standard preprocessing with standard parameters
+            logger.info(f"Trying standard preprocessing for {filename}")
+            preprocessed_image = self._preprocess_image(image, aggressive=False)
             bounds = self.reader.readtext(
                 np.array(preprocessed_image),
                 min_size=0,
@@ -421,6 +448,56 @@ class OCRService:
                 low_text=0.3
             )
             
+            # Strategy 2: If no detections, try aggressive preprocessing with standard parameters
+            if len(bounds) == 0:
+                logger.warning(f"No text detected with standard preprocessing for {filename}, trying aggressive preprocessing...")
+                preprocessed_image = self._preprocess_image(image, aggressive=True)
+                bounds = self.reader.readtext(
+                    np.array(preprocessed_image),
+                    min_size=0,
+                    slope_ths=0.2,
+                    ycenter_ths=0.7,
+                    height_ths=0.6,
+                    width_ths=0.8,
+                    decoder='beamsearch',
+                    beamWidth=10,
+                    paragraph=True,
+                    text_threshold=0.5,
+                    low_text=0.3
+                )
+                logger.info(f"Aggressive preprocessing found {len(bounds)} text regions")
+            
+            # Strategy 3: If still no detections, try aggressive preprocessing with lenient parameters
+            if len(bounds) == 0:
+                logger.warning(f"No text detected with aggressive preprocessing for {filename}, trying lenient OCR parameters...")
+                bounds = self.reader.readtext(
+                    np.array(preprocessed_image),
+                    paragraph=True,
+                    text_threshold=0.3,  # Lower threshold for imperfect images
+                    low_text=0.2,  # Lower threshold
+                    width_ths=0.5,  # More lenient width threshold
+                    height_ths=0.5,  # More lenient height threshold
+                    slope_ths=0.1,  # More lenient slope threshold
+                    ycenter_ths=0.5  # More lenient center threshold
+                )
+                logger.info(f"Lenient parameters found {len(bounds)} text regions")
+            
+            # Strategy 4: If still no detections, try original image with very lenient parameters
+            if len(bounds) == 0:
+                logger.warning(f"No text detected with preprocessing for {filename}, trying original image with very lenient parameters...")
+                bounds = self.reader.readtext(
+                    np.array(image),
+                    paragraph=True,
+                    text_threshold=0.25,  # Even lower threshold
+                    low_text=0.15,  # Even lower threshold
+                    width_ths=0.4,  # Very lenient
+                    height_ths=0.4,  # Very lenient
+                    slope_ths=0.1,
+                    ycenter_ths=0.5,
+                    min_size=0  # Allow very small text
+                )
+                logger.info(f"Original image with lenient parameters found {len(bounds)} text regions")
+            
             # Extract text
             all_text = []
             total_confidence = 0.0
@@ -431,6 +508,8 @@ class OCRService:
                     text = bound[1]
                     confidence = bound[2] if len(bound) > 2 else 0.0
                     
+                    # Include text even with lower confidence for imperfect images
+                    # (EasyOCR will have already filtered based on thresholds)
                     all_text.append(text)
                     total_confidence += confidence
                     detection_count += 1
@@ -438,6 +517,8 @@ class OCRService:
             extracted_text = '\n'.join(all_text)
             avg_confidence = (total_confidence / detection_count) if detection_count > 0 else 0.0
             word_count = len(extracted_text.split()) if extracted_text.strip() else 0
+            
+            logger.info(f"OCR completed for {filename}: {word_count} words, {detection_count} detections, {avg_confidence:.2f} avg confidence")
             
             return {
                 "text": extracted_text,

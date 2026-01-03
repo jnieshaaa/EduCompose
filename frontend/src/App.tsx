@@ -41,6 +41,7 @@ import AnalysisResults from "./pages/AnalysisResults"; // General route (no layo
 // import Settings from "./pages/Settings"; // Legacy, kept for reference
 import { EssayManagementTab } from "./pages/teachers/EssayManagementTab.tsx";
 import { ActivitiesTab } from "./pages/teachers/ActivitiesTab.tsx";
+import { CompareActivitiesTab } from "./pages/teachers/CompareActivitiesTab.tsx";
 
 // General/Utility Imports
 import ErrorPage from "./components/ErrorPage";
@@ -111,6 +112,7 @@ const AppContent: React.FC = () => {
           <Route path="Students" element={<StudentsTab />} />
           {/* <Route path="Essays" element={<EssaysTab />} /> */}
           <Route path="Activities" element={<ActivitiesTab />} />
+          <Route path="CompareActivities" element={<CompareActivitiesTab />} />
           <Route path="EssayManagement" element={<EssayManagementTab />} />
           <Route path="Metrics" element={<MetricsTab />} />
           <Route path="Programs" element={<ProgramsTab />} />

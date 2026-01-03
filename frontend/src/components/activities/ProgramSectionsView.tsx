@@ -212,18 +212,28 @@ export function ProgramSectionsView({
         </Card>
 
         {/* Duplicate Essays Warning - Takes 1/3 width on large screens */}
-        {duplicateGroups.length > 0 && (
-          <Card className="border-warning-default/30 bg-warning-default/5 lg:col-span-1">
-            <div className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-warning-default flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-neutral-900 mb-2 text-sm">
-                    Duplicate Essays Detected
-                  </h3>
-                  <p className="text-xs text-neutral-600 mb-3">
-                    Same content submitted by students from different programs.
-                  </p>
+        <Card className={`lg:col-span-1 ${
+          duplicateGroups.length > 0
+            ? "border-warning-default/30 bg-warning-default/5"
+            : "border-neutral-200 bg-neutral-50"
+        }`}>
+          <div className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                duplicateGroups.length > 0
+                  ? "text-warning-default"
+                  : "text-neutral-400"
+              }`} />
+              <div className="flex-1">
+                <h3 className="font-semibold text-neutral-900 mb-2 text-sm">
+                  Duplicate Essays Detected
+                </h3>
+                <p className="text-xs text-neutral-600 mb-3">
+                  {duplicateGroups.length > 0
+                    ? "Same content submitted by students from different programs."
+                    : "No duplicate essays detected. All submissions appear to be unique."}
+                </p>
+                {duplicateGroups.length > 0 ? (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {duplicateGroups.map((group, index) => {
                       return (
@@ -271,11 +281,15 @@ export function ProgramSectionsView({
                       );
                     })}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-xs text-neutral-500 italic text-center py-4">
+                    All essays are unique. No duplicates found.
+                  </div>
+                )}
               </div>
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
       </div>
     </div>
   );
