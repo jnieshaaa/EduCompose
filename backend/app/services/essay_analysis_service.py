@@ -168,16 +168,8 @@ class EssayAnalysisService:
         argument_coherence = argument_metrics.get("coherence") if argument_metrics else 0.0
         coherence_score = argument_coherence if argument_coherence else coherence_analysis.get("score", 0.0)
 
-        # Handle grammar score - may be None if LLM failed
-        grammar_score = grammar_analysis.get("score")
-        if grammar_score is None:
-            # LLM failed - don't include grammar in overall score calculation
-            grammar_score = None
-        else:
-            grammar_score = grammar_score
-        
         scores = {
-            "grammar": grammar_score,  # Can be None if LLM failed
+            "grammar": grammar_analysis.get("score", 0.0),
             "readability": readability_analysis.get("score", 0.0),
             "coherence": coherence_score,
             "argument_strength": argument_analysis.get("score", 0.0),
@@ -192,7 +184,6 @@ class EssayAnalysisService:
         coherence_analysis["score"] = coherence_score
         
         # Calculate overall score (weighted average)
-        # If grammar score is None (LLM failed), adjust weights to exclude it
         weights = {
             "grammar": 0.20,
             "readability": 0.20,
@@ -201,16 +192,7 @@ class EssayAnalysisService:
             "knowledge_graph": 0.10
         }
         
-        # If grammar score is None, redistribute weights proportionally
-        if grammar_score is None:
-            # Remove grammar from calculation and redistribute its weight
-            total_weight_without_grammar = sum(w for k, w in weights.items() if k != "grammar")
-            adjusted_weights = {k: (w / total_weight_without_grammar) * (1 - weights["grammar"]) 
-                              for k, w in weights.items() if k != "grammar"}
-            overall_score = sum(scores[dim] * adjusted_weights[dim] for dim in adjusted_weights.keys())
-        else:
-            overall_score = sum(scores[dim] * weights[dim] for dim in scores.keys())
-        
+        overall_score = sum(scores[dim] * weights[dim] for dim in scores.keys())
         scores["overall"] = round(overall_score, 2)
         
         # Generate teacher-centered diagnostic recommendations
@@ -222,12 +204,10 @@ class EssayAnalysisService:
         # Compile detailed analysis for teacher review
         detailed_analysis = {
             "grammar": {
-                "score": grammar_analysis.get("score"),  # Can be None if LLM failed
+                "score": grammar_analysis.get("score", 0.0),
                 "errors": grammar_analysis.get("errors", []),
                 "error_count": grammar_analysis.get("error_count", 0),
-                "syntax_patterns": grammar_analysis.get("syntax_patterns", {}),
-                "llm_available": grammar_analysis.get("llm_available", False),
-                "llm_failed": grammar_analysis.get("llm_failed", False)
+                "syntax_patterns": grammar_analysis.get("syntax_patterns", {})
             },
             "readability": {
                 "score": readability_analysis.get("score", 0.0),

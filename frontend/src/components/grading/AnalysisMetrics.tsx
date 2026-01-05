@@ -127,19 +127,13 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
             { key: 'coherence', label: 'Coherence', icon: Brain, color: 'text-blue-500' },
             { key: 'argument_strength', label: 'Argument', icon: Target, color: 'text-amber-500' },
           ].map(({ key, label, icon: Icon, color }) => {
-            const score = scores[key as keyof typeof scores];
-            const isGrammar = key === 'grammar';
-            const isUnavailable = isGrammar && score === null;
+            const score = scores[key as keyof typeof scores] || 0;
             return (
               <div key={key} className="flex items-center space-x-2 p-2 bg-neutral-50 rounded-lg">
                 <Icon className={`w-4 h-4 ${color}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-neutral-600 truncate">{label}</p>
-                  {isUnavailable ? (
-                    <p className="text-xs text-amber-600 font-medium">Unavailable</p>
-                  ) : (
-                    <p className="text-sm font-semibold">{Math.round(score || 0)}</p>
-                  )}
+                  <p className="text-sm font-semibold">{Math.round(score)}</p>
                 </div>
               </div>
             );
