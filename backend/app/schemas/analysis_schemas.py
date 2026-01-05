@@ -19,7 +19,7 @@ class TextAnalysisRequest(BaseModel):
 
 class TextAnalysisResponse(BaseModel):
     analysis_type: str
-    scores: Dict[str, float]
+    scores: Dict[str, Any]  # Allow None for grammar when LLM fails (use Any to support float | None)
     detailed_analysis: Dict[str, Any]
     recommendations: List[Dict[str, Any]]
     diagnostic_summary: Optional[Dict[str, Any]] = None
@@ -45,7 +45,7 @@ class DiagnosticSummary(BaseModel):
 class AnalysisResponse(BaseModel):
     essay_id: int
     analysis_type: str
-    scores: Dict[str, float]
+    scores: Dict[str, Any]  # Allow None for grammar when LLM fails (use Any to support float | None)
     detailed_analysis: Dict[str, Any]
     recommendations: List[Dict[str, Any]]  # List of DiagnosticRecommendation dicts
     diagnostic_summary: Optional[Dict[str, Any]] = None

@@ -15,7 +15,10 @@ interface SendCodeEmailParams {
   code: string;
 }
 
-export const sendCodeEmail = async ({ toEmail, code }: SendCodeEmailParams): Promise<void> => {
+export const sendCodeEmail = async ({
+  toEmail,
+  code,
+}: SendCodeEmailParams): Promise<void> => {
   if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
     throw new Error(
       "EmailJS is not configured. Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY environment variables."
@@ -35,4 +38,3 @@ export const sendCodeEmail = async ({ toEmail, code }: SendCodeEmailParams): Pro
     throw new Error("Failed to send verification code. Please try again.");
   }
 };
-

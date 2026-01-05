@@ -44,7 +44,9 @@ async def analyze_essay(
         raise HTTPException(status_code=400, detail=analysis_result.get("message", "Analysis failed"))
     
     # Update essay with analysis results
-    essay.grammar_score = analysis_result["scores"].get("grammar", 0)
+    # Handle None grammar score (when LLM fails)
+    grammar_score = analysis_result["scores"].get("grammar")
+    essay.grammar_score = grammar_score if grammar_score is not None else None
     essay.readability_score = analysis_result["scores"].get("readability", 0)
     essay.coherence_score = analysis_result["scores"].get("coherence", 0)
     essay.argument_strength_score = analysis_result["scores"].get("argument_strength", 0)
@@ -125,43 +127,55 @@ async def analyze_text(
     """
     start_time = time.time()
     
-    # Perform analysis
-    analysis_result = await essay_analysis_service.analyze_text(
-        request.text, 
-        request.title, 
-        request.analysis_type,
-        request.rubric_id
-    )
-    
-    processing_time = time.time() - start_time
-    
-    # Check for errors
-    if "error" in analysis_result:
-        raise HTTPException(
-            status_code=400, 
-            detail=analysis_result.get("message", "Analysis failed")
+    try:
+        # Perform analysis
+        analysis_result = await essay_analysis_service.analyze_text(
+            request.text, 
+            request.title, 
+            request.analysis_type,
+            request.rubric_id
         )
-    
-    # Log processing time
-    word_count = analysis_result.get("word_count", 0)
-    rubric_info = f", Rubric: {request.rubric_id}" if request.rubric_id else ""
-    logger.info(
-        f"Analysis completed - Type: {request.analysis_type}, "
-        f"Words: {word_count}, Time: {processing_time:.2f}s "
-        f"({processing_time/60:.2f} min){rubric_info}"
-    )
-    
-    return TextAnalysisResponse(
-        analysis_type=request.analysis_type,
-        scores=analysis_result["scores"],
-        detailed_analysis=analysis_result["detailed_analysis"],
-        recommendations=analysis_result["recommendations"],
-        diagnostic_summary=analysis_result.get("diagnostic_summary"),
-        word_count=word_count,
-        generated_at=datetime.utcnow(),
-        processing_time_seconds=round(processing_time, 2),
-        rubric_scores=analysis_result.get("rubric_scores")
-    )
+        
+        processing_time = time.time() - start_time
+        
+        # Check for errors
+        if "error" in analysis_result:
+            raise HTTPException(
+                status_code=400, 
+                detail=analysis_result.get("message", "Analysis failed")
+            )
+        
+        # Log processing time
+        word_count = analysis_result.get("word_count", 0)
+        rubric_info = f", Rubric: {request.rubric_id}" if request.rubric_id else ""
+        logger.info(
+            f"Analysis completed - Type: {request.analysis_type}, "
+            f"Words: {word_count}, Time: {processing_time:.2f}s "
+            f"({processing_time/60:.2f} min){rubric_info}"
+        )
+        
+        return TextAnalysisResponse(
+            analysis_type=request.analysis_type,
+            scores=analysis_result["scores"],
+            detailed_analysis=analysis_result["detailed_analysis"],
+            recommendations=analysis_result["recommendations"],
+            diagnostic_summary=analysis_result.get("diagnostic_summary"),
+            word_count=word_count,
+            generated_at=datetime.utcnow(),
+            processing_time_seconds=round(processing_time, 2),
+            rubric_scores=analysis_result.get("rubric_scores")
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions (they already have proper status codes)
+        raise
+    except Exception as e:
+        # Log the full exception for debugging
+        logger.error(f"Error in analyze_text endpoint: {e}", exc_info=True)
+        # Return a proper error response with CORS headers
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error during analysis: {str(e)}"
+        )
 
 @analysis_router.post("/comparison", response_model=ComparisonAnalysisResponse)
 async def analyze_comparison(
