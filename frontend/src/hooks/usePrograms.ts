@@ -6,10 +6,40 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 
+// Helper to get teacher ID from authenticated user
+const getTeacherId = async (): Promise<number | null> => {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Error getting authenticated user:", userError);
+      return null;
+    }
+
+    const { data: teacherData, error: teacherError } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (teacherError || !teacherData) {
+      console.error("Error getting teacher record:", teacherError);
+      return null;
+    }
+
+    return teacherData.id;
+  } catch (err) {
+    console.error("Unexpected error fetching teacher ID:", err);
+    return null;
+  }
+};
+
 export function usePrograms() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { showError, showSuccess, AlertComponent } = useAlert();
+  const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
 
   // Read search query from URL params
   const urlSearchQuery = searchParams.get("search");
@@ -166,7 +196,18 @@ export function usePrograms() {
         return;
       }
 
-      // 3. Insert into Supabase
+      // 3. Get teacher ID for created_by
+      const teacherId = await getTeacherId();
+      if (!teacherId) {
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError("Unable to identify teacher. Please try logging in again.");
+        }, 100);
+        setIsCreating(false);
+        return;
+      }
+
+      // 4. Insert into Supabase with created_by
       const { data, error } = await supabase
         .from("programs")
         .insert({
@@ -176,6 +217,7 @@ export function usePrograms() {
           courses: 0,
           avg_class_size: 0,
           status: newProgram.status || "Active",
+          created_by: teacherId,
         })
         .select()
         .single();
@@ -249,14 +291,109 @@ export function usePrograms() {
   };
 
   // HANDLE BATCH UPLOAD
-  const handleBatchUploadComplete = (result: UploadResult) => {
+  const handleBatchUploadComplete = async (result: UploadResult) => {
     if (result.success && result.data) {
-      // Add imported programs to the list
-      setPrograms((prevPrograms) => [
-        ...(result.data as Program[]),
-        ...prevPrograms,
-      ]);
+      const importedPrograms = result.data as Program[];
+      
+      if (importedPrograms.length === 0) {
+        return;
+      }
+
+      try {
+        // Get teacher ID for created_by
+        const teacherId = await getTeacherId();
+        if (!teacherId) {
+          showError("Unable to identify teacher. Please try logging in again.");
+          return;
+        }
+
+        // Prepare programs for Supabase insertion
+        const programsToInsert = importedPrograms.map((program) => ({
+          name: program.name.trim(),
+          description: program.description || "",
+          tracks: program.tracks,
+          courses: program.courses || 0,
+          avg_class_size: program.avgClassSize || 0,
+          status: program.status || "Active",
+          created_by: teacherId,
+        }));
+
+        // Insert all programs into Supabase
+        const { data: insertedPrograms, error } = await supabase
+          .from("programs")
+          .insert(programsToInsert)
+          .select();
+
+        if (error) {
+          console.error("Error saving batch programs to Supabase:", error);
+          showError(
+            `Failed to save programs to database: ${error.message}`
+          );
+          return;
+        }
+
+        // Map Supabase response to Program type
+        const savedPrograms: Program[] = (insertedPrograms || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description ?? "",
+          tracks: p.tracks ?? 0,
+          courses: p.courses ?? 0,
+          avgClassSize: p.avg_class_size ?? 0,
+          status: p.status ?? "Active",
+        }));
+
+        // Add imported programs to the list
+        setPrograms((prevPrograms) => [
+          ...savedPrograms,
+          ...prevPrograms,
+        ]);
+
+        showSuccess(`Successfully imported ${savedPrograms.length} program(s)!`);
+      } catch (err) {
+        console.error("Unexpected error saving batch programs:", err);
+        showError("An unexpected error occurred while saving programs.");
+      }
     }
+  };
+
+  // HANDLE DELETE FUNCTION
+  const handleDeleteProgram = (program: Program) => {
+    showWarning(
+      `Are you sure you want to delete program "${program.name}"? This action cannot be undone and will affect all sections and students in this program.`,
+      {
+        title: "Delete Program",
+        showCancel: true,
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            const { error } = await supabase
+              .from("programs")
+              .delete()
+              .eq("id", program.id);
+
+            if (error) {
+              console.error("Error deleting program:", error);
+              showError(`Failed to delete program: ${error.message}`);
+              return;
+            }
+
+            // Remove from local state
+            setPrograms((prevPrograms) =>
+              prevPrograms.filter((p) => p.id !== program.id)
+            );
+
+            showSuccess("Program deleted successfully!");
+          } catch (err) {
+            console.error("Unexpected error deleting program:", err);
+            showError(
+              "An unexpected error occurred while deleting the program."
+            );
+          }
+        },
+      }
+    );
   };
 
   return {
@@ -278,6 +415,7 @@ export function usePrograms() {
     handleInputChange,
     handleCreateProgram,
     handleProgramClick,
+    handleDeleteProgram,
     handleBatchUploadComplete,
     // Alert Component
     AlertComponent,
