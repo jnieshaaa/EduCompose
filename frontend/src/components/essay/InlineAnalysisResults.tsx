@@ -318,7 +318,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
   }
 
   const scores = analysis.scores || {
-    grammar: 0,
+    grammar: null,
     readability: 0,
     coherence: 0,
     argument_strength: 0,
@@ -567,24 +567,51 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 <div className='space-y-3 mb-4'>
                   <div className='flex items-center justify-between'>
                     <span className='text-sm text-neutral-600'>Score</span>
-                    <span className='font-semibold'>
-                      {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
-                    </span>
+                    {analysis.detailed_analysis.grammar.score !== null ? (
+                      <span className='font-semibold'>
+                        {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
+                      </span>
+                    ) : (
+                      <div className='flex flex-col items-end gap-2'>
+                        <span className='text-sm text-amber-600 font-medium'>
+                          Analysis unavailable
+                        </span>
+                        {onRetry && (
+                          <button
+                            onClick={onRetry}
+                            className='px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-1'
+                          >
+                            <ArrowRight className='w-3 h-3' />
+                            Retry Grammar Analysis
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className='flex items-center justify-between'>
-                    <span className='text-sm text-neutral-600'>
-                      Error Count
-                    </span>
-                    <Badge
-                      variant={
-                        analysis.detailed_analysis.grammar.error_count > 10
-                          ? "error"
-                          : "warning"
-                      }
-                    >
-                      {analysis.detailed_analysis.grammar.error_count} errors
-                    </Badge>
-                  </div>
+                  {analysis.detailed_analysis.grammar.score !== null && (
+                    <div className='flex items-center justify-between'>
+                      <span className='text-sm text-neutral-600'>
+                        Error Count
+                      </span>
+                      <Badge
+                        variant={
+                          analysis.detailed_analysis.grammar.error_count > 10
+                            ? "error"
+                            : "warning"
+                        }
+                      >
+                        {analysis.detailed_analysis.grammar.error_count} errors
+                      </Badge>
+                    </div>
+                  )}
+                  {analysis.detailed_analysis.grammar.score === null && (
+                    <div className='text-xs text-neutral-500 bg-amber-50 p-3 rounded-lg border border-amber-200'>
+                      <p className='mb-1'>
+                        <strong>Grammar analysis unavailable:</strong> The LLM service could not be reached. This may be due to internet connectivity issues.
+                      </p>
+                      <p>Please check your internet connection and try again.</p>
+                    </div>
+                  )}
                 </div>
 
                 {Object.keys(groupedGrammarErrors).length > 0 && (
@@ -749,7 +776,9 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     color: "secondary",
                   },
                 ].map(({ key, label, icon: Icon, color }) => {
-                  const score = scores[key as keyof typeof scores] || 0;
+                  const score = scores[key as keyof typeof scores];
+                  const isGrammar = key === 'grammar';
+                  const isUnavailable = isGrammar && score === null;
                   return (
                     <Card key={key}>
                       <div className='text-center flex flex-col h-full'>
@@ -760,16 +789,34 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                           {label}
                         </h5>
                         <div className='mt-auto'>
-                          <div
-                            className={`text-xl font-bold text-${color} mb-1`}
-                          >
-                            {Math.round(score)}
-                          </div>
-                          <ProgressBar
-                            value={score}
-                            color={getScoreColor(score)}
-                            size='sm'
-                          />
+                          {isUnavailable ? (
+                            <>
+                              <div className='text-sm text-amber-600 font-medium mb-2'>
+                                Unavailable
+                              </div>
+                              {onRetry && (
+                                <button
+                                  onClick={onRetry}
+                                  className='w-full px-2 py-1 text-xs bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors'
+                                >
+                                  Retry
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div
+                                className={`text-xl font-bold text-${color} mb-1`}
+                              >
+                                {Math.round(score || 0)}
+                              </div>
+                              <ProgressBar
+                                value={score || 0}
+                                color={getScoreColor(score || 0)}
+                                size='sm'
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
                     </Card>

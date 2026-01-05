@@ -167,7 +167,7 @@ class GrammarAnalyzer:
         request_id = str(uuid.uuid4())[:8]
         
         results = {
-            "score": 100.0,
+            "score": None,  # Set to None when LLM fails - don't default to 100
             "errors": [],
             "syntax_patterns": {},
             "error_count": 0,
@@ -175,7 +175,9 @@ class GrammarAnalyzer:
             "avg_sentence_length": 0.0,
             "syntax_complexity": 0.0,
             "analyzer_version": "2.0-pure-llm",  # Debug signature - verify new code is running
-            "request_id": request_id  # Track this specific analysis request
+            "request_id": request_id,  # Track this specific analysis request
+            "llm_available": False,  # Track if LLM was available and succeeded
+            "llm_failed": False  # Track if LLM was attempted but failed
         }
         
         logger.info(f"Request ID: {request_id} | Text hash: {hash(text[:100])}")
@@ -198,12 +200,15 @@ class GrammarAnalyzer:
         # Grammar checking - use LLM with retry mechanism (NO LanguageTool)
         grammar_errors = []
         llm_success = False  # Track if LLM call succeeded (even with 0 errors)
+        llm_attempted = False  # Track if we attempted to use LLM
         
         logger.info("Attempting LLM-based grammar checking (LanguageTool completely removed)")
         
         # Try LLM with retry mechanism (up to 3 attempts)
         llm_client = self._ensure_llm_loaded()
         if llm_client:
+            llm_attempted = True
+            results["llm_available"] = True
             try:
                 logger.info(f"LLM client available: {self.available_llm}")
                 grammar_errors, llm_success = self._check_with_llm_with_retry(text, sentences)
@@ -211,12 +216,15 @@ class GrammarAnalyzer:
                     logger.info(f"✓ LLM SUCCESS: Found {len(grammar_errors)} grammar errors (V2 PURE LLM)")
                 else:
                     logger.warning("✗ LLM check failed after all retries - NO LanguageTool fallback")
+                    results["llm_failed"] = True
             except Exception as e:
                 logger.warning(f"✗ LLM grammar check failed after all retries: {e} - NO LanguageTool fallback")
                 llm_success = False
                 grammar_errors = []
+                results["llm_failed"] = True
         else:
             logger.warning("✗ No LLM client available - NO LanguageTool fallback (using basic rules only)")
+            results["llm_available"] = False
         
         # If LLM failed, we'll only use basic rules (capitalization checks)
         # IMPORTANT: LanguageTool has been completely removed - no fallback
@@ -250,14 +258,21 @@ class GrammarAnalyzer:
                 results["errors"].append(error)
                 results["error_count"] += 1
         
-        # Calculate grammar score (0-100)
-        # Penalize based on error density
-        total_words = len(text.split())
-        if total_words > 0:
-            error_density = results["error_count"] / total_words
-            results["score"] = max(0.0, 100.0 - (error_density * 1000))
+        # Calculate grammar score (0-100) ONLY if LLM succeeded
+        # If LLM failed, score remains None to indicate incomplete analysis
+        if llm_success:
+            # Penalize based on error density
+            total_words = len(text.split())
+            if total_words > 0:
+                error_density = results["error_count"] / total_words
+                results["score"] = max(0.0, 100.0 - (error_density * 1000))
+            else:
+                results["score"] = 0.0
         else:
-            results["score"] = 0.0
+            # LLM failed - don't calculate score, keep it as None
+            # Frontend will show retry button instead of score
+            logger.info("LLM failed - grammar score set to None (will show retry button in frontend)")
+            results["score"] = None
         
         # Final debug log
         logger.info(f"--- COMPLETED GRAMMAR ANALYSIS (V2 PURE LLM) ---")

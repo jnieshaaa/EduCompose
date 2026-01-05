@@ -516,24 +516,50 @@ const EnhancedEssayAnalysisModal: React.FC<EnhancedEssayAnalysisModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-600">Score</span>
-                    <span className="font-semibold">
-                      {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
-                    </span>
+                    {analysis.detailed_analysis.grammar.score !== null ? (
+                      <span className="font-semibold">
+                        {analysis.detailed_analysis.grammar.score.toFixed(1)}/100
+                      </span>
+                    ) : (
+                      <div className='flex flex-col items-end gap-2'>
+                        <span className='text-sm text-amber-600 font-medium'>
+                          Analysis unavailable
+                        </span>
+                        <button
+                          onClick={handleAnalyze}
+                          disabled={loading}
+                          className='px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                          <ArrowRight className='w-3 h-3' />
+                          Retry Grammar Analysis
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
-                      Error Count
-                    </span>
-                    <Badge
-                      variant={
-                        analysis.detailed_analysis.grammar.error_count > 10
-                          ? "error"
-                          : "warning"
-                      }
-                    >
-                      {analysis.detailed_analysis.grammar.error_count} errors
-                    </Badge>
-                  </div>
+                  {analysis.detailed_analysis.grammar.score !== null && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-neutral-600">
+                        Error Count
+                      </span>
+                      <Badge
+                        variant={
+                          analysis.detailed_analysis.grammar.error_count > 10
+                            ? "error"
+                            : "warning"
+                        }
+                      >
+                        {analysis.detailed_analysis.grammar.error_count} errors
+                      </Badge>
+                    </div>
+                  )}
+                  {analysis.detailed_analysis.grammar.score === null && (
+                    <div className='text-xs text-neutral-500 bg-amber-50 p-3 rounded-lg border border-amber-200'>
+                      <p className='mb-1'>
+                        <strong>Grammar analysis unavailable:</strong> The LLM service could not be reached. This may be due to internet connectivity issues.
+                      </p>
+                      <p>Please check your internet connection and try again.</p>
+                    </div>
+                  )}
                   {analysis.detailed_analysis.grammar.errors.length > 0 && (
                     <div className="mt-4 space-y-2">
                       <p className="text-sm font-medium text-neutral-700">

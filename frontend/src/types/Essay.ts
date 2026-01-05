@@ -230,10 +230,12 @@ export interface AnalysisRequest {
 
 export interface DetailedAnalysis {
   grammar: {
-    score: number;
+    score: number | null;  // null when LLM fails
     errors: GrammarError[];
     error_count: number;
     syntax_patterns: GrammarSyntaxPatterns;
+    llm_available?: boolean;
+    llm_failed?: boolean;
   };
   readability: {
     score: number;
@@ -342,7 +344,7 @@ export interface AnalysisResponse {
   essay_id: number;
   analysis_type: string;
   scores: {
-    grammar: number;
+    grammar: number | null;  // null when LLM fails
     readability: number;
     coherence: number;
     argument_strength: number;
@@ -359,7 +361,7 @@ export interface AnalysisResponse {
 export interface TextAnalysisResponse {
   analysis_type: string;
   scores: {
-    grammar: number;
+    grammar: number | null;  // null when LLM fails
     readability: number;
     coherence: number;
     argument_strength: number;
