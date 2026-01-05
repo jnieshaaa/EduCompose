@@ -7,6 +7,36 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 
+// Helper to get teacher ID from authenticated user
+const getTeacherId = async (): Promise<number | null> => {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Error getting authenticated user:", userError);
+      return null;
+    }
+
+    const { data: teacherData, error: teacherError } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (teacherError || !teacherData) {
+      console.error("Error getting teacher record:", teacherError);
+      return null;
+    }
+
+    return teacherData.id;
+  } catch (err) {
+    console.error("Unexpected error fetching teacher ID:", err);
+    return null;
+  }
+};
+
 export function useSections() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -239,7 +269,18 @@ export function useSections() {
     }
 
     try {
-      // 4. Insert into Supabase
+      // 4. Get teacher ID for created_by
+      const teacherId = await getTeacherId();
+      if (!teacherId) {
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError("Unable to identify teacher. Please try logging in again.");
+        }, 100);
+        setIsCreatingSection(false);
+        return;
+      }
+
+      // 5. Insert into Supabase with created_by
       const { data, error } = await supabase
         .from("sections")
         .insert({
@@ -248,6 +289,7 @@ export function useSections() {
           term: newSection.term,
           students_estimated: parseInt(newSection.students, 10),
           essays_estimated: 0,
+          created_by: teacherId,
         })
         .select()
         .single();
@@ -419,6 +461,13 @@ export function useSections() {
       }
 
       try {
+        // Get teacher ID for created_by
+        const teacherId = await getTeacherId();
+        if (!teacherId) {
+          showError("Unable to identify teacher. Please try logging in again.");
+          return;
+        }
+
         // Prepare sections for Supabase insertion
         const sectionsToInsert = importedSections.map((section) => {
           const programId = programNameToIdMap.get(section.program);
@@ -434,6 +483,7 @@ export function useSections() {
             term: section.term,
             students_estimated: section.students,
             essays_estimated: section.essays || 0,
+            created_by: teacherId,
           };
         });
 

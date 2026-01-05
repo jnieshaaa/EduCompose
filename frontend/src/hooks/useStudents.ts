@@ -6,6 +6,36 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 
+// Helper to get teacher ID from authenticated user
+const getTeacherId = async (): Promise<number | null> => {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Error getting authenticated user:", userError);
+      return null;
+    }
+
+    const { data: teacherData, error: teacherError } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (teacherError || !teacherData) {
+      console.error("Error getting teacher record:", teacherError);
+      return null;
+    }
+
+    return teacherData.id;
+  } catch (err) {
+    console.error("Unexpected error fetching teacher ID:", err);
+    return null;
+  }
+};
+
 // Helper function to parse full name into first, middle, last
 export const parseName = (
   fullName: string

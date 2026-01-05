@@ -16,9 +16,9 @@ export function ProgramsTab() {
   const { showSuccess } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  // State to toggle the "Select to Delete" mode
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Removed: Teachers cannot delete programs, so selection mode is not needed
+  // const [isSelectionMode, setIsSelectionMode] = useState(false);
+  // const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const {
     programs,
@@ -35,40 +35,29 @@ export function ProgramsTab() {
     handleInputChange,
     handleCreateProgram,
     handleProgramClick,
+    handleDeleteProgram,
     handleBatchUploadComplete,
     AlertComponent,
   } = usePrograms();
 
-  // --- Selection Handlers ---
-
-  const handleSelectAll = () => {
-    setSelectedIds(programs.map((p) => String(p.id)));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedIds([]);
-  };
-
-  const handleCancelSelectionMode = () => {
-    setIsSelectionMode(false);
-    setSelectedIds([]);
-  };
+  // Removed: Selection handlers not needed since teachers cannot delete programs
 
   // --- Action Handlers ---
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
+  // Removed: Teachers cannot delete programs
+  // const handleDeleteSelected = () => {
+  //   if (selectedIds.length === 0) return;
 
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${selectedIds.length} programs?`
-      )
-    ) {
-      // In a real app, call your API here
-      showSuccess(`Deleted ${selectedIds.length} programs successfully`);
-      handleCancelSelectionMode();
-    }
-  };
+  //   if (
+  //     window.confirm(
+  //       `Are you sure you want to delete ${selectedIds.length} programs?`
+  //     )
+  //   ) {
+  //     // In a real app, call your API here
+  //     showSuccess(`Deleted ${selectedIds.length} programs successfully`);
+  //     handleCancelSelectionMode();
+  //   }
+  // };
 
   const handleEditProgram = (program: Program) => {
     console.log("Edit program:", program);
@@ -78,15 +67,14 @@ export function ProgramsTab() {
     showSuccess(`Archived program: ${program.name}`);
   };
 
-  const handleDeleteProgram = (program: Program) => {
-    if (window.confirm(`Are you sure you want to delete ${program.name}?`)) {
-      showSuccess(`Deleted program: ${program.name}`);
-    }
-  };
+  // Removed: Teachers cannot delete programs
+  // const handleDeleteProgram = (program: Program) => {
+  //   if (window.confirm(`Are you sure you want to delete ${program.name}?`)) {
+  //     showSuccess(`Deleted program: ${program.name}`);
+  //   }
+  // };
 
-  // Check if all displayed programs are selected
-  const isAllSelected =
-    programs.length > 0 && selectedIds.length === programs.length;
+  // Removed: Selection check not needed
 
   return (
     <div className="space-y-6">
@@ -101,63 +89,20 @@ export function ProgramsTab() {
 
         {/* ACTION BUTTONS */}
         <div className="flex items-center gap-2">
-          {/* 1. SELECTION MODE ACTIONS (Visible when "Select to Delete" is active) */}
-          {isSelectionMode ? (
-            <>
-              {/* Select All Button */}
-              <Button
-                variant="outline"
-                onClick={isAllSelected ? handleDeselectAll : handleSelectAll}
-                className="text-neutral-700 border-neutral-300"
-              >
-                <CheckSquare className="w-4 h-4 mr-2" />
-                {isAllSelected ? "Deselect All" : "Select All"}
-              </Button>
+          <Button
+            className="bg-primary hover:bg-primary-300"
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Program
+          </Button>
 
-              <Button
-                variant="ghost"
-                onClick={handleCancelSelectionMode}
-                className="text-neutral-600"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-
-              <Button
-                className="bg-error-default hover:bg-error-dark text-white border-none animate-in fade-in zoom-in duration-200"
-                onClick={handleDeleteSelected}
-                disabled={selectedIds.length === 0}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete ({selectedIds.length})
-              </Button>
-            </>
-          ) : (
-            /* 2. NORMAL ACTIONS (Visible by default) */
-            <>
-              <Button
-                className="bg-primary hover:bg-primary-300"
-                onClick={() => setIsAddDialogOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Program
-              </Button>
-
-              <BatchUploadDialog
-                type="programs"
-                existingPrograms={allPrograms}
-                onUploadComplete={handleBatchUploadComplete}
-              />
-              <Button
-                variant="outline"
-                className="text-error-default border-error-default/30 hover:bg-error-default/5"
-                onClick={() => setIsSelectionMode(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </>
-          )}
+          <BatchUploadDialog
+            type="programs"
+            existingPrograms={allPrograms}
+            onUploadComplete={handleBatchUploadComplete}
+          />
+          {/* Removed: Teachers cannot delete programs */}
         </div>
       </div>
 

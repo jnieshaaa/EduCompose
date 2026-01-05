@@ -119,7 +119,6 @@ export function ProgramsCardView({
                         <Archive className='w-4 h-4 mr-2' />
                         Archive Program
                       </DropdownMenuItem>
-                      {/* Delete Program Option */}
                       <DropdownMenuItem
                         className='text-error-default focus:text-error-default focus:bg-error-default/10'
                         onClick={(e) => {
