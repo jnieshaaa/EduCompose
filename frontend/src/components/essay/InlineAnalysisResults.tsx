@@ -217,7 +217,9 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
           typeof error.offset === "number" &&
           typeof error.errorLength === "number" &&
           error.errorLength > 0 &&
-          error.offset < originalText.length
+          error.offset >= 0 &&
+          error.offset < originalText.length &&
+          error.offset + error.errorLength <= originalText.length
       )
       .sort((a, b) => a.offset - b.offset);
 

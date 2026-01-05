@@ -128,7 +128,8 @@ export function EssayTextDisplay({
           return false;
         }
         const textAtOffset = originalText.slice(error.offset, error.offset + error.errorLength);
-        if (!textAtOffset.trim()) {
+        // Allow whitespace-only errors (e.g., multiple spaces, tabs) but ensure there's actual content
+        if (textAtOffset.length === 0) {
           return false;
         }
         return true;

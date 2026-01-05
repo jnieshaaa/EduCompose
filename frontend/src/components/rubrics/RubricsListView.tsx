@@ -42,8 +42,6 @@ interface RubricsListViewProps {
       programsList?: string[];
     }
   ) => void;
-  onEditRubric?: (rubricId: number) => void;
-  onDeleteRubric?: (rubricId: number) => void;
 }
 
 export function RubricsListView({
@@ -56,8 +54,6 @@ export function RubricsListView({
   onCreateClick,
   onPreviewRubric,
   onPreviewMyRubric,
-  onEditRubric,
-  onDeleteRubric,
 }: RubricsListViewProps) {
   const filteredPlatformRubrics = (platformRubrics || []).filter(
     (rubric) =>
@@ -246,26 +242,11 @@ export function RubricsListView({
                               <FileSpreadsheet className="w-4 h-4 mr-2" />
                               Export as Excel
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (onEditRubric) {
-                                  onEditRubric(rubric.id);
-                                }
-                              }}
-                            >
+                            <DropdownMenuItem>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Rubric
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-error-default"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (onDeleteRubric) {
-                                  onDeleteRubric(rubric.id);
-                                }
-                              }}
-                            >
+                            <DropdownMenuItem className="text-error-default">
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete Rubric
                             </DropdownMenuItem>

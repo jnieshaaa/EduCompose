@@ -374,7 +374,7 @@ class GrammarAnalyzer:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert grammar checker for academic essays. Analyze the text and identify all grammatical errors, including spelling, punctuation, grammar, and style issues. Return your findings as a JSON array."
+                        "content": "You are an expert grammar checker for academic essays. Analyze the text and identify all grammatical errors, including spelling, punctuation, grammar, and style issues. Return your findings as a JSON object with an 'errors' array containing all error objects."
                     },
                     {
                         "role": "user",
@@ -566,7 +566,7 @@ Instructions:
    - Missing words or grammar that makes sentences unreadable
    - Paragraph structure (long paragraphs that need splitting - see section 3)
 
-7. Return results as a JSON array of error objects with these fields:
+7. Return results as a JSON object with an "errors" array containing error objects. Each error object must have these fields:
    - type: "grammar" | "spelling" | "punctuation" | "structure" | "word_choice" | "style"
    - message: string (brief description explaining WHY it's an error)
    - offset: number (EXACT character position in text - count carefully from the start, counting every character including spaces and newlines)
@@ -589,7 +589,22 @@ Instructions:
    - If a word is used correctly or the meaning is clear, do NOT flag it as an error
    - Prioritize structural paragraph breaks and phonetic spelling errors
 
-Return only the JSON array, no additional text."""
+Return ONLY a valid JSON object with this exact structure:
+{
+  "errors": [
+    {
+      "type": "spelling",
+      "message": "Misspelled word",
+      "offset": 0,
+      "errorLength": 5,
+      "text": "impo rtant",
+      "suggestion": "important",
+      "context": "Time management is very important"
+    }
+  ]
+}
+
+Do not include any text before or after the JSON object."""
         
         return prompt
     
