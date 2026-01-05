@@ -374,7 +374,18 @@ export function useStudents() {
     const last_name = newStudent.lastName.trim();
 
     try {
-      // 6. Insert into Supabase
+      // 6. Get teacher ID for created_by
+      const teacherId = await getTeacherId();
+      if (!teacherId) {
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError("Unable to identify teacher. Please try logging in again.");
+        }, 100);
+        setIsCreatingStudent(false);
+        return;
+      }
+
+      // 7. Insert into Supabase with created_by
       const { data, error } = await supabase
         .from("students")
         .insert({
@@ -385,6 +396,7 @@ export function useStudents() {
           email: newStudent.email.trim(),
           program_id: programId,
           section_id: sectionId,
+          created_by: teacherId,
         })
         .select()
         .single();
@@ -667,6 +679,13 @@ export function useStudents() {
     if (result.success && result.data) {
       const importedStudents = result.data as Student[];
 
+      // Get teacher ID for created_by
+      const teacherId = await getTeacherId();
+      if (!teacherId) {
+        showError("Unable to identify teacher. Please try logging in again.");
+        return;
+      }
+
       // Save each student to Supabase
       const studentsToAdd: Student[] = [];
       const errors: string[] = [];
@@ -716,7 +735,7 @@ export function useStudents() {
             student.name
           );
 
-          // Insert into Supabase
+          // Insert into Supabase with created_by
           const { data, error } = await supabase
             .from("students")
             .insert({
@@ -727,6 +746,7 @@ export function useStudents() {
               email: student.email?.trim() || null,
               program_id: programId,
               section_id: sectionId,
+              created_by: teacherId,
             })
             .select()
             .single();
