@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 import eduComposeLogo from "../assets/EduCompose.png";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderPublicProps {
   onLoginClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -13,6 +14,8 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
   const [activeSection, setActiveSection] = useState<"hero" | "about">("hero");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [logoShine, setLogoShine] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // Trigger shine animation on page load
   useEffect(() => {
@@ -143,10 +146,16 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           {/* Get Started button comment muna sabi ni Junie Pogi */}
           <button
             type='button'
-            onClick={onLoginClick}
+            onClick={(e) => {
+              if (isAuthenticated) {
+                navigate("/Teacher/Dashboard");
+              } else {
+                onLoginClick?.(e);
+              }
+            }}
             className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-rd transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
           >
-            Get Started
+            {isAuthenticated ? "Dashboard" : "Get Started"}
           </button>
         </nav>
 
@@ -196,7 +205,11 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           <button
             type='button'
             onClick={(e) => {
-              onLoginClick?.(e);
+              if (isAuthenticated) {
+                navigate("/Teacher/Dashboard");
+              } else {
+                onLoginClick?.(e);
+              }
               setIsMenuOpen(false);
             }}
             className={`w-full bg-primary-200 text-white font-semibold px-6 py-3 rounded-rd transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
@@ -204,7 +217,7 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
             }`}
             style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}
           >
-            Get Started
+            {isAuthenticated ? "Dashboard" : "Get Started"}
           </button>
         </div>
       </div>

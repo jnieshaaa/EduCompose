@@ -123,7 +123,8 @@ export class BatchUploadController {
   static async uploadSections(
     file: File,
     existingSections: Section[],
-    availablePrograms: string[]
+    availablePrograms: string[],
+    defaultProgram?: string
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
 
@@ -157,11 +158,14 @@ export class BatchUploadController {
           "block_name",
           "block",
         ]);
-        const program = this.getFieldValue(row, [
-          "program",
-          "program name",
-          "program_name",
-        ]);
+        // Use default program if provided, otherwise read from CSV
+        const program =
+          defaultProgram ||
+          this.getFieldValue(row, [
+            "program",
+            "program name",
+            "program_name",
+          ]);
         const term = this.getFieldValue(row, [
           "term",
           "academic term",

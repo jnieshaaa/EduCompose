@@ -4,7 +4,13 @@
  */
 
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog";
 import Button from "./Button";
 import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 import { BatchUploadController } from "../../services/BatchUploadController";
@@ -80,7 +86,8 @@ export function BatchUploadDialog({
           uploadResult = await BatchUploadController.uploadSections(
             selectedFile,
             existingSections,
-            availablePrograms
+            availablePrograms,
+            defaultProgram
           );
           break;
         case "students":
@@ -133,9 +140,15 @@ export function BatchUploadDialog({
     switch (type) {
       case "programs":
         return ["name", "description", "tracks", "status"];
-      case "sections":
-        return ["name", "program", "term", "students"];
-      case "students":
+      case "sections": {
+        const baseColumns = ["name", "term", "students"];
+        // Only include program if not provided as default
+        if (!defaultProgram) {
+          baseColumns.splice(1, 0, "program"); // Insert "program" after "name"
+        }
+        return baseColumns;
+      }
+      case "students": {
         const baseColumns = [
           "id",
           "firstname",
@@ -151,6 +164,7 @@ export function BatchUploadDialog({
           baseColumns.push("section");
         }
         return baseColumns;
+      }
       default:
         return [];
     }
@@ -217,7 +231,8 @@ export function BatchUploadDialog({
               <div className="mt-3 flex items-center gap-2 p-3 bg-neutral-50 rounded-rd">
                 <FileText className="w-4 h-4 text-primary" />
                 <span className="text-sm text-neutral-700 flex-1">
-                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)}{" "}
+                  KB)
                 </span>
                 <button
                   onClick={() => {
@@ -250,12 +265,19 @@ export function BatchUploadDialog({
               ))}
             </div>
             <p className="text-xs text-neutral-500 mt-2">
-              Column names are case-insensitive and can include spaces or underscores
+              Column names are case-insensitive and can include spaces or
+              underscores
             </p>
             {type === "students" && (defaultProgram || defaultSection) && (
               <p className="text-xs text-info-default mt-2">
-                Note: Program and Section are automatically set from the current context.
-                You don't need to include these columns in your file.
+                Note: Program and Section are automatically set from the current
+                context. You don't need to include these columns in your file.
+              </p>
+            )}
+            {type === "sections" && defaultProgram && (
+              <p className="text-xs text-info-default mt-2">
+                Note: Program is automatically set from the current context. You
+                don't need to include the program column in your file.
               </p>
             )}
           </div>
@@ -278,7 +300,9 @@ export function BatchUploadDialog({
                 <div className="flex-1">
                   <p
                     className={`text-sm font-medium ${
-                      result.success ? "text-success-default" : "text-error-default"
+                      result.success
+                        ? "text-success-default"
+                        : "text-error-default"
                     }`}
                   >
                     {result.message}
@@ -305,7 +329,11 @@ export function BatchUploadDialog({
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleClose} disabled={uploading}>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={uploading}
+            >
               Cancel
             </Button>
             <Button
@@ -321,4 +349,3 @@ export function BatchUploadDialog({
     </Dialog>
   );
 }
-

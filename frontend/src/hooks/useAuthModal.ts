@@ -7,6 +7,8 @@ import {
   DESIGN_MODE_USER,
 } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { sendCodeEmail } from "../services/emailService";
+import { authApi } from "../api";
 
 // Minimal typed shape for Supabase user metadata
 interface UserMetadata {
@@ -44,6 +46,19 @@ export function useAuthModal(onClose: () => void) {
 
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<
+    "email" | "code" | "password"
+  >("email");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Handle login
   const handleLogin = async (e?: React.FormEvent) => {
@@ -190,12 +205,192 @@ export function useAuthModal(onClose: () => void) {
     }
   };
 
-  // Handle forgot password
-  const handleForgotPassword = () => {
-    console.log("Requesting password reset for:", forgotEmail);
-    // TODO: Implement forgot password logic
-    console.log("Password reset link sent to:", forgotEmail);
-    setView("login");
+  // Generate 6-digit code
+  const generateCode = (): string => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  // Store code in sessionStorage
+  const storeCode = (email: string, code: string): void => {
+    const codeData = {
+      code,
+      email,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    };
+    sessionStorage.setItem(`reset_code_${email}`, JSON.stringify(codeData));
+  };
+
+  // Verify code from sessionStorage
+  const verifyCode = (email: string, code: string): boolean => {
+    const storedData = sessionStorage.getItem(`reset_code_${email}`);
+    if (!storedData) {
+      return false;
+    }
+
+    try {
+      const { code: storedCode, expiresAt } = JSON.parse(storedData);
+      if (Date.now() > expiresAt) {
+        sessionStorage.removeItem(`reset_code_${email}`);
+        return false;
+      }
+      return storedCode === code;
+    } catch {
+      return false;
+    }
+  };
+
+  // Handle forgot password - Step 1: Send code
+  const handleSendCode = async () => {
+    setForgotPasswordError("");
+    setForgotPasswordSuccess("");
+
+    if (!forgotEmail.trim()) {
+      setForgotPasswordError("Please enter your email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forgotEmail.trim())) {
+      setForgotPasswordError("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingCode(true);
+
+    try {
+      // FIRST: Check if email exists in Supabase BEFORE sending code
+      const checkResult = await authApi.checkEmail(forgotEmail.trim());
+
+      // If email doesn't exist, STOP here - don't send code
+      if (!checkResult.exists) {
+        setForgotPasswordError(
+          checkResult.message || "No account found with this email address."
+        );
+        return;
+      }
+
+      // Email exists - NOW generate and send code via EmailJS
+      const code = generateCode();
+      storeCode(forgotEmail.trim(), code);
+
+      await sendCodeEmail({
+        toEmail: forgotEmail.trim(),
+        code,
+      });
+
+      setForgotPasswordSuccess("Verification code sent to your email!");
+      setForgotPasswordStep("code");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setForgotPasswordError(
+        message || "Failed to send verification code. Please try again."
+      );
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // Handle forgot password - Step 2: Verify code
+  const handleVerifyCode = async () => {
+    setForgotPasswordError("");
+
+    if (verificationCode.length !== 6) {
+      setForgotPasswordError("Please enter the complete 6-digit code");
+      return;
+    }
+
+    setIsVerifyingCode(true);
+
+    try {
+      const isValid = verifyCode(forgotEmail.trim(), verificationCode);
+
+      if (!isValid) {
+        setForgotPasswordError("Invalid or expired code. Please try again.");
+        return;
+      }
+
+      setForgotPasswordStep("password");
+      setForgotPasswordSuccess(
+        "Code verified! Please enter your new password."
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setForgotPasswordError(
+        message || "Verification failed. Please try again."
+      );
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
+  // Handle forgot password - Step 3: Reset password
+  const handleResetPassword = async () => {
+    setForgotPasswordError("");
+    setForgotPasswordSuccess("");
+
+    if (!newPassword.trim() || !confirmPassword.trim()) {
+      setForgotPasswordError("Please fill in all password fields");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setForgotPasswordError("Passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setForgotPasswordError("Password must be at least 6 characters long");
+      return;
+    }
+
+    // Verify code again before resetting
+    const isValid = verifyCode(forgotEmail.trim(), verificationCode);
+    if (!isValid) {
+      setForgotPasswordError("Verification code expired. Please start over.");
+      setForgotPasswordStep("email");
+      setVerificationCode("");
+      return;
+    }
+
+    setIsResettingPassword(true);
+
+    try {
+      // Use backend API to reset password (which uses Supabase Admin API server-side)
+      const result = await authApi.resetPassword(
+        forgotEmail.trim(),
+        newPassword.trim()
+      );
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to reset password");
+      }
+
+      // Clear the stored verification code
+      sessionStorage.removeItem(`reset_code_${forgotEmail.trim()}`);
+
+      setForgotPasswordSuccess(
+        "Password reset successfully! You can now log in with your new password."
+      );
+
+      setTimeout(() => {
+        setView("login");
+        // Reset state
+        setForgotEmail("");
+        setVerificationCode("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setForgotPasswordStep("email");
+        setForgotPasswordError("");
+        setForgotPasswordSuccess("");
+      }, 3000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setForgotPasswordError(
+        message || "Failed to reset password. Please try again."
+      );
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   return {
@@ -233,7 +428,27 @@ export function useAuthModal(onClose: () => void) {
     // Forgot password state
     forgotEmail,
     setForgotEmail,
-    handleForgotPassword,
+    forgotPasswordStep,
+    setForgotPasswordStep,
+    verificationCode,
+    setVerificationCode,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    forgotPasswordError,
+    setForgotPasswordError,
+    forgotPasswordSuccess,
+    setForgotPasswordSuccess,
+    isSendingCode,
+    isVerifyingCode,
+    isResettingPassword,
+    handleSendCode,
+    handleVerifyCode,
+    handleResetPassword,
   };
 }
-

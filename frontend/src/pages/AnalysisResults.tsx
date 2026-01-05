@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -26,6 +26,7 @@ import { RubricPreviewModal } from '../components/rubrics/RubricPreviewModal';
 import { platformRubrics, getTypeBadgeColor } from '../data/rubricData';
 import type { PlatformRubric } from '../components/rubrics/types';
 import { savePlagiarismResult, loadPlagiarismResult } from '../services/activityService';
+import { useAuth } from '../contexts/AuthContext';
 
 const STORAGE_KEY = 'essay_analysis_results';
 
@@ -239,6 +240,7 @@ In conclusion, addressing climate change requires coordinated effort across all 
 const AnalysisResults: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const [analysis, setAnalysis] = useState<Omit<AnalysisResponse, 'essay_id'> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -531,8 +533,8 @@ const AnalysisResults: React.FC = () => {
   // Save plagiarism result when navigating away, refreshing, or switching tabs
   useEffect(() => {
     const savePlagiarismOnExit = async () => {
-      // Skip if already saved, in preview mode, or no result to save
-      if (plagiarismResultSavedRef.current || isPreviewMode || !plagiarismResultRef.current) {
+      // Skip if already saved, in preview mode, user not authenticated, or no result to save
+      if (plagiarismResultSavedRef.current || isPreviewMode || !isAuthenticated || !plagiarismResultRef.current) {
         return;
       }
 
@@ -649,7 +651,7 @@ const AnalysisResults: React.FC = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [essayId, studentId, activityId, isPreviewMode, location.state]);
+  }, [essayId, studentId, activityId, isPreviewMode, isAuthenticated, location.state]);
 
   // Handle error click - toggle selection (inline details are handled in EssayTextDisplay)
   const handleErrorClick = useCallback((error: HighlightError, index: number) => {
@@ -776,6 +778,13 @@ const AnalysisResults: React.FC = () => {
       const result = await plagiarismApi.checkPlagiarism(textToCheck);
       setPlagiarismResult(result);
       
+      // Save plagiarism result to Supabase only if user is authenticated
+      // Skip saving if user is not logged in to avoid unnecessary costs
+      if (!isAuthenticated) {
+        console.log('Plagiarism check completed. Results not saved (user not authenticated).');
+        return;
+      }
+      
       // Save plagiarism result to Supabase if essayId is available, or studentId and activityId
       if (derivedEssayId) {
         try {
@@ -809,8 +818,8 @@ const AnalysisResults: React.FC = () => {
           setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
         }
       } else {
-        // In preview mode or when no IDs are available, just show the result without saving
-        console.log('Plagiarism check completed. Results not saved (preview mode or no identifiers available).');
+        // When no IDs are available, just show the result without saving
+        console.log('Plagiarism check completed. Results not saved (no identifiers available).');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to check for plagiarism';
@@ -943,6 +952,12 @@ const AnalysisResults: React.FC = () => {
     doc.save(fileName);
   };
 
+  // Memoize grammarErrors to prevent unnecessary recalculations in EssayTextDisplay
+  // Must be called before any early returns to follow Rules of Hooks
+  const grammarErrors = useMemo(() => {
+    return analysis?.detailed_analysis?.grammar?.errors || [];
+  }, [analysis]);
+
   // Loading state
   if (loading) {
     return (
@@ -993,7 +1008,6 @@ const AnalysisResults: React.FC = () => {
   }
 
   const recommendations: DiagnosticRecommendation[] = analysis.recommendations || [];
-  const grammarErrors = analysis.detailed_analysis?.grammar?.errors || [];
   const rubricData = (analysis as any).rubric_scores as { rubric_id?: string | number; rubric_name?: string } | undefined;
 
   // Find the rubric for preview

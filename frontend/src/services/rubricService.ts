@@ -86,25 +86,18 @@ export const fetchTeacherRubrics = async (
       return {
         id: r.id,
         name: r.name,
-        criteria: criteriaData?.length || 0,
+        criteria: criteriaData.length,
         programs: programs.length,
-        lastUsed: r.created_at
-          ? new Date(r.created_at).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
+        lastUsed: r.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
         level: "College",
-        // Store programs array for display
         programsList: programs,
-        // Store full rubric data for preview
         fullData: {
           id: r.id,
           name: r.name,
           description: r.description || "",
+          criteria: criteriaData,
           type: r.grading_intensity || "Basic",
-          criteria: criteriaData || [],
-          programs: programs.length,
-          lastUpdated: r.created_at
-            ? new Date(r.created_at).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
+          programs: programs,
         },
       };
     });
@@ -126,10 +119,33 @@ export const saveRubric = async (
   },
   teacherId: number
 ) => {
+  const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
+
+  // Check if a rubric with the same name already exists for this teacher
+  const { data: existingRubrics, error: checkError } = await supabase
+    .from("rubrics")
+    .select("id, name")
+    .eq("created_by", teacherId)
+    .ilike("name", rubricName); // Case-insensitive comparison
+
+  if (checkError) {
+    console.error("Error checking for duplicate rubric:", checkError);
+    throw checkError;
+  }
+
+  // If a rubric with the same name exists, throw an error
+  if (existingRubrics && existingRubrics.length > 0) {
+    const error = new Error(
+      `A rubric with the name "${rubricName}" already exists. Please choose a different name.`
+    ) as Error & { code?: string };
+    error.code = "DUPLICATE_RUBRIC";
+    throw error;
+  }
+
   const { data, error } = await supabase
     .from("rubrics")
     .insert({
-      name: rubricFormData.name || "Untitled Rubric",
+      name: rubricName,
       description: `Grading intensity: ${rubricFormData.gradingIntensity}`,
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
@@ -157,10 +173,33 @@ export const saveTemplateRubric = async (
   },
   teacherId: number
 ) => {
+  const rubricName = rubric.name?.trim() || "Untitled Rubric";
+
+  // Check if a rubric with the same name already exists for this teacher
+  const { data: existingRubrics, error: checkError } = await supabase
+    .from("rubrics")
+    .select("id, name")
+    .eq("created_by", teacherId)
+    .ilike("name", rubricName); // Case-insensitive comparison
+
+  if (checkError) {
+    console.error("Error checking for duplicate rubric:", checkError);
+    throw checkError;
+  }
+
+  // If a rubric with the same name exists, throw an error
+  if (existingRubrics && existingRubrics.length > 0) {
+    const error = new Error(
+      `A rubric with the name "${rubricName}" already exists. Please choose a different name.`
+    ) as Error & { code?: string };
+    error.code = "DUPLICATE_RUBRIC";
+    throw error;
+  }
+
   const { data, error } = await supabase
     .from("rubrics")
     .insert({
-      name: rubric.name,
+      name: rubricName,
       description: rubric.description,
       criteria: rubric.criteria,
       programs: [], // Template rubrics don't have specific programs
@@ -178,3 +217,117 @@ export const saveTemplateRubric = async (
   return data;
 };
 
+// Delete rubric from Supabase
+export const deleteRubric = async (rubricId: number): Promise<void> => {
+  const { error } = await supabase.from("rubrics").delete().eq("id", rubricId);
+
+  if (error) {
+    console.error("Error deleting rubric:", error);
+    throw error;
+  }
+};
+
+// Update rubric in Supabase
+export const updateRubric = async (
+  rubricId: number,
+  rubricFormData: {
+    name: string;
+    gradingIntensity: string;
+    programs: string[];
+    criteria: CriteriaRow[];
+  },
+  teacherId: number
+) => {
+  const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
+
+  // Check if another rubric with the same name already exists for this teacher (excluding current rubric)
+  const { data: existingRubrics, error: checkError } = await supabase
+    .from("rubrics")
+    .select("id, name")
+    .eq("created_by", teacherId)
+    .ilike("name", rubricName); // Case-insensitive comparison
+
+  if (checkError) {
+    console.error("Error checking for duplicate rubric:", checkError);
+    throw checkError;
+  }
+
+  // If another rubric with the same name exists (excluding current rubric), throw an error
+  if (
+    existingRubrics &&
+    existingRubrics.some((r) => r.id !== rubricId && r.name.toLowerCase() === rubricName.toLowerCase())
+  ) {
+    const error = new Error(
+      `A rubric with the name "${rubricName}" already exists. Please choose a different name.`
+    ) as Error & { code?: string };
+    error.code = "DUPLICATE_RUBRIC";
+    throw error;
+  }
+
+  const { data, error } = await supabase
+    .from("rubrics")
+    .update({
+      name: rubricName,
+      description: `Grading intensity: ${rubricFormData.gradingIntensity}`,
+      criteria: rubricFormData.criteria,
+      programs: rubricFormData.programs,
+      grading_intensity: rubricFormData.gradingIntensity,
+    })
+    .eq("id", rubricId)
+    .eq("created_by", teacherId) // Ensure only the owner can update
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating rubric:", error);
+    throw error;
+  }
+
+  return data;
+};
+
+// Fetch a single rubric by ID
+export const fetchRubricById = async (
+  rubricId: number
+): Promise<(RubricTemplate & { programsList?: string[]; fullData?: Record<string, unknown> }) | null> => {
+  try {
+    const { data: rubricData, error: rubricError } = await supabase
+      .from("rubrics")
+      .select(
+        "id, name, description, criteria, programs, grading_intensity, created_at"
+      )
+      .eq("id", rubricId)
+      .single();
+
+    if (rubricError || !rubricData) {
+      console.error("Error loading rubric:", rubricError);
+      return null;
+    }
+
+    const r = rubricData as SupabaseRubricRow;
+    const criteriaObj: unknown = r.criteria;
+    const criteriaData = extractCriteriaFromSupabase(criteriaObj);
+    const programs = extractProgramsFromSupabase(r.programs, criteriaObj);
+
+    return {
+      id: r.id,
+      name: r.name,
+      criteria: criteriaData.length,
+      programs: programs.length,
+      lastUsed: r.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+      level: "College",
+      programsList: programs,
+      fullData: {
+        id: r.id,
+        name: r.name,
+        description: r.description || "",
+        criteria: criteriaData,
+        type: r.grading_intensity || "Basic",
+        programs: programs,
+      },
+    };
+  } catch (err) {
+    console.error("Unexpected error loading rubric:", err);
+    return null;
+  }
+};

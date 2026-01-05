@@ -44,3 +44,18 @@ class LoginResponse(BaseModel):
     token_type: str
     user: UserInfo
 
+class CheckEmailRequest(BaseModel):
+    email: str = Field(..., description="Email address to check")
+
+class CheckEmailResponse(BaseModel):
+    exists: bool
+    message: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    new_password: str = Field(..., min_length=6, description="New password (minimum 6 characters)")
+
+class ResetPasswordResponse(BaseModel):
+    message: str
+    success: bool
+

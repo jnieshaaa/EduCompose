@@ -432,16 +432,24 @@ Please return your response as a valid JSON object with this structure:
             # Configure generation config with higher token limit
             generation_config = {
                 "temperature": 0.1,  # Low temperature for consistent results
-                "max_output_tokens": 8000,  # Increased to prevent truncation
+                "max_output_tokens": 8192,  # Maximum for Gemini 2.5 models
             }
             
             response = self.llm_client.generate_content(
                 full_prompt,
                 generation_config=generation_config
             )
+            
+            # Check if response was truncated by examining finish_reason
+            finish_reason = None
+            if response.candidates and len(response.candidates) > 0:
+                finish_reason = response.candidates[0].finish_reason
+                if finish_reason == "MAX_OUTPUT_TOKENS":
+                    logger.warning(f"⚠️ Gemini response was TRUNCATED (max_output_tokens limit reached). "
+                                 f"Some errors may be missing. Response length: {len(response.text)} chars.")
+            
             result_text = response.text.strip()
             
-            # Check if response was truncated (Gemini may not indicate this directly, but we can check for incomplete JSON)
             # Remove markdown code blocks if present
             if result_text.startswith("```json"):
                 result_text = result_text[7:]
@@ -452,9 +460,12 @@ Please return your response as a valid JSON object with this structure:
             result_text = result_text.strip()
             
             # Check if JSON looks incomplete (common signs: missing closing brackets, truncated last error)
-            if result_text and not result_text.rstrip().endswith("]") and not result_text.rstrip().endswith("}"):
-                logger.warning(f"⚠️ Gemini response may be incomplete (doesn't end with ] or }}). "
-                             f"Response length: {len(result_text)} chars. Attempting to repair JSON...")
+            # This check is still useful even if finish_reason doesn't indicate truncation
+            json_incomplete = result_text and not result_text.rstrip().endswith("]") and not result_text.rstrip().endswith("}")
+            if json_incomplete or finish_reason == "MAX_OUTPUT_TOKENS":
+                if json_incomplete:
+                    logger.warning(f"⚠️ Gemini response may be incomplete (doesn't end with ] or }}). "
+                                 f"Response length: {len(result_text)} chars. Attempting to repair JSON...")
                 # Try to repair incomplete JSON
                 result_text = self._repair_incomplete_json(result_text)
             
@@ -511,6 +522,11 @@ Instructions:
    - You should find at least 2 paragraph breaks (creating 3 sections total)
 
 4. CONTEXT-AWARE SPELLING (type: "spelling"):
+   - CRITICAL: Flag ALL invalid words, random character sequences, and gibberish text:
+     * Random character strings that don't form valid words (e.g., "asds", "dsds", "dsd", "asd", "sdg", "mana sd ging", "consumpsd", etc.)
+     * Nonsensical character sequences that are clearly not English words
+     * Words with random letters inserted (e.g., "mana sd ging" should be "managing", "consumpsd" should be "consumption")
+     * Any sequence of letters separated by spaces that doesn't form valid words (e.g., "asds dsds dsd")
    - Pay special attention to PHONETIC TYPOS that are common in fast typing:
      * "mot" -> "not" (e.g., "this program is mot my passion" -> "this program is not my passion")
      * "weed" -> "need" (e.g., "I don't weed to sell" -> "I don't need to sell", "what I weed" -> "what I need")
@@ -521,7 +537,8 @@ Instructions:
      * "finaly" -> "finally"
      * "noone" -> "no one" (space needed)
    - These are REAL spelling errors that change meaning - flag them even if frequency is low
-   - Only flag if you're confident about the correction based on context
+   - For gibberish/random character sequences: Flag them even if you can't determine the exact intended word - you can suggest "[remove]" or "[replace with contextually appropriate word]" or leave the suggestion field empty
+   - For regular spelling errors: Only flag if you're confident about the correction based on context
    - Common misspellings: "recieve" -> "receive", "definately" -> "definitely", "seperate" -> "separate"
    - Do NOT flag: Proper nouns, brand names, technical terms, regional variations
 
@@ -543,7 +560,9 @@ Instructions:
    - Subject-verb agreement (e.g., "the program are" -> "the program is")
    - Tense consistency within paragraphs
    - Punctuation errors (missing commas, periods, apostrophes)
-   - Spelling errors (especially phonetic typos listed above)
+   - Spelling errors (especially phonetic typos and gibberish/random character sequences - see section 4)
+   - Invalid words, random character strings, and nonsensical text (CRITICAL - flag all gibberish)
+   - Excessive whitespace (multiple consecutive spaces or tabs, e.g., "word          word" -> "word word")
    - Missing words or grammar that makes sentences unreadable
    - Paragraph structure (long paragraphs that need splitting - see section 3)
 
@@ -903,11 +922,14 @@ Return only the JSON array, no additional text."""
                         # If suggestion doesn't match expected format, log but don't skip (LLM might have different format)
                         logger.debug(f"Structure error suggestion format: '{suggestion}' (expected period + newlines)")
                 
-                # For spelling errors, ensure suggestion is provided and different from actual text
+                # For spelling errors, validate suggestion if provided (but allow empty suggestions for gibberish/invalid words)
                 if error_type == "spelling":
-                    if not suggestion or suggestion.lower().strip() == actual_text.lower().strip():
-                        logger.debug(f"Skipping spelling error: no valid suggestion provided")
+                    # If a suggestion is provided, ensure it's different from actual text
+                    if suggestion and suggestion.lower().strip() == actual_text.lower().strip():
+                        logger.debug(f"Skipping spelling error: suggestion same as actual text")
                         continue
+                    # Allow empty suggestions for gibberish/random character sequences that can't be easily corrected
+                    # The error will still be flagged and highlighted even without a suggestion
                 
                 # Final validation: Ensure offset and length are still valid after corrections
                 if offset < 0 or offset >= len(original_text):
@@ -1004,7 +1026,7 @@ Return only the JSON array, no additional text."""
         """
         errors = []
         
-        # Only check capitalization - word choice should be handled by LLM with context
+        # Check capitalization - word choice should be handled by LLM with context
         for i, sentence in enumerate(sentences):
             if sentence and not sentence[0].isupper():
                 # Find the offset of this sentence in the original text
@@ -1021,6 +1043,39 @@ Return only the JSON array, no additional text."""
                     "offset": sentence_start,
                     "errorLength": 1  # Just the first character
                 })
+        
+        # Check for excessive whitespace (multiple consecutive spaces, tabs, etc.)
+        # Pattern matches 2 or more consecutive whitespace characters (spaces, tabs)
+        whitespace_pattern = re.compile(r'[ \t]{2,}')
+        
+        for match in whitespace_pattern.finditer(text):
+            start_pos = match.start()
+            whitespace_text = match.group()
+            whitespace_length = len(whitespace_text)
+            
+            # Determine what the correction should be
+            # If it's between words, use single space; if at start/end, remove
+            before_char = text[start_pos - 1] if start_pos > 0 else ''
+            after_char = text[start_pos + whitespace_length] if start_pos + whitespace_length < len(text) else ''
+            
+            # Check if whitespace is at start or end of text/line
+            if start_pos == 0 or before_char == '\n':
+                # Leading whitespace - remove it
+                suggestion = ""
+            elif start_pos + whitespace_length == len(text) or after_char == '\n':
+                # Trailing whitespace - remove it
+                suggestion = ""
+            else:
+                # Between words - replace with single space
+                suggestion = " "
+            
+            errors.append({
+                "type": "punctuation",
+                "message": f"Excessive whitespace ({whitespace_length} spaces/tabs) - use single space",
+                "suggestion": suggestion,
+                "offset": start_pos,
+                "errorLength": whitespace_length
+            })
         
         # Removed aggressive word checking - LLM handles word choice with context
         # The previous implementation was flagging correct uses of "to", "then", "your", etc.

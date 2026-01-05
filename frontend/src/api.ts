@@ -133,6 +133,20 @@ export const authApi = {
       body: JSON.stringify({ verification_code: verificationCode }),
     });
   },
+
+  checkEmail: async (email: string) => {
+    return apiRequest<{ exists: boolean; message: string }>("/auth/check-email", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (email: string, newPassword: string) => {
+    return apiRequest<{ message: string; success: boolean }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, new_password: newPassword }),
+    });
+  },
 };
 
 // User API

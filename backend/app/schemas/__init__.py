@@ -11,6 +11,10 @@ from .auth_schemas import (
     EmailVerificationResponse,
     VerifyEmailToken,
     DeleteAccountRequest,   # ✅ ADDED
+    CheckEmailRequest,
+    CheckEmailResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from .user_schemas import (
     UserBase,
@@ -44,6 +48,10 @@ __all__ = [
     "EmailVerificationResponse",
     "VerifyEmailToken",
     "DeleteAccountRequest",  # ✅ ADDED
+    "CheckEmailRequest",
+    "CheckEmailResponse",
+    "ResetPasswordRequest",
+    "ResetPasswordResponse",
     "UserBase",
     "UserCreate",
     "UserResponse",

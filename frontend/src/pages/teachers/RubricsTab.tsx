@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import Button from "../../components/ui/Button";
+import { useAlert } from "../../hooks/useAlert";
 import { RubricsListView } from "../../components/rubrics/RubricsListView";
 import { RubricCreationOptionsView } from "../../components/rubrics/RubricCreationOptionsView";
 import { UploadModeView } from "../../components/rubrics/UploadModeView";
@@ -14,6 +15,7 @@ import type {
   RubricFormData,
   PlatformRubric,
   RubricTemplate,
+  CriteriaRow,
 } from "../../types/rubricTypes";
 import {
   defaultRubricFormData,
@@ -24,11 +26,15 @@ import {
   fetchTeacherRubrics,
   saveRubric,
   saveTemplateRubric,
+  deleteRubric,
+  updateRubric,
+  fetchRubricById,
 } from "../../services/rubricService";
 
 export function RubricsTab() {
   const [searchParams] = useSearchParams();
   const urlSearchQuery = searchParams.get("search");
+  const { showError, showSuccess, AlertComponent } = useAlert();
 
   const [currentView, setCurrentView] = useState<RubricView>("list");
   const [selectedMode, setSelectedMode] = useState<BuilderMode>(null);
@@ -50,6 +56,7 @@ export function RubricsTab() {
   const [rubricFormData, setRubricFormData] = useState<RubricFormData>(
     defaultRubricFormData
   );
+  const [editingRubricId, setEditingRubricId] = useState<number | null>(null);
 
   // Preview modal state
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -90,6 +97,7 @@ export function RubricsTab() {
   const handleCreateClick = () => {
     setCurrentView("options");
     setSelectedMode(null);
+    setEditingRubricId(null);
     // Reset form data for new rubric
     setRubricFormData({
       ...defaultRubricFormData,
@@ -100,6 +108,63 @@ export function RubricsTab() {
         })),
       ],
     });
+  };
+
+  // Edit rubric handler
+  const handleEditRubric = async (rubricId: number) => {
+    try {
+      const rubric = await fetchRubricById(rubricId);
+      if (!rubric || !rubric.fullData) {
+        showError("Failed to load rubric for editing.");
+        return;
+      }
+
+      const fullData = rubric.fullData as {
+        name: string;
+        criteria: CriteriaRow[];
+        type: string;
+        programs: string[];
+      };
+
+      // Convert fullData to RubricFormData format
+      setRubricFormData({
+        name: fullData.name,
+        gradingIntensity: fullData.type as "Basic" | "Professional" | "Advanced" | "Technical",
+        programs: fullData.programs || [],
+        criteria: fullData.criteria || [],
+      });
+
+      setEditingRubricId(rubricId);
+      setCurrentView("options");
+      setSelectedMode("scratch");
+      setActiveTab("my");
+    } catch (err) {
+      console.error("Error loading rubric for editing:", err);
+      showError("Failed to load rubric for editing. Please try again.");
+    }
+  };
+
+  // Delete rubric handler
+  const handleDeleteRubric = async (rubricId: number) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this rubric? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteRubric(rubricId);
+
+      // Remove from local state
+      setSavedRubrics((prev) => prev.filter((r) => r.id !== rubricId));
+
+      showSuccess("Rubric deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting rubric:", err);
+      showError("Failed to delete rubric. Please try again.");
+    }
   };
 
   const handleModeSelection = (mode: BuilderMode) => {
@@ -123,38 +188,74 @@ export function RubricsTab() {
     }
 
     try {
-      const data = await saveRubric(rubricFormData, teacherId);
+      let data;
+      if (editingRubricId) {
+        // Update existing rubric
+        data = await updateRubric(editingRubricId, rubricFormData, teacherId);
 
-      // Extract programs from dedicated column
-      const programs = (data.programs as string[]) || [];
+        // Extract programs from dedicated column
+        const programs = (data.programs as string[]) || [];
 
-      // Map to RubricTemplate format and add to local state
-      const newRubric: RubricTemplate & { programsList?: string[] } = {
-        id: data.id,
-        name: data.name,
-        criteria: rubricFormData.criteria.length,
-        programs: programs.length,
-        lastUsed: new Date().toISOString().split("T")[0],
-        level: "College",
-        programsList: programs,
-      };
+        // Map to RubricTemplate format and update in local state
+        const updatedRubric: RubricTemplate & { programsList?: string[] } = {
+          id: data.id,
+          name: data.name,
+          criteria: rubricFormData.criteria.length,
+          programs: programs.length,
+          lastUsed: new Date().toISOString().split("T")[0],
+          level: "College",
+          programsList: programs,
+        };
 
-      // Add to the savedRubrics list
-      setSavedRubrics((prev) => [newRubric, ...prev]);
+        // Update the rubric in the savedRubrics list
+        setSavedRubrics((prev) =>
+          prev.map((r) => (r.id === editingRubricId ? updatedRubric : r))
+        );
+
+        setEditingRubricId(null);
+        showSuccess("Rubric updated successfully!");
+      } else {
+        // Create new rubric
+        data = await saveRubric(rubricFormData, teacherId);
+
+        // Extract programs from dedicated column
+        const programs = (data.programs as string[]) || [];
+
+        // Map to RubricTemplate format and add to local state
+        const newRubric: RubricTemplate & { programsList?: string[] } = {
+          id: data.id,
+          name: data.name,
+          criteria: rubricFormData.criteria.length,
+          programs: programs.length,
+          lastUsed: new Date().toISOString().split("T")[0],
+          level: "College",
+          programsList: programs,
+        };
+
+        // Add to the savedRubrics list
+        setSavedRubrics((prev) => [newRubric, ...prev]);
+
+        // Switch to "My rubrics" tab to show the new rubric
+        setActiveTab("my");
+        showSuccess("Rubric saved successfully!");
+      }
 
       // Switch view back to list
       setCurrentView("list");
       setSelectedMode(null);
-
-      // Switch to "My rubrics" tab to show the new rubric
-      setActiveTab("my");
     } catch (err) {
-      console.error("Unexpected error saving rubric:", err);
+      console.error("Error saving rubric:", err);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to save rubric. Please try again.";
+      showError(errorMessage);
     }
   };
 
   const handleCancelMode = () => {
     setSelectedMode(null);
+    setEditingRubricId(null);
   };
 
   // Preview modal handlers
@@ -203,8 +304,14 @@ export function RubricsTab() {
       setSavedRubrics((prev) => [newRubric, ...prev]);
       handleClosePreview();
       setActiveTab("my");
+      showSuccess(`Rubric "${rubric.name}" copied to My Rubrics successfully!`);
     } catch (err) {
-      console.error("Unexpected error saving template rubric:", err);
+      console.error("Error saving template rubric:", err);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to save rubric. Please try again.";
+      showError(errorMessage);
     }
   };
 
@@ -288,6 +395,8 @@ export function RubricsTab() {
           onCreateClick={handleCreateClick}
           onPreviewRubric={handlePreviewRubric}
           onPreviewMyRubric={handlePreviewMyRubric}
+          onEditRubric={handleEditRubric}
+          onDeleteRubric={handleDeleteRubric}
         />
       )}
 
@@ -300,6 +409,9 @@ export function RubricsTab() {
           onUseTemplate={handleUseTemplate}
         />
       )}
+
+      {/* Alert Modal */}
+      <AlertComponent />
 
       {/* Preview Modal for My Rubrics */}
       {selectedMyRubric && (

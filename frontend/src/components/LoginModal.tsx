@@ -45,7 +45,25 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     // Forgot password
     forgotEmail,
     setForgotEmail,
-    handleForgotPassword,
+    forgotPasswordStep,
+    verificationCode,
+    setVerificationCode,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    forgotPasswordError,
+    forgotPasswordSuccess,
+    isSendingCode,
+    isVerifyingCode,
+    isResettingPassword,
+    handleSendCode,
+    handleVerifyCode,
+    handleResetPassword,
   } = useAuthModal(onClose);
 
   const renderContent = () => {
@@ -78,7 +96,25 @@ export default function AuthModal({ onClose }: AuthModalProps) {
           <ForgotPasswordForm
             email={forgotEmail}
             setEmail={setForgotEmail}
-            onSubmit={handleForgotPassword}
+            step={forgotPasswordStep}
+            verificationCode={verificationCode}
+            setVerificationCode={setVerificationCode}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
+            showNewPassword={showNewPassword}
+            setShowNewPassword={setShowNewPassword}
+            showConfirmPassword={showConfirmPassword}
+            setShowConfirmPassword={setShowConfirmPassword}
+            error={forgotPasswordError}
+            success={forgotPasswordSuccess}
+            isSendingCode={isSendingCode}
+            isVerifyingCode={isVerifyingCode}
+            isResettingPassword={isResettingPassword}
+            onSendCode={handleSendCode}
+            onVerifyCode={handleVerifyCode}
+            onResetPassword={handleResetPassword}
             onViewChange={setView}
           />
         );

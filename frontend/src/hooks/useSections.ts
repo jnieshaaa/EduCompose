@@ -410,13 +410,79 @@ export function useSections() {
   };
 
   // HANDLE BATCH UPLOAD
-  const handleBatchUploadComplete = (result: UploadResult) => {
+  const handleBatchUploadComplete = async (result: UploadResult) => {
     if (result.success && result.data) {
-      // Add imported sections to the list
-      setSections((prevSections) => [
-        ...(result.data as Section[]),
-        ...prevSections,
-      ]);
+      const importedSections = result.data as Section[];
+      
+      if (importedSections.length === 0) {
+        return;
+      }
+
+      try {
+        // Prepare sections for Supabase insertion
+        const sectionsToInsert = importedSections.map((section) => {
+          const programId = programNameToIdMap.get(section.program);
+          if (!programId) {
+            throw new Error(
+              `Program "${section.program}" not found for section "${section.name}". Please refresh and try again.`
+            );
+          }
+
+          return {
+            program_id: programId,
+            name: section.name,
+            term: section.term,
+            students_estimated: section.students,
+            essays_estimated: section.essays || 0,
+          };
+        });
+
+        // Insert all sections into Supabase
+        const { data: insertedSections, error } = await supabase
+          .from("sections")
+          .insert(sectionsToInsert)
+          .select();
+
+        if (error) {
+          console.error("Error saving batch sections to Supabase:", error);
+          showError(
+            `Failed to save sections to database: ${error.message}`
+          );
+          return;
+        }
+
+        // Create reverse map (id -> name) for efficient lookup
+        const idToNameMap = new Map<number, string>();
+        programNameToIdMap.forEach((id, name) => {
+          idToNameMap.set(id, name);
+        });
+
+        // Map Supabase response to Section type
+        const savedSections: Section[] = (insertedSections || []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          program: idToNameMap.get(s.program_id) || "",
+          term: s.term ?? "",
+          students: s.students_estimated ?? 0,
+          essays: s.essays_estimated ?? 0,
+        }));
+
+        // Add saved sections to the list
+        setSections((prevSections) => [
+          ...savedSections,
+          ...prevSections,
+        ]);
+
+        // Show success message
+        showSuccess(
+          `Successfully imported and saved ${savedSections.length} section(s) to the database!`
+        );
+      } catch (err) {
+        console.error("Error processing batch upload:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "An unexpected error occurred";
+        showError(`Failed to save sections: ${errorMessage}`);
+      }
     }
   };
 

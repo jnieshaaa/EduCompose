@@ -539,10 +539,22 @@ export function StudentsView({
                         </span>
                       </div>
                     ) : student.status === "submitted" ? (
-                      <Badge className="bg-success-default/90 text-success-default border-success-default/20">
-                        <CheckCircle2 className="w-3 h-3 mr-1 inline" />
-                        Submitted
-                      </Badge>
+                      // Check if essay has been graded (has any scores)
+                      student.coherence !== undefined ||
+                      student.readability !== undefined ||
+                      student.argumentative !== undefined ||
+                      student.grammar !== undefined ||
+                      student.score !== undefined ? (
+                        <Badge className="bg-primary/90 text-primary border-primary/20">
+                          <CheckCircle2 className="w-3 h-3 mr-1 inline" />
+                          Graded
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-success-default/90 text-success-default border-success-default/20">
+                          <CheckCircle2 className="w-3 h-3 mr-1 inline" />
+                          Submitted
+                        </Badge>
+                      )
                     ) : (
                       <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200">
                         <XCircle className="w-3 h-3 mr-1 inline" />

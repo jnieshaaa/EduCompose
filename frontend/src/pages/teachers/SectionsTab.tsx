@@ -74,6 +74,7 @@ export function SectionsTab() {
             type="sections"
             existingSections={allSections}
             availablePrograms={availablePrograms}
+            defaultProgram={urlProgramFilter || undefined}
             onUploadComplete={handleBatchUploadComplete}
           />
         </div>
