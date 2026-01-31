@@ -10,7 +10,8 @@ import type {
 import dummyDataJson from "./data/dummyData.json";
 
 // Get API base URL from environment variable, fallback to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 class ApiError extends Error {
   status: number;
@@ -24,7 +25,7 @@ class ApiError extends Error {
 
 const apiRequest = async <T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> => {
   const token = localStorage.getItem("auth_token");
 
@@ -63,7 +64,7 @@ const apiRequest = async <T>(
     if (isTypeError || messageContainsFetch) {
       const networkError = new ApiError(
         0,
-        "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000"
+        "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000",
       );
       throw networkError;
     }
@@ -76,7 +77,7 @@ const apiRequest = async <T>(
 export const authApi = {
   login: async (
     identifier: { email?: string; username?: string },
-    password: string
+    password: string,
   ) => {
     return apiRequest<{
       access_token: string;
@@ -102,13 +103,36 @@ export const authApi = {
   register: async (userData: {
     email: string;
     password: string;
-    username?: string;
-    full_name?: string;
+    confirm_password?: string;
   }) => {
-    return apiRequest<User>("/auth/register", {
+    return apiRequest<{
+      message: string;
+      user: User;
+      verification_code: string;
+    }>("/auth/register", {
       method: "POST",
       body: JSON.stringify(userData),
     });
+  },
+
+  verifySignup: async (email: string, code: string, password?: string) => {
+    return apiRequest<{ success: boolean; message: string }>(
+      "/auth/verify-signup",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, code, ...(password && { password }) }),
+      },
+    );
+  },
+
+  resendSignupCode: async (email: string) => {
+    return apiRequest<{ verification_code: string }>(
+      "/auth/resend-signup-code",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+    );
   },
 
   updatePassword: async (currentPassword: string, newPassword: string) => {
@@ -135,16 +159,49 @@ export const authApi = {
   },
 
   checkEmail: async (email: string) => {
-    return apiRequest<{ exists: boolean; message: string }>("/auth/check-email", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
+    return apiRequest<{ exists: boolean; message: string }>(
+      "/auth/check-email",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+    );
   },
 
   resetPassword: async (email: string, newPassword: string) => {
-    return apiRequest<{ message: string; success: boolean }>("/auth/reset-password", {
+    return apiRequest<{ message: string; success: boolean }>(
+      "/auth/reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, new_password: newPassword }),
+      },
+    );
+  },
+
+  createUser: async (userData: {
+    email: string;
+    password: string;
+    role: "admin" | "teacher" | "student";
+    first_name?: string;
+    middle_name?: string;
+    last_name?: string;
+    username?: string;
+    full_name?: string;
+  }) => {
+    return apiRequest<{
+      message: string;
+      user: {
+        id: number;
+        email: string;
+        username: string;
+        full_name: string;
+        role: string;
+        email_verified: boolean;
+        supabase_user_id?: string;
+      };
+    }>("/auth/admin/create-user", {
       method: "POST",
-      body: JSON.stringify({ email, new_password: newPassword }),
+      body: JSON.stringify(userData),
     });
   },
 };
@@ -294,7 +351,7 @@ export const analysisApi = {
       | "readability"
       | "coherence"
       | "argument"
-      | "comprehensive" = "comprehensive"
+      | "comprehensive" = "comprehensive",
   ) => {
     return apiRequest<AnalysisResponse>("/analysis/analyze", {
       method: "POST",
@@ -309,7 +366,7 @@ export const analysisApi = {
       | "readability"
       | "coherence"
       | "argument"
-      | "comprehensive" = "comprehensive"
+      | "comprehensive" = "comprehensive",
   ) => {
     return apiRequest<{
       total_analyzed: number;
@@ -342,7 +399,7 @@ export const analysisApi = {
       | "coherence"
       | "argument"
       | "comprehensive" = "comprehensive",
-    rubricId?: string
+    rubricId?: string,
   ): Promise<TextAnalysisResponse> => {
     // This endpoint doesn't require authentication, so we make a direct fetch call
     const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
@@ -371,7 +428,9 @@ export const analysisApi = {
 
 // OCR API
 export const ocrApi = {
-  extractTextFromFile: async (file: File): Promise<{
+  extractTextFromFile: async (
+    file: File,
+  ): Promise<{
     text: string;
     word_count: number;
     confidence: number;
@@ -380,12 +439,12 @@ export const ocrApi = {
   }> => {
     const formData = new FormData();
     formData.append("file", file);
-    
+
     // Debug: Log file info
     console.log("Uploading file:", {
       name: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
     });
 
     const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
@@ -404,13 +463,17 @@ export const ocrApi = {
     const result = await response.json();
     // Debug: Log the response to check what we're receiving
     console.log("OCR API Response:", result);
-    
+
     // Ensure word_count is valid - calculate if missing
-    if (result.text && result.text.trim() && (!result.word_count || result.word_count === 0)) {
+    if (
+      result.text &&
+      result.text.trim() &&
+      (!result.word_count || result.word_count === 0)
+    ) {
       result.word_count = result.text.trim().split(/\s+/).length;
       console.log("Calculated word_count:", result.word_count);
     }
-    
+
     return result;
   },
 };
@@ -454,6 +517,89 @@ export const plagiarismApi = {
     }
 
     return response.json() as Promise<PlagiarismCheckResponse>;
+  },
+};
+
+// Admin API
+export const adminApi = {
+  getUsers: async (params?: {
+    skip?: number;
+    limit?: number;
+    role?: string;
+    search?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.skip) queryParams.append("skip", params.skip.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.role) queryParams.append("role", params.role);
+    if (params?.search) queryParams.append("search", params.search);
+
+    const query = queryParams.toString();
+    return apiRequest<any[]>(`/admin/users${query ? `?${query}` : ""}`);
+  },
+
+  updateUser: async (
+    userId: string,
+    data: {
+      email?: string;
+      full_name?: string;
+      first_name?: string;
+      middle_name?: string;
+      last_name?: string;
+      role?: string;
+      is_active?: boolean;
+    },
+  ) => {
+    return apiRequest<{ message: string; user: any }>(
+      `/admin/users/${userId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    );
+  },
+
+  deleteUser: async (userId: string) => {
+    return apiRequest<{ message: string }>(`/admin/users/${userId}`, {
+      method: "DELETE",
+    });
+  },
+
+  resetUserPassword: async (userId: string, newPassword: string) => {
+    return apiRequest<{ message: string }>(
+      `/admin/users/${userId}/reset-password`,
+      {
+        method: "POST",
+        body: JSON.stringify({ new_password: newPassword }),
+      },
+    );
+  },
+
+  getSystemStats: async () => {
+    return apiRequest<{
+      total_users: number;
+      total_teachers: number;
+      total_students: number;
+      total_admins: number;
+      total_programs: number;
+      total_sections: number;
+      total_activities: number;
+      total_essays: number;
+      total_rubrics: number;
+      platform_rubrics: number;
+    }>("/admin/stats");
+  },
+
+  getAllPrograms: async () => {
+    return apiRequest<any[]>("/admin/content/programs");
+  },
+
+  getAllActivities: async () => {
+    return apiRequest<any[]>("/admin/content/activities");
+  },
+
+  getAllRubrics: async () => {
+    return apiRequest<any[]>("/admin/content/rubrics");
   },
 };
 

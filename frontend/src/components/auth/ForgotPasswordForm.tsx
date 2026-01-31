@@ -56,23 +56,22 @@ export function ForgotPasswordForm({
       case "email":
         return (
           <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-neutral-900 mb-2">
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-neutral-900 mb-1">
                 Forgot Password?
               </h2>
-              <p className="text-neutral-900">
-                Enter your email address and we'll send you a 6-digit code to
-                reset your password.
+              <p className="text-neutral-500 text-xs">
+                Enter your email and we'll send you a 6-digit code to reset.
               </p>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs">
                   {success}
                 </div>
               )}
@@ -89,7 +88,7 @@ export function ForgotPasswordForm({
               <button
                 onClick={onSendCode}
                 disabled={isSendingCode}
-                className="w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white py-2.5 text-sm rounded-lg font-semibold bg-primary-500 hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSendingCode ? "Sending Code..." : "Send Verification Code"}
               </button>
@@ -100,28 +99,29 @@ export function ForgotPasswordForm({
       case "code":
         return (
           <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-neutral-900 mb-2">
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-neutral-900 mb-1">
                 Enter Verification Code
               </h2>
-              <p className="text-neutral-900">
-                We've sent a 6-digit code to <strong>{email}</strong>. Please
-                enter it below.
+              <p className="text-neutral-500 text-xs">
+                We've sent a 6-digit code to{" "}
+                <strong className="text-neutral-700">{email}</strong>. Enter it
+                below.
               </p>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs">
                   {success}
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-neutral-600 mb-4 text-center">
+                <label className="block text-xs font-medium text-neutral-500 mb-3 text-center">
                   Enter 6-digit code
                 </label>
                 <CodeInput
@@ -135,7 +135,7 @@ export function ForgotPasswordForm({
               <button
                 onClick={onVerifyCode}
                 disabled={isVerifyingCode || verificationCode.length !== 6}
-                className="w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white py-2.5 text-sm rounded-lg font-semibold bg-primary-500 hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isVerifyingCode ? "Verifying..." : "Verify Code"}
               </button>
@@ -146,7 +146,7 @@ export function ForgotPasswordForm({
                   setEmail("");
                   onViewChange("forgot-password");
                 }}
-                className="w-full text-neutral-600 py-2 text-sm hover:text-primary-500 transition-colors"
+                className="w-full text-neutral-500 py-1.5 text-xs hover:text-primary-500 transition-colors"
               >
                 Back to email
               </button>
@@ -157,22 +157,22 @@ export function ForgotPasswordForm({
       case "password":
         return (
           <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-neutral-900 mb-2">
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-neutral-900 mb-1">
                 Reset Password
               </h2>
-              <p className="text-neutral-900">
+              <p className="text-neutral-500 text-xs">
                 Enter your new password below.
               </p>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+                <div className="p-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs">
                   {success}
                 </div>
               )}
@@ -205,9 +205,11 @@ export function ForgotPasswordForm({
               <button
                 onClick={onResetPassword}
                 disabled={isResettingPassword}
-                className="w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white py-2.5 text-sm rounded-lg font-semibold bg-primary-500 hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isResettingPassword ? "Resetting Password..." : "Reset Password"}
+                {isResettingPassword
+                  ? "Resetting Password..."
+                  : "Reset Password"}
               </button>
             </div>
           </>
@@ -222,9 +224,9 @@ export function ForgotPasswordForm({
     <>
       <button
         onClick={() => onViewChange("login")}
-        className="flex items-center text-neutral-600 mb-4 hover:text-primary-500 transition-colors"
+        className="flex items-center text-neutral-500 text-xs mb-3 hover:text-primary-500 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Login
+        <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Back to Login
       </button>
       {renderStep()}
     </>

@@ -14,6 +14,14 @@ import { RubricsTab } from "./pages/teachers/RubricsTab.tsx";
 import { SectionsTab } from "./pages/teachers/SectionsTab.tsx";
 import { NotificationsTab as TeacherNotificationsTab } from "./pages/teachers/NotificationsTab.tsx";
 
+// Import Admin Layout and Tabs
+import AdminLayout from "./layout/AdminLayout.tsx";
+import { AdminDashboardTab } from "./pages/admin/AdminDashboardTab.tsx";
+import { AdminRubricsTab } from "./pages/admin/AdminRubricsTab.tsx";
+import { AdminUsersTab } from "./pages/admin/AdminUsersTab.tsx";
+import { AdminSettingsTab } from "./pages/admin/AdminSettingsTab.tsx";
+import { AdminContentTab } from "./pages/admin/AdminContentTab.tsx";
+
 // Import Student Layout and Pages (Placeholders)
 // NOTE: I'm creating a new StudentLayout and placeholder components for the student pages
 // based on the paths defined in StudentSidebar.tsx. You will need to create these files.
@@ -161,6 +169,27 @@ const AppContent: React.FC = () => {
 
           {/* Redirect to Dashboard if hitting /Student without a sub-path */}
           <Route index element={<StudentDashboardTab />} />
+        </Route>
+
+        {/* ======================================================= */}
+        {/* 4. Admin Routes (Protected, uses AdminLayout) */}
+        {/* ======================================================= */}
+        <Route
+          path="/Admin"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="Dashboard" element={<AdminDashboardTab />} />
+          <Route path="Users" element={<AdminUsersTab />} />
+          <Route path="Rubrics" element={<AdminRubricsTab />} />
+          <Route path="Content" element={<AdminContentTab />} />
+          <Route path="Settings" element={<AdminSettingsTab />} />
+
+          {/* Redirect to Dashboard if hitting /Admin without a sub-path */}
+          <Route index element={<AdminDashboardTab />} />
         </Route>
       </Routes>
     </>

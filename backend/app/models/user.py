@@ -15,7 +15,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
     password_hash = Column(String, nullable=True)
-    role = Column(String, default="teacher")  # teacher, admin
+    role = Column(String, default="teacher")  # admin, teacher, student
     is_active = Column(Boolean, default=True)
     email_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

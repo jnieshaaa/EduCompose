@@ -7,7 +7,12 @@ interface CodeInputProps {
   error?: string;
 }
 
-export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps) {
+export function CodeInput({
+  value,
+  onChange,
+  length = 6,
+  error,
+}: CodeInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -31,7 +36,10 @@ export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps
     }
   };
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
     if (e.key === "Backspace" && !value[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     } else if (e.key === "ArrowLeft" && index > 0) {
@@ -44,7 +52,10 @@ export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").slice(0, length);
-    const digits = pastedData.split("").filter((char) => /^\d$/.test(char)).join("");
+    const digits = pastedData
+      .split("")
+      .filter((char) => /^\d$/.test(char))
+      .join("");
     onChange(digits.slice(0, length));
     const nextIndex = Math.min(digits.length, length - 1);
     inputRefs.current[nextIndex]?.focus();
@@ -52,7 +63,7 @@ export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps
 
   return (
     <div>
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-1.5 justify-center">
         {Array.from({ length }).map((_, index) => (
           <input
             key={index}
@@ -66,7 +77,7 @@ export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
-            className={`w-12 h-12 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all ${
+            className={`w-12 h-12 text-center text-lg font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all ${
               error
                 ? "border-red-500 bg-red-50"
                 : "border-neutral-300 bg-white text-neutral-900"
@@ -75,9 +86,8 @@ export function CodeInput({ value, onChange, length = 6, error }: CodeInputProps
         ))}
       </div>
       {error && (
-        <p className="mt-2 text-sm text-red-600 text-center">{error}</p>
+        <p className="mt-1.5 text-xs text-red-600 text-center">{error}</p>
       )}
     </div>
   );
 }
-

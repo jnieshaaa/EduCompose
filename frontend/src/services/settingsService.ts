@@ -7,7 +7,6 @@ import type {
   AIAssessmentSettings,
   ThresholdSettings,
   RubricDefaults,
-  SupabaseTeacherRow,
 } from "../types/settingsTypes";
 import {
   DEFAULT_AI_ASSESSMENT_SETTINGS,
@@ -15,7 +14,7 @@ import {
   DEFAULT_RUBRIC_DEFAULTS,
 } from "../types/settingsTypes";
 
-// Helper to get teacher ID from authenticated user
+// Helper to get user ID from authenticated user
 const getTeacherId = async (): Promise<number | null> => {
   try {
     const {
@@ -27,20 +26,20 @@ const getTeacherId = async (): Promise<number | null> => {
       return null;
     }
 
-    const { data: teacherData, error: teacherError } = await supabase
-      .from("teachers")
+    const { data: userData, error: userTableError } = await supabase
+      .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
       .single();
 
-    if (teacherError || !teacherData) {
-      console.error("Error getting teacher record:", teacherError);
+    if (userTableError || !userData) {
+      console.error("Error getting user record:", userTableError);
       return null;
     }
 
-    return teacherData.id;
+    return userData.id;
   } catch (err) {
-    console.error("Unexpected error fetching teacher ID:", err);
+    console.error("Unexpected error fetching user ID:", err);
     return null;
   }
 };
@@ -52,8 +51,8 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
     if (!teacherId) return null;
 
     const { data, error } = await supabase
-      .from("teachers")
-      .select("email, full_name, institution")
+      .from("users")
+      .select("email, full_name")
       .eq("id", teacherId)
       .single();
 
@@ -72,7 +71,7 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       firstName,
       lastName,
       email: data.email || "",
-      institution: (data as { institution?: string }).institution || undefined,
+      institution: undefined, // Institution not available in users table yet
     };
   } catch (err) {
     console.error("Unexpected error fetching teacher profile:", err);
@@ -87,8 +86,8 @@ export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> =>
     if (!teacherId) return null;
 
     const { data, error } = await supabase
-      .from("teachers")
-      .select("email, full_name, institution, settings")
+      .from("users")
+      .select("email, full_name")
       .eq("id", teacherId)
       .single();
 
@@ -97,16 +96,13 @@ export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> =>
       return null;
     }
 
-    const row = data as SupabaseTeacherRow;
+    const row = data as { email?: string; full_name?: string };
     const fullName = row.full_name || "";
     const nameParts = fullName.trim().split(/\s+/);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
-    // Parse settings JSONB or use defaults
-    const settings = row.settings || {};
-
-    const institution = (row as { institution?: string }).institution || settings.profile?.institution;
+    const institution = undefined;
 
     return {
       profile: {
@@ -115,18 +111,9 @@ export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> =>
         email: row.email || "",
         institution,
       },
-      aiAssessment: {
-        ...DEFAULT_AI_ASSESSMENT_SETTINGS,
-        ...settings.aiAssessment,
-      },
-      thresholds: {
-        ...DEFAULT_THRESHOLD_SETTINGS,
-        ...settings.thresholds,
-      },
-      rubricDefaults: {
-        ...DEFAULT_RUBRIC_DEFAULTS,
-        ...settings.rubricDefaults,
-      },
+      aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
+      thresholds: DEFAULT_THRESHOLD_SETTINGS,
+      rubricDefaults: DEFAULT_RUBRIC_DEFAULTS,
     };
   } catch (err) {
     console.error("Unexpected error fetching teacher settings:", err);
@@ -145,8 +132,7 @@ export const updateTeacherProfile = async (
     }
 
     // Don't allow email updates
-    const { email, ...profileUpdate } = profile;
-    if (email !== undefined) {
+    if (profile.email !== undefined) {
       console.warn("Email update attempted but not allowed");
     }
 
@@ -154,7 +140,7 @@ export const updateTeacherProfile = async (
     let fullName = "";
     if (profile.firstName !== undefined || profile.lastName !== undefined) {
       const currentData = await supabase
-        .from("teachers")
+        .from("users")
         .select("full_name")
         .eq("id", teacherId)
         .single();
@@ -171,12 +157,10 @@ export const updateTeacherProfile = async (
 
     const updateData: Record<string, unknown> = {};
     if (fullName) updateData.full_name = fullName;
-    if (profile.institution !== undefined) {
-      updateData.institution = profile.institution;
-    }
+    // Institution not available in users table yet
 
     const { error } = await supabase
-      .from("teachers")
+      .from("users")
       .update(updateData)
       .eq("id", teacherId);
 
@@ -197,155 +181,29 @@ export const updateTeacherProfile = async (
 
 // Update AI assessment settings
 export const updateAIAssessmentSettings = async (
-  settings: Partial<AIAssessmentSettings>
+  _settings: Partial<AIAssessmentSettings>
 ): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const teacherId = await getTeacherId();
-    if (!teacherId) {
-      return { success: false, error: "Teacher not found" };
-    }
-
-    const { data: currentData, error: fetchError } = await supabase
-      .from("teachers")
-      .select("settings")
-      .eq("id", teacherId)
-      .single();
-
-    if (fetchError || !currentData) {
-      console.error("Error fetching current settings:", fetchError);
-      return { success: false, error: fetchError?.message || "Failed to fetch settings" };
-    }
-
-    const currentSettings = (currentData as { settings?: TeacherSettings })?.settings || {};
-    const updatedSettings: TeacherSettings = {
-      ...currentSettings,
-      aiAssessment: {
-        ...DEFAULT_AI_ASSESSMENT_SETTINGS,
-        ...currentSettings.aiAssessment,
-        ...settings,
-      },
-    } as TeacherSettings;
-
-    const { error } = await supabase
-      .from("teachers")
-      .update({ settings: updatedSettings })
-      .eq("id", teacherId);
-
-    if (error) {
-      console.error("Error updating AI assessment settings:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error("Unexpected error updating AI assessment settings:", err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
+  // Settings not available in users table yet - return error
+  void _settings; // Parameter required for API compatibility but not used
+  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
 };
 
 // Update threshold settings
 export const updateThresholdSettings = async (
-  settings: Partial<ThresholdSettings>
+  _settings: Partial<ThresholdSettings>
 ): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const teacherId = await getTeacherId();
-    if (!teacherId) {
-      return { success: false, error: "Teacher not found" };
-    }
-
-    const { data: currentData, error: fetchError } = await supabase
-      .from("teachers")
-      .select("settings")
-      .eq("id", teacherId)
-      .single();
-
-    if (fetchError || !currentData) {
-      console.error("Error fetching current settings:", fetchError);
-      return { success: false, error: fetchError?.message || "Failed to fetch settings" };
-    }
-
-    const currentSettings = (currentData as { settings?: TeacherSettings })?.settings || {};
-    const updatedSettings: TeacherSettings = {
-      ...currentSettings,
-      thresholds: {
-        ...DEFAULT_THRESHOLD_SETTINGS,
-        ...currentSettings.thresholds,
-        ...settings,
-      },
-    } as TeacherSettings;
-
-    const { error } = await supabase
-      .from("teachers")
-      .update({ settings: updatedSettings })
-      .eq("id", teacherId);
-
-    if (error) {
-      console.error("Error updating threshold settings:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error("Unexpected error updating threshold settings:", err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
+  // Settings not available in users table yet - return error
+  void _settings; // Parameter required for API compatibility but not used
+  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
 };
 
 // Update rubric defaults
 export const updateRubricDefaults = async (
-  defaults: Partial<RubricDefaults>
+  _defaults: Partial<RubricDefaults>
 ): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const teacherId = await getTeacherId();
-    if (!teacherId) {
-      return { success: false, error: "Teacher not found" };
-    }
-
-    const { data: currentData, error: fetchError } = await supabase
-      .from("teachers")
-      .select("settings")
-      .eq("id", teacherId)
-      .single();
-
-    if (fetchError || !currentData) {
-      console.error("Error fetching current settings:", fetchError);
-      return { success: false, error: fetchError?.message || "Failed to fetch settings" };
-    }
-
-    const currentSettings = (currentData as { settings?: TeacherSettings })?.settings || {};
-    const updatedSettings: TeacherSettings = {
-      ...currentSettings,
-      rubricDefaults: {
-        ...DEFAULT_RUBRIC_DEFAULTS,
-        ...currentSettings.rubricDefaults,
-        ...defaults,
-      },
-    } as TeacherSettings;
-
-    const { error } = await supabase
-      .from("teachers")
-      .update({ settings: updatedSettings })
-      .eq("id", teacherId);
-
-    if (error) {
-      console.error("Error updating rubric defaults:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error("Unexpected error updating rubric defaults:", err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
+  // Settings not available in users table yet - return error
+  void _defaults; // Parameter required for API compatibility but not used
+  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
 };
 
 // Reset all settings to defaults
@@ -356,33 +214,8 @@ export const resetSettingsToDefaults = async (): Promise<{ success: boolean; err
       return { success: false, error: "Teacher not found" };
     }
 
-    // Get current profile to preserve it
-    const profile = await fetchTeacherProfile();
-    if (!profile) {
-      return { success: false, error: "Failed to fetch current profile" };
-    }
-
-    const defaultSettings: TeacherSettings = {
-      profile: {
-        ...profile,
-        // Email cannot be changed, so preserve it
-      },
-      aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
-      thresholds: DEFAULT_THRESHOLD_SETTINGS,
-      rubricDefaults: DEFAULT_RUBRIC_DEFAULTS,
-    };
-
-    const { error } = await supabase
-      .from("teachers")
-      .update({ settings: defaultSettings })
-      .eq("id", teacherId);
-
-    if (error) {
-      console.error("Error resetting settings:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
+    // Settings not available in users table yet
+    return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
   } catch (err) {
     console.error("Unexpected error resetting settings:", err);
     return {

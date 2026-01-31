@@ -57,14 +57,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const countdownIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Fetch user data from the users table with timeout
+  const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
+    try {
+      // Add timeout to prevent hanging - 2 seconds max
+      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+        setTimeout(() => resolve({ data: null, error: { message: "Timeout" } }), 2000);
+      });
+
+      const queryPromise = supabase
+        .from("users")
+        .select("id, email, full_name, role, is_active")
+        .eq("auth_user_id", authUserId)
+        .single();
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+
+      // If timeout occurred or error
+      if (result.error || !result.data) {
+        // Don't log as error if it's just that the record doesn't exist yet or timeout
+        if (result.error?.message !== "Timeout" && result.error?.code !== "PGRST116") {
+          console.warn("User not found in users table, using metadata fallback");
+        }
+        return null;
+      }
+
+      const { data } = result;
+
+      return {
+        id: data.id.toString(),
+        email: data.email ?? "",
+        username: data.email ?? "",
+        full_name: data.full_name || data.email?.split("@")[0] || "User",
+        role: data.role || "teacher",
+        is_active: data.is_active ?? true,
+        email_verified: true,
+      };
+    } catch (err) {
+      console.warn("Error fetching user from users table, using fallback");
+      return null;
+    }
+  };
+
   // Map Supabase user object into our local User shape
-  const mapSupabaseUser = (supabaseUser: unknown): User => {
+  const mapSupabaseUser = async (supabaseUser: unknown): Promise<User> => {
     const su = supabaseUser as {
       id?: string | number;
       email?: string | null;
       user_metadata?: Record<string, unknown> | null;
       email_confirmed_at?: string | null;
     };
+
+    // Try to fetch from users table first
+    if (su.id) {
+      const userFromTable = await fetchUserFromTable(su.id.toString());
+      if (userFromTable) {
+        return userFromTable;
+      }
+    }
+
+    // Fallback to metadata if users table doesn't have the record
     const metadata = su.user_metadata ?? {};
     const meta = metadata as Record<string, unknown>;
     const fullName =
@@ -79,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username:
         (meta["username"] as string | undefined) || su.email || fullName,
       full_name: fullName,
-      role: "teacher",
+      role: (meta["role"] as string | undefined) || "teacher",
       is_active: true,
       email_verified: !!su.email_confirmed_at,
     };
@@ -89,6 +141,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuth = async () => {
     setIsLoading(true);
     try {
+      // Check localStorage first for faster initial load
+      const cachedUser = localStorage.getItem("user");
+      if (cachedUser) {
+        try {
+          const parsedUser = JSON.parse(cachedUser);
+          setUser(parsedUser);
+        } catch {
+          // Invalid cache, continue with auth check
+        }
+      }
+
       // Always verify with Supabase to ensure session is valid
       const {
         data: { session },
@@ -104,12 +167,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // Verify session is still valid by checking user
-      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      // Verify session is still valid by checking user (with timeout)
+      let currentUser;
+      let userError;
+      try {
+        const getUserPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise<{ data: { user: null }; error: { message: string } }>((resolve) => {
+          setTimeout(() => resolve({ data: { user: null }, error: { message: "Timeout" } }), 5000);
+        });
+
+        const userResult = await Promise.race([getUserPromise, timeoutPromise]);
+        currentUser = userResult.data?.user;
+        userError = userResult.error;
+      } catch (err) {
+        userError = err as { message: string };
+        currentUser = null;
+      }
 
       if (userError || !currentUser) {
         // Session expired or invalid, clear everything
-        await supabase.auth.signOut();
+        if (userError?.message !== "Timeout") {
+          await supabase.auth.signOut();
+        }
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         setUser(null);
@@ -117,15 +196,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // Session is valid, update user data
-      const mappedUser = mapSupabaseUser(currentUser);
+      // Session is valid, update user data (with fast fallback)
+      const mappedUser = await mapSupabaseUser(currentUser);
       localStorage.setItem("auth_token", session.access_token);
       localStorage.setItem("user", JSON.stringify(mappedUser));
       setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);
       // On any error, clear auth and sign out
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Ignore signout errors
+      }
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
@@ -150,7 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         // User signed in or token refreshed, update user data
         if (session.user) {
-          const mappedUser = mapSupabaseUser(session.user);
+          const mappedUser = await mapSupabaseUser(session.user);
           localStorage.setItem("auth_token", session.access_token);
           localStorage.setItem("user", JSON.stringify(mappedUser));
           setUser(mappedUser);

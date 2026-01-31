@@ -34,27 +34,27 @@ export function AuthInputField({
         {label}
       </label>
       <div className="relative">
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
+        <Icon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
         <input
           id={id}
           type={type}
           value={value}
           onChange={onChange}
-          className={`w-full pl-11 ${
-            showToggle ? "pr-12" : "pr-4"
-          } py-3 border border-neutral-300 rounded-rd bg-white text-neutral-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all`}
+          className={`w-full pl-9 ${
+            showToggle ? "pr-10" : "pr-3"
+          } py-2.5 text-sm border border-neutral-300 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all`}
           placeholder={placeholder}
         />
         {showToggle && setShowPassword && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-900 hover:text-neutral-400"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700"
           >
             {showPassword ? (
-              <EyeOff className="w-5 h-5" />
+              <EyeOff className="w-4 h-4" />
             ) : (
-              <Eye className="w-5 h-5" />
+              <Eye className="w-4 h-4" />
             )}
           </button>
         )}

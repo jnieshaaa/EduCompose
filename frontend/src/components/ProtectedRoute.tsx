@@ -5,10 +5,11 @@ import { supabase } from "../lib/supabaseClient";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: "admin" | "teacher" | "student";
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, checkAuth } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+  const { isAuthenticated, isLoading, checkAuth, user } = useAuth();
   const location = useLocation();
 
   // Re-validate authentication on route change
@@ -47,6 +48,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // The landing page has a login modal that users can use
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  // Check role-based access if requiredRole is specified
+  if (requiredRole && user) {
+    const userRole = user.role?.toLowerCase();
+    const requiredRoleLower = requiredRole.toLowerCase();
+
+    if (userRole !== requiredRoleLower) {
+      // Redirect based on user's actual role
+      if (userRole === "admin") {
+        return <Navigate to="/Admin/Dashboard" replace />;
+      } else if (userRole === "student") {
+        return <Navigate to="/Student/Dashboard" replace />;
+      } else {
+        return <Navigate to="/Teacher/Dashboard" replace />;
+      }
+    }
   }
 
   return <>{children}</>;

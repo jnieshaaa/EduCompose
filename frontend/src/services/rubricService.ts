@@ -11,17 +11,7 @@ import {
   extractProgramsFromSupabase,
 } from "../data/rubricData";
 
-// Helper to safely read metadata.programs from unknown criteria JSON
-const getMetadataPrograms = (obj: unknown): string[] | undefined => {
-  if (!obj || typeof obj !== "object") return undefined;
-  const maybeMeta = (obj as Record<string, unknown>)["metadata"];
-  if (!maybeMeta || typeof maybeMeta !== "object") return undefined;
-  const programsVal = (maybeMeta as Record<string, unknown>)["programs"];
-  if (Array.isArray(programsVal)) return programsVal as string[];
-  return undefined;
-};
-
-// Load teacher ID from Supabase
+// Load user ID from Supabase users table
 export const fetchTeacherId = async (): Promise<number | null> => {
   try {
     const {
@@ -33,20 +23,20 @@ export const fetchTeacherId = async (): Promise<number | null> => {
       return null;
     }
 
-    const { data: teacherData, error: teacherError } = await supabase
-      .from("teachers")
+    const { data: userData, error: userTableError } = await supabase
+      .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
       .single();
 
-    if (teacherError || !teacherData) {
-      console.error("Error getting teacher:", teacherError);
+    if (userTableError || !userData) {
+      console.error("Error getting user from users table:", userTableError);
       return null;
     }
 
-    return teacherData.id;
+    return userData.id;
   } catch (err) {
-    console.error("Unexpected error fetching teacher ID:", err);
+    console.error("Unexpected error fetching user ID:", err);
     return null;
   }
 };
@@ -78,7 +68,7 @@ export const fetchTeacherRubrics = async (
     })[] = (rubricsData || []).map((r: SupabaseRubricRow) => {
       // Extract criteria from JSONB
       const criteriaObj: unknown = r.criteria;
-      const criteriaData = extractCriteriaFromSupabase(criteriaObj);
+      const criteriaData = extractCriteriaFromSupabase(criteriaObj) || [];
 
       // Extract programs from dedicated column, fallback to criteria metadata for backward compatibility
       const programs = extractProgramsFromSupabase(r.programs, criteriaObj);
@@ -107,6 +97,59 @@ export const fetchTeacherRubrics = async (
     console.error("Unexpected error loading rubrics:", err);
     return [];
   }
+};
+
+// Save platform rubric (admin only - created_by is null)
+export const savePlatformRubric = async (
+  rubricFormData: {
+    name: string;
+    description?: string;
+    gradingIntensity: string;
+    programs: string[];
+    criteria: CriteriaRow[];
+  }
+) => {
+  const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
+
+  // Check if a platform rubric with the same name already exists
+  const { data: existingRubrics, error: checkError } = await supabase
+    .from("rubrics")
+    .select("id, name")
+    .is("created_by", null) // Platform rubrics
+    .ilike("name", rubricName);
+
+  if (checkError) {
+    console.error("Error checking for duplicate platform rubric:", checkError);
+    throw checkError;
+  }
+
+  if (existingRubrics && existingRubrics.length > 0) {
+    const error = new Error(
+      `A platform rubric with the name "${rubricName}" already exists. Please choose a different name.`
+    ) as Error & { code?: string };
+    error.code = "DUPLICATE_RUBRIC";
+    throw error;
+  }
+
+  const { data, error } = await supabase
+    .from("rubrics")
+    .insert({
+      name: rubricName,
+      description: rubricFormData.description || `Grading intensity: ${rubricFormData.gradingIntensity}`,
+      criteria: rubricFormData.criteria,
+      programs: rubricFormData.programs,
+      grading_intensity: rubricFormData.gradingIntensity,
+      created_by: null, // Platform rubric
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error saving platform rubric:", error);
+    throw error;
+  }
+
+  return data;
 };
 
 // Save rubric to Supabase
@@ -306,7 +349,7 @@ export const fetchRubricById = async (
 
     const r = rubricData as SupabaseRubricRow;
     const criteriaObj: unknown = r.criteria;
-    const criteriaData = extractCriteriaFromSupabase(criteriaObj);
+    const criteriaData = extractCriteriaFromSupabase(criteriaObj) || [];
     const programs = extractProgramsFromSupabase(r.programs, criteriaObj);
 
     return {

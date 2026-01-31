@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
@@ -7,10 +7,9 @@ import {
   DESIGN_MODE_USER,
 } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabaseClient";
-import { sendCodeEmail } from "../services/emailService";
 import { authApi } from "../api";
+import { sendCodeEmail, sendSignupCodeEmail } from "../services/emailService";
 
-// Minimal typed shape for Supabase user metadata
 interface UserMetadata {
   full_name?: string;
   name?: string;
@@ -19,6 +18,8 @@ interface UserMetadata {
 }
 
 export type AuthView = "login" | "signup" | "forgot-password";
+
+export type SignupStep = "form" | "accountCreated" | "verifyCode";
 
 export function useAuthModal(onClose: () => void) {
   const navigate = useNavigate();
@@ -32,17 +33,24 @@ export function useAuthModal(onClose: () => void) {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Signup form state
-  const [signupFullName, setSignupFullName] = useState("");
+  // Signup form state (email + password only; no confirm password)
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] =
-    useState(false);
   const [signupError, setSignupError] = useState("");
   const [signupSuccess, setSignupSuccess] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signupStep, setSignupStep] = useState<SignupStep>("form");
+  const [signupVerificationCode, setSignupVerificationCode] = useState("");
+  const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
+  const [isResendingSignupCode, setIsResendingSignupCode] = useState(false);
+
+  useEffect(() => {
+    if (view !== "signup") {
+      setSignupStep("form");
+      setSignupVerificationCode("");
+    }
+  }, [view]);
 
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState("");
@@ -111,7 +119,9 @@ export function useAuthModal(onClose: () => void) {
         });
 
         const role = (userMeta.role as string) || "teacher";
-        if (role === "student") {
+        if (role === "admin") {
+          navigate("/Admin/Dashboard");
+        } else if (role === "student") {
           navigate("/Student/Dashboard");
         } else {
           navigate("/Teacher/Dashboard");
@@ -119,21 +129,32 @@ export function useAuthModal(onClose: () => void) {
         onClose();
       } else {
         setLoginError(
-          "Authentication failed. Please check your email and password."
+          "Authentication failed. Please check your email and password.",
         );
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setLoginError(
         message ||
-          "Authentication failed. Please check your credentials and try again."
+          "Authentication failed. Please check your credentials and try again.",
       );
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  // Handle signup
+  // Password requirements for signup (match first image)
+  const signupPasswordValid =
+    signupPassword.length >= 8 &&
+    /[A-Z]/.test(signupPassword) &&
+    /[a-z]/.test(signupPassword) &&
+    /\d/.test(signupPassword);
+
+  // Generate 6-digit signup code
+  const generateSignupCode = (): string =>
+    Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Handle signup: generate code → store in Supabase → send via EmailJS → show "Account Created"
   const handleSignUp = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -142,66 +163,171 @@ export function useAuthModal(onClose: () => void) {
     setSignupError("");
     setSignupSuccess("");
 
-    if (
-      !signupFullName.trim() ||
-      !signupEmail.trim() ||
-      !signupPassword.trim() ||
-      !signupConfirmPassword.trim()
-    ) {
-      setSignupError("Please fill in all required fields");
+    if (!signupEmail.trim() || !signupPassword.trim()) {
+      setSignupError("Please fill in email and password.");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signupEmail.trim())) {
-      setSignupError("Please enter a valid email address");
+      setSignupError("Please enter a valid email address.");
       return;
     }
 
-    if (signupPassword !== signupConfirmPassword) {
-      setSignupError("Passwords do not match");
-      return;
-    }
-
-    if (signupPassword.length < 6) {
-      setSignupError("Password must be at least 6 characters long");
+    if (!signupPasswordValid) {
+      setSignupError(
+        "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number.",
+      );
       return;
     }
 
     setIsSigningUp(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: signupEmail.trim(),
-        password: signupPassword.trim(),
-        options: {
-          data: {
-            full_name: signupFullName.trim(),
-            role: "teacher",
-          },
-        },
+      const code = generateSignupCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      const { error: insertError } = await supabase
+        .from("signup_verification_codes")
+        .insert({
+          email: signupEmail.trim().toLowerCase(),
+          code,
+          expires_at: expiresAt,
+        });
+
+      if (insertError) throw insertError;
+
+      await sendSignupCodeEmail({
+        toEmail: signupEmail.trim(),
+        code,
       });
 
-      if (error) {
-        throw error;
-      }
-
-      setSignupSuccess(
-        "Account created successfully! Please check your email to verify your account, then log in."
-      );
-      setSignupFullName("");
-      setSignupEmail("");
-      setSignupPassword("");
-      setSignupConfirmPassword("");
-
-      setTimeout(() => {
-        setView("login");
-      }, 2000);
+      setSignupStep("accountCreated");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setSignupError(message || "Registration failed. Please try again.");
     } finally {
       setIsSigningUp(false);
+    }
+  };
+
+  const handleSignupGotIt = () => {
+    setSignupStep("verifyCode");
+    setSignupVerificationCode("");
+    setSignupError("");
+  };
+
+  const handleVerifySignupCode = async () => {
+    setSignupError("");
+    if (signupVerificationCode.length !== 6) {
+      setSignupError("Please enter the complete 6-digit code.");
+      return;
+    }
+
+    setIsVerifyingSignup(true);
+    try {
+      const { data: isValid, error: rpcError } = await supabase.rpc(
+        "verify_signup_code",
+        {
+          p_email: signupEmail.trim(),
+          p_code: signupVerificationCode,
+        },
+      );
+
+      if (rpcError) throw rpcError;
+      if (!isValid) {
+        setSignupError("Invalid or expired code. Please try again.");
+        return;
+      }
+
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: signupEmail.trim(),
+          password: signupPassword,
+          options: {
+            data: {
+              full_name: signupEmail.trim().split("@")[0],
+              role: "teacher",
+            },
+          },
+        });
+
+      if (signUpError) {
+        if (signUpError.message?.includes("already registered")) {
+          setSignupError("Email already registered.");
+          return;
+        }
+        throw signUpError;
+      }
+
+      if (signUpData.user?.identities?.length === 0) {
+        setSignupError("Email already registered.");
+        return;
+      }
+
+      if (signUpData.session && signUpData.user) {
+        const userMeta = (signUpData.user.user_metadata || {}) as UserMetadata;
+        login(signUpData.session.access_token, {
+          id: signUpData.user.id,
+          email: signUpData.user.email ?? "",
+          username: signUpData.user.email ?? "",
+          full_name:
+            (userMeta.full_name as string) ||
+            (userMeta.name as string) ||
+            signUpData.user.email?.split("@")[0] ||
+            "Teacher",
+          role: (userMeta.role as string) || "teacher",
+          is_active: true,
+          email_verified: true,
+        });
+        const role = (userMeta.role as string) || "teacher";
+        if (role === "admin") navigate("/Admin/Dashboard");
+        else if (role === "student") navigate("/Student/Dashboard");
+        else navigate("/Teacher/Dashboard");
+        onClose();
+      } else {
+        setSignupSuccess(
+          "Account created! Please log in with your email and password.",
+        );
+        setView("login");
+        setLoginEmail(signupEmail.trim());
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSignupError(message || "Verification failed. Please try again.");
+    } finally {
+      setIsVerifyingSignup(false);
+    }
+  };
+
+  const handleResendSignupCode = async () => {
+    setSignupError("");
+    setIsResendingSignupCode(true);
+    try {
+      const code = generateSignupCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      const { error: insertError } = await supabase
+        .from("signup_verification_codes")
+        .insert({
+          email: signupEmail.trim().toLowerCase(),
+          code,
+          expires_at: expiresAt,
+        });
+
+      if (insertError) throw insertError;
+
+      await sendSignupCodeEmail({
+        toEmail: signupEmail.trim(),
+        code,
+      });
+
+      setSignupSuccess("Verification code sent again to your email.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSignupError(message || "Failed to resend code.");
+    } finally {
+      setIsResendingSignupCode(false);
     }
   };
 
@@ -264,7 +390,7 @@ export function useAuthModal(onClose: () => void) {
       // If email doesn't exist, STOP here - don't send code
       if (!checkResult.exists) {
         setForgotPasswordError(
-          checkResult.message || "No account found with this email address."
+          checkResult.message || "No account found with this email address.",
         );
         return;
       }
@@ -283,7 +409,7 @@ export function useAuthModal(onClose: () => void) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setForgotPasswordError(
-        message || "Failed to send verification code. Please try again."
+        message || "Failed to send verification code. Please try again.",
       );
     } finally {
       setIsSendingCode(false);
@@ -311,12 +437,12 @@ export function useAuthModal(onClose: () => void) {
 
       setForgotPasswordStep("password");
       setForgotPasswordSuccess(
-        "Code verified! Please enter your new password."
+        "Code verified! Please enter your new password.",
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setForgotPasswordError(
-        message || "Verification failed. Please try again."
+        message || "Verification failed. Please try again.",
       );
     } finally {
       setIsVerifyingCode(false);
@@ -358,7 +484,7 @@ export function useAuthModal(onClose: () => void) {
       // Use backend API to reset password (which uses Supabase Admin API server-side)
       const result = await authApi.resetPassword(
         forgotEmail.trim(),
-        newPassword.trim()
+        newPassword.trim(),
       );
 
       if (!result.success) {
@@ -369,7 +495,7 @@ export function useAuthModal(onClose: () => void) {
       sessionStorage.removeItem(`reset_code_${forgotEmail.trim()}`);
 
       setForgotPasswordSuccess(
-        "Password reset successfully! You can now log in with your new password."
+        "Password reset successfully! You can now log in with your new password.",
       );
 
       setTimeout(() => {
@@ -386,7 +512,7 @@ export function useAuthModal(onClose: () => void) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setForgotPasswordError(
-        message || "Failed to reset password. Please try again."
+        message || "Failed to reset password. Please try again.",
       );
     } finally {
       setIsResettingPassword(false);
@@ -407,24 +533,27 @@ export function useAuthModal(onClose: () => void) {
     setLoginError,
     isLoggingIn,
     handleLogin,
-    // Signup state
-    signupFullName,
-    setSignupFullName,
+    // Signup state (no confirm password)
     signupEmail,
     setSignupEmail,
     signupPassword,
     setSignupPassword,
-    signupConfirmPassword,
-    setSignupConfirmPassword,
     showSignupPassword,
     setShowSignupPassword,
-    showSignupConfirmPassword,
-    setShowSignupConfirmPassword,
     signupError,
     setSignupError,
     signupSuccess,
     isSigningUp,
     handleSignUp,
+    signupStep,
+    setSignupStep,
+    signupVerificationCode,
+    setSignupVerificationCode,
+    handleSignupGotIt,
+    handleVerifySignupCode,
+    handleResendSignupCode,
+    isVerifyingSignup,
+    isResendingSignupCode,
     // Forgot password state
     forgotEmail,
     setForgotEmail,

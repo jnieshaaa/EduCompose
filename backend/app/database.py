@@ -8,12 +8,9 @@ load_dotenv()
 # --- SETUP DATABASE CONNECTION ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    print("❌ CRITICAL: DATABASE_URL is missing. Cannot connect to tables.")
-
 # Connect to the database
 engine = create_engine(
-    DATABASE_URL,
+    DATABASE_URL or "sqlite:///./educompose.db",
     pool_pre_ping=True, 
     pool_size=10, 
     max_overflow=20,

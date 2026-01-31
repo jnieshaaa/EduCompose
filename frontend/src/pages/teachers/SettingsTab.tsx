@@ -55,7 +55,7 @@ export function SettingsTab() {
         const [settingsData, teacherIdResult] = await Promise.all([
           fetchTeacherSettings(),
           supabase
-            .from("teachers")
+            .from("users")
             .select("id")
             .eq(
               "auth_user_id",

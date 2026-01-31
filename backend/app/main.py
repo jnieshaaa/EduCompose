@@ -3,16 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 import uvicorn
 
-from . import models
-from .database import engine
-from sqlalchemy import text
 from .controllers import (
     auth_router,
     users_router,
     classes_router,
     students_router,
     essays_router,
-    analysis_router
+    analysis_router,
+    admin_router
 )
 from .controllers import kg_controller, ocr_controller
 
@@ -25,9 +23,15 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Note: allow_credentials=True requires explicit origins (not "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,33 +47,18 @@ app.include_router(classes_router, prefix="/api/classes", tags=["Classes"])
 app.include_router(students_router, prefix="/api/students", tags=["Students"])
 app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
 app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(kg_controller.kg_router, prefix="/api/kg", tags=["Knowledge Graph"])
 app.include_router(ocr_controller.ocr_router, prefix="/api/ocr", tags=["OCR"])
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database tables and warm up NLP models on startup"""
-    # Initialize database
-    try:
-        models.Base.metadata.create_all(bind=engine)
-        print("Database tables initialized successfully")
+    """Create database tables if needed, then warm up NLP models"""
+    # Create tables if they don't exist (e.g. when using SQLite)
+    from .database import engine
+    from . import models
+    models.Base.metadata.create_all(bind=engine)
 
-        # Ensure legacy schemas have password_hash column nullable
-        try:
-            with engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "ALTER TABLE IF EXISTS users "
-                        "ALTER COLUMN password_hash DROP NOT NULL"
-                    )
-                )
-        except Exception:
-            pass  # Ignore if column doesn't exist or already nullable
-    except Exception as e:
-        print(f"Warning: Could not initialize database tables: {e}")
-        print("  The app will continue, but database operations may fail.")
-        print("  Please check your DATABASE_URL in the .env file.")
-    
     # Warm up NLP models to avoid cold start delays
     # This runs synchronously to ensure models are loaded before server accepts requests
     print("\nWarming up NLP models (this may take 30-60 seconds)...")

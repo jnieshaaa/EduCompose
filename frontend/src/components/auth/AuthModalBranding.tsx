@@ -1,19 +1,19 @@
 export function AuthModalBranding() {
   return (
     <>
-      {/* Desktop Branding */}
-      <div className="hidden lg:flex flex-1 items-center justify-center p-10 relative bg-gradient-to-tr from-primary-500 via-primary-400 to-primary-300 text-white">
-        <div className="relative z-10 max-w-xs">
-          <h1 className="text-4xl font-bold mb-4 tracking-tight">
+      {/* Desktop Branding - Equal 50% column */}
+      <div className="hidden lg:flex flex-1 min-w-0 items-center justify-center p-8 relative bg-gradient-to-tr from-primary-500 via-primary-400 to-primary-300 text-white">
+        <div className="relative z-10 max-w-[260px]">
+          <h1 className="text-3xl font-bold mb-3 tracking-tight">
             Edu<span className="text-primary-50">Compose</span>
           </h1>
-          <p className="text-lg font-semibold mb-6">
+          <p className="text-sm font-medium text-white/95 mb-6 leading-tight">
             Teacher's Companion for Essay Evaluation
           </p>
-          <ul className="space-y-3">
-            <li className="flex items-start space-x-3">
+          <ul className="space-y-2.5 text-sm text-white/90">
+            <li className="flex items-start gap-2.5">
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -23,11 +23,11 @@ export function AuthModalBranding() {
                   clipRule="evenodd"
                 />
               </svg>
-              <p>AI-powered essay analysis</p>
+              <span>AI-powered essay analysis</span>
             </li>
-            <li className="flex items-start space-x-3">
+            <li className="flex items-start gap-2.5">
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -37,11 +37,11 @@ export function AuthModalBranding() {
                   clipRule="evenodd"
                 />
               </svg>
-              <p>Detailed feedback generation</p>
+              <span>Detailed feedback generation</span>
             </li>
-            <li className="flex items-start space-x-3">
+            <li className="flex items-start gap-2.5">
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -51,24 +51,12 @@ export function AuthModalBranding() {
                   clipRule="evenodd"
                 />
               </svg>
-              <p>Save time, improve learning</p>
+              <span>Save time, improve learning</span>
             </li>
           </ul>
         </div>
-        {/* Subtle decoration inside the left panel */}
-        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -translate-x-1/3 -translate-y-1/3"></div>
-      </div>
-
-      {/* Mobile Logo/Branding */}
-      <div className="lg:hidden text-center mb-8">
-        <h1 className="text-3xl font-bold mb-1 text-neutral-900">
-          Edu<span className="text-primary-500">Compose</span>
-        </h1>
-        <p className="text-neutral-600 text-sm">
-          Teacher's Companion for Essay Evaluation
-        </p>
+        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full -translate-x-1/3 -translate-y-1/3" />
       </div>
     </>
   );
 }
-

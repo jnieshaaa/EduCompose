@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 
-// Helper to get teacher ID from authenticated user
+// Helper to get user ID from authenticated user
 const getTeacherId = async (): Promise<number | null> => {
   try {
     const {
@@ -19,20 +19,20 @@ const getTeacherId = async (): Promise<number | null> => {
       return null;
     }
 
-    const { data: teacherData, error: teacherError } = await supabase
-      .from("teachers")
+    const { data: userData, error: userTableError } = await supabase
+      .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
       .single();
 
-    if (teacherError || !teacherData) {
-      console.error("Error getting teacher record:", teacherError);
+    if (userTableError || !userData) {
+      console.error("Error getting user record:", userTableError);
       return null;
     }
 
-    return teacherData.id;
+    return userData.id;
   } catch (err) {
-    console.error("Unexpected error fetching teacher ID:", err);
+    console.error("Unexpected error fetching user ID:", err);
     return null;
   }
 };

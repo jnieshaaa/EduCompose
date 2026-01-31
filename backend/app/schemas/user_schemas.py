@@ -15,6 +15,10 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    role: str = "teacher"  # admin, teacher, or student
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     # username and full_name will be auto-generated from email if not provided
     username: Optional[str] = None
     full_name: Optional[str] = None

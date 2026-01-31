@@ -9,6 +9,7 @@ from .student import Student
 from .essay import Essay
 from .analysis_report import AnalysisReport
 from .login_activity import LoginActivity
+from .signup_code import SignupVerificationCode
 
 __all__ = [
     "Base",
@@ -17,6 +18,7 @@ __all__ = [
     "Student",
     "Essay",
     "AnalysisReport",
-    "LoginActivity"
+    "LoginActivity",
+    "SignupVerificationCode",
 ]
 

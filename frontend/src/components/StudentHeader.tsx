@@ -114,7 +114,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   };
 
   const userName = user?.full_name || user?.username || "Student";
-  const userInitial = userName[0].toUpperCase();
+  const userInitial = userName.split(/\s+/).map((part) => part.charAt(0).toUpperCase()).join("");
 
   return (
     <header className='relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 px-3 sm:px-4 py-3 border-b bg-white shadow-sm'>

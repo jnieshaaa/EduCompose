@@ -30,16 +30,17 @@ export function LoginForm({
 }: LoginFormProps) {
   return (
     <>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-neutral-900 mb-2">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">
           Welcome Back
         </h2>
-        <p className="text-neutral-900">Login to access your dashboard</p>
+        <p className="text-neutral-600 text-sm">
+          Login to access your dashboard
+        </p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-5">
-        {/* Error Message */}
+      <form onSubmit={onSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
             {error}
           </div>
         )}
@@ -72,41 +73,38 @@ export function LoginForm({
           setShowPassword={setShowPassword}
         />
 
-        {/* Remember + Forgot */}
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-xs">
           <label className="flex items-center cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 text-primary-500 focus:ring-primary-500"
+              className="w-3.5 h-3.5 text-primary-500 focus:ring-primary-500 rounded"
             />
-            <span className="ml-2 text-neutral-900">Remember me</span>
+            <span className="ml-1.5 text-neutral-600">Remember me</span>
           </label>
           <button
             type="button"
             onClick={() => onViewChange("forgot-password")}
-            className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"
+            className="font-medium text-primary-500 hover:text-primary-600 transition-colors"
           >
             Forgot password?
           </button>
         </div>
 
-        {/* Login Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full text-white py-3 rounded-rd font-semibold bg-primary-500 shadow-lg hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full text-white py-3 text-sm rounded-lg font-semibold bg-primary-500 hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? "Logging in..." : "Login"}
         </button>
       </form>
 
-      {/* Sign Up */}
-      <p className="text-center text-neutral-900 text-sm mt-6">
+      <p className="text-center text-neutral-500 text-xs mt-4">
         Don't have an account?{" "}
         <button
           type="button"
           onClick={() => onViewChange("signup")}
-          className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"
+          className="font-medium text-primary-500 hover:text-primary-600 transition-colors"
         >
           Sign up now!
         </button>
@@ -114,4 +112,3 @@ export function LoginForm({
     </>
   );
 }
-
