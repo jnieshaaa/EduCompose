@@ -17,6 +17,7 @@ class Student(Base):
     class_id = Column(Integer, ForeignKey("classes.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    created_by = Column(Integer, nullable=True)
     
     # Relationships
     class_obj = relationship("Class", back_populates="students")

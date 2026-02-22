@@ -1,14 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Card from "../ui/Card";
-import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import {
   MoreVertical,
   Edit,
   Archive,
-  Layers,
-  FileText,
-  Users,
   ArrowRight,
   Trash2,
 } from "lucide-react";
@@ -52,15 +48,6 @@ export function ProgramsCardView({
               className='group relative overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1'
               onClick={() => onProgramClick(program.name)}
             >
-              {/* Status indicator bar */}
-              <div
-                className={`absolute top-0 left-0 right-0 h-1 ${
-                  program.status === "Active"
-                    ? "bg-gradient-to-r from-success-default to-success-default/60"
-                    : "bg-gradient-to-r from-neutral-400 to-neutral-300"
-                }`}
-              />
-
               <div className='p-5'>
                 {/* Header with title and menu */}
                 <div className='flex items-start justify-between mb-3'>
@@ -69,19 +56,7 @@ export function ProgramsCardView({
                       <h3 className='text-lg font-bold text-neutral-900 truncate group-hover:text-primary transition-colors'>
                         {program.name}
                       </h3>
-                      <Badge
-                        className={
-                          program.status === "Active"
-                            ? "bg-success-default text-neutral-700 border-success-default/20 text-xs"
-                            : "bg-neutral-300/50 text-red-600 border-neutral-300/30 text-xs"
-                        }
-                      >
-                        {program.status}
-                      </Badge>
                     </div>
-                    <p className='text-sm text-neutral-500 line-clamp-2'>
-                      {program.description || "No description available"}
-                    </p>
                   </div>
 
                   {/* Actions dropdown */}
@@ -134,34 +109,17 @@ export function ProgramsCardView({
                   </DropdownMenu>
                 </div>
 
-                {/* Stats grid */}
-                <div className='grid grid-cols-3 gap-3 mt-4'>
-                  <div className='text-center p-3 bg-primary/5 rounded-lg'>
-                    <div className='flex items-center justify-center gap-1 text-primary'>
-                      <Layers className='w-4 h-4' />
-                      <span className='text-xl font-bold'>
-                        {program.tracks}
-                      </span>
-                    </div>
-                    <p className='text-xs text-neutral-500 mt-1'>Sections</p>
+                {/* Counts and Stats */}
+                <div className='flex items-center gap-4 mt-1'>
+                  <div className='flex items-center gap-1.5 text-sm text-neutral-600 bg-neutral-100 px-2 py-1 rounded-md'>
+                    <div className='w-1.5 h-1.5 rounded-full bg-blue-500' />
+                    <span className='font-medium'>{program.sectionCount ?? 0}</span>
+                    <span className='text-neutral-500'>Sections</span>
                   </div>
-                  <div className='text-center p-3 bg-secondary/5 rounded-lg'>
-                    <div className='flex items-center justify-center gap-1 text-secondary'>
-                      <FileText className='w-4 h-4' />
-                      <span className='text-xl font-bold'>
-                        {program.courses}
-                      </span>
-                    </div>
-                    <p className='text-xs text-neutral-500 mt-1'>Courses</p>
-                  </div>
-                  <div className='text-center p-3 bg-success-default/5 rounded-lg'>
-                    <div className='flex items-center justify-center gap-1 text-success-default'>
-                      <Users className='w-4 h-4' />
-                      <span className='text-xl font-bold'>
-                        {program.avgClassSize}
-                      </span>
-                    </div>
-                    <p className='text-xs text-neutral-500 mt-1'>Avg Size</p>
+                  <div className='flex items-center gap-1.5 text-sm text-neutral-600 bg-neutral-100 px-2 py-1 rounded-md'>
+                    <div className='w-1.5 h-1.5 rounded-full bg-green-500' />
+                    <span className='font-medium'>{program.studentCount ?? 0}</span>
+                    <span className='text-neutral-500'>Students</span>
                   </div>
                 </div>
 

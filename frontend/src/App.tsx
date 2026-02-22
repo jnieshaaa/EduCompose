@@ -60,9 +60,11 @@ import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
 import Login from "./pages/Login.tsx";
 import EmailConfirmation from "./pages/EmailConfirmation.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import OnboardingCheck from "./components/OnboardingCheck";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -100,6 +102,17 @@ const AppContent: React.FC = () => {
         <Route path="/Login" element={<Login />} />
         <Route path="/auth/confirm" element={<EmailConfirmation />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
+        
+        {/* Onboarding Route (Protected but no onboarding check) */}
+        <Route 
+          path="/onboarding" 
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          } 
+        />
+        
         <Route path="*" element={<ErrorPage code={404} />} />
 
         {/* ======================================================= */}
@@ -110,7 +123,9 @@ const AppContent: React.FC = () => {
           path="/Teacher"
           element={
             <ProtectedRoute>
-              <TeacherLayout />
+              <OnboardingCheck>
+                <TeacherLayout />
+              </OnboardingCheck>
             </ProtectedRoute>
           }
         >
@@ -151,7 +166,9 @@ const AppContent: React.FC = () => {
           path="/Student"
           element={
             <ProtectedRoute>
-              <StudentLayout />
+              <OnboardingCheck>
+                <StudentLayout />
+              </OnboardingCheck>
             </ProtectedRoute>
           }
         >
@@ -178,7 +195,9 @@ const AppContent: React.FC = () => {
           path="/Admin"
           element={
             <ProtectedRoute requiredRole="admin">
-              <AdminLayout />
+              <OnboardingCheck>
+                <AdminLayout />
+              </OnboardingCheck>
             </ProtectedRoute>
           }
         >

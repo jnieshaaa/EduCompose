@@ -7,7 +7,7 @@ from .user import User
 from .class_model import Class
 from .student import Student
 from .essay import Essay
-from .analysis_report import AnalysisReport
+# from .analysis_report import AnalysisReport
 from .login_activity import LoginActivity
 from .signup_code import SignupVerificationCode
 
@@ -17,7 +17,7 @@ __all__ = [
     "Class",
     "Student",
     "Essay",
-    "AnalysisReport",
+# "AnalysisReport",
     "LoginActivity",
     "SignupVerificationCode",
 ]

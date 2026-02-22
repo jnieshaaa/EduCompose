@@ -1,39 +1,24 @@
 import { useState, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import Input from "../ui/Input";
-import { Textarea } from "../ui/textarea";
 import Button from "../ui/Button";
 import { PROGRAM_DETAILS } from "../../data/classOptions";
+import { Plus, X } from "lucide-react";
 
 interface AddProgramDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  newProgram: {
-    name: string;
-    description: string;
-    tracks: string;
-    status: string;
-  };
-  onInputChange: (field: string, value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (programs: { name: string }[]) => void;
   isCreating: boolean;
 }
 
 export function AddProgramDialog({
   isOpen,
   onClose,
-  newProgram,
-  onInputChange,
   onSubmit,
   isCreating,
 }: AddProgramDialogProps) {
-  // Autocomplete state for program name
   const [programSuggestions, setProgramSuggestions] = useState<
     typeof PROGRAM_DETAILS
   >([]);
@@ -41,17 +26,21 @@ export function AddProgramDialog({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const handleNameChange = (value: string) => {
-    onInputChange("name", value);
+  // State for multiple programs
+  const [programsToAdd, setProgramsToAdd] = useState<Array<{ name: string }>>([]);
+  const [currentInput, setCurrentInput] = useState("");
+  // const [currentDesc, setCurrentDesc] = useState("");
 
-    // Handle autocomplete for program name
+  const handleNameChange = (value: string) => {
+    setCurrentInput(value);
+
     if (value.trim().length > 0) {
       const filtered = PROGRAM_DETAILS.filter(
         (program) =>
           program.name.toLowerCase().includes(value.toLowerCase()) ||
-          program.code.toLowerCase().includes(value.toLowerCase())
+          program.code.toLowerCase().includes(value.toLowerCase()),
       );
-      setProgramSuggestions(filtered.slice(0, 10)); // Limit to 10 suggestions
+      setProgramSuggestions(filtered.slice(0, 10));
       setShowSuggestions(true);
       setHighlightedIndex(-1);
     } else {
@@ -60,12 +49,24 @@ export function AddProgramDialog({
     }
   };
 
-  // Handle program selection from autocomplete
   const handleProgramSelect = (program: (typeof PROGRAM_DETAILS)[0]) => {
-    onInputChange("name", program.name);
-    onInputChange("description", program.description);
+    setCurrentInput(program.name);
     setShowSuggestions(false);
     setProgramSuggestions([]);
+  };
+
+  const handleAddProgram = () => {
+    if (currentInput.trim()) {
+      setProgramsToAdd([
+        ...programsToAdd,
+        { name: currentInput.trim() },
+      ]);
+      setCurrentInput("");
+    }
+  };
+
+  const handleRemoveProgram = (index: number) => {
+    setProgramsToAdd(programsToAdd.filter((_, i) => i !== index));
   };
 
   // Handle keyboard navigation in suggestions
@@ -78,7 +79,7 @@ export function AddProgramDialog({
       case "ArrowDown":
         e.preventDefault();
         setHighlightedIndex((prev) =>
-          prev < programSuggestions.length - 1 ? prev + 1 : prev
+          prev < programSuggestions.length - 1 ? prev + 1 : prev,
         );
         break;
       case "ArrowUp":
@@ -101,11 +102,11 @@ export function AddProgramDialog({
   };
 
   const handleFocus = () => {
-    if (newProgram.name.trim().length > 0) {
+    if (currentInput.trim().length > 0) {
       const filtered = PROGRAM_DETAILS.filter(
         (program) =>
-          program.name.toLowerCase().includes(newProgram.name.toLowerCase()) ||
-          program.code.toLowerCase().includes(newProgram.name.toLowerCase())
+          program.name.toLowerCase().includes(currentInput.toLowerCase()) ||
+          program.code.toLowerCase().includes(currentInput.toLowerCase()),
       );
       setProgramSuggestions(filtered.slice(0, 10));
       setShowSuggestions(true);
@@ -124,71 +125,81 @@ export function AddProgramDialog({
           <DialogTitle>Add New Program</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
+          {/* Display added programs */}
+          {programsToAdd.length > 0 && (
+            <div className="space-y-2">
+              <Label>Programs to Add ({programsToAdd.length})</Label>
+              <div className="flex flex-wrap gap-2">
+                {programsToAdd.map((program, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-rd text-sm"
+                  >
+                    <span className="font-medium">{program.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProgram(index)}
+                      className="hover:bg-primary/20 rounded-rs p-0.5 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             <Label htmlFor="program-name">Program Name</Label>
-            <div className="relative mt-1">
-              <Input
-                id="program-name"
-                placeholder="e.g., BS Computer Science or BSCS"
-                className="mt-0"
-                value={newProgram.name}
-                onChange={handleNameChange}
-                onKeyDown={handleKeyDown}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-              {/* Autocomplete Suggestions Dropdown */}
-              {showSuggestions && programSuggestions.length > 0 && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                >
-                  {programSuggestions.map((program, index) => (
-                    <div
-                      key={program.code}
-                      className={`px-4 py-2 cursor-pointer transition-colors ${
-                        index === highlightedIndex
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-neutral-50 text-neutral-900"
-                      }`}
-                      onClick={() => handleProgramSelect(program)}
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{program.name}</div>
-                          <div className="text-xs text-neutral-500 mt-0.5">
-                            {program.code}
+            <div className="relative mt-1 flex gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  id="program-name"
+                  placeholder="e.g., BS Computer Science or BSCS"
+                  className="mt-0"
+                  value={currentInput}
+                  onChange={handleNameChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {showSuggestions && programSuggestions.length > 0 && (
+                  <div
+                    ref={suggestionsRef}
+                    className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                  >
+                    {programSuggestions.map((program, index) => (
+                      <div
+                        key={program.code}
+                        className={`px-4 py-2 cursor-pointer transition-colors ${
+                          index === highlightedIndex
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-neutral-50 text-neutral-900"
+                        }`}
+                        onClick={() => handleProgramSelect(program)}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">{program.name}</div>
+                            <div className="text-xs text-neutral-500 mt-0.5">
+                              {program.code}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="program-desc">Description</Label>
-            <Textarea
-              id="program-desc"
-              placeholder="Brief description of the program/department"
-              className="mt-1"
-              value={newProgram.description}
-              onChange={(e) => onInputChange("description", e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="program-tracks">Number of Course Tracks</Label>
-              <Input
-                id="program-tracks"
-                type="number"
-                placeholder="0"
-                className="mt-1"
-                value={newProgram.tracks}
-                onChange={(value) => onInputChange("tracks", value)}
-              />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={handleAddProgram}
+                disabled={!currentInput.trim()}
+                className="bg-primary hover:bg-primary-400 px-3"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
@@ -197,11 +208,42 @@ export function AddProgramDialog({
             </Button>
             <Button
               className="bg-primary hover:bg-primary-300"
-              onClick={onSubmit}
+              onClick={() => {
+                const programsToCreate: Array<{
+                  name: string;
+                }> = [];
+
+                // Case 1: No programs added and field is empty → show error
+                if (programsToAdd.length === 0 && !currentInput.trim()) {
+                  onSubmit([]);
+                  return;
+                }
+
+                // Case 2: Programs are added (regardless of field) → add them all
+                if (programsToAdd.length > 0) {
+                  programsToCreate.push(...programsToAdd);
+                }
+
+                // Case 3: Field has input (regardless of added programs) → add current input
+                if (currentInput.trim()) {
+                  programsToCreate.push({
+                    name: currentInput.trim(),
+                  });
+                }
+
+                // Submit the collected programs
+                onSubmit(programsToCreate);
+
+                // Reset local state after submit
+                setProgramsToAdd([]);
+                setCurrentInput("");
+              }}
               disabled={isCreating}
               aria-busy={isCreating}
             >
-              {isCreating ? "Creating..." : "Create Program"}
+              {isCreating
+                ? "Creating..."
+                : `Create ${programsToAdd.length + (currentInput.trim() ? 1 : 0)} Program(s)`}
             </Button>
           </div>
         </div>
@@ -209,4 +251,3 @@ export function AddProgramDialog({
     </Dialog>
   );
 }
-

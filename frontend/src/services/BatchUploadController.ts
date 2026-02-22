@@ -57,18 +57,6 @@ export class BatchUploadController {
           "program_name",
           "program",
         ]);
-        const description = this.getFieldValue(row, ["description", "desc"]);
-        const tracks =
-          parseInt(
-            this.getFieldValue(row, [
-              "tracks",
-              "course tracks",
-              "course_tracks",
-              "tracks_count",
-            ]),
-            10
-          ) || 0;
-        const status = this.getFieldValue(row, ["status", "state"]) || "Active";
 
         if (!name) {
           errors.push(`Row ${rowNum}: Program name is required`);
@@ -89,11 +77,6 @@ export class BatchUploadController {
         const program: Program = {
           id: nextId++,
           name: name.trim(),
-          description: description.trim() || "",
-          tracks,
-          courses: 0,
-          avgClassSize: 0,
-          status: status.trim() || "Active",
         };
 
         imported.push(program);
@@ -333,6 +316,13 @@ export class BatchUploadController {
             "program name",
             "program_name",
           ]);
+        const yearLevel = this.getFieldValue(row, [
+          "year level",
+          "year_level",
+          "year",
+          "level",
+          "yr",
+        ]);
         const section =
           defaultSection ||
           this.getFieldValue(row, [
@@ -342,6 +332,7 @@ export class BatchUploadController {
             "block",
             "block name",
             "block_name",
+            "block/section",
           ]);
 
         if (!id) {
@@ -417,6 +408,7 @@ export class BatchUploadController {
           email: email.trim(),
           program: program.trim(),
           section: section.trim(),
+          yearLevel: yearLevel.trim(),
           submitted: 0,
           pending: 0,
           avgScore: 0,

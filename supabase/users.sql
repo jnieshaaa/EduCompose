@@ -11,8 +11,12 @@ CREATE TABLE IF NOT EXISTS users (
   first_name   text,
   middle_name  text,
   last_name    text,
+  suffix       text,
+  title        text, -- mr, ms, mrs, sir, prof, etc.
+  nickname     text, -- custom nickname/title
   role         text NOT NULL DEFAULT 'teacher',
   is_active    boolean NOT NULL DEFAULT true,
+  onboarding_completed boolean NOT NULL DEFAULT false,
   created_at   timestamptz NOT NULL DEFAULT now(),
   updated_at   timestamptz NOT NULL DEFAULT now()
 );

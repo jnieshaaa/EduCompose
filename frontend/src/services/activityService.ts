@@ -416,13 +416,20 @@ export const deleteActivity = async (activityId: string): Promise<void> => {
 };
 
 // Load programs for dropdown
+// Load programs for dropdown, filtered by teacher
 export const fetchPrograms = async (): Promise<
   { id: string; name: string }[]
 > => {
   try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return [];
+    }
+
     const { data, error } = await supabase
       .from("programs")
       .select("id, name")
+      .eq("created_by", teacherId)
       .order("name", { ascending: true });
 
     if (error) {
@@ -440,17 +447,46 @@ export const fetchPrograms = async (): Promise<
   }
 };
 
-// Load sections (blocks) for dropdown, optionally filtered by program
+// Load sections (blocks) for dropdown, optionally filtered by program and always by teacher
 export const fetchSections = async (
   programId?: string | "all"
 ): Promise<{ id: string; name: string; programId: string }[]> => {
   try {
-    let query = supabase.from("sections").select("id, name, program_id");
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) {
+      return [];
+    }
+
+    // First get all programs for this teacher to filter sections
+    const { data: programsData, error: programsError } = await supabase
+      .from("programs")
+      .select("id")
+      .eq("created_by", teacherId);
+
+    if (programsError) {
+      console.error("Error loading teacher programs for sections:", programsError);
+      return [];
+    }
+
+    const programIds = (programsData || []).map(p => p.id);
+    
+    if (programIds.length === 0) {
+      return [];
+    }
+
+    let query = supabase.from("sections").select("id, name, program_id")
+      .in("program_id", programIds);
 
     if (programId && programId !== "all") {
       const pid = parseInt(programId, 10);
       if (!isNaN(pid)) {
-        query = query.eq("program_id", pid);
+        // Ensure the requested program ID belongs to the teacher
+        if (programIds.includes(pid)) {
+          query = query.eq("program_id", pid);
+        } else {
+          // If asking for a program not owned by teacher, return empty
+          return [];
+        }
       }
     }
 

@@ -1,14 +1,14 @@
 import Card from "../ui/Card";
-import { BookOpen, Layers, Users } from "lucide-react";
+import { BookOpen, LayoutGrid, Users } from "lucide-react";
 
 interface ProgramsStatsCardsProps {
-  activePrograms: number;
+  totalPrograms: number;
   totalSections: number;
   totalStudents: number;
 }
 
 export function ProgramsStatsCards({
-  activePrograms,
+  totalPrograms,
   totalSections,
   totalStudents,
 }: ProgramsStatsCardsProps) {
@@ -20,15 +20,16 @@ export function ProgramsStatsCards({
             <BookOpen className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm text-neutral-500">Active Programs</p>
-            <p className="text-2xl font-bold text-neutral-900">{activePrograms}</p>
+            <p className="text-sm text-neutral-500">Total Programs</p>
+            <p className="text-2xl font-bold text-neutral-900">{totalPrograms}</p>
           </div>
         </div>
       </Card>
-      <Card className="p-4 bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+
+      <Card className="p-4 bg-gradient-to-br from-blue-50/50 to-blue-100/50 border-blue-200">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-secondary/20 rounded-lg">
-            <Layers className="w-5 h-5 text-secondary" />
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <LayoutGrid className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <p className="text-sm text-neutral-500">Total Sections</p>
@@ -36,13 +37,14 @@ export function ProgramsStatsCards({
           </div>
         </div>
       </Card>
-      <Card className="p-4 bg-gradient-to-br from-success-default/5 to-success-default/10 border-success-default/20">
+
+      <Card className="p-4 bg-gradient-to-br from-green-50/50 to-green-100/50 border-green-200">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-success-default/20 rounded-lg">
-            <Users className="w-5 h-5 text-success-default" />
+          <div className="p-2 bg-green-100 rounded-lg">
+            <Users className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <p className="text-sm text-neutral-500">Est. Students</p>
+            <p className="text-sm text-neutral-500">Total Students</p>
             <p className="text-2xl font-bold text-neutral-900">{totalStudents}</p>
           </div>
         </div>

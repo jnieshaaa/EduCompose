@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -13,7 +13,7 @@ interface TooltipProps {
 const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
-  position = "bottom",
+  position = "right",
   delay = 300,
   disabled = false,
 }) => {
@@ -25,9 +25,11 @@ const Tooltip: React.FC<TooltipProps> = ({
   );
 
   const showTooltip = () => {
+    console.log("showTooltip called, disabled:", disabled, "content:", content);
     if (disabled) return;
 
     const id = setTimeout(() => {
+      console.log("Setting tooltip visible");
       computeCoords();
       setIsVisible(true);
     }, delay);
@@ -50,36 +52,34 @@ const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [timeoutId]);
 
-  const computeCoords = useCallback(() => {
+  const computeCoords = () => {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const gap = 4; // Reduced gap to make tooltip closer
-    // Use getBoundingClientRect directly since we're using fixed positioning
-    // Fixed positioning is relative to viewport, not document
-    let top = rect.top;
-    let left = rect.left;
+    const gap = 8;
+    let top = rect.top + window.scrollY;
+    let left = rect.left + window.scrollX;
     switch (position) {
       case "top":
-        top = rect.top - gap;
-        left = rect.left + rect.width / 2;
+        top = rect.top + window.scrollY - gap;
+        left = rect.left + window.scrollX + rect.width / 2;
         break;
       case "bottom":
-        top = rect.bottom + gap;
-        left = rect.left + rect.width / 2;
+        top = rect.bottom + window.scrollY + gap;
+        left = rect.left + window.scrollX + rect.width / 2;
         break;
       case "left":
-        top = rect.top + rect.height / 2;
-        left = rect.left - gap;
+        top = rect.top + window.scrollY + rect.height / 2;
+        left = rect.left + window.scrollX - gap;
         break;
       case "right":
       default:
-        top = rect.top + rect.height / 2;
-        left = rect.right + gap;
+        top = rect.top + window.scrollY + rect.height / 2;
+        left = rect.right + window.scrollX + gap;
         break;
     }
     setCoords({ top, left });
-  }, [position]);
+  };
 
   useEffect(() => {
     if (!isVisible) return;
@@ -92,12 +92,12 @@ const Tooltip: React.FC<TooltipProps> = ({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
-  }, [isVisible, computeCoords]);
+  }, [isVisible, position]);
 
   return (
     <div
       ref={triggerRef}
-      className='relative block w-full'
+      className="relative inline-block"
       onMouseEnter={showTooltip}
       onMouseLeave={hideTooltip}
       onFocus={showTooltip}
@@ -107,32 +107,33 @@ const Tooltip: React.FC<TooltipProps> = ({
 
       <AnimatePresence>
         {isVisible && coords && (
-          createPortal(
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.12 }}
-              className='fixed z-[1000]'
-              style={{
-                top: coords.top,
-                left: coords.left,
-                transform:
-                  position === "top"
-                    ? "translate(-50%, -100%)"
-                    : position === "bottom"
-                    ? "translateX(-50%)"
-                    : position === "left"
-                    ? "translate(-100%, -50%)"
-                    : "translate(0, -50%)",
-              }}
-            >
-              <div className='bg-neutral-800 text-white text-sm px-3 py-2 rounded-rs shadow-lg whitespace-nowrap'>
-                {content}
-              </div>
-            </motion.div>,
-            document.body
-          )
+          <>
+            {console.log("Rendering tooltip:", { isVisible, coords, content })}
+            {createPortal(
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.12 }}
+                className="fixed z-[1000]"
+                style={{
+                  top: coords.top,
+                  left: coords.left,
+                  transform:
+                    position === "top" || position === "bottom"
+                      ? "translate(-50%, -100%)"
+                      : position === "left"
+                      ? "translate(-100%, -50%)"
+                      : "translate(0, -50%)",
+                }}
+              >
+                <div className="bg-neutral-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                  {content}
+                </div>
+              </motion.div>,
+              document.body
+            )}
+          </>
         )}
       </AnimatePresence>
     </div>

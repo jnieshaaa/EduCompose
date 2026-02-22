@@ -139,7 +139,7 @@ export function BatchUploadDialog({
   const getExpectedColumns = () => {
     switch (type) {
       case "programs":
-        return ["name", "description", "tracks", "status"];
+        return ["name", "description", "status"];
       case "sections": {
         const baseColumns = ["name", "term", "students"];
         // Only include program if not provided as default
@@ -151,17 +151,25 @@ export function BatchUploadDialog({
       case "students": {
         const baseColumns = [
           "id",
-          "firstname",
-          "middlename (optional)",
-          "lastname",
+          "program",
+          "year level",
+          "block/section",
           "email",
+          "lastname",
+          "firstname",
+          "middlename",
         ];
         // Only include program/section if not provided as defaults
         if (!defaultProgram) {
-          baseColumns.push("program");
-        }
-        if (!defaultSection) {
-          baseColumns.push("section");
+          // baseColumns already has program, maybe we should conditionally check?
+          // The previous logic pushed program if not default. 
+          // Let's stick to the user's explicit list as "Expected Columns" to guide them.
+          // The user said: "in excel filename... it has a list of students of student id, program: BSCS-DS, year level: 4, block/section: b, email:..., last name:..., first name:..., middle name:..."
+          // So the file MUST contain these.
+          // However, if defaultProgram is set (context), maybe they don't *need* the program column?
+          // But the user said "so the batch upload in program, blocks and students is all the same like dont change the content".
+          // This implies the upload FILE content is fixed format.
+          // So I should list all of them.
         }
         return baseColumns;
       }

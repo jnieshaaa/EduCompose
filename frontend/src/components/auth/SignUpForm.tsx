@@ -6,8 +6,12 @@ interface SignUpFormProps {
   setEmail: (value: string) => void;
   password: string;
   setPassword: (value: string) => void;
+  confirmPassword: string;
+  setConfirmPassword: (value: string) => void;
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
+  showConfirmPassword: boolean;
+  setShowConfirmPassword: (show: boolean) => void;
   error: string;
   setError: (error: string) => void;
   success: string;
@@ -30,8 +34,12 @@ export function SignUpForm({
   setEmail,
   password,
   setPassword,
+  confirmPassword,
+  setConfirmPassword,
   showPassword,
   setShowPassword,
+  showConfirmPassword,
+  setShowConfirmPassword,
   error,
   setError,
   success,
@@ -41,6 +49,7 @@ export function SignUpForm({
 }: SignUpFormProps) {
   const req = checkPasswordRequirements(password);
   const allMet = req.minLength && req.hasUpper && req.hasLower && req.hasNumber;
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
   return (
     <>
@@ -183,9 +192,25 @@ export function SignUpForm({
           </div>
         </div>
 
+        <AuthInputField
+          id="signup-confirm-password"
+          label="Confirm Password"
+          type={showConfirmPassword ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setError("");
+          }}
+          placeholder="Re-enter your password"
+          Icon={Lock}
+          showToggle
+          showPassword={showConfirmPassword}
+          setShowPassword={setShowConfirmPassword}
+        />
+
         <button
           type="submit"
-          disabled={isLoading || !allMet}
+          disabled={isLoading || !allMet || !passwordsMatch}
           className="w-full text-white py-3 text-sm rounded-lg font-semibold bg-primary-500 hover:bg-primary-600 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? "Creating account…" : "Continue"}

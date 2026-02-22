@@ -30,8 +30,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setSignupEmail,
     signupPassword,
     setSignupPassword,
+    signupConfirmPassword,
+    setSignupConfirmPassword,
     showSignupPassword,
     setShowSignupPassword,
+    showSignupConfirmPassword,
+    setShowSignupConfirmPassword,
     signupError,
     setSignupError,
     signupSuccess,
@@ -155,8 +159,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             setEmail={setSignupEmail}
             password={signupPassword}
             setPassword={setSignupPassword}
+            confirmPassword={signupConfirmPassword}
+            setConfirmPassword={setSignupConfirmPassword}
             showPassword={showSignupPassword}
             setShowPassword={setShowSignupPassword}
+            showConfirmPassword={showSignupConfirmPassword}
+            setShowConfirmPassword={setShowSignupConfirmPassword}
             error={signupError}
             setError={setSignupError}
             success={signupSuccess}

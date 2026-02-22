@@ -1,10 +1,15 @@
 // Settings Model - Type definitions for teacher settings
 
 export interface TeacherProfile {
+  title?: string;
+  nickname?: string;
+  school?: string;
+  department?: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
+  suffix?: string;
   email: string; // Read-only, cannot be updated
-  institution?: string;
 }
 
 export interface AIAssessmentSettings {

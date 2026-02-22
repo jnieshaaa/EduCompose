@@ -1,5 +1,4 @@
 import Card from "../ui/Card";
-import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import {
   Table,
@@ -33,11 +32,8 @@ export function ProgramsTableView({
         <TableHeader>
           <TableRow>
             <TableHead>Program Name</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="text-center">Sections</TableHead>
-            <TableHead className="text-center">Courses</TableHead>
-            <TableHead className="text-center">Avg Class Size</TableHead>
-            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-center">Block/Section</TableHead>
+            <TableHead className="text-center">Students</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -53,45 +49,15 @@ export function ProgramsTableView({
                   {program.name}
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="text-sm text-neutral-500 max-w-xs truncate">
-                  {program.description || "No description"}
-                </div>
+              <TableCell className="text-center">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {program.sectionCount ?? 0}
+                </span>
               </TableCell>
               <TableCell className="text-center">
-                <Badge
-                  variant="outline"
-                  className="bg-primary/10 text-primary border-primary/20"
-                >
-                  {program.tracks}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge
-                  variant="outline"
-                  className="bg-secondary/10 text-secondary border-secondary/20"
-                >
-                  {program.courses}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge
-                  variant="outline"
-                  className="bg-info-default/10 text-info-default border-info-default/20"
-                >
-                  {program.avgClassSize}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge
-                  className={
-                    program.status === "Active"
-                      ? "bg-success-default text-white"
-                      : "bg-neutral-400 text-white"
-                  }
-                >
-                  {program.status}
-                </Badge>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {program.studentCount ?? 0}
+                </span>
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
@@ -103,13 +69,13 @@ export function ProgramsTableView({
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align='end'>
                     <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                      <Edit className="w-4 h-4 mr-2" />
+                      <Edit className='w-4 h-4 mr-2' />
                       Edit Program
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                      <Archive className="w-4 h-4 mr-2" />
+                      <Archive className='w-4 h-4 mr-2' />
                       Archive Program
                     </DropdownMenuItem>
                   </DropdownMenuContent>

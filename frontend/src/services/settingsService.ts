@@ -52,7 +52,7 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
 
     const { data, error } = await supabase
       .from("users")
-      .select("email, full_name")
+      .select("email, first_name, last_name, middle_name, suffix, title, nickname, school, department")
       .eq("id", teacherId)
       .single();
 
@@ -61,17 +61,16 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       return null;
     }
 
-    // Parse full_name into first and last name
-    const fullName = data.full_name || "";
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
     return {
-      firstName,
-      lastName,
+      firstName: data.first_name || "",
+      lastName: data.last_name || "",
+      middleName: data.middle_name || "",
+      suffix: data.suffix || "",
+      title: data.title || "",
+      nickname: data.nickname || "",
+      school: data.school || "",
+      department: data.department || "",
       email: data.email || "",
-      institution: undefined, // Institution not available in users table yet
     };
   } catch (err) {
     console.error("Unexpected error fetching teacher profile:", err);
@@ -87,7 +86,7 @@ export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> =>
 
     const { data, error } = await supabase
       .from("users")
-      .select("email, full_name")
+      .select("email, first_name, last_name, middle_name, suffix, title, nickname, school, department")
       .eq("id", teacherId)
       .single();
 
@@ -96,20 +95,17 @@ export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> =>
       return null;
     }
 
-    const row = data as { email?: string; full_name?: string };
-    const fullName = row.full_name || "";
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
-    const institution = undefined;
-
     return {
       profile: {
-        firstName,
-        lastName,
-        email: row.email || "",
-        institution,
+        firstName: data.first_name || "",
+        lastName: data.last_name || "",
+        middleName: data.middle_name || "",
+        suffix: data.suffix || "",
+        title: data.title || "",
+        nickname: data.nickname || "",
+        school: data.school || "",
+        department: data.department || "",
+        email: data.email || "",
       },
       aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
       thresholds: DEFAULT_THRESHOLD_SETTINGS,
@@ -136,28 +132,37 @@ export const updateTeacherProfile = async (
       console.warn("Email update attempted but not allowed");
     }
 
-    // Combine first and last name into full_name
-    let fullName = "";
-    if (profile.firstName !== undefined || profile.lastName !== undefined) {
-      const currentData = await supabase
-        .from("users")
-        .select("full_name")
-        .eq("id", teacherId)
-        .single();
+    // Get current data to merge
+    const { data: currentData, error: fetchError } = await supabase
+      .from("users")
+      .select("first_name, last_name, middle_name, title, nickname, suffix, school, department")
+      .eq("id", teacherId)
+      .single();
 
-      const currentFullName = currentData.data?.full_name || "";
-      const currentParts = currentFullName.trim().split(/\s+/);
-      const currentFirst = currentParts[0] || "";
-      const currentLast = currentParts.slice(1).join(" ") || "";
-
-      const firstName = profile.firstName !== undefined ? profile.firstName : currentFirst;
-      const lastName = profile.lastName !== undefined ? profile.lastName : currentLast;
-      fullName = `${firstName} ${lastName}`.trim();
+    if (fetchError) {
+       console.error("Error fetching current data:", fetchError);
+       return { success: false, error: fetchError.message };
     }
 
-    const updateData: Record<string, unknown> = {};
-    if (fullName) updateData.full_name = fullName;
-    // Institution not available in users table yet
+    const firstName = profile.firstName !== undefined ? profile.firstName : (currentData.first_name || "");
+    const lastName = profile.lastName !== undefined ? profile.lastName : (currentData.last_name || "");
+    const middleName = profile.middleName !== undefined ? profile.middleName : (currentData.middle_name || "");
+    
+    // Construct full name
+    const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
+
+    const updateData: Record<string, unknown> = {
+      full_name: fullName,
+    };
+    
+    if (profile.firstName !== undefined) updateData.first_name = profile.firstName;
+    if (profile.lastName !== undefined) updateData.last_name = profile.lastName;
+    if (profile.middleName !== undefined) updateData.middle_name = profile.middleName;
+    if (profile.suffix !== undefined) updateData.suffix = profile.suffix;
+    if (profile.title !== undefined) updateData.title = profile.title;
+    if (profile.nickname !== undefined) updateData.nickname = profile.nickname;
+    if (profile.school !== undefined) updateData.school = profile.school;
+    if (profile.department !== undefined) updateData.department = profile.department;
 
     const { error } = await supabase
       .from("users")

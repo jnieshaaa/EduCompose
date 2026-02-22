@@ -25,6 +25,9 @@ interface User {
   role: string;
   is_active: boolean;
   email_verified?: boolean;
+  onboarding_completed?: boolean;
+  title?: string;
+  nickname?: string;
 }
 
 interface AuthContextType {
@@ -67,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const queryPromise = supabase
         .from("users")
-        .select("id, email, full_name, role, is_active")
+        .select("id, email, full_name, role, is_active, onboarding_completed, title, nickname")
         .eq("auth_user_id", authUserId)
         .single();
 
@@ -92,6 +95,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role: data.role || "teacher",
         is_active: data.is_active ?? true,
         email_verified: true,
+        onboarding_completed: data.onboarding_completed ?? false,
+        title: data.title,
+        nickname: data.nickname,
       };
     } catch (err) {
       console.warn("Error fetching user from users table, using fallback");
@@ -134,6 +140,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       role: (meta["role"] as string | undefined) || "teacher",
       is_active: true,
       email_verified: !!su.email_confirmed_at,
+      onboarding_completed: false, // Default to false for new users
+      title: (meta["title"] as string | undefined),
+      nickname: (meta["nickname"] as string | undefined),
     };
   };
 

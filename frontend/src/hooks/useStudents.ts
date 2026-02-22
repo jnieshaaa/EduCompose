@@ -135,40 +135,59 @@ export function useStudents() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        // Load programs and sections to map ids -> names
-        const [
-          { data: programsData, error: programsError },
-          { data: sectionsData, error: sectionsError },
-        ] = await Promise.all([
-          supabase.from("programs").select("id, name").order("id", {
-            ascending: true,
-          }),
-          supabase.from("sections").select("id, name").order("id", {
-            ascending: true,
-          }),
-        ]);
+        const teacherId = await getTeacherId();
+        if (!teacherId) {
+          setIsLoading(false);
+          return;
+        }
+
+        // 1. Fetch programs created by this teacher
+        const { data: programsData, error: programsError } = await supabase
+          .from("programs")
+          .select("id, name")
+          .eq("created_by", teacherId)
+          .order("id", { ascending: true });
 
         if (programsError) throw programsError;
-        if (sectionsError) throw sectionsError;
 
         const programMap = new Map<number, string>();
-        const sectionMap = new Map<number, string>();
         const programNameToId = new Map<string, number>();
-        const sectionNameToId = new Map<string, number>();
+        const programIds: number[] = [];
 
         type SupabaseProgramRow = { id: number; name: string };
-        type SupabaseSectionRow = { id: number; name: string };
 
         if (programsData) {
           (programsData as SupabaseProgramRow[]).forEach((p) => {
             programMap.set(p.id, p.name);
             programNameToId.set(p.name, p.id);
+            programIds.push(p.id);
           });
           setAvailablePrograms(
             (programsData as SupabaseProgramRow[]).map((p) => p.name)
           );
           setProgramNameToIdMap(programNameToId);
         }
+
+        // If no programs, then no sections or students to fetch
+        if (programIds.length === 0) {
+          setStudents([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. Fetch sections belonging to these programs
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from("sections")
+          .select("id, name")
+          .in("program_id", programIds)
+          .order("id", { ascending: true });
+
+        if (sectionsError) throw sectionsError;
+
+        const sectionMap = new Map<number, string>();
+        const sectionNameToId = new Map<string, number>();
+
+        type SupabaseSectionRow = { id: number; name: string };
 
         if (sectionsData) {
           (sectionsData as SupabaseSectionRow[]).forEach((s) => {
@@ -181,9 +200,11 @@ export function useStudents() {
           setSectionNameToIdMap(sectionNameToId);
         }
 
+        // 3. Fetch students belonging to these programs
         const { data: studentsData, error: studentsError } = await supabase
           .from("students")
           .select("id, student_code, full_name, email, program_id, section_id")
+          .in("program_id", programIds)
           .order("id", { ascending: true });
 
         if (studentsError) {
@@ -217,6 +238,7 @@ export function useStudents() {
               pending: 0,
               missing: 0,
               avgScore: 0,
+              yearLevel: "1",
             };
           }) ?? [];
 
@@ -332,7 +354,18 @@ export function useStudents() {
       return;
     }
 
-    // 3. Check for duplicate email (case-insensitive)
+    // 3. Get teacher ID for checks and creation
+    const teacherId = await getTeacherId();
+    if (!teacherId) {
+      setIsAddDialogOpen(false);
+      setTimeout(() => {
+        showError("Unable to identify teacher. Please try logging in again.");
+      }, 100);
+      setIsCreatingStudent(false);
+      return;
+    }
+
+    // 4. Check for duplicate email (case-insensitive)
     const emailToCheck = newStudent.email.trim().toLowerCase();
     const existingStudentWithEmail = students.find(
       (s) => s.email.toLowerCase() === emailToCheck
@@ -348,11 +381,12 @@ export function useStudents() {
       return;
     }
 
-    // 4. Also check in database to catch any duplicates not in local state
+    // 5. Also check in database to catch any duplicates not in local state (scoped to teacher)
     const { data: existingEmailCheck, error: checkError } = await supabase
       .from("students")
       .select("id, email")
-      .ilike("email", newStudent.email.trim());
+      .ilike("email", newStudent.email.trim())
+      .eq("created_by", teacherId);
 
     if (checkError) {
       console.error("Error checking for duplicate email:", checkError);
@@ -368,23 +402,12 @@ export function useStudents() {
       return;
     }
 
-    // 5. Use separate name fields directly
+    // 6. Use separate name fields directly
     const first_name = newStudent.firstName.trim();
     const middle_name = newStudent.middleName.trim() || null;
     const last_name = newStudent.lastName.trim();
 
     try {
-      // 6. Get teacher ID for created_by
-      const teacherId = await getTeacherId();
-      if (!teacherId) {
-        setIsAddDialogOpen(false);
-        setTimeout(() => {
-          showError("Unable to identify teacher. Please try logging in again.");
-        }, 100);
-        setIsCreatingStudent(false);
-        return;
-      }
-
       // 7. Insert into Supabase with created_by
       const { data, error } = await supabase
         .from("students")
@@ -438,6 +461,7 @@ export function useStudents() {
         pending: 0,
         missing: 0,
         avgScore: 0,
+        yearLevel: "1",
       };
 
       // Update the student code to db id map
@@ -720,7 +744,8 @@ export function useStudents() {
             const { data: existingEmailCheck } = await supabase
               .from("students")
               .select("id, email")
-              .ilike("email", student.email.trim());
+              .ilike("email", student.email.trim())
+              .eq("created_by", teacherId);
 
             if (existingEmailCheck && existingEmailCheck.length > 0) {
               errors.push(
@@ -778,6 +803,7 @@ export function useStudents() {
             pending: 0,
             missing: 0,
             avgScore: 0,
+            yearLevel: "1",
           };
 
           // Update the student code to db id map

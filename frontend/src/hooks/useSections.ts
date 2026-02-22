@@ -40,7 +40,7 @@ const getTeacherId = async (): Promise<number | null> => {
 export function useSections() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { showError, showSuccess, showWarning } = useAlert();
+  const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
 
   // Read program filter from URL params (for drill-down from Programs)
   const urlProgramFilter = searchParams.get("program");
@@ -68,7 +68,7 @@ export function useSections() {
 
   // Map to store program tracks limit (program name -> tracks count)
   const [programTracksMap, setProgramTracksMap] = useState<Map<string, number>>(
-    new Map(initialProgramsData.map((p) => [p.name, p.tracks]))
+    new Map(initialProgramsData.map((p) => [p.name, p.tracks ?? 0]))
   );
 
   // Map to store program name -> program_id for lookups
@@ -100,10 +100,18 @@ export function useSections() {
       setIsLoading(true);
       setLoadError(null);
       try {
+        const teacherId = await getTeacherId();
+        if (!teacherId) {
+          setIsLoading(false);
+          return;
+        }
+
         // Load programs first to map program_id -> name and store tracks
+        // FILTER: Only fetch programs created by this teacher
         const { data: programsData, error: programsError } = await supabase
           .from("programs")
           .select("id, name, tracks")
+          .eq("created_by", teacherId)
           .order("id", { ascending: true });
 
         if (programsError) {
@@ -113,6 +121,8 @@ export function useSections() {
         const programMap = new Map<number, string>();
         const tracksMap = new Map<string, number>();
         const nameToIdMap = new Map<string, number>();
+        const programIds: number[] = [];
+
         type SupabaseProgramRow = {
           id: number;
           name: string;
@@ -125,6 +135,7 @@ export function useSections() {
             tracksMap.set(p.name, p.tracks ?? 0);
             // Store name -> id mapping for lookups
             nameToIdMap.set(p.name, p.id);
+            programIds.push(p.id);
           });
           setAvailablePrograms(
             (programsData as SupabaseProgramRow[]).map((p) => p.name)
@@ -133,11 +144,20 @@ export function useSections() {
           setProgramNameToIdMap(nameToIdMap);
         }
 
+        // If no programs, no sections to fetch
+        if (programIds.length === 0) {
+          setSections([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // FILTER: Only fetch sections belonging to these programs
         const { data: sectionsData, error: sectionsError } = await supabase
           .from("sections")
           .select(
             "id, name, term, students_estimated, essays_estimated, program_id"
           )
+          .in("program_id", programIds)
           .order("id", { ascending: true });
 
         if (sectionsError) {
@@ -280,7 +300,27 @@ export function useSections() {
         return;
       }
 
-      // 5. Insert into Supabase with created_by
+      // 5. Check for duplicate section in this program/term
+      const { data: existingSection, error: _ } = await supabase
+        .from("sections")
+        .select("id")
+        .eq("program_id", programId)
+        .eq("name", newSection.name)
+        .eq("term", newSection.term)
+        .maybeSingle();
+
+      if (existingSection) {
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError(
+            `A section named "${newSection.name}" already exists in "${newSection.term}" for this program.`
+          );
+        }, 100);
+        setIsCreatingSection(false);
+        return;
+      }
+
+      // 6. Insert into Supabase
       const { data, error } = await supabase
         .from("sections")
         .insert({
@@ -289,7 +329,6 @@ export function useSections() {
           term: newSection.term,
           students_estimated: parseInt(newSection.students, 10),
           essays_estimated: 0,
-          created_by: teacherId,
         })
         .select()
         .single();
@@ -297,9 +336,19 @@ export function useSections() {
       if (error) {
         console.error("Error creating section:", error);
         setIsAddDialogOpen(false);
-        setTimeout(() => {
-          showError(`Failed to create section: ${error.message}`);
-        }, 100);
+        
+        // Handle duplicate error if race condition occurs
+        if (error.code === '23505' || error.message.includes("duplicate")) {
+           setTimeout(() => {
+            showError(
+              `A section named "${newSection.name}" already exists in "${newSection.term}" for this program.`
+            );
+          }, 100);
+        } else {
+          setTimeout(() => {
+            showError(`Failed to create section: ${error.message}`);
+          }, 100);
+        }
         setIsCreatingSection(false);
         return;
       }
@@ -483,7 +532,6 @@ export function useSections() {
             term: section.term,
             students_estimated: section.students,
             essays_estimated: section.essays || 0,
-            created_by: teacherId,
           };
         });
 
@@ -574,5 +622,6 @@ export function useSections() {
     handleClearProgramFilter,
     handleSectionClick,
     handleBatchUploadComplete,
+    AlertComponent,
   };
 }

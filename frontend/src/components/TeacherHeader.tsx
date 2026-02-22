@@ -11,7 +11,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
-import { fetchTeacherNotifications, markNotificationAsRead } from "../services/notificationService";
+import {
+  fetchTeacherNotifications,
+  markNotificationAsRead,
+} from "../services/notificationService";
 import { fetchTeacherId } from "../services/rubricService";
 import type { Notification } from "../data/notificationsData";
 
@@ -80,7 +83,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const handleMarkAsRead = async (id: string) => {
     // Optimistically update UI
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
 
     // Update in Supabase
@@ -169,7 +172,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
       } else {
         // If not on a searchable page, navigate to Students page with search
         navigate(
-          `/Teacher/Students?search=${encodeURIComponent(trimmedSearch)}`
+          `/Teacher/Students?search=${encodeURIComponent(trimmedSearch)}`,
         );
       }
     } else {
@@ -189,8 +192,27 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     // For now, we'll update on submit only
   };
 
-  const userName = user?.full_name || user?.username || "User";
-  const userInitial = userName.split(/\s+/).map((part) => part.charAt(0).toUpperCase()).join("");
+  // Format display name: Title. Nickname (e.g., "Sir. Pogi")
+  const displayName = React.useMemo(() => {
+    if (!user) return "User";
+
+    const title = user.title;
+    const nickname = user.nickname;
+
+    const capitalize = (s: string) =>
+      s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+
+    if (title && nickname) {
+      return `${capitalize(title)}. ${capitalize(nickname)}`;
+    }
+
+    return nickname ? capitalize(nickname) : "User";
+  }, [user]);
+
+  // Generate initials from nickname or display name
+  const userInitial = (user?.nickname || displayName || "U")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <header className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 px-3 sm:px-4 py-3 border-b bg-white shadow-sm">
@@ -265,20 +287,9 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
           {/* User Avatar */}
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-xl font-bold flex-shrink-0"
-            title={userName}
+            title={displayName}
           >
             {userInitial}
-          </div>
-
-          {/* User Name and Role (New design) - Hidden on mobile, shown on tablet+ */}
-          <div className="hidden md:flex ml-3 flex-col text-left">
-            <p className="font-semibold text-base lg:text-lg text-neutral-900 whitespace-nowrap truncate max-w-[120px] lg:max-w-none">
-              {userName}
-            </p>
-            {/* Display role from props */}
-            <p className="text-xs lg:text-sm text-neutral-500 whitespace-nowrap">
-              {role}
-            </p>
           </div>
 
           <AnimatePresence>
@@ -292,7 +303,9 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
               >
                 <div className="bg-white shadow-lg rounded-rd overflow-hidden border border-neutral-200">
                   <div className="px-4 py-3 border-b border-neutral-300/30">
-                    <p className="font-semibold text-neutral-900">{userName}</p>
+                    <p className="font-semibold text-neutral-900">
+                      {displayName}
+                    </p>
                     <p className="text-sm text-neutral-400">
                       {user?.email || ""}
                     </p>

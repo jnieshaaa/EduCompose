@@ -36,6 +36,11 @@ const getTeacherId = async (): Promise<number | null> => {
   }
 };
 
+type SupabaseProgramRow = {
+  id: number;
+  name: string;
+};
+
 export function usePrograms() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,17 +58,24 @@ export function usePrograms() {
   const [newProgram, setNewProgram] = useState(initialNewProgramState);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Load programs from Supabase (teacher-end) – falls back to mock data on error.
+  // Load programs from Supabase (teacher-end) – filtered by authenticated teacher.
   useEffect(() => {
     const fetchPrograms = async () => {
       setIsLoading(true);
       setLoadError(null);
       try {
+        const teacherId = await getTeacherId();
+        if (!teacherId) {
+          // If we can't identify the teacher, we shouldn't show any data
+          // (or potentially redirect to login, but here we just show empty)
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("programs")
-          .select(
-            "id, name, description, tracks, courses, avg_class_size, status"
-          )
+          .select("id, name")
+          .eq("created_by", teacherId)
           .order("id", { ascending: true });
 
         if (error) {
@@ -72,25 +84,12 @@ export function usePrograms() {
           return;
         }
 
-        type SupabaseProgramRow = {
-          id: number;
-          name: string;
-          description?: string | null;
-          tracks?: number | null;
-          courses?: number | null;
-          avg_class_size?: number | null;
-          status?: string | null;
-        };
-
         const mapped: Program[] =
           (data as SupabaseProgramRow[] | undefined)?.map((row) => ({
             id: row.id,
             name: row.name,
-            description: row.description ?? "",
-            tracks: (row.tracks ?? 0) as number,
-            courses: (row.courses ?? 0) as number,
-            avgClassSize: (row.avg_class_size ?? 0) as number,
-            status: (row.status ?? "Active") as string,
+            sectionCount: 0,
+            studentCount: 0,
           })) ?? [];
         setPrograms(mapped);
       } catch (err) {
@@ -113,22 +112,23 @@ export function usePrograms() {
 
   // Filter Logic
   const filteredPrograms = useMemo(() => {
-    return programs.filter(
-      (program) =>
-        program.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        program.description.toLowerCase().includes(searchQuery.toLowerCase())
+    return programs.filter((program) =>
+      program.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [programs, searchQuery]);
 
   // Calculate summary stats
   const stats = useMemo(() => {
-    const totalStudents = programs.reduce(
-      (acc, p) => acc + p.avgClassSize * p.tracks,
-      0
+    const totalPrograms = programs.length;
+    const totalSections = programs.reduce(
+      (acc, p) => acc + (p.sectionCount ?? 0),
+      0,
     );
-    const totalSections = programs.reduce((acc, p) => acc + p.tracks, 0);
-    const activePrograms = programs.filter((p) => p.status === "Active").length;
-    return { totalStudents, totalSections, activePrograms };
+    const totalStudents = programs.reduce(
+      (acc, p) => acc + (p.studentCount ?? 0),
+      0,
+    );
+    return { totalPrograms, totalSections, totalStudents };
   }, [programs]);
 
   // HANDLE INPUT CHANGE
@@ -137,17 +137,16 @@ export function usePrograms() {
   };
 
   // HANDLE CREATE FUNCTION
-  const handleCreateProgram = async () => {
+  const handleCreateProgram = async (
+    // programsToCreate: Array<{ name: string; description: string }>,
+    programsToCreate: Array<{ name: string }>,
+  ) => {
     // Prevent multiple submissions
     if (isCreating) return;
     setIsCreating(true);
 
-    // 1. Validate fields (Basic check)
-    if (
-      !newProgram.name ||
-      !newProgram.description ||
-      parseInt(newProgram.tracks) < 0
-    ) {
+    // 1. Validate fields
+    if (!programsToCreate || programsToCreate.length === 0) {
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError("Please fill in required fields correctly.");
@@ -156,47 +155,44 @@ export function usePrograms() {
       return;
     }
 
-    try {
-      // 2. Check for duplicate program name (case-insensitive)
-      const trimmedProgramName = newProgram.name.trim();
-      const { data: existingPrograms, error: checkError } = await supabase
-        .from("programs")
-        .select("id, name")
-        .ilike("name", trimmedProgramName);
+    const normalizedPrograms = programsToCreate.map((program) => ({
+      name: program.name.trim(),
+      // description: program.description.trim(),
+    }));
 
-      if (checkError) {
-        console.error("Error checking for duplicate program:", checkError);
-        setIsAddDialogOpen(false);
-        setTimeout(() => {
-          showError(`Failed to verify program name: ${checkError.message}`);
-        }, 100);
-        setIsCreating(false);
-        return;
-      }
+    const invalidProgram = normalizedPrograms.find(
+      // (program) => !program.name || !program.description,
+      (program) => !program.name,
+    );
 
-      if (existingPrograms && existingPrograms.length > 0) {
-        // Duplicate found - close AddProgramModal and show error modal
-        console.log("[usePrograms] Duplicate program found:", existingPrograms);
-        setIsCreating(false);
-        // Close the AddProgramModal temporarily
+    if (invalidProgram) {
+      setIsAddDialogOpen(false);
+      setTimeout(() => {
+        showError("Please fill in required fields correctly.");
+      }, 100);
+      setIsCreating(false);
+      return;
+    }
+
+    const inputNameSet = new Set<string>();
+    for (const program of normalizedPrograms) {
+      const lower = program.name.toLowerCase();
+      if (inputNameSet.has(lower)) {
         setIsAddDialogOpen(false);
-        // Show error modal immediately
         setTimeout(() => {
           showError(
-            `A program with the name "${trimmedProgramName}" already exists. Please choose a different name.`,
-            {
-              title: "Duplicate Program",
-              onConfirm: () => {
-                // When OK is clicked, reopen the AddProgramModal so user can edit
-                setIsAddDialogOpen(true);
-              },
-            }
+            "Duplicate program names detected in your list. Please remove duplicates and try again.",
+            { title: "Duplicate Program" },
           );
         }, 100);
+        setIsCreating(false);
         return;
       }
+      inputNameSet.add(lower);
+    }
 
-      // 3. Get teacher ID for created_by
+    try {
+      // 2. Get teacher ID for created_by
       const teacherId = await getTeacherId();
       if (!teacherId) {
         setIsAddDialogOpen(false);
@@ -207,43 +203,67 @@ export function usePrograms() {
         return;
       }
 
-      // 4. Insert into Supabase with created_by
+      // 3. Check for duplicates against existing programs (case-insensitive)
+      const existingLowerNames = new Set(
+        programs.map((program) => program.name.toLowerCase()),
+      );
+
+      const duplicatesExisting = normalizedPrograms.filter((program) =>
+        existingLowerNames.has(program.name.toLowerCase()),
+      );
+
+      const uniqueToInsert = normalizedPrograms.filter(
+        (program) => !existingLowerNames.has(program.name.toLowerCase()),
+      );
+
+      if (uniqueToInsert.length === 0) {
+        setIsCreating(false);
+        setIsAddDialogOpen(false);
+        setTimeout(() => {
+          showError(
+            `All selected programs already exist: ${duplicatesExisting
+              .map((p) => p.name)
+              .join(", ")}.`,
+            {
+              title: "Duplicate Program",
+              onConfirm: () => {
+                setIsAddDialogOpen(true);
+              },
+            },
+          );
+        }, 100);
+        return;
+      }
+
+      // 4. Insert into Supabase with created_by (batch insert)
+      const programsToInsert = uniqueToInsert.map((program) => ({
+        name: program.name,
+        created_by: teacherId,
+      }));
+
       const { data, error } = await supabase
         .from("programs")
-        .insert({
-          name: trimmedProgramName,
-          description: newProgram.description,
-          tracks: parseInt(newProgram.tracks, 10),
-          courses: 0,
-          avg_class_size: 0,
-          status: newProgram.status || "Active",
-          created_by: teacherId,
-        })
-        .select()
-        .single();
+        .insert(programsToInsert)
+        .select();
 
       if (error) {
-        console.error("Error creating program:", error);
+        console.error("Error creating program(s):", error);
         setIsCreating(false);
-        // Check if it's a unique constraint violation (database-level protection)
         if (
-          error.code === "23505" || // PostgreSQL unique violation error code
+          error.code === "23505" ||
           error.message?.toLowerCase().includes("duplicate") ||
           error.message?.toLowerCase().includes("unique")
         ) {
-          // Close the AddProgramModal temporarily
           setIsAddDialogOpen(false);
-          // Show error modal immediately
           setTimeout(() => {
             showError(
-              `A program with the name "${trimmedProgramName}" already exists. Please choose a different name.`,
+              "One or more programs already exist. Please use different names.",
               {
                 title: "Duplicate Program",
                 onConfirm: () => {
-                  // When OK is clicked, reopen the AddProgramModal so user can edit
                   setIsAddDialogOpen(true);
                 },
-              }
+              },
             );
           }, 100);
         } else {
@@ -255,25 +275,34 @@ export function usePrograms() {
         return;
       }
 
-      // 4. Map Supabase response to Program type and add to the list
-      const newProgramObject: Program = {
-        id: data.id,
-        name: data.name,
-        description: data.description ?? "",
-        tracks: data.tracks ?? 0,
-        courses: data.courses ?? 0,
-        avgClassSize: data.avg_class_size ?? 0,
-        status: data.status ?? "Active",
-      };
+      const createdPrograms: Program[] = (
+        (data as SupabaseProgramRow[] | null) || []
+      ).map((row) => ({
+        id: row.id,
+        name: row.name,
+      }));
 
-      setPrograms((prevPrograms) => [newProgramObject, ...prevPrograms]);
+      setPrograms((prevPrograms) => [...createdPrograms, ...prevPrograms]);
+
+      if (duplicatesExisting.length > 0) {
+        setTimeout(() => {
+          showWarning(
+            `Skipped existing program(s): ${duplicatesExisting
+              .map((p) => p.name)
+              .join(", ")}.`,
+            { title: "Duplicate Program" },
+          );
+        }, 100);
+      }
 
       // 5. Reset form and close dialog
       setNewProgram(initialNewProgramState);
       setIsAddDialogOpen(false);
       setIsCreating(false);
       setTimeout(() => {
-        showSuccess("Program created successfully!");
+        showSuccess(
+          `Program${createdPrograms.length > 1 ? "s" : ""} created successfully!`,
+        );
       }, 100);
     } catch (err) {
       console.error("Unexpected error creating program:", err);
@@ -294,7 +323,7 @@ export function usePrograms() {
   const handleBatchUploadComplete = async (result: UploadResult) => {
     if (result.success && result.data) {
       const importedPrograms = result.data as Program[];
-      
+
       if (importedPrograms.length === 0) {
         return;
       }
@@ -310,11 +339,6 @@ export function usePrograms() {
         // Prepare programs for Supabase insertion
         const programsToInsert = importedPrograms.map((program) => ({
           name: program.name.trim(),
-          description: program.description || "",
-          tracks: program.tracks,
-          courses: program.courses || 0,
-          avg_class_size: program.avgClassSize || 0,
-          status: program.status || "Active",
           created_by: teacherId,
         }));
 
@@ -326,30 +350,24 @@ export function usePrograms() {
 
         if (error) {
           console.error("Error saving batch programs to Supabase:", error);
-          showError(
-            `Failed to save programs to database: ${error.message}`
-          );
+          showError(`Failed to save programs to database: ${error.message}`);
           return;
         }
 
         // Map Supabase response to Program type
-        const savedPrograms: Program[] = (insertedPrograms || []).map((p: any) => ({
+        const savedPrograms: Program[] = (
+          (insertedPrograms as SupabaseProgramRow[] | null) || []
+        ).map((p) => ({
           id: p.id,
           name: p.name,
-          description: p.description ?? "",
-          tracks: p.tracks ?? 0,
-          courses: p.courses ?? 0,
-          avgClassSize: p.avg_class_size ?? 0,
-          status: p.status ?? "Active",
         }));
 
         // Add imported programs to the list
-        setPrograms((prevPrograms) => [
-          ...savedPrograms,
-          ...prevPrograms,
-        ]);
+        setPrograms((prevPrograms) => [...savedPrograms, ...prevPrograms]);
 
-        showSuccess(`Successfully imported ${savedPrograms.length} program(s)!`);
+        showSuccess(
+          `Successfully imported ${savedPrograms.length} program(s)!`,
+        );
       } catch (err) {
         console.error("Unexpected error saving batch programs:", err);
         showError("An unexpected error occurred while saving programs.");
@@ -381,18 +399,18 @@ export function usePrograms() {
 
             // Remove from local state
             setPrograms((prevPrograms) =>
-              prevPrograms.filter((p) => p.id !== program.id)
+              prevPrograms.filter((p) => p.id !== program.id),
             );
 
             showSuccess("Program deleted successfully!");
           } catch (err) {
             console.error("Unexpected error deleting program:", err);
             showError(
-              "An unexpected error occurred while deleting the program."
+              "An unexpected error occurred while deleting the program.",
             );
           }
         },
-      }
+      },
     );
   };
 

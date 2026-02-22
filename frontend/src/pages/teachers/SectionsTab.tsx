@@ -3,7 +3,7 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { Plus, Users } from "lucide-react";
 import { BatchUploadDialog } from "../../components/ui/BatchUploadDialog";
-import { useAlert } from "../../hooks/useAlert";
+
 import { useSections } from "../../hooks/useSections";
 import { AddSectionDialog } from "../../components/sections/AddSectionDialog";
 import { EditSectionDialog } from "../../components/sections/EditSectionDialog";
@@ -12,7 +12,6 @@ import { SectionsCardView } from "../../components/sections/SectionsCardView";
 import { SectionsTableView } from "../../components/sections/SectionsTableView";
 
 export function SectionsTab() {
-  const { AlertComponent } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   const {
@@ -46,6 +45,7 @@ export function SectionsTab() {
     handleClearProgramFilter,
     handleSectionClick,
     handleBatchUploadComplete,
+    AlertComponent,
   } = useSections();
 
   return (

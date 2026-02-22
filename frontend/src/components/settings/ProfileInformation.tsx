@@ -33,7 +33,31 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="title">Title (e.g., Mr., Ms., Dr.)</Label>
+              <Input
+                id="title"
+                type="text"
+                className="mt-1"
+                value={profile.title || ""}
+                onChange={(value) => onProfileChange({ title: value })}
+                disabled={isSaving}
+                placeholder="Title"
+              />
+            </div>
+             <div>
+              <Label htmlFor="nickname">Nickname (Display Name)</Label>
+              <Input
+                id="nickname"
+                type="text"
+                className="mt-1"
+                value={profile.nickname || ""}
+                onChange={(value) => onProfileChange({ nickname: value })}
+                disabled={isSaving}
+                placeholder="Nickname"
+              />
+            </div>
             <div>
               <Label htmlFor="first-name">First Name</Label>
               <Input
@@ -46,6 +70,18 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
+              <Label htmlFor="middle-name">Middle Name</Label>
+              <Input
+                id="middle-name"
+                type="text"
+                className="mt-1"
+                value={profile.middleName || ""}
+                onChange={(value) => onProfileChange({ middleName: value })}
+                disabled={isSaving}
+                placeholder="Optional"
+              />
+            </div>
+            <div>
               <Label htmlFor="last-name">Last Name</Label>
               <Input
                 id="last-name"
@@ -54,6 +90,40 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
                 value={profile.lastName}
                 onChange={(value) => onProfileChange({ lastName: value })}
                 disabled={isSaving}
+              />
+            </div>
+            <div>
+              <Label htmlFor="suffix">Suffix</Label>
+              <Input
+                id="suffix"
+                type="text"
+                className="mt-1"
+                value={profile.suffix || ""}
+                onChange={(value) => onProfileChange({ suffix: value })}
+                disabled={isSaving}
+                placeholder="Optional (e.g., Jr.)"
+              />
+            </div>
+            <div>
+              <Label htmlFor="school">School Code</Label>
+              <Input
+                id="school"
+                type="text"
+                className="mt-1"
+                value={profile.school || ""}
+                disabled
+                placeholder="School Code"
+              />
+            </div>
+            <div>
+              <Label htmlFor="department">Department Code</Label>
+              <Input
+                id="department"
+                type="text"
+                className="mt-1"
+                value={profile.department || ""}
+                disabled
+                placeholder="Department Code"
               />
             </div>
           </div>
@@ -71,18 +141,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               assistance.
             </p>
           </div>
-          <div>
-            <Label htmlFor="institution">Institution/Organization</Label>
-            <Input
-              id="institution"
-              type="text"
-              className="mt-1"
-              value={profile.institution || ""}
-              onChange={(value) => onProfileChange({ institution: value })}
-              placeholder="Enter your institution or organization"
-              disabled={isSaving}
-            />
-          </div>
+          
           <div className="flex justify-end pt-2">
             <Button
               className="bg-primary hover:bg-primary-300"

@@ -33,10 +33,12 @@ export function useAuthModal(onClose: () => void) {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Signup form state (email + password only; no confirm password)
+  // Signup form state
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signupError, setSignupError] = useState("");
   const [signupSuccess, setSignupSuccess] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -533,13 +535,17 @@ export function useAuthModal(onClose: () => void) {
     setLoginError,
     isLoggingIn,
     handleLogin,
-    // Signup state (no confirm password)
+    // Signup state
     signupEmail,
     setSignupEmail,
     signupPassword,
     setSignupPassword,
+    signupConfirmPassword,
+    setSignupConfirmPassword,
     showSignupPassword,
     setShowSignupPassword,
+    showSignupConfirmPassword,
+    setShowSignupConfirmPassword,
     signupError,
     setSignupError,
     signupSuccess,

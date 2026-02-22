@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { Plus, BookOpen, Trash2, X, CheckSquare } from "lucide-react";
+import { Plus, BookOpen } from "lucide-react";
 import { BatchUploadDialog } from "../../components/ui/BatchUploadDialog";
 import { useAlert } from "../../hooks/useAlert";
 import { usePrograms } from "../../hooks/usePrograms";
@@ -27,28 +27,16 @@ export function ProgramsTab() {
     loadError,
     searchQuery,
     isAddDialogOpen,
-    newProgram,
     isCreating,
     stats,
     setSearchQuery,
     setIsAddDialogOpen,
-    handleInputChange,
     handleCreateProgram,
     handleProgramClick,
     handleDeleteProgram,
     handleBatchUploadComplete,
     AlertComponent,
   } = usePrograms();
-
-  // Removed: Selection handlers not needed since teachers cannot delete programs
-
-  // --- Action Handlers ---
-
-  // Removed: Teachers cannot delete programs
-  // const handleDeleteSelected = () => {
-  //   if (selectedIds.length === 0) return;
-
-  //   if (
   //     window.confirm(
   //       `Are you sure you want to delete ${selectedIds.length} programs?`
   //     )
@@ -108,7 +96,7 @@ export function ProgramsTab() {
 
       {/* Summary Stats */}
       <ProgramsStatsCards
-        activePrograms={stats.activePrograms}
+        totalPrograms={stats.totalPrograms}
         totalSections={stats.totalSections}
         totalStudents={stats.totalStudents}
       />
@@ -172,8 +160,6 @@ export function ProgramsTab() {
       <AddProgramDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
-        newProgram={newProgram}
-        onInputChange={handleInputChange}
         onSubmit={handleCreateProgram}
         isCreating={isCreating}
       />
