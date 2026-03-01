@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS users (
   id           bigserial PRIMARY KEY,
   auth_user_id uuid UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   email        text UNIQUE NOT NULL,
-  full_name    text,
   first_name   text,
   middle_name  text,
   last_name    text,

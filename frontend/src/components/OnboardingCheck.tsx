@@ -26,7 +26,7 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
         // 2. Query using the confirmed UUID from Supabase Auth
         const { data, error } = await supabase
           .from('users')
-          .select('onboarding_completed, title, nickname')
+          .select('onboarding_completed, title, nickname, role')
           .eq('auth_user_id', authUser.id) // Guaranteed UUID
           .single();
 
@@ -35,9 +35,14 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
           // If row doesn't exist, they definitely haven't completed onboarding
           setOnboardingCompleted(false);
         } else {
-          // User must have completed onboarding AND have title/nickname set
-          const isComplete = data?.onboarding_completed && data?.title && data?.nickname;
-          setOnboardingCompleted(!!isComplete);
+          // Admins skip onboarding
+          if (data?.role === 'admin') {
+            setOnboardingCompleted(true);
+          } else {
+            // User must have completed onboarding AND have title/nickname set
+            const isComplete = data?.onboarding_completed && data?.title && data?.nickname;
+            setOnboardingCompleted(!!isComplete);
+          }
         }
       } catch (error) {
         console.error('Error checking onboarding status:', error);

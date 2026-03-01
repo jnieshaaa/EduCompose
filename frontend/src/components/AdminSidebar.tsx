@@ -1,245 +1,200 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Home,
   Users,
-  Shield,
   Settings,
   ClipboardCheck,
   BookOpen,
+  Info,
+  LogOut,
+  ChevronUp,
+  ChevronDown,
+  GraduationCap,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import Tooltip from "./ui/Tooltip";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 
-interface MenuItem {
-  icon: React.ReactNode;
-  label: string;
-  path: string;
-}
-
-interface AdminSidebarProps {
-  isSidebarOpen: boolean;
-  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const AdminSidebar: React.FC<AdminSidebarProps> = ({
-  isSidebarOpen,
-  setIsSidebarOpen,
-}) => {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [isTablet, setIsTablet] = useState(
-    window.innerWidth >= 768 && window.innerWidth < 1024
-  );
+const AdminSidebar: React.FC = () => {
+  const { user, logout } = useAuth();
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  // Close menu when clicking outside
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const navigate = useNavigate();
   const location = useLocation();
+  const SIDEBAR_WIDTH = "240px";
 
-  // Admin menu items
-  const menuItems: MenuItem[] = useMemo(
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
+
+  const menuItems = useMemo(
     () => [
       {
-        icon: <Home className="w-5 h-5" />,
+        icon: <Home size={20} />,
         label: "Dashboard",
         path: "/Admin/Dashboard",
       },
       {
-        icon: <Users className="w-5 h-5" />,
+        icon: <Users size={20} />,
         label: "User Management",
         path: "/Admin/Users",
       },
       {
-        icon: <ClipboardCheck className="w-5 h-5" />,
+        icon: <GraduationCap size={20} />,
+        label: "Schools",
+        path: "/Admin/Schools",
+      },
+      {
+        icon: <ClipboardCheck size={20} />,
         label: "Platform Rubrics",
         path: "/Admin/Rubrics",
       },
       {
-        icon: <BookOpen className="w-5 h-5" />,
+        icon: <BookOpen size={20} />,
         label: "Content Management",
         path: "/Admin/Content",
       },
       {
-        icon: <Settings className="w-5 h-5" />,
+        icon: <Settings size={20} />,
         label: "Settings",
         path: "/Admin/Settings",
       },
     ],
-    []
+    [],
   );
 
-  const [activePath, setActivePath] = useState(location.pathname);
-
-  useEffect(() => {
-    setActivePath(location.pathname);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
-      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const handleItemClick = (path: string) => {
-    navigate(path);
-    if (!isDesktop && !isTablet) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  const isItemActive = (path: string): boolean => {
-    return location.pathname === path || location.pathname.startsWith(path + "/");
-  };
-
-  const textVariants = {
-    hidden: { opacity: 0, width: 0 },
-    visible: { opacity: 1, width: "auto" },
-  };
+  const isItemActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
     <>
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-primary text-white transition-all duration-300 ${
-          isSidebarOpen ? "w-64" : "w-20"
-        } ${!isDesktop && !isTablet && !isSidebarOpen ? "-translate-x-full" : ""}`}
+        className="fixed left-0 top-0 h-screen flex flex-col bg-primary border-r border-white/10 text-white z-40"
+        style={{ width: SIDEBAR_WIDTH }}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo Section */}
-          <div className="p-4 border-b border-primary-600">
-            <div className="flex items-center justify-center">
+        {/* Header */}
+        <div className="flex items-center h-20 px-6 border-b border-white/10">
+          <div
+            className="relative w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1 cursor-pointer"
+            onMouseEnter={() => setLogoShine(true)}
+          >
+            <img
+              src={eduComposeLogo}
+              alt="Logo"
+              className="w-full h-full object-contain"
+            />
+            <div
+              className={`absolute top-0 left-0 w-full h-full bg-shine-gradient transform -translate-x-full ${logoShine ? "animate-shine" : ""}`}
+              onAnimationEnd={() => setLogoShine(false)}
+            />
+          </div>
+          <div className="ml-3">
+            <h1 className="font-bold text-xl">EduCompose</h1>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-4 py-6 overflow-y-auto">
+          <ul className="space-y-1.5">
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isItemActive(item.path) ? "bg-white text-primary" : "text-white/70 hover:bg-white/10"}`}
+                >
+                  {item.icon}
+                  <span className="font-medium text-sm">{item.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* User Profile Dropdown */}
+        <div className="p-4 border-t border-white/10 relative" ref={menuRef}>
+          {isUserMenuOpen && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 z-50">
               <button
                 onClick={() => {
-                  setLogoShine(true);
-                  setTimeout(() => setLogoShine(false), 600);
-                  navigate("/Admin/Dashboard");
+                  setIsInfoModalOpen(true);
+                  setIsUserMenuOpen(false);
                 }}
-                className="relative"
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
               >
-                <img
-                  src={eduComposeLogo}
-                  alt="EduCompose Logo"
-                  className={`h-12 w-12 transition-all duration-300 ${
-                    logoShine ? "scale-110 brightness-125" : ""
-                  }`}
-                />
+                <Info size={16} /> About Platform
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} /> Sign Out
               </button>
             </div>
-          </div>
+          )}
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4">
-            <ul className="space-y-2">
-              {menuItems.map((item) => {
-                const isActive = isItemActive(item.path);
-                return (
-                  <li key={item.label} className="w-full">
-                    <Tooltip
-                      content={item.label}
-                      position="right"
-                      delay={200}
-                      disabled={isSidebarOpen}
-                    >
-                      <button
-                        onClick={() => handleItemClick(item.path)}
-                        className={`btn-fade group w-full flex items-center rounded-rd ${
-                          isActive
-                            ? "bg-neutral-50 text-primary"
-                            : "bg-primary text-white hover:text-support-superlight"
-                        }`}
-                      >
-                        <div className="flex items-center w-full flex-1">
-                          <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                            {item.icon}
-                          </span>
-                          <AnimatePresence>
-                            {isSidebarOpen && (
-                              <motion.span
-                                initial="hidden"
-                                animate="visible"
-                                exit="hidden"
-                                variants={textVariants}
-                                className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                              >
-                                {item.label}
-                              </motion.span>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </button>
-                    </Tooltip>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          {/* Info Button */}
-          <div className="p-4 border-t border-primary-600">
-            <Tooltip
-              content="About EduCompose"
-              position="right"
-              delay={200}
-              disabled={isSidebarOpen}
-            >
-              <button
-                onClick={() => setIsInfoModalOpen(true)}
-                className="btn-fade group w-full flex items-center rounded-rd bg-primary text-white hover:text-support-superlight"
-              >
-                <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                  <Shield className="w-5 h-5" />
-                </span>
-                <AnimatePresence>
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={textVariants}
-                      className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                    >
-                      About
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
-            </Tooltip>
-          </div>
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold">
+              {user?.full_name.charAt(0) || "U"}
+            </div>
+            <div className="flex-1 text-left overflow-hidden">
+              <p className="text-sm font-semibold truncate">
+                {user?.full_name || "User"}
+              </p>
+              <p className="text-[10px] text-white/50 truncate">
+                {user?.role === "admin" ? "Administrator" : "User"}
+              </p>
+            </div>
+            {isUserMenuOpen ? (
+              <ChevronUp size={16} className="text-white/50" />
+            ) : (
+              <ChevronDown size={16} className="text-white/50" />
+            )}
+          </button>
         </div>
       </aside>
 
-      {/* Info Modal */}
+      <div
+        style={{ marginLeft: SIDEBAR_WIDTH }}
+        className="min-h-screen bg-neutral-50"
+      />
+
       <Modal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
         title="About EduCompose"
       >
-        <div className="space-y-4">
-          <p className="text-neutral-700">
-            EduCompose is a comprehensive essay evaluation platform designed for
-            educators to efficiently grade and provide feedback on student essays.
-          </p>
-          <p className="text-neutral-700">
-            <strong>Version:</strong> 1.0.0
-          </p>
-        </div>
+        <p className="text-neutral-600">
+          EduCompose v1.0.0 — Empowering educators through intelligent essay
+          evaluation.
+        </p>
       </Modal>
-
-      {/* Overlay for mobile */}
-      {!isDesktop && !isTablet && isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
     </>
   );
 };
 
 export default AdminSidebar;
-

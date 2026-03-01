@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { UserPlus, Search, Edit2, Trash2, Key, Filter, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { UserPlus, Search, Edit2, Trash2, Key, Filter, X, MoreVertical } from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -11,7 +11,6 @@ import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
 interface User {
   id: string;
   email: string;
-  full_name: string;
   first_name?: string;
   middle_name?: string;
   last_name?: string;
@@ -27,10 +26,23 @@ export function AdminUsersTab() {
   const [loading, setLoading] = useState(true);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [resettingPasswordUser, setResettingPasswordUser] = useState<User | null>(null);
+  const [resettingPasswordUser, setResettingPasswordUser] =
+    useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [error, setError] = useState("");
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadUsers();
@@ -45,7 +57,8 @@ export function AdminUsersTab() {
         role: roleFilter !== "all" ? roleFilter : undefined,
         search: searchTerm || undefined,
       });
-      setUsers(data);
+      // Filter out admin users
+      setUsers(data.filter(user => user.role !== 'admin'));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load users");
     } finally {
@@ -54,7 +67,11 @@ export function AdminUsersTab() {
   };
 
   const handleDeleteUser = async (userId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete user ${email}? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete user ${email}? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -94,13 +111,14 @@ export function AdminUsersTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">User Management</h1>
-          <p className="text-neutral-600 mt-1">Create, edit, and manage user accounts</p>
+          <h1 className="text-3xl font-bold text-neutral-900">
+            User Management
+          </h1>
+          <p className="text-neutral-600 mt-1">
+            Create, edit, and manage user accounts
+          </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowCreateUserModal(true)}
-        >
+        <Button variant="primary" onClick={() => setShowCreateUserModal(true)}>
           <UserPlus className="w-5 h-5 mr-2" />
           Create User
         </Button>
@@ -115,7 +133,7 @@ export function AdminUsersTab() {
               type="text"
               placeholder="Search by email or name..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
               className="pl-10"
             />
           </div>
@@ -127,7 +145,6 @@ export function AdminUsersTab() {
               className="px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
               <option value="teacher">Teacher</option>
               <option value="student">Student</option>
             </select>
@@ -199,16 +216,15 @@ export function AdminUsersTab() {
                   <tr key={user.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-neutral-900">
-                          {user.full_name}
+                        <div className="text-sm text-neutral-500">
+                          {user.email}
                         </div>
-                        <div className="text-sm text-neutral-500">{user.email}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(
-                          user.role
+                          user.role,
                         )}`}
                       >
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -243,39 +259,57 @@ export function AdminUsersTab() {
                         : "Never"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="relative" ref={openDropdown === user.id ? dropdownRef : null}>
                         <button
-                          onClick={() => setEditingUser(user)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit user"
+                          onClick={() => setOpenDropdown(openDropdown === user.id ? null : user.id)}
+                          className="p-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <MoreVertical className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setResettingPasswordUser(user)}
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                          title="Reset password"
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            user.is_active
-                              ? "text-yellow-600 hover:bg-yellow-50"
-                              : "text-green-600 hover:bg-green-50"
-                          }`}
-                          title={user.is_active ? "Deactivate" : "Activate"}
-                        >
-                          {user.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id, user.email)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete user"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {openDropdown === user.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-10">
+                            <button
+                              onClick={() => {
+                                setEditingUser(user);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit User
+                            </button>
+                            <button
+                              onClick={() => {
+                                setResettingPasswordUser(user);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            >
+                              <Key className="w-4 h-4" />
+                              Reset Password
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleToggleActive(user);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            >
+                              {user.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            <div className="border-t border-neutral-200 my-1"></div>
+                            <button
+                              onClick={() => {
+                                handleDeleteUser(user.id, user.email);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete User
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>

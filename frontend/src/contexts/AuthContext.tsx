@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
@@ -28,6 +29,8 @@ interface User {
   onboarding_completed?: boolean;
   title?: string;
   nickname?: string;
+  school?: string;
+  department?: string;
 }
 
 interface AuthContextType {
@@ -57,20 +60,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const countdownIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch user data from the users table with timeout
-  const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
+  const fetchUserFromTable = async (
+    authUserId: string,
+  ): Promise<User | null> => {
     try {
       // Add timeout to prevent hanging - 2 seconds max
-      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
-        setTimeout(() => resolve({ data: null, error: { message: "Timeout" } }), 2000);
+      const timeoutPromise = new Promise<{
+        data: null;
+        error: { message: string };
+      }>((resolve) => {
+        setTimeout(
+          () => resolve({ data: null, error: { message: "Timeout" } }),
+          2000,
+        );
       });
 
       const queryPromise = supabase
         .from("users")
-        .select("id, email, full_name, role, is_active, onboarding_completed, title, nickname")
+        .select(
+          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname, school, department",
+        )
         .eq("auth_user_id", authUserId)
         .single();
 
@@ -79,27 +90,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If timeout occurred or error
       if (result.error || !result.data) {
         // Don't log as error if it's just that the record doesn't exist yet or timeout
-        if (result.error?.message !== "Timeout" && result.error?.code !== "PGRST116") {
-          console.warn("User not found in users table, using metadata fallback");
+        const isPostgrestError = result.error && "code" in result.error;
+        if (
+          result.error?.message !== "Timeout" &&
+          (!isPostgrestError ||
+            (result.error as { code?: string }).code !== "PGRST116")
+        ) {
+          console.warn(
+            "User not found in users table, using metadata fallback",
+          );
         }
         return null;
       }
 
       const { data } = result;
 
+      // Compute full_name from first_name, middle_name, last_name
+      const nameParts = [
+        data.first_name,
+        data.middle_name,
+        data.last_name,
+      ].filter(Boolean);
+      const fullName =
+        nameParts.length > 0
+          ? nameParts.join(" ")
+          : data.email?.split("@")[0] || "User";
+
       return {
         id: data.id.toString(),
         email: data.email ?? "",
         username: data.email ?? "",
-        full_name: data.full_name || data.email?.split("@")[0] || "User",
+        full_name: fullName,
         role: data.role || "teacher",
         is_active: data.is_active ?? true,
         email_verified: true,
         onboarding_completed: data.onboarding_completed ?? false,
         title: data.title,
         nickname: data.nickname,
+        school: data.school,
+        department: data.department,
       };
-    } catch (err) {
+    } catch {
       console.warn("Error fetching user from users table, using fallback");
       return null;
     }
@@ -126,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const metadata = su.user_metadata ?? {};
     const meta = metadata as Record<string, unknown>;
     const fullName =
+      (meta["display_name"] as string | undefined) ||
       (meta["full_name"] as string | undefined) ||
       (meta["name"] as string | undefined) ||
       su.email?.split("@")[0] ||
@@ -141,8 +173,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       is_active: true,
       email_verified: !!su.email_confirmed_at,
       onboarding_completed: false, // Default to false for new users
-      title: (meta["title"] as string | undefined),
-      nickname: (meta["nickname"] as string | undefined),
+      title: meta["title"] as string | undefined,
+      nickname: meta["nickname"] as string | undefined,
     };
   };
 
@@ -181,8 +213,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let userError;
       try {
         const getUserPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise<{ data: { user: null }; error: { message: string } }>((resolve) => {
-          setTimeout(() => resolve({ data: { user: null }, error: { message: "Timeout" } }), 5000);
+        const timeoutPromise = new Promise<{
+          data: { user: null };
+          error: { message: string };
+        }>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({ data: { user: null }, error: { message: "Timeout" } }),
+            5000,
+          );
         });
 
         const userResult = await Promise.race([getUserPromise, timeoutPromise]);
@@ -253,15 +292,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
-
-  // Cleanup countdown interval on unmount
-  useEffect(() => {
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-      }
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = (token: string, userData?: User) => {
@@ -291,51 +322,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Handle inactivity warning
-  const handleInactivityWarning = (seconds: number) => {
-    setRemainingSeconds(seconds);
+  const handleInactivityWarning = () => {
     setShowInactivityWarning(true);
-    
-    // Clear any existing countdown interval
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-    }
-    
-    // Start countdown timer
-    let currentSeconds = seconds;
-    countdownIntervalRef.current = setInterval(() => {
-      currentSeconds -= 1;
-      setRemainingSeconds(currentSeconds);
-      
-      if (currentSeconds <= 0) {
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-      }
-    }, 1000);
   };
 
   // Handle inactivity logout
   const handleInactivityLogout = () => {
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
     setShowInactivityWarning(false);
     logout();
   };
 
   // Use inactivity logout hook (only when user is authenticated)
   useInactivityLogout({
-    timeout: 60 * 60 * 1000, // 1 hour
-    warningTime: 5 * 60 * 1000, // 5 minutes before logout
+    timeout: 30 * 60 * 1000, // 30 minutes of inactivity
+    warningTime: 2 * 60 * 1000, // 2 minutes warning before logout
     onLogout: handleInactivityLogout,
     onWarning: handleInactivityWarning,
     onWarningDismissed: () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
       setShowInactivityWarning(false);
     },
     enabled: !!user && !!localStorage.getItem("auth_token"),
@@ -356,19 +359,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {/* Inactivity Warning Modal */}
       <AlertModal
         isOpen={showInactivityWarning}
-        onClose={() => setShowInactivityWarning(false)}
+        onClose={handleInactivityLogout}
         type="warning"
-        title="Session Timeout Warning"
-        message={`You have been inactive for a while. You will be automatically logged out in ${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'} for security reasons. Please interact with the page to stay logged in.`}
-        confirmText="Stay Logged In"
-        onConfirm={() => {
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-          }
-          setShowInactivityWarning(false);
-          // Activity will reset the timer automatically
-        }}
+        title="Session Timeout"
+        message="You have been inactive for too long. For security reasons, please click OK to logout."
+        confirmText="OK"
+        onConfirm={handleInactivityLogout}
         showCancel={false}
       />
     </AuthContext.Provider>

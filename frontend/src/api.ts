@@ -8,6 +8,7 @@ import type {
   DashboardStats,
 } from "./types/Essay";
 import dummyDataJson from "./data/dummyData.json";
+import { supabase } from "./lib/supabaseClient";
 
 // Get API base URL from environment variable, fallback to localhost for development
 const API_BASE_URL =
@@ -520,7 +521,7 @@ export const plagiarismApi = {
   },
 };
 
-// Admin API
+// Admin API (uses Supabase)
 export const adminApi = {
   getUsers: async (params?: {
     skip?: number;
@@ -528,14 +529,39 @@ export const adminApi = {
     role?: string;
     search?: string;
   }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.skip) queryParams.append("skip", params.skip.toString());
-    if (params?.limit) queryParams.append("limit", params.limit.toString());
-    if (params?.role) queryParams.append("role", params.role);
-    if (params?.search) queryParams.append("search", params.search);
+    let query = supabase
+      .from("users")
+      .select(
+        "id, email, first_name, middle_name, last_name, role, is_active, created_at, auth_user_id",
+      )
+      .order("created_at", { ascending: false });
 
-    const query = queryParams.toString();
-    return apiRequest<any[]>(`/admin/users${query ? `?${query}` : ""}`);
+    // Apply filters
+    if (params?.role) {
+      query = query.eq("role", params.role);
+    }
+
+    if (params?.search) {
+      query = query.or(
+        `email.ilike.%${params.search}%,first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%`,
+      );
+    }
+
+    if (params?.limit) {
+      query = query.limit(params.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Map to include email_verified from auth.users if needed
+    return data.map((user) => ({
+      ...user,
+      email_verified: true, // Default to true, can be enhanced later
+    }));
   },
 
   updateUser: async (
@@ -550,56 +576,154 @@ export const adminApi = {
       is_active?: boolean;
     },
   ) => {
-    return apiRequest<{ message: string; user: any }>(
-      `/admin/users/${userId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(data),
-      },
-    );
+    const { error } = await supabase
+      .from("users")
+      .update(data)
+      .eq("id", userId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { message: "User updated successfully", user: data };
   },
 
   deleteUser: async (userId: string) => {
-    return apiRequest<{ message: string }>(`/admin/users/${userId}`, {
-      method: "DELETE",
-    });
+    // First get the auth_user_id
+    const { data: user, error: fetchError } = await supabase
+      .from("users")
+      .select("auth_user_id")
+      .eq("id", userId)
+      .single();
+
+    if (fetchError || !user?.auth_user_id) {
+      throw new Error("User not found");
+    }
+
+    // Delete from auth.users (this will cascade to users table)
+    const { error } = await supabase.auth.admin.deleteUser(user.auth_user_id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { message: "User deleted successfully" };
   },
 
   resetUserPassword: async (userId: string, newPassword: string) => {
-    return apiRequest<{ message: string }>(
-      `/admin/users/${userId}/reset-password`,
-      {
-        method: "POST",
-        body: JSON.stringify({ new_password: newPassword }),
-      },
+    // First get the auth_user_id
+    const { data: user, error: fetchError } = await supabase
+      .from("users")
+      .select("auth_user_id")
+      .eq("id", userId)
+      .single();
+
+    if (fetchError || !user?.auth_user_id) {
+      throw new Error("User not found");
+    }
+
+    // Update password using admin API
+    const { error } = await supabase.auth.admin.updateUserById(
+      user.auth_user_id,
+      { password: newPassword },
     );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { message: "Password reset successfully" };
   },
 
   getSystemStats: async () => {
-    return apiRequest<{
-      total_users: number;
-      total_teachers: number;
-      total_students: number;
-      total_admins: number;
-      total_programs: number;
-      total_sections: number;
-      total_activities: number;
-      total_essays: number;
-      total_rubrics: number;
-      platform_rubrics: number;
-    }>("/admin/stats");
+    // Get counts from various tables
+    const [
+      usersCount,
+      teachersCount,
+      studentsCount,
+      adminsCount,
+      programsCount,
+      sectionsCount,
+      activitiesCount,
+      essaysCount,
+      rubricsCount,
+    ] = await Promise.all([
+      supabase.from("users").select("id", { count: "exact", head: true }),
+      supabase
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "teacher"),
+      supabase.from("students").select("id", { count: "exact", head: true }),
+      supabase
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "admin"),
+      supabase.from("programs").select("id", { count: "exact", head: true }),
+      supabase.from("sections").select("id", { count: "exact", head: true }),
+      supabase
+        .from("essay_activities")
+        .select("id", { count: "exact", head: true }),
+      supabase.from("essays").select("id", { count: "exact", head: true }),
+      supabase.from("rubrics").select("id", { count: "exact", head: true }),
+    ]);
+
+    // Get platform rubrics count
+    const { count: platformRubricsCount } = await supabase
+      .from("rubrics")
+      .select("id", { count: "exact", head: true })
+      .eq("is_platform_rubric", true);
+
+    return {
+      total_users: usersCount.count || 0,
+      total_teachers: teachersCount.count || 0,
+      total_students: studentsCount.count || 0,
+      total_admins: adminsCount.count || 0,
+      total_programs: programsCount.count || 0,
+      total_sections: sectionsCount.count || 0,
+      total_activities: activitiesCount.count || 0,
+      total_essays: essaysCount.count || 0,
+      total_rubrics: rubricsCount.count || 0,
+      platform_rubrics: platformRubricsCount || 0,
+    };
   },
 
   getAllPrograms: async () => {
-    return apiRequest<any[]>("/admin/content/programs");
+    const { data, error } = await supabase
+      .from("programs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   },
 
   getAllActivities: async () => {
-    return apiRequest<any[]>("/admin/content/activities");
+    const { data, error } = await supabase
+      .from("essay_activities")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   },
 
   getAllRubrics: async () => {
-    return apiRequest<any[]>("/admin/content/rubrics");
+    const { data, error } = await supabase
+      .from("rubrics")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   },
 };
 

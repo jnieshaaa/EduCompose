@@ -8,7 +8,9 @@ interface ResetPasswordModalProps {
   user: {
     id: string;
     email: string;
-    full_name: string;
+    first_name?: string;
+    middle_name?: string;
+    last_name?: string;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -82,7 +84,7 @@ export default function ResetPasswordModal({
           Reset Password
         </h2>
         <p className="text-sm text-neutral-600 mb-6">
-          Reset password for <strong>{user.full_name}</strong> ({user.email})
+          Reset password for <strong>{user.email}</strong>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,7 +95,7 @@ export default function ResetPasswordModal({
             <Input
               type="password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={setNewPassword}
               placeholder="Minimum 6 characters"
               required
             />
@@ -106,7 +108,7 @@ export default function ResetPasswordModal({
             <Input
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={setConfirmPassword}
               placeholder="Confirm password"
               required
             />
@@ -142,4 +144,3 @@ export default function ResetPasswordModal({
     </div>
   );
 }
-

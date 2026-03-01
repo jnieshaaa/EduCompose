@@ -4,7 +4,9 @@ export interface TeacherProfile {
   title?: string;
   nickname?: string;
   school?: string;
+  schoolName?: string;
   department?: string;
+  departmentName?: string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -73,4 +75,3 @@ export interface SupabaseTeacherRow {
   created_at: string;
   settings?: TeacherSettings | null; // JSONB column
 }
-

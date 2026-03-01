@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
 import Card from "../../components/ui/Card";
-import { BookOpen, Layers, Users, FileText, CheckCircle, Clock, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  BookOpen,
+  Layers,
+  Users,
+  FileText,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import Badge from "../../components/ui/Badge";
-import { analysisApi } from "../../api";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherId } from "../../services/rubricService";
 import { fetchPrograms, fetchSections } from "../../services/activityService";
-import type { DashboardStats } from "../../types/Essay";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -59,24 +67,85 @@ interface DashboardData {
   essaysEvaluated: number;
   pendingReviews: number;
   performanceMetrics: {
-    avgScore: { value: string; trend: string; status: 'up' | 'down' | 'neutral' };
-    grammarAccuracy: { value: string; trend: string; status: 'up' | 'down' | 'neutral' };
-    coherenceScore: { value: string; trend: string; status: 'up' | 'down' | 'neutral' };
-    vocabularyComplexity: { value: string; trend: string; status: 'up' | 'down' | 'neutral' };
+    avgScore: {
+      value: string;
+      trend: string;
+      status: "up" | "down" | "neutral";
+    };
+    grammarAccuracy: {
+      value: string;
+      trend: string;
+      status: "up" | "down" | "neutral";
+    };
+    coherenceScore: {
+      value: string;
+      trend: string;
+      status: "up" | "down" | "neutral";
+    };
+    vocabularyComplexity: {
+      value: string;
+      trend: string;
+      status: "up" | "down" | "neutral";
+    };
   };
   recentActivity: Array<{
     student: string;
     action: string;
     essay: string;
     time: string;
-    status: 'new' | 'evaluated' | 'review';
+    status: "new" | "evaluated" | "review";
     score?: number;
   }>;
   alerts: Array<{
-    type: 'warning' | 'error' | 'info';
+    type: "warning" | "error" | "info";
     message: string;
     count: number;
   }>;
+}
+
+interface TeacherActivityRow {
+  id: number | null;
+  program_id: number | null;
+  section_id: number | null;
+}
+
+interface StudentFilterRow {
+  id: number;
+  program_id: number | null;
+  section_id: number | null;
+}
+
+interface EssayRow {
+  id: number;
+  title: string;
+  submitted_at: string;
+  status: string;
+  student_id: number;
+  activity_id: number | null;
+  overall_score: number | null;
+  grammar_score: number | null;
+  coherence_score: number | null;
+  argument_strength_score: number | null;
+}
+
+interface AnalysisResultRow {
+  essay_id: number;
+  grammar_score: number | null;
+  coherence_score: number | null;
+  detailed_analysis: Record<string, unknown> | null;
+}
+
+interface ProgramListItem {
+  id: string;
+}
+
+interface SectionListItem {
+  id: string;
+}
+
+interface StudentNameRow {
+  id: number;
+  full_name: string | null;
 }
 
 export function DashboardTab() {
@@ -96,176 +165,238 @@ export function DashboardTab() {
         }
 
         // Get teacher's activities to find which programs/sections they work with
-        const { data: teacherActivities, error: activitiesError } = await supabase
-          .from("essay_activities")
-          .select("id, program_id, section_id")
-          .eq("teacher_id", teacherId);
+        const { data: teacherActivities, error: activitiesError } =
+          await supabase
+            .from("essay_activities")
+            .select("id, program_id, section_id")
+            .eq("teacher_id", teacherId);
 
         if (activitiesError) throw activitiesError;
 
         // Get unique program and section IDs from teacher's activities
-        const programIds = [...new Set(
-          (teacherActivities || [])
-            .map(a => a.program_id)
-            .filter((id): id is number => id !== null)
-        )];
-        const sectionIds = [...new Set(
-          (teacherActivities || [])
-            .map(a => a.section_id)
-            .filter((id): id is number => id !== null)
-        )];
+        const typedTeacherActivities =
+          (teacherActivities as TeacherActivityRow[] | null) || [];
+
+        const programIds = [
+          ...new Set(
+            typedTeacherActivities
+              .map((activity) => activity.program_id)
+              .filter((id): id is number => id !== null),
+          ),
+        ];
+        const sectionIds = [
+          ...new Set(
+            typedTeacherActivities
+              .map((activity) => activity.section_id)
+              .filter((id): id is number => id !== null),
+          ),
+        ];
 
         // Fetch all data in parallel
         const [
-          dashboardStats,
           allPrograms,
           allSections,
           studentsData,
           essaysData,
-          analysisResults
+          analysisResults,
         ] = await Promise.all([
-          // Silently catch 401 errors - backend API might not be available or authenticated
-          // Note: Browser console will still show the network error, but we handle it gracefully
-          analysisApi.getDashboardStats().catch((err: any) => {
-            // Silently ignore 401 (unauthorized) errors - backend might not be authenticated
-            // or might not be available. We'll use Supabase data instead.
-            const status = err?.status || err?.response?.status;
-            if (status !== 401 && status !== 0) {
-              // Only log non-401 errors (0 is network error, which is also expected if backend is down)
-              console.warn("Failed to fetch dashboard stats from backend:", err);
-            }
-            return null;
-          }),
           fetchPrograms(),
           fetchSections(),
           // Get students in teacher's programs/sections
           supabase
             .from("students")
-            .select("id")
+            .select("id, program_id, section_id")
             .then(({ data, error }) => {
               if (error) throw error;
-              // Filter by program_id or section_id if we have them
-              if (programIds.length > 0 || sectionIds.length > 0) {
-                const filtered = (data || []).filter((s: any) => 
-                  (programIds.length > 0 && s.program_id && programIds.includes(s.program_id)) ||
-                  (sectionIds.length > 0 && s.section_id && sectionIds.includes(s.section_id))
+              const typedStudents = (data as StudentFilterRow[] | null) || [];
+              // Scope students to this teacher's activity context.
+              // Prefer section-level filtering to avoid pulling students from
+              // other teachers who share the same program.
+              if (sectionIds.length > 0) {
+                return typedStudents.filter(
+                  (student) =>
+                    student.section_id !== null &&
+                    sectionIds.includes(student.section_id),
                 );
-                return filtered;
               }
-              return data || [];
+
+              // Fallback: if activities don't have section_id, scope by program.
+              if (programIds.length > 0) {
+                return typedStudents.filter(
+                  (student) =>
+                    student.program_id !== null &&
+                    programIds.includes(student.program_id),
+                );
+              }
+
+              // No teacher scope found yet (no activities/programs/sections)
+              return [];
             }),
           // Get essays from teacher's activities
           supabase
             .from("essays")
-            .select("id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score")
+            .select(
+              "id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score",
+            )
             .then(({ data, error }) => {
               if (error) throw error;
               // Filter essays by teacher's activities
-              if (teacherActivities && teacherActivities.length > 0) {
-                const activityIds = teacherActivities
-                  .map(a => a.id)
-                  .filter((id): id is number => id !== null);
+              if (typedTeacherActivities.length > 0) {
                 // Note: We need to get activity IDs, but we only have program_id and section_id
                 // So we'll get all essays and filter by checking if they belong to teacher's activities
                 // For now, we'll get all essays and filter later by activity_id
-                return data || [];
+                return (data as EssayRow[] | null) || [];
               }
               return [];
             }),
-          supabase
-            .from("essay_analysis_results")
-            .select("essay_id, grammar_score, coherence_score, detailed_analysis")
-            .then(({ data, error }) => {
-              // If table doesn't exist or column doesn't exist, return empty array
-              if (error) {
-                // PGRST116 = table not found, 42703 = column not found, 400 = bad request (invalid column)
-                if (error.code === 'PGRST116' || error.code === '42703' || error.code === 'PGRST100') {
-                  return [];
-                }
-                throw error;
+          (async (): Promise<AnalysisResultRow[]> => {
+            const { data, error } = await supabase
+              .from("essay_analysis_results")
+              .select(
+                "essay_id, grammar_score, coherence_score, detailed_analysis",
+              );
+
+            if (error) {
+              if (
+                error.code === "PGRST116" ||
+                error.code === "42703" ||
+                error.code === "PGRST100"
+              ) {
+                return [];
               }
-              return data || [];
-            }).catch(() => [])
+              throw error;
+            }
+
+            return (data as AnalysisResultRow[] | null) || [];
+          })(),
         ]);
 
         // Get activity IDs for the teacher
-        const { data: activityIdsData, error: activityIdsError } = await supabase
-          .from("essay_activities")
-          .select("id")
-          .eq("teacher_id", teacherId);
+        const { data: activityIdsData, error: activityIdsError } =
+          await supabase
+            .from("essay_activities")
+            .select("id")
+            .eq("teacher_id", teacherId);
 
         if (activityIdsError) throw activityIdsError;
 
-        const activityIds = (activityIdsData || []).map(a => a.id);
+        const activityIds = (
+          (activityIdsData as Array<{ id: number }> | null) || []
+        ).map((activity) => activity.id);
 
         // Filter essays by teacher's activities
-        const teacherEssays = (essaysData || []).filter((e: any) => 
-          e.activity_id && activityIds.includes(e.activity_id)
+        const teacherEssays = (essaysData as EssayRow[]).filter(
+          (essay) =>
+            essay.activity_id !== null &&
+            activityIds.includes(essay.activity_id),
         );
 
         // Filter programs and sections to only those the teacher has activities for
-        const teacherPrograms = programIds.length > 0
-          ? allPrograms.filter(p => programIds.includes(parseInt(p.id)))
-          : [];
-        const teacherSections = sectionIds.length > 0
-          ? allSections.filter(s => sectionIds.includes(parseInt(s.id)))
-          : [];
+        const teacherPrograms =
+          programIds.length > 0
+            ? (allPrograms as ProgramListItem[]).filter((program) =>
+                programIds.includes(parseInt(program.id, 10)),
+              )
+            : [];
+        const teacherSections =
+          sectionIds.length > 0
+            ? (allSections as SectionListItem[]).filter((section) =>
+                sectionIds.includes(parseInt(section.id, 10)),
+              )
+            : [];
 
         const totalStudents = studentsData?.length || 0;
 
         // Calculate essay statistics
         const essaysSubmitted = teacherEssays.length;
-        const essaysEvaluated = teacherEssays.filter((e: any) => e.status === 'analyzed' || e.status === 'reviewed').length;
-        const pendingReviews = teacherEssays.filter((e: any) => e.status === 'submitted').length;
+        const essaysEvaluated = teacherEssays.filter(
+          (essay) => essay.status === "analyzed" || essay.status === "reviewed",
+        ).length;
+        const pendingReviews = teacherEssays.filter(
+          (essay) => essay.status === "submitted",
+        ).length;
 
         // Calculate performance metrics
-        const evaluatedEssays = teacherEssays.filter((e: any) => 
-          e.status === 'analyzed' || e.status === 'reviewed'
+        const evaluatedEssays = teacherEssays.filter(
+          (essay) => essay.status === "analyzed" || essay.status === "reviewed",
         );
 
-        const avgScore = evaluatedEssays.length > 0
-          ? evaluatedEssays.reduce((sum, e) => sum + (e.overall_score || 0), 0) / evaluatedEssays.length
-          : 0;
+        const avgScore =
+          evaluatedEssays.length > 0
+            ? evaluatedEssays.reduce(
+                (sum: number, essay) => sum + (essay.overall_score || 0),
+                0,
+              ) / evaluatedEssays.length
+            : 0;
 
         const grammarScores = evaluatedEssays
-          .map(e => e.grammar_score)
-          .filter((s): s is number => s !== null && s !== undefined);
-        const grammarAccuracy = grammarScores.length > 0
-          ? grammarScores.reduce((sum, s) => sum + s, 0) / grammarScores.length
-          : 0;
+          .map((essay) => essay.grammar_score)
+          .filter(
+            (score): score is number => score !== null && score !== undefined,
+          );
+        const grammarAccuracy =
+          grammarScores.length > 0
+            ? grammarScores.reduce((sum: number, score) => sum + score, 0) /
+              grammarScores.length
+            : 0;
 
         const coherenceScores = evaluatedEssays
-          .map(e => e.coherence_score)
-          .filter((s): s is number => s !== null && s !== undefined);
-        const coherenceScore = coherenceScores.length > 0
-          ? coherenceScores.reduce((sum, s) => sum + s, 0) / coherenceScores.length
-          : 0;
+          .map((essay) => essay.coherence_score)
+          .filter(
+            (score): score is number => score !== null && score !== undefined,
+          );
+        const coherenceScore =
+          coherenceScores.length > 0
+            ? coherenceScores.reduce((sum: number, score) => sum + score, 0) /
+              coherenceScores.length
+            : 0;
 
         // Calculate vocabulary complexity from analysis results
         // Try to extract from detailed_analysis JSONB field, or use a default
         const vocabScores: number[] = [];
-        analysisResults.forEach((r: any) => {
-          if (r.detailed_analysis && typeof r.detailed_analysis === 'object') {
+        analysisResults.forEach((result) => {
+          if (
+            result.detailed_analysis &&
+            typeof result.detailed_analysis === "object"
+          ) {
+            const detailed = result.detailed_analysis as Record<
+              string,
+              unknown
+            >;
+            const vocabulary = detailed.vocabulary as
+              | Record<string, unknown>
+              | undefined;
+            const scores = detailed.scores as
+              | Record<string, unknown>
+              | undefined;
             // Try to find vocabulary complexity in the detailed analysis
-            const vocab = r.detailed_analysis.vocabulary_complexity || 
-                         r.detailed_analysis.vocabulary?.complexity ||
-                         r.detailed_analysis.scores?.vocabulary;
-            if (typeof vocab === 'number') {
+            const vocab =
+              (detailed.vocabulary_complexity as number | undefined) ||
+              (vocabulary?.complexity as number | undefined) ||
+              (scores?.vocabulary as number | undefined);
+            if (typeof vocab === "number") {
               vocabScores.push(vocab);
             }
           }
         });
-        const vocabularyComplexity = vocabScores.length > 0
-          ? vocabScores.reduce((sum, s) => sum + s, 0) / vocabScores.length
-          : 0;
+        const vocabularyComplexity =
+          vocabScores.length > 0
+            ? vocabScores.reduce((sum, s) => sum + s, 0) / vocabScores.length
+            : 0;
 
         // Get recent activity (last 5 essays)
         const recentEssays = teacherEssays
-          .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+          .sort(
+            (a, b) =>
+              new Date(b.submitted_at).getTime() -
+              new Date(a.submitted_at).getTime(),
+          )
           .slice(0, 5);
 
         // Fetch student names for recent activity
-        const studentIds = [...new Set(recentEssays.map(e => e.student_id))];
+        const studentIds = [
+          ...new Set(recentEssays.map((essay) => essay.student_id)),
+        ];
         const { data: students, error: studentsErr } = await supabase
           .from("students")
           .select("id, full_name")
@@ -273,99 +404,82 @@ export function DashboardTab() {
 
         if (studentsErr) throw studentsErr;
 
-        const studentMap = new Map((students || []).map(s => [s.id, s.full_name]));
+        const typedStudents = (students as StudentNameRow[] | null) || [];
+        const studentMap = new Map(
+          typedStudents.map((student) => [student.id, student.full_name]),
+        );
 
-        const recentActivity = recentEssays.map(essay => {
-          const studentName = studentMap.get(essay.student_id) || `Student ${essay.student_id}`;
-          const status = essay.status === 'submitted' ? 'new' as const :
-                        essay.status === 'analyzed' ? 'evaluated' as const :
-                        'review' as const;
-          
+        const recentActivity = recentEssays.map((essay) => {
+          const studentName =
+            studentMap.get(essay.student_id) || `Student ${essay.student_id}`;
+          const status =
+            essay.status === "submitted"
+              ? ("new" as const)
+              : essay.status === "analyzed"
+                ? ("evaluated" as const)
+                : ("review" as const);
+
           return {
             student: studentName,
-            action: essay.status === 'submitted' ? 'Submitted essay' :
-                   essay.status === 'analyzed' ? 'Essay evaluated' :
-                   'Needs review',
+            action:
+              essay.status === "submitted"
+                ? "Submitted essay"
+                : essay.status === "analyzed"
+                  ? "Essay evaluated"
+                  : "Needs review",
             essay: essay.title,
             time: formatTimeAgo(essay.submitted_at),
             status,
-            score: essay.overall_score ? Math.round(essay.overall_score) : undefined
+            score: essay.overall_score
+              ? Math.round(essay.overall_score)
+              : undefined,
           };
         });
 
         // Calculate alerts
-        const alerts: Array<{ type: 'warning' | 'error' | 'info'; message: string; count: number }> = [];
+        const alerts: Array<{
+          type: "warning" | "error" | "info";
+          message: string;
+          count: number;
+        }> = [];
 
         // Check for students who haven't submitted essays this week
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const recentSubmissions = teacherEssays.filter((e: any) => 
-          new Date(e.submitted_at) >= oneWeekAgo
+        const recentSubmissions = teacherEssays.filter(
+          (essay) => new Date(essay.submitted_at) >= oneWeekAgo,
         );
-        const studentsWithRecentSubmissions = new Set(recentSubmissions.map(e => e.student_id));
-        const studentsWithoutSubmissions = totalStudents - studentsWithRecentSubmissions.size;
-        
+        const studentsWithRecentSubmissions = new Set(
+          recentSubmissions.map((essay) => essay.student_id),
+        );
+        const studentsWithoutSubmissions =
+          totalStudents - studentsWithRecentSubmissions.size;
+
         if (studentsWithoutSubmissions > 0) {
           alerts.push({
-            type: 'warning',
-            message: `${studentsWithoutSubmissions} student${studentsWithoutSubmissions !== 1 ? 's' : ''} have not submitted essays this week`,
-            count: studentsWithoutSubmissions
+            type: "warning",
+            message: `${studentsWithoutSubmissions} student${studentsWithoutSubmissions !== 1 ? "s" : ""} have not submitted essays this week`,
+            count: studentsWithoutSubmissions,
           });
         }
 
         // Check for pending reviews
         if (pendingReviews > 0) {
           alerts.push({
-            type: 'info',
-            message: `${pendingReviews} essay${pendingReviews !== 1 ? 's' : ''} pending review`,
-            count: pendingReviews
+            type: "info",
+            message: `${pendingReviews} essay${pendingReviews !== 1 ? "s" : ""} pending review`,
+            count: pendingReviews,
           });
         }
 
         // Check for students showing improvement (placeholder - would need historical data)
         if (evaluatedEssays.length > 0) {
           alerts.push({
-            type: 'info',
-            message: `${evaluatedEssays.length} essay${evaluatedEssays.length !== 1 ? 's' : ''} evaluated`,
-            count: evaluatedEssays.length
+            type: "info",
+            message: `${evaluatedEssays.length} essay${evaluatedEssays.length !== 1 ? "s" : ""} evaluated`,
+            count: evaluatedEssays.length,
           });
         }
-
-        const statsCards = [
-          { label: 'Total Programs', value: formatNumber(teacherPrograms.length), icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Total Sections', value: formatNumber(teacherSections.length), icon: Layers, color: 'text-support', bg: 'bg-support/10' },
-          { label: 'Total Students', value: formatNumber(totalStudents), icon: Users, color: 'text-secondary', bg: 'bg-secondary/10' },
-          { label: 'Essays Submitted', value: formatNumber(essaysSubmitted), icon: FileText, color: 'text-info-default', bg: 'bg-info-default/10' },
-          { label: 'Essays Evaluated', value: formatNumber(essaysEvaluated), icon: CheckCircle, color: 'text-success-default', bg: 'bg-success-default/10' },
-          { label: 'Pending Reviews', value: formatNumber(pendingReviews), icon: Clock, color: 'text-warning-default', bg: 'bg-warning-default/10' },
-        ];
-
-        const performanceMetrics = [
-          { 
-            label: 'Average Essay Score', 
-            value: `${avgScore.toFixed(1)}%`, 
-            trend: '', 
-            status: 'neutral' as const 
-          },
-          { 
-            label: 'Grammar Accuracy', 
-            value: `${grammarAccuracy.toFixed(1)}%`, 
-            trend: '', 
-            status: 'neutral' as const 
-          },
-          { 
-            label: 'Coherence Score', 
-            value: `${coherenceScore.toFixed(1)}%`, 
-            trend: '', 
-            status: 'neutral' as const 
-          },
-          { 
-            label: 'Vocabulary Complexity', 
-            value: `${vocabularyComplexity.toFixed(1)}/10`, 
-            trend: '', 
-            status: 'neutral' as const 
-          },
-        ];
 
         setData({
           totalPrograms: teacherPrograms.length,
@@ -375,17 +489,35 @@ export function DashboardTab() {
           essaysEvaluated,
           pendingReviews,
           performanceMetrics: {
-            avgScore: { value: `${avgScore.toFixed(1)}%`, trend: '', status: 'neutral' },
-            grammarAccuracy: { value: `${grammarAccuracy.toFixed(1)}%`, trend: '', status: 'neutral' },
-            coherenceScore: { value: `${coherenceScore.toFixed(1)}%`, trend: '', status: 'neutral' },
-            vocabularyComplexity: { value: `${vocabularyComplexity.toFixed(1)}/10`, trend: '', status: 'neutral' },
+            avgScore: {
+              value: `${avgScore.toFixed(1)}%`,
+              trend: "",
+              status: "neutral",
+            },
+            grammarAccuracy: {
+              value: `${grammarAccuracy.toFixed(1)}%`,
+              trend: "",
+              status: "neutral",
+            },
+            coherenceScore: {
+              value: `${coherenceScore.toFixed(1)}%`,
+              trend: "",
+              status: "neutral",
+            },
+            vocabularyComplexity: {
+              value: `${vocabularyComplexity.toFixed(1)}/10`,
+              trend: "",
+              status: "neutral",
+            },
           },
           recentActivity,
-          alerts
+          alerts,
         });
       } catch (err) {
         console.error("Error loading dashboard data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        setError(
+          err instanceof Error ? err.message : "Failed to load dashboard data",
+        );
       } finally {
         setLoading(false);
       }
@@ -407,7 +539,9 @@ export function DashboardTab() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-error-default mx-auto mb-4" />
-          <p className="text-lg text-neutral-900 mb-2">Error loading dashboard</p>
+          <p className="text-lg text-neutral-900 mb-2">
+            Error loading dashboard
+          </p>
           <p className="text-sm text-neutral-500">{error}</p>
         </div>
       </div>
@@ -419,19 +553,75 @@ export function DashboardTab() {
   }
 
   const statsCards = [
-    { label: 'Total Programs', value: formatNumber(data.totalPrograms), icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
-    { label: 'Total Sections', value: formatNumber(data.totalSections), icon: Layers, color: 'text-support', bg: 'bg-support/10' },
-    { label: 'Total Students', value: formatNumber(data.totalStudents), icon: Users, color: 'text-secondary', bg: 'bg-secondary/10' },
-    { label: 'Essays Submitted', value: formatNumber(data.essaysSubmitted), icon: FileText, color: 'text-info-default', bg: 'bg-info-default/10' },
-    { label: 'Essays Evaluated', value: formatNumber(data.essaysEvaluated), icon: CheckCircle, color: 'text-success-default', bg: 'bg-success-default/10' },
-    { label: 'Pending Reviews', value: formatNumber(data.pendingReviews), icon: Clock, color: 'text-warning-default', bg: 'bg-warning-default/10' },
+    {
+      label: "Total Programs",
+      value: formatNumber(data.totalPrograms),
+      icon: BookOpen,
+      color: "text-primary",
+      bg: "bg-primary/10",
+    },
+    {
+      label: "Total Sections",
+      value: formatNumber(data.totalSections),
+      icon: Layers,
+      color: "text-support",
+      bg: "bg-support/10",
+    },
+    {
+      label: "Total Students",
+      value: formatNumber(data.totalStudents),
+      icon: Users,
+      color: "text-secondary",
+      bg: "bg-secondary/10",
+    },
+    {
+      label: "Essays Submitted",
+      value: formatNumber(data.essaysSubmitted),
+      icon: FileText,
+      color: "text-info-default",
+      bg: "bg-info-default/10",
+    },
+    {
+      label: "Essays Evaluated",
+      value: formatNumber(data.essaysEvaluated),
+      icon: CheckCircle,
+      color: "text-success-default",
+      bg: "bg-success-default/10",
+    },
+    {
+      label: "Pending Reviews",
+      value: formatNumber(data.pendingReviews),
+      icon: Clock,
+      color: "text-warning-default",
+      bg: "bg-warning-default/10",
+    },
   ];
 
   const performanceMetrics = [
-    { label: 'Average Essay Score', value: data.performanceMetrics.avgScore.value, trend: data.performanceMetrics.avgScore.trend, status: data.performanceMetrics.avgScore.status },
-    { label: 'Grammar Accuracy', value: data.performanceMetrics.grammarAccuracy.value, trend: data.performanceMetrics.grammarAccuracy.trend, status: data.performanceMetrics.grammarAccuracy.status },
-    { label: 'Coherence Score', value: data.performanceMetrics.coherenceScore.value, trend: data.performanceMetrics.coherenceScore.trend, status: data.performanceMetrics.coherenceScore.status },
-    { label: 'Vocabulary Complexity', value: data.performanceMetrics.vocabularyComplexity.value, trend: data.performanceMetrics.vocabularyComplexity.trend, status: data.performanceMetrics.vocabularyComplexity.status },
+    {
+      label: "Average Essay Score",
+      value: data.performanceMetrics.avgScore.value,
+      trend: data.performanceMetrics.avgScore.trend,
+      status: data.performanceMetrics.avgScore.status,
+    },
+    {
+      label: "Grammar Accuracy",
+      value: data.performanceMetrics.grammarAccuracy.value,
+      trend: data.performanceMetrics.grammarAccuracy.trend,
+      status: data.performanceMetrics.grammarAccuracy.status,
+    },
+    {
+      label: "Coherence Score",
+      value: data.performanceMetrics.coherenceScore.value,
+      trend: data.performanceMetrics.coherenceScore.trend,
+      status: data.performanceMetrics.coherenceScore.status,
+    },
+    {
+      label: "Vocabulary Complexity",
+      value: data.performanceMetrics.vocabularyComplexity.value,
+      trend: data.performanceMetrics.vocabularyComplexity.trend,
+      status: data.performanceMetrics.vocabularyComplexity.status,
+    },
   ];
 
   return (
@@ -469,15 +659,21 @@ export function DashboardTab() {
               <div className="flex items-end gap-2">
                 <p className="text-2xl text-neutral-900">{metric.value}</p>
                 {metric.trend && (
-                  <div className={`flex items-center text-sm ${
-                    metric.status === 'up' ? 'text-success-default' : 
-                    metric.status === 'down' ? 'text-error-default' : 
-                    'text-neutral-500'
-                  }`}>
-                    {metric.status !== 'neutral' && (
-                      <TrendingUp className={`w-4 h-4 mr-1 ${
-                        metric.status === 'down' ? 'rotate-180' : ''
-                      }`} />
+                  <div
+                    className={`flex items-center text-sm ${
+                      metric.status === "up"
+                        ? "text-success-default"
+                        : metric.status === "down"
+                          ? "text-error-default"
+                          : "text-neutral-500"
+                    }`}
+                  >
+                    {metric.status !== "neutral" && (
+                      <TrendingUp
+                        className={`w-4 h-4 mr-1 ${
+                          metric.status === "down" ? "rotate-180" : ""
+                        }`}
+                      />
                     )}
                     {metric.trend}
                   </div>
@@ -500,26 +696,38 @@ export function DashboardTab() {
               </div>
             ) : (
               data.recentActivity.map((activity, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-neutral-100 rounded-rd hover:bg-neutral-200 transition-colors">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-neutral-100 rounded-rd hover:bg-neutral-200 transition-colors"
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-neutral-900">{activity.student}</span>
+                      <span className="text-neutral-900">
+                        {activity.student}
+                      </span>
                       <span className="text-sm text-neutral-500">•</span>
-                      <span className="text-sm text-neutral-500">{activity.action}</span>
+                      <span className="text-sm text-neutral-500">
+                        {activity.action}
+                      </span>
                     </div>
                     <p className="text-sm text-neutral-600">{activity.essay}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {activity.status === 'new' && (
+                    {activity.status === "new" && (
                       <Badge className="bg-blue-600 text-white">New</Badge>
                     )}
-                    {activity.status === 'evaluated' && activity.score !== undefined && (
-                      <Badge className="bg-green-600 text-white">{activity.score}%</Badge>
-                    )}
-                    {activity.status === 'review' && (
+                    {activity.status === "evaluated" &&
+                      activity.score !== undefined && (
+                        <Badge className="bg-green-600 text-white">
+                          {activity.score}%
+                        </Badge>
+                      )}
+                    {activity.status === "review" && (
                       <Badge className="bg-amber-600 text-white">Review</Badge>
                     )}
-                    <span className="text-xs text-neutral-400 whitespace-nowrap">{activity.time}</span>
+                    <span className="text-xs text-neutral-400 whitespace-nowrap">
+                      {activity.time}
+                    </span>
                   </div>
                 </div>
               ))
@@ -538,25 +746,40 @@ export function DashboardTab() {
               </div>
             ) : (
               data.alerts.map((alert, idx) => (
-                <div key={idx} className={`p-4 rounded-rd border-l-4 ${
-                  alert.type === 'warning' ? 'bg-warning-light/20 border-warning-default' :
-                  alert.type === 'error' ? 'bg-error-light/20 border-error-default' :
-                  'bg-info-light/20 border-info-default'
-                }`}>
+                <div
+                  key={idx}
+                  className={`p-4 rounded-rd border-l-4 ${
+                    alert.type === "warning"
+                      ? "bg-warning-light/20 border-warning-default"
+                      : alert.type === "error"
+                        ? "bg-error-light/20 border-error-default"
+                        : "bg-info-light/20 border-info-default"
+                  }`}
+                >
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className={`w-5 h-5 mt-0.5 ${
-                      alert.type === 'warning' ? 'text-warning-default' :
-                      alert.type === 'error' ? 'text-error-default' :
-                      'text-info-default'
-                    }`} />
+                    <AlertTriangle
+                      className={`w-5 h-5 mt-0.5 ${
+                        alert.type === "warning"
+                          ? "text-warning-default"
+                          : alert.type === "error"
+                            ? "text-error-default"
+                            : "text-info-default"
+                      }`}
+                    />
                     <div className="flex-1">
-                      <p className="text-sm text-neutral-900">{alert.message}</p>
+                      <p className="text-sm text-neutral-900">
+                        {alert.message}
+                      </p>
                     </div>
-                    <Badge className={`${
-                      alert.type === 'warning' ? 'bg-warning-default' :
-                      alert.type === 'error' ? 'bg-error-default' :
-                      'bg-info-default'
-                    } text-white`}>
+                    <Badge
+                      className={`${
+                        alert.type === "warning"
+                          ? "bg-warning-default"
+                          : alert.type === "error"
+                            ? "bg-error-default"
+                            : "bg-info-default"
+                      } text-white`}
+                    >
                       {alert.count}
                     </Badge>
                   </div>

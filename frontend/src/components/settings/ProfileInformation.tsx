@@ -35,7 +35,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="title">Title (e.g., Mr., Ms., Dr.)</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
                 type="text"
@@ -46,8 +46,8 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
                 placeholder="Title"
               />
             </div>
-             <div>
-              <Label htmlFor="nickname">Nickname (Display Name)</Label>
+            <div>
+              <Label htmlFor="nickname">Nickname</Label>
               <Input
                 id="nickname"
                 type="text"
@@ -105,25 +105,25 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <Label htmlFor="school">School Code</Label>
+              <Label htmlFor="school">School</Label>
               <Input
                 id="school"
                 type="text"
                 className="mt-1"
-                value={profile.school || ""}
+                value={profile.schoolName || ""}
                 disabled
-                placeholder="School Code"
+                placeholder="School"
               />
             </div>
             <div>
-              <Label htmlFor="department">Department Code</Label>
+              <Label htmlFor="department">Department</Label>
               <Input
                 id="department"
                 type="text"
                 className="mt-1"
-                value={profile.department || ""}
+                value={profile.departmentName || ""}
                 disabled
-                placeholder="Department Code"
+                placeholder="Department"
               />
             </div>
           </div>
@@ -141,7 +141,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               assistance.
             </p>
           </div>
-          
+
           <div className="flex justify-end pt-2">
             <Button
               className="bg-primary hover:bg-primary-300"
@@ -166,4 +166,3 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
     </ScrollableSection>
   );
 };
-

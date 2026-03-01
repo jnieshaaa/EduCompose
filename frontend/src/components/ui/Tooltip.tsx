@@ -21,15 +21,13 @@ const Tooltip: React.FC<TooltipProps> = ({
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(
-    null
+    null,
   );
 
   const showTooltip = () => {
-    console.log("showTooltip called, disabled:", disabled, "content:", content);
     if (disabled) return;
 
     const id = setTimeout(() => {
-      console.log("Setting tooltip visible");
       computeCoords();
       setIsVisible(true);
     }, delay);
@@ -108,7 +106,6 @@ const Tooltip: React.FC<TooltipProps> = ({
       <AnimatePresence>
         {isVisible && coords && (
           <>
-            {console.log("Rendering tooltip:", { isVisible, coords, content })}
             {createPortal(
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -123,15 +120,15 @@ const Tooltip: React.FC<TooltipProps> = ({
                     position === "top" || position === "bottom"
                       ? "translate(-50%, -100%)"
                       : position === "left"
-                      ? "translate(-100%, -50%)"
-                      : "translate(0, -50%)",
+                        ? "translate(-100%, -50%)"
+                        : "translate(0, -50%)",
                 }}
               >
                 <div className="bg-neutral-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
                   {content}
                 </div>
               </motion.div>,
-              document.body
+              document.body,
             )}
           </>
         )}

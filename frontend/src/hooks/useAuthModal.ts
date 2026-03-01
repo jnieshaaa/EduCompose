@@ -38,7 +38,8 @@ export function useAuthModal(onClose: () => void) {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] =
+    useState(false);
   const [signupError, setSignupError] = useState("");
   const [signupSuccess, setSignupSuccess] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -248,7 +249,7 @@ export function useAuthModal(onClose: () => void) {
           password: signupPassword,
           options: {
             data: {
-              full_name: signupEmail.trim().split("@")[0],
+              display_name: signupEmail.trim().split("@")[0],
               role: "teacher",
             },
           },

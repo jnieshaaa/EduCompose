@@ -21,6 +21,7 @@ import { AdminRubricsTab } from "./pages/admin/AdminRubricsTab.tsx";
 import { AdminUsersTab } from "./pages/admin/AdminUsersTab.tsx";
 import { AdminSettingsTab } from "./pages/admin/AdminSettingsTab.tsx";
 import { AdminContentTab } from "./pages/admin/AdminContentTab.tsx";
+import SchoolManagement from "./pages/admin/SchoolManagement.tsx";
 
 // Import Student Layout and Pages (Placeholders)
 // NOTE: I'm creating a new StudentLayout and placeholder components for the student pages
@@ -122,7 +123,7 @@ const AppContent: React.FC = () => {
         <Route
           path="/Teacher"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="teacher">
               <OnboardingCheck>
                 <TeacherLayout />
               </OnboardingCheck>
@@ -165,7 +166,7 @@ const AppContent: React.FC = () => {
         <Route
           path="/Student"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="student">
               <OnboardingCheck>
                 <StudentLayout />
               </OnboardingCheck>
@@ -205,6 +206,7 @@ const AppContent: React.FC = () => {
           <Route path="Users" element={<AdminUsersTab />} />
           <Route path="Rubrics" element={<AdminRubricsTab />} />
           <Route path="Content" element={<AdminContentTab />} />
+          <Route path="Schools" element={<SchoolManagement />} />
           <Route path="Settings" element={<AdminSettingsTab />} />
 
           {/* Redirect to Dashboard if hitting /Admin without a sub-path */}

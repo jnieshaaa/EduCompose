@@ -139,10 +139,50 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
 
+-- 4. ADMIN POLICIES
+-- Create a function to check if current user is admin (SECURITY DEFINER to bypass RLS)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users
+    WHERE auth_user_id = auth.uid()
+    AND role = 'admin'
+  );
+END;
+$$;
+
+-- Add policy for admins to view all users
+DROP POLICY IF EXISTS "Admins can view all users" ON users;
+CREATE POLICY "Admins can view all users"
+ON users FOR SELECT
+TO authenticated
+USING (is_admin());
+
+-- Add policy for admins to update any user
+DROP POLICY IF EXISTS "Admins can update any user" ON users;
+CREATE POLICY "Admins can update any user"
+ON users FOR UPDATE
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- Add policy for admins to delete any user
+DROP POLICY IF EXISTS "Admins can delete any user" ON users;
+CREATE POLICY "Admins can delete any user"
+ON users FOR DELETE
+TO authenticated
+USING (is_admin());
+
 --------------------------------------------------------------------------------
 -- DONE! Your Supabase database is now ready for EduCompose
 -- 
 -- Next steps:
 -- 1. Disable "Confirm email" in Authentication → Settings (if using custom verification)
 -- 2. Test signup from your frontend
+-- 3. Promote a user to admin role: UPDATE users SET role = 'admin' WHERE email = 'your-email@example.com';
 --------------------------------------------------------------------------------

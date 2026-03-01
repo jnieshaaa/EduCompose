@@ -15,6 +15,7 @@ interface AlertModalProps {
   confirmText?: string;
   showCancel?: boolean;
   cancelText?: string;
+  hideButtons?: boolean;
 }
 
 const AlertModal: React.FC<AlertModalProps> = ({
@@ -27,6 +28,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
   confirmText = "OK",
   showCancel = false,
   cancelText = "Cancel",
+  hideButtons = false,
 }) => {
   const getIcon = () => {
     const iconClass = "w-8 h-8";
@@ -36,7 +38,9 @@ const AlertModal: React.FC<AlertModalProps> = ({
       case "success":
         return <CheckCircle className={`${iconClass} text-success-default`} />;
       case "warning":
-        return <AlertTriangle className={`${iconClass} text-warning-default`} />;
+        return (
+          <AlertTriangle className={`${iconClass} text-warning-default`} />
+        );
       case "info":
         return <Info className={`${iconClass} text-info-default`} />;
     }
@@ -81,10 +85,10 @@ const AlertModal: React.FC<AlertModalProps> = ({
     (type === "error"
       ? "Error"
       : type === "success"
-      ? "Success"
-      : type === "warning"
-      ? "Warning"
-      : "Information");
+        ? "Success"
+        : type === "warning"
+          ? "Warning"
+          : "Information");
 
   const handleConfirm = () => {
     if (onConfirm) {
@@ -103,7 +107,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={hideButtons ? undefined : onClose}
           />
 
           {/* Modal */}
@@ -116,13 +120,15 @@ const AlertModal: React.FC<AlertModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
-            <button
-              onClick={onClose}
-              className="absolute top-5 right-5 p-2 rounded-lg hover:bg-neutral-100 transition-colors duration-200 z-10"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5 text-neutral-500" />
-            </button>
+            {!hideButtons && (
+              <button
+                onClick={onClose}
+                className="absolute top-5 right-5 p-2 rounded-lg hover:bg-neutral-100 transition-colors duration-200 z-10"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            )}
 
             {/* Content */}
             <div className="p-8">
@@ -146,30 +152,32 @@ const AlertModal: React.FC<AlertModalProps> = ({
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-neutral-200">
-                {showCancel && (
+              {!hideButtons && (
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-neutral-200">
+                  {showCancel && (
+                    <button
+                      onClick={onClose}
+                      className="px-6 py-2.5 text-base font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors duration-200"
+                    >
+                      {cancelText}
+                    </button>
+                  )}
                   <button
-                    onClick={onClose}
-                    className="px-6 py-2.5 text-base font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors duration-200"
+                    onClick={handleConfirm}
+                    className={`px-6 py-2.5 text-base font-medium text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md ${
+                      type === "error"
+                        ? "bg-error-default hover:bg-error-600"
+                        : type === "success"
+                          ? "bg-success-default hover:bg-success-600"
+                          : type === "warning"
+                            ? "bg-warning-default hover:bg-warning-600"
+                            : "bg-info-default hover:bg-info-600"
+                    }`}
                   >
-                    {cancelText}
+                    {confirmText}
                   </button>
-                )}
-                <button
-                  onClick={handleConfirm}
-                  className={`px-6 py-2.5 text-base font-medium text-white rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md ${
-                    type === "error"
-                      ? "bg-error-default hover:bg-error-600"
-                      : type === "success"
-                      ? "bg-success-default hover:bg-success-600"
-                      : type === "warning"
-                      ? "bg-warning-default hover:bg-warning-600"
-                      : "bg-info-default hover:bg-info-600"
-                  }`}
-                >
-                  {confirmText}
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -185,4 +193,3 @@ const AlertModal: React.FC<AlertModalProps> = ({
 };
 
 export default AlertModal;
-

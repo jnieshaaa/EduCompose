@@ -52,13 +52,37 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
 
     const { data, error } = await supabase
       .from("users")
-      .select("email, first_name, last_name, middle_name, suffix, title, nickname, school, department")
+      .select(
+        "email, first_name, last_name, middle_name, suffix, title, nickname, school, department",
+      )
       .eq("id", teacherId)
       .single();
 
     if (error || !data) {
       console.error("Error fetching teacher profile:", error);
       return null;
+    }
+
+    // Fetch school name if school ID exists
+    let schoolName = "";
+    if (data.school) {
+      const { data: schoolData } = await supabase
+        .from("schools")
+        .select("name")
+        .eq("id", data.school)
+        .single();
+      schoolName = schoolData?.name || "";
+    }
+
+    // Fetch department name if department ID exists
+    let departmentName = "";
+    if (data.department) {
+      const { data: deptData } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("id", data.department)
+        .single();
+      departmentName = deptData?.name || "";
     }
 
     return {
@@ -69,7 +93,9 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       title: data.title || "",
       nickname: data.nickname || "",
       school: data.school || "",
+      schoolName: schoolName,
       department: data.department || "",
+      departmentName: departmentName,
       email: data.email || "",
     };
   } catch (err) {
@@ -79,47 +105,74 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
 };
 
 // Fetch all teacher settings
-export const fetchTeacherSettings = async (): Promise<TeacherSettings | null> => {
-  try {
-    const teacherId = await getTeacherId();
-    if (!teacherId) return null;
+export const fetchTeacherSettings =
+  async (): Promise<TeacherSettings | null> => {
+    try {
+      const teacherId = await getTeacherId();
+      if (!teacherId) return null;
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("email, first_name, last_name, middle_name, suffix, title, nickname, school, department")
-      .eq("id", teacherId)
-      .single();
+      const { data, error } = await supabase
+        .from("users")
+        .select(
+          "email, first_name, last_name, middle_name, suffix, title, nickname, school, department",
+        )
+        .eq("id", teacherId)
+        .single();
 
-    if (error || !data) {
-      console.error("Error fetching teacher settings:", error);
+      if (error || !data) {
+        console.error("Error fetching teacher settings:", error);
+        return null;
+      }
+
+      // Fetch school name if school ID exists
+      let schoolName = "";
+      if (data.school) {
+        const { data: schoolData } = await supabase
+          .from("schools")
+          .select("name")
+          .eq("id", data.school)
+          .single();
+        schoolName = schoolData?.name || "";
+      }
+
+      // Fetch department name if department ID exists
+      let departmentName = "";
+      if (data.department) {
+        const { data: deptData } = await supabase
+          .from("departments")
+          .select("name")
+          .eq("id", data.department)
+          .single();
+        departmentName = deptData?.name || "";
+      }
+
+      return {
+        profile: {
+          firstName: data.first_name || "",
+          lastName: data.last_name || "",
+          middleName: data.middle_name || "",
+          suffix: data.suffix || "",
+          title: data.title || "",
+          nickname: data.nickname || "",
+          school: data.school || "",
+          schoolName: schoolName,
+          department: data.department || "",
+          departmentName: departmentName,
+          email: data.email || "",
+        },
+        aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
+        thresholds: DEFAULT_THRESHOLD_SETTINGS,
+        rubricDefaults: DEFAULT_RUBRIC_DEFAULTS,
+      };
+    } catch (err) {
+      console.error("Unexpected error fetching teacher settings:", err);
       return null;
     }
-
-    return {
-      profile: {
-        firstName: data.first_name || "",
-        lastName: data.last_name || "",
-        middleName: data.middle_name || "",
-        suffix: data.suffix || "",
-        title: data.title || "",
-        nickname: data.nickname || "",
-        school: data.school || "",
-        department: data.department || "",
-        email: data.email || "",
-      },
-      aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
-      thresholds: DEFAULT_THRESHOLD_SETTINGS,
-      rubricDefaults: DEFAULT_RUBRIC_DEFAULTS,
-    };
-  } catch (err) {
-    console.error("Unexpected error fetching teacher settings:", err);
-    return null;
-  }
-};
+  };
 
 // Update teacher profile (email cannot be updated)
 export const updateTeacherProfile = async (
-  profile: Partial<TeacherProfile>
+  profile: Partial<TeacherProfile>,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await getTeacherId();
@@ -135,34 +188,50 @@ export const updateTeacherProfile = async (
     // Get current data to merge
     const { data: currentData, error: fetchError } = await supabase
       .from("users")
-      .select("first_name, last_name, middle_name, title, nickname, suffix, school, department")
+      .select(
+        "first_name, last_name, middle_name, title, nickname, suffix, school, department",
+      )
       .eq("id", teacherId)
       .single();
 
     if (fetchError) {
-       console.error("Error fetching current data:", fetchError);
-       return { success: false, error: fetchError.message };
+      console.error("Error fetching current data:", fetchError);
+      return { success: false, error: fetchError.message };
     }
 
-    const firstName = profile.firstName !== undefined ? profile.firstName : (currentData.first_name || "");
-    const lastName = profile.lastName !== undefined ? profile.lastName : (currentData.last_name || "");
-    const middleName = profile.middleName !== undefined ? profile.middleName : (currentData.middle_name || "");
-    
+    const firstName =
+      profile.firstName !== undefined
+        ? profile.firstName
+        : currentData.first_name || "";
+    const lastName =
+      profile.lastName !== undefined
+        ? profile.lastName
+        : currentData.last_name || "";
+    const middleName =
+      profile.middleName !== undefined
+        ? profile.middleName
+        : currentData.middle_name || "";
+
     // Construct full name
-    const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
+    const fullName = `${firstName} ${middleName} ${lastName}`
+      .replace(/\s+/g, " ")
+      .trim();
 
     const updateData: Record<string, unknown> = {
       full_name: fullName,
     };
-    
-    if (profile.firstName !== undefined) updateData.first_name = profile.firstName;
+
+    if (profile.firstName !== undefined)
+      updateData.first_name = profile.firstName;
     if (profile.lastName !== undefined) updateData.last_name = profile.lastName;
-    if (profile.middleName !== undefined) updateData.middle_name = profile.middleName;
+    if (profile.middleName !== undefined)
+      updateData.middle_name = profile.middleName;
     if (profile.suffix !== undefined) updateData.suffix = profile.suffix;
     if (profile.title !== undefined) updateData.title = profile.title;
     if (profile.nickname !== undefined) updateData.nickname = profile.nickname;
     if (profile.school !== undefined) updateData.school = profile.school;
-    if (profile.department !== undefined) updateData.department = profile.department;
+    if (profile.department !== undefined)
+      updateData.department = profile.department;
 
     const { error } = await supabase
       .from("users")
@@ -186,33 +255,48 @@ export const updateTeacherProfile = async (
 
 // Update AI assessment settings
 export const updateAIAssessmentSettings = async (
-  _settings: Partial<AIAssessmentSettings>
+  _settings: Partial<AIAssessmentSettings>,
 ): Promise<{ success: boolean; error?: string }> => {
   // Settings not available in users table yet - return error
   void _settings; // Parameter required for API compatibility but not used
-  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
+  return {
+    success: false,
+    error:
+      "Settings feature not available yet. Users table needs settings column.",
+  };
 };
 
 // Update threshold settings
 export const updateThresholdSettings = async (
-  _settings: Partial<ThresholdSettings>
+  _settings: Partial<ThresholdSettings>,
 ): Promise<{ success: boolean; error?: string }> => {
   // Settings not available in users table yet - return error
   void _settings; // Parameter required for API compatibility but not used
-  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
+  return {
+    success: false,
+    error:
+      "Settings feature not available yet. Users table needs settings column.",
+  };
 };
 
 // Update rubric defaults
 export const updateRubricDefaults = async (
-  _defaults: Partial<RubricDefaults>
+  _defaults: Partial<RubricDefaults>,
 ): Promise<{ success: boolean; error?: string }> => {
   // Settings not available in users table yet - return error
   void _defaults; // Parameter required for API compatibility but not used
-  return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
+  return {
+    success: false,
+    error:
+      "Settings feature not available yet. Users table needs settings column.",
+  };
 };
 
 // Reset all settings to defaults
-export const resetSettingsToDefaults = async (): Promise<{ success: boolean; error?: string }> => {
+export const resetSettingsToDefaults = async (): Promise<{
+  success: boolean;
+  error?: string;
+}> => {
   try {
     const teacherId = await getTeacherId();
     if (!teacherId) {
@@ -220,7 +304,11 @@ export const resetSettingsToDefaults = async (): Promise<{ success: boolean; err
     }
 
     // Settings not available in users table yet
-    return { success: false, error: "Settings feature not available yet. Users table needs settings column." };
+    return {
+      success: false,
+      error:
+        "Settings feature not available yet. Users table needs settings column.",
+    };
   } catch (err) {
     console.error("Unexpected error resetting settings:", err);
     return {
@@ -229,4 +317,3 @@ export const resetSettingsToDefaults = async (): Promise<{ success: boolean; err
     };
   }
 };
-

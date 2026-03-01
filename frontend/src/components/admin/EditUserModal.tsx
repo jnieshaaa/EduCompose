@@ -8,7 +8,6 @@ interface EditUserModalProps {
   user: {
     id: string;
     email: string;
-    full_name: string;
     first_name?: string;
     middle_name?: string;
     last_name?: string;
@@ -29,7 +28,7 @@ export default function EditUserModal({
   const [lastName, setLastName] = useState(user.last_name || "");
   const [email, setEmail] = useState(user.email);
   const [role, setRole] = useState<"admin" | "teacher" | "student">(
-    user.role as "admin" | "teacher" | "student"
+    user.role as "admin" | "teacher" | "student",
   );
   const [isActive, setIsActive] = useState(user.is_active);
   const [error, setError] = useState("");
@@ -150,7 +149,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={setFirstName}
                   placeholder="First name"
                   required
                 />
@@ -162,7 +161,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={middleName}
-                  onChange={(e) => setMiddleName(e.target.value)}
+                  onChange={setMiddleName}
                   placeholder="Middle name (optional)"
                 />
               </div>
@@ -173,7 +172,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={setLastName}
                   placeholder="Last name"
                   required
                 />
@@ -188,7 +187,7 @@ export default function EditUserModal({
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
                 placeholder="user@example.com"
                 required
               />
@@ -203,7 +202,10 @@ export default function EditUserModal({
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
               />
-              <label htmlFor="isActive" className="text-sm font-medium text-neutral-700">
+              <label
+                htmlFor="isActive"
+                className="text-sm font-medium text-neutral-700"
+              >
                 Account is active
               </label>
             </div>
@@ -241,4 +243,3 @@ export default function EditUserModal({
     </div>
   );
 }
-

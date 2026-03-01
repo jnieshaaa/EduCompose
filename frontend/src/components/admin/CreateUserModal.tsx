@@ -15,7 +15,9 @@ export default function CreateUserModal({
   onClose,
   defaultRole = "teacher",
 }: CreateUserModalProps) {
-  const [role, setRole] = useState<"admin" | "teacher" | "student">(defaultRole);
+  const [role, setRole] = useState<"admin" | "teacher" | "student">(
+    defaultRole,
+  );
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -61,7 +63,7 @@ export default function CreateUserModal({
     setIsLoading(true);
 
     try {
-      const result = await authApi.createUser({
+      await authApi.createUser({
         email: email.trim(),
         password: password.trim(),
         role,
@@ -71,7 +73,7 @@ export default function CreateUserModal({
       });
 
       setSuccess(`Account created successfully for ${role}!`);
-      
+
       // Reset form
       setFirstName("");
       setMiddleName("");
@@ -151,7 +153,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={setFirstName}
                   placeholder="First name"
                   required
                 />
@@ -163,7 +165,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={middleName}
-                  onChange={(e) => setMiddleName(e.target.value)}
+                  onChange={setMiddleName}
                   placeholder="Middle name (optional)"
                 />
               </div>
@@ -174,7 +176,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={setLastName}
                   placeholder="Last name"
                   required
                 />
@@ -189,7 +191,7 @@ export default function CreateUserModal({
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
                 placeholder="user@example.com"
                 required
               />
@@ -204,7 +206,7 @@ export default function CreateUserModal({
                 <Input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={setPassword}
                   placeholder="Minimum 6 characters"
                   required
                 />
@@ -216,7 +218,7 @@ export default function CreateUserModal({
                 <Input
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={setConfirmPassword}
                   placeholder="Confirm password"
                   required
                 />
@@ -246,11 +248,7 @@ export default function CreateUserModal({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isLoading}
-              >
+              <Button type="submit" variant="primary" disabled={isLoading}>
                 {isLoading ? "Creating..." : "Create Account"}
               </Button>
             </div>
@@ -260,4 +258,3 @@ export default function CreateUserModal({
     </div>
   );
 }
-
