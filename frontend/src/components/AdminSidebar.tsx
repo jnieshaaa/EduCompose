@@ -63,7 +63,7 @@ const AdminSidebar: React.FC = () => {
       },
       {
         icon: <GraduationCap size={20} />,
-        label: "Schools",
+        label: "Academics",
         path: "/Admin/Schools",
       },
       {
