@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { RubricsTab } from "../teachers/RubricsTab";
 import type { CriteriaRow } from "../../types/rubricTypes";
 
 export function AdminRubricsTab() {
@@ -44,7 +43,7 @@ export function AdminRubricsTab() {
     programs: string[];
   }) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("rubrics")
         .insert({
           name: rubricData.name,

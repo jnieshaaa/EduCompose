@@ -27,7 +27,7 @@ const EmailConfirmation: React.FC = () => {
 
         if (accessToken && refreshToken) {
           // Set the session using hash-based tokens (most common Supabase flow)
-          const { data, error } = await supabase.auth.setSession({
+          const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
@@ -36,7 +36,7 @@ const EmailConfirmation: React.FC = () => {
           setStatus("success");
         } else if (queryToken) {
           // Handle query param token (less common but possible)
-          const { data, error } = await supabase.auth.verifyOtp({
+          const { error } = await supabase.auth.verifyOtp({
             token_hash: queryToken,
             type: (queryType || type) === "signup" ? "signup" : "email",
           });

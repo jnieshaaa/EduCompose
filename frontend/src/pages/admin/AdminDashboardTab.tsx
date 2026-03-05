@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Users, UserPlus, Shield, BookOpen, ClipboardCheck, TrendingUp, FileText, Layers } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, UserPlus, Shield, ClipboardCheck, FileText, Layers } from "lucide-react";
 import { adminApi } from "../../api";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";

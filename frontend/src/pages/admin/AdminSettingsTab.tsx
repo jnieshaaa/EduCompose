@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Save, Download, Upload, Shield, Mail, Database } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -56,7 +56,7 @@ export function AdminSettingsTab() {
             <Input
               type="text"
               value={settings.platformName}
-              onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
+              onChange={(val) => setSettings({ ...settings, platformName: val })}
               placeholder="EduCompose"
             />
           </div>

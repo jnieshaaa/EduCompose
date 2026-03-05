@@ -193,7 +193,7 @@ export const AdminCoursesTab: React.FC = () => {
 
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisible = 5;
+    
     
     if (totalPages <= 8) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);

@@ -16,14 +16,14 @@ import {
   Info,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import Card from '../components/ui/Card';
+
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi, plagiarismApi, type PlagiarismCheckResponse, type PlagiarismMatch } from '../api';
 import { RubricPreviewModal } from '../components/rubrics/RubricPreviewModal';
-import { platformRubrics, getTypeBadgeColor } from '../data/rubricData';
+import { platformRubrics } from '../data/rubricData';
 import type { PlatformRubric } from '../components/rubrics/types';
 import { savePlagiarismResult, loadPlagiarismResult } from '../services/activityService';
 import { useAuth } from '../contexts/AuthContext';
@@ -247,6 +247,7 @@ const AnalysisResults: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric' | 'plagiarism'>('insights');
   const [originalText, setOriginalText] = useState<string>('');
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedError, setSelectedError] = useState<HighlightError | null>(null);
   const [analysisKey, setAnalysisKey] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -299,7 +300,17 @@ const AnalysisResults: React.FC = () => {
               const { essay_id, ...rest } = result;
               return rest;
             })()
-          : result;
+          : {
+              ...result,
+              diagnostic_summary: result.diagnostic_summary || {
+                overall_score: result.scores.overall || 0,
+                strengths: [],
+                weaknesses: [],
+                critical_issues: [],
+                dimension_scores: {}
+              },
+              word_count: result.word_count || 0
+            };
 
       const stableAnalysis = JSON.parse(JSON.stringify(analysisResult));
       const stableText = text;
@@ -400,7 +411,7 @@ const AnalysisResults: React.FC = () => {
         try {
           // Dynamic import to avoid potential circular dependencies
           const { fetchEssayAnalysis } = await import('../services/activityService');
-          const analysisData = await fetchEssayAnalysis(state.studentId, state.activityId);
+          const analysisData = await fetchEssayAnalysis(state.studentId!, state.activityId!);
           if (analysisData) {
             const stableAnalysis = JSON.parse(JSON.stringify(analysisData.analysis));
             const stableText = analysisData.text || '';
@@ -439,7 +450,7 @@ const AnalysisResults: React.FC = () => {
           const { supabase } = await import('../lib/supabaseClient');
           
           // Parse student ID
-          let studentDbId = parseInt(state.studentId, 10);
+          let studentDbId = parseInt(state.studentId!, 10);
           if (isNaN(studentDbId)) {
             const { data: studentData } = await supabase
               .from('students')
@@ -449,7 +460,7 @@ const AnalysisResults: React.FC = () => {
             if (studentData) studentDbId = studentData.id;
           }
           
-          const activityDbId = parseInt(state.activityId, 10);
+          const activityDbId = parseInt(state.activityId!, 10);
           if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
             // Get essay_id
             const { data: essayData } = await supabase

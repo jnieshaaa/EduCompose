@@ -65,7 +65,7 @@ export function PlatformRubricCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => e?.stopPropagation()}
               >
                 <Download className="w-4 h-4 text-neutral-500" />
               </Button>

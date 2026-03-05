@@ -7,11 +7,8 @@ import {
   Clock,
   Users,
   Edit,
-  Trash2,
   Eye,
-  Copy,
   Download,
-  Upload,
   AlertCircle,
   CheckCircle,
   Target,
@@ -569,7 +566,7 @@ const AssignmentManagement: React.FC = () => {
                           Max Score: {assignment.max_score}
                         </span>
                       </div>
-                      {assignment.word_limit > 0 && (
+                      {(assignment.word_limit || 0) > 0 && (
                         <div className="flex items-center space-x-2">
                           <FileText className="w-4 h-4 text-neutral-500" />
                           <span className="text-neutral-600">
@@ -577,7 +574,7 @@ const AssignmentManagement: React.FC = () => {
                           </span>
                         </div>
                       )}
-                      {assignment.time_limit > 0 && (
+                      {(assignment.time_limit || 0) > 0 && (
                         <div className="flex items-center space-x-2">
                           <Clock className="w-4 h-4 text-neutral-500" />
                           <span className="text-neutral-600">

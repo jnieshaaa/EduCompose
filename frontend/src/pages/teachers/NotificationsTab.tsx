@@ -55,7 +55,7 @@ export function NotificationsTab() {
     }
   };
 
-  const getNotificationIcon = (type: Notification["type"]) => {
+  const getNotificationIcon = () => {
     return Bell; // You can customize icons per type
   };
 

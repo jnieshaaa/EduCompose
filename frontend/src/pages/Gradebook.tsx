@@ -5,8 +5,6 @@ import {
   BookOpen,
   TrendingUp,
   Download,
-  Filter,
-  Search,
   Eye,
   Edit,
   Award,

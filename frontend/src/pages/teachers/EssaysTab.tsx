@@ -7,7 +7,7 @@ import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import { 
   Search, Eye, Play, MessageSquare, Download, MoreVertical, Filter, 
-  Upload, FileText, X, Users, Layers, ClipboardList, ArrowLeft
+  Upload, FileText, X, ClipboardList
 } from 'lucide-react';
 import {
   Table,

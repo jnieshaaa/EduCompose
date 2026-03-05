@@ -33,12 +33,7 @@ export function AIFeedbackTab() {
     return 'text-error-default';
   };
 
-  const getCriteriaBarColor = (score: number) => {
-    if (score >= 90) return 'bg-success-default';
-    if (score >= 80) return 'bg-info-default';
-    if (score >= 70) return 'bg-warning-default';
-    return 'bg-error-default';
-  };
+
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {

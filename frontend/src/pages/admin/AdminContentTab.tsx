@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, FileText, ClipboardCheck, Search } from "lucide-react";
 import { adminApi } from "../../api";
 import Card from "../../components/ui/Card";
@@ -90,7 +90,7 @@ export function AdminContentTab() {
           type="text"
           placeholder={`Search ${activeTab}...`}
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={setSearchTerm}
           className="pl-10"
         />
       </div>
