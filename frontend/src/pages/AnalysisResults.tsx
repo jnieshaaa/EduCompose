@@ -247,8 +247,6 @@ const AnalysisResults: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric' | 'plagiarism'>('insights');
   const [originalText, setOriginalText] = useState<string>('');
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedError, setSelectedError] = useState<HighlightError | null>(null);
   const [analysisKey, setAnalysisKey] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismCheckResponse | null>(null);
@@ -630,7 +628,7 @@ const AnalysisResults: React.FC = () => {
     };
 
     // Save on component unmount (back button, navigation)
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       // Use sendBeacon for reliable saving on page unload
       if (!plagiarismResultSavedRef.current && !isPreviewMode && plagiarismResultRef.current) {
         // For beforeunload, we can't use async, so we'll trigger a sync save
@@ -665,14 +663,12 @@ const AnalysisResults: React.FC = () => {
   }, [essayId, studentId, activityId, isPreviewMode, isAuthenticated, location.state]);
 
   // Handle error click - toggle selection (inline details are handled in EssayTextDisplay)
-  const handleErrorClick = useCallback((error: HighlightError, index: number) => {
+  const handleErrorClick = useCallback((_error: HighlightError, index: number) => {
     // Toggle: if same error is clicked, deselect it; otherwise select the new one
     if (selectedErrorIndex === index) {
       setSelectedErrorIndex(null);
-      setSelectedError(null);
     } else {
       setSelectedErrorIndex(index);
-      setSelectedError(error);
     }
   }, [selectedErrorIndex]);
 
