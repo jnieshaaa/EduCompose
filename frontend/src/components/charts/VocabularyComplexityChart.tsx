@@ -37,7 +37,7 @@ export function VocabularyComplexityChart({
               x={props.x}
               y={props.y}
               fill="#000"
-              textAnchor={props.textAnchor}
+              textAnchor={props.textAnchor as "inherit" | "end" | "start" | "middle" | undefined}
               dominantBaseline="central"
             >
               {`${props.level}: ${props.value}%`}

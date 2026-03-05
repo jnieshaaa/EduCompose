@@ -3,6 +3,7 @@ export interface Program {
   name: string;
   sectionCount?: number;
   studentCount?: number;
+  tracks?: number;
 }
 
 export const initialProgramsData: Program[] = [

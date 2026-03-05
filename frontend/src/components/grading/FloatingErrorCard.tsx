@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { X, AlertTriangle, Lightbulb } from 'lucide-react';
 import Badge from '../ui/Badge';
 import type { HighlightError } from './EssayTextDisplay';

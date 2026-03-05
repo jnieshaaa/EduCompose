@@ -107,7 +107,6 @@ export function ViewEssayModal({
                   onClick={handleZoomOut}
                   disabled={zoomLevel <= 50}
                   className="flex items-center gap-1"
-                  title="Zoom Out"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </Button>
@@ -120,7 +119,6 @@ export function ViewEssayModal({
                   onClick={handleZoomIn}
                   disabled={zoomLevel >= 300}
                   className="flex items-center gap-1"
-                  title="Zoom In"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </Button>
@@ -130,7 +128,6 @@ export function ViewEssayModal({
                   onClick={handleResetZoom}
                   disabled={zoomLevel === 100}
                   className="flex items-center gap-1"
-                  title="Reset Zoom"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </Button>

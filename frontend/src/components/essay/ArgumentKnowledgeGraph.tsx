@@ -303,17 +303,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   }
                   return link.type === "rebuts" ? 2.5 : 1.5;
                 }}
-                linkOpacity={(link: ForceLink) => {
-                  // Dim links not connected to hovered node
-                  if (hoveredNode) {
-                    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
-                    const targetId = typeof link.target === "object" ? link.target.id : link.target;
-                    const isHighlighted = 
-                      sourceId === hoveredNode.id || targetId === hoveredNode.id;
-                    return isHighlighted ? 1.0 : 0.3;
-                  }
-                  return 1.0;
-                }}
                 linkDirectionalArrowLength={6}
                 linkDirectionalParticles={0}
                 // Better force simulation parameters

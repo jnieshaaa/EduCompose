@@ -68,7 +68,7 @@ export function useSections() {
 
   // Map to store program tracks limit (program name -> tracks count)
   const [programTracksMap, setProgramTracksMap] = useState<Map<string, number>>(
-    new Map(initialProgramsData.map((p) => [p.name, p.tracks ?? 0]))
+    new Map((initialProgramsData as any[]).map((p) => [p.name, p.tracks ?? 0]))
   );
 
   // Map to store program name -> program_id for lookups
@@ -556,7 +556,15 @@ export function useSections() {
         });
 
         // Map Supabase response to Section type
-        const savedSections: Section[] = (insertedSections || []).map((s: any) => ({
+        type InsertedSectionRow = {
+          id: number;
+          name: string;
+          program_id: number;
+          term?: string | null;
+          students_estimated?: number | null;
+          essays_estimated?: number | null;
+        };
+        const savedSections: Section[] = (insertedSections || []).map((s: InsertedSectionRow) => ({
           id: s.id,
           name: s.name,
           program: idToNameMap.get(s.program_id) || "",

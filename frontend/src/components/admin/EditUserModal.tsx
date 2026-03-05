@@ -149,7 +149,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={firstName}
-                  onChange={setFirstName}
+                  onChange={(val) => setFirstName(val)}
                   placeholder="First name"
                   required
                 />
@@ -161,7 +161,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={middleName}
-                  onChange={setMiddleName}
+                  onChange={(val) => setMiddleName(val)}
                   placeholder="Middle name (optional)"
                 />
               </div>
@@ -172,7 +172,7 @@ export default function EditUserModal({
                 <Input
                   type="text"
                   value={lastName}
-                  onChange={setLastName}
+                  onChange={(val) => setLastName(val)}
                   placeholder="Last name"
                   required
                 />
@@ -187,7 +187,7 @@ export default function EditUserModal({
               <Input
                 type="email"
                 value={email}
-                onChange={setEmail}
+                onChange={(val) => setEmail(val)}
                 placeholder="user@example.com"
                 required
               />

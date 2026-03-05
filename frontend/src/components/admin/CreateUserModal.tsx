@@ -153,7 +153,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={firstName}
-                  onChange={setFirstName}
+                  onChange={(val) => setFirstName(val)}
                   placeholder="First name"
                   required
                 />
@@ -165,7 +165,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={middleName}
-                  onChange={setMiddleName}
+                  onChange={(val) => setMiddleName(val)}
                   placeholder="Middle name (optional)"
                 />
               </div>
@@ -176,7 +176,7 @@ export default function CreateUserModal({
                 <Input
                   type="text"
                   value={lastName}
-                  onChange={setLastName}
+                  onChange={(val) => setLastName(val)}
                   placeholder="Last name"
                   required
                 />
@@ -191,7 +191,7 @@ export default function CreateUserModal({
               <Input
                 type="email"
                 value={email}
-                onChange={setEmail}
+                onChange={(val) => setEmail(val)}
                 placeholder="user@example.com"
                 required
               />
@@ -206,7 +206,7 @@ export default function CreateUserModal({
                 <Input
                   type="password"
                   value={password}
-                  onChange={setPassword}
+                  onChange={(val) => setPassword(val)}
                   placeholder="Minimum 6 characters"
                   required
                 />
@@ -218,7 +218,7 @@ export default function CreateUserModal({
                 <Input
                   type="password"
                   value={confirmPassword}
-                  onChange={setConfirmPassword}
+                  onChange={(val) => setConfirmPassword(val)}
                   placeholder="Confirm password"
                   required
                 />

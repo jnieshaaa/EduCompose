@@ -1,18 +1,16 @@
-import React from "react";
 import { motion } from "framer-motion";
+import type { HTMLMotionProps } from "framer-motion";
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
+interface CardProps extends HTMLMotionProps<"div"> {
   hover?: boolean;
 }
 
-const Card: React.FC<CardProps> = ({
+const Card = ({
   children,
   className = "",
   hover = false,
   ...rest
-}) => {
+}: CardProps) => {
   const baseClasses =
     "bg-white rounded-rd shadow-sm border border-neutral-200 p-6";
   const hoverClasses = hover

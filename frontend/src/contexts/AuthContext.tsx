@@ -90,11 +90,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If timeout occurred or error
       if (result.error || !result.data) {
         // Don't log as error if it's just that the record doesn't exist yet or timeout
-        const isPostgrestError = result.error && "code" in result.error;
+        const isPostgrestError = result.error && "code" in (result.error as any);
         if (
           result.error?.message !== "Timeout" &&
           (!isPostgrestError ||
-            (result.error as { code?: string }).code !== "PGRST116")
+            (result.error as any).code !== "PGRST116")
         ) {
           console.warn(
             "User not found in users table, using metadata fallback",

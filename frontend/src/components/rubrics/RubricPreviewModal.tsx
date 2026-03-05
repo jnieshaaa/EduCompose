@@ -227,7 +227,7 @@ export function RubricPreviewModal({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => onUseTemplate(rubric)}
+                onClick={() => onUseTemplate(rubric as PlatformRubric)}
               >
                 <Copy className='w-4 h-4 mr-2' />
                 Copy to My Rubrics
@@ -283,7 +283,7 @@ export function RubricPreviewModal({
             {onUseTemplate && (
               <Button
                 className='bg-primary hover:bg-primary-300'
-                onClick={() => onUseTemplate(rubric)}
+                onClick={() => onUseTemplate(rubric as PlatformRubric)}
               >
                 Use This Template
               </Button>

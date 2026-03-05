@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Home,
   FileText,
   // Layers,
   // BarChart3,

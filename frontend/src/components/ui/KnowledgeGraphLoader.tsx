@@ -44,12 +44,7 @@ const KnowledgeGraphLoader: React.FC<KnowledgeGraphLoaderProps> = ({
     { from: 5, to: 1 },
   ];
 
-  // Calculate edge path for SVG line
-  const getEdgePath = (from: number, to: number) => {
-    const fromNode = nodes[from];
-    const toNode = nodes[to];
-    return `M ${fromNode.x} ${fromNode.y} L ${toNode.x} ${toNode.y}`;
-  };
+
 
   return (
     <div className={`flex items-center justify-center ${className}`}>

@@ -22,13 +22,12 @@ import type { Notification } from "../data/notificationsData";
 interface TeacherHeaderProps {
   onMenuClick: () => void;
   isBurgerActive: boolean;
-  role: "Teacher" | "Student"; // Added role prop
+  role: "Admin" | "Teacher" | "Student"; // Added role prop
 }
 
 const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   onMenuClick,
   isBurgerActive,
-  role, // Destructured role prop
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);

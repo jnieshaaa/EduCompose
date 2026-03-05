@@ -95,7 +95,7 @@ export default function ResetPasswordModal({
             <Input
               type="password"
               value={newPassword}
-              onChange={setNewPassword}
+              onChange={(val) => setNewPassword(val)}
               placeholder="Minimum 6 characters"
               required
             />
@@ -108,7 +108,7 @@ export default function ResetPasswordModal({
             <Input
               type="password"
               value={confirmPassword}
-              onChange={setConfirmPassword}
+              onChange={(val) => setConfirmPassword(val)}
               placeholder="Confirm password"
               required
             />

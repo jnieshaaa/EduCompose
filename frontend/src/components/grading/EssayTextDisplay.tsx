@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useEffect, useMemo, useCallback, Fragment } from 'react';
 import { X, AlertTriangle, Lightbulb } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
@@ -242,7 +242,7 @@ export function EssayTextDisplay({
       <Card className="p-6">
         <div ref={containerRef} className="leading-relaxed text-neutral-800 text-[15px] selection:bg-primary/20">
           <div className="whitespace-pre-wrap">
-            {textSegments.segments.map((segment, idx) => {
+            {textSegments.segments.map((segment: any, idx) => {
               if (segment.type === 'text') {
                 return <span key={idx}>{segment.text}</span>;
               } else {
@@ -253,7 +253,7 @@ export function EssayTextDisplay({
                 const color = getHighlightColor(error.type || 'grammar', isSelected);
 
                 return (
-                  <React.Fragment key={idx}>
+                  <Fragment key={idx}>
                     <mark
                       id={`error-mark-${errorIndex}`}
                       onClick={() => handleErrorClick(errorIndex)}
@@ -279,7 +279,7 @@ export function EssayTextDisplay({
                         onClose={() => handleErrorClick(errorIndex)}
                       />
                     )}
-                  </React.Fragment>
+                  </Fragment>
                 );
               }
             })}

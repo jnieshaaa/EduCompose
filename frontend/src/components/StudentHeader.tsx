@@ -17,7 +17,7 @@ import { studentNotifications } from "../data/notificationsData";
 interface StudentHeaderProps {
   onMenuClick: () => void;
   isBurgerActive: boolean;
-  role: "Teacher" | "Student"; // Role prop remains for display
+  role: "Admin" | "Teacher" | "Student"; // Role prop remains for display
 }
 
 // Renamed component
