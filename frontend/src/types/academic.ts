@@ -17,6 +17,8 @@ export interface Course {
   course_code: string;
   course_title: string;
   units: number;
+  year_level?: string;
+  semester?: string;
   department?: string; // Add this
   created_at?: string;
   // For joined data

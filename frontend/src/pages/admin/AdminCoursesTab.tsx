@@ -31,7 +31,9 @@ export const AdminCoursesTab: React.FC = () => {
     course_code: "", 
     course_title: "", 
     units: 0,
-    user_id: ""
+    user_id: "",
+    year_level: "",
+    semester: ""
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,6 +125,8 @@ export const AdminCoursesTab: React.FC = () => {
         course_code: courseForm.course_code.toUpperCase(),
         course_title: courseForm.course_title,
         units: courseForm.units,
+        year_level: courseForm.year_level || null,
+        semester: courseForm.semester || null,
       };
 
       if (editingCourse) {
@@ -132,7 +136,10 @@ export const AdminCoursesTab: React.FC = () => {
           .eq("id", editingCourse.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("courses").insert(courseData);
+        // For new courses, default user_id if not set (could use current user session here if needed)
+        const { data: userData } = await supabase.auth.getUser();
+        const finalData = { ...courseData, user_id: userData.user?.id || null };
+        const { error } = await supabase.from("courses").insert(finalData);
         if (error) throw error;
       }
 
@@ -161,7 +168,9 @@ export const AdminCoursesTab: React.FC = () => {
       course_code: "", 
       course_title: "", 
       units: 0,
-      user_id: ""
+      user_id: "",
+      year_level: "",
+      semester: ""
     });
     setEditingCourse(null);
     setSelectedSchool("");
@@ -314,7 +323,8 @@ export const AdminCoursesTab: React.FC = () => {
               <tr>
                 <th className="px-4 py-3 font-semibold text-neutral-700">Course</th>
                 <th className="px-4 py-3 font-semibold text-neutral-700">Units</th>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Assigned To</th>
+                <th className="px-4 py-3 font-semibold text-neutral-700">Year & Semester</th>
+                <th className="px-4 py-3 font-semibold text-neutral-700">Added By</th>
                 <th className="px-4 py-3 font-semibold text-neutral-700">Affiliation</th>
                 <th className="px-4 py-3 font-semibold text-neutral-700 text-right">Actions</th>
               </tr>
@@ -345,6 +355,14 @@ export const AdminCoursesTab: React.FC = () => {
                         {course.units} UNITS
                       </span>
                     </td>
+                    <td className="px-4 py-4">
+                      <div className="text-xs text-neutral-600 font-medium">
+                        {course.year_level || "No Year"}
+                      </div>
+                      <div className="text-[10px] text-neutral-400 mt-0.5">
+                        {course.semester || "No Semester"}
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-neutral-600">
                       {course.users ? (
                         <div className="flex items-center gap-2">
@@ -373,7 +391,9 @@ export const AdminCoursesTab: React.FC = () => {
                               course_code: course.course_code, 
                               course_title: course.course_title, 
                               units: course.units,
-                              user_id: course.user_id || ""
+                              user_id: course.user_id || "",
+                              year_level: course.year_level || "",
+                              semester: course.semester || ""
                             });
                             setSelectedSchool(course.school_id || "");
                             setSelectedDept(course.department_id || "");
@@ -483,7 +503,7 @@ export const AdminCoursesTab: React.FC = () => {
               </button>
             </div>
             
-            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+            <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
               {/* Organization Selection */}
               <div className="space-y-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Affiliation Details</h3>
@@ -538,20 +558,15 @@ export const AdminCoursesTab: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Assign To User (Optional)</label>
-                  <select
-                    value={courseForm.user_id}
-                    onChange={(e) => setCourseForm({ ...courseForm, user_id: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                  >
-                    <option value="">Keep Unassigned</option>
-                    {users.map(u => (
-                      <option key={u.auth_user_id} value={u.auth_user_id}>{u.first_name} {u.last_name}</option>
-                    ))}
-                  </select>
+                  {editingCourse && (
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Added By</label>
+                      <div className="w-full px-3 py-2.5 bg-neutral-100 border border-neutral-200 rounded-lg text-sm text-neutral-600 italic">
+                        {editingCourse.users ? `${editingCourse.users.first_name} ${editingCourse.users.last_name}` : "System / Unknown"}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
 
               {/* Course Details */}
               <div className="space-y-4">
@@ -577,6 +592,37 @@ export const AdminCoursesTab: React.FC = () => {
                       className="w-full px-3 py-2.5 bg-neutral-50/50 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                       placeholder="Intro to Computing"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Year Level</label>
+                    <select
+                      value={courseForm.year_level}
+                      onChange={(e) => setCourseForm({ ...courseForm, year_level: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-neutral-50/50 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    >
+                      <option value="">Select Year Level</option>
+                      <option value="First Year">First Year</option>
+                      <option value="Second Year">Second Year</option>
+                      <option value="Third Year">Third Year</option>
+                      <option value="Fourth Year">Fourth Year</option>
+                      <option value="Fifth Year">Fifth Year</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Semester</label>
+                    <select
+                      value={courseForm.semester}
+                      onChange={(e) => setCourseForm({ ...courseForm, semester: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-neutral-50/50 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    >
+                      <option value="">Select Semester</option>
+                      <option value="First">First</option>
+                      <option value="Second">Second</option>
+                      <option value="Summer">Summer</option>
+                    </select>
                   </div>
                 </div>
                 

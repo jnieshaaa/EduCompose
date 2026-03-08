@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { supabase } from '../../lib/supabaseClient';
 import { useAlert } from '../../hooks/useAlert';
+import { useAcademicContext } from '../../hooks/useAcademicContext';
 import type { Course, Section } from '../../types/academic';
 
 interface CourseSectionsViewProps {
@@ -26,6 +27,7 @@ interface ProgramLookup {
 
 export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) {
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
+  const { currentSemester } = useAcademicContext();
   const [sections, setSections] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
@@ -48,9 +50,17 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
     selectedDepartmentId: '',
     selectedProgramAbbrs: [],
     blockPart: '',
-    term: '1st Semester',
+    term: '',
     students: '0'
   });
+
+  // Sync term with global settings
+  useEffect(() => {
+    if (currentSemester) {
+      setNewSection(prev => ({ ...prev, term: currentSemester }));
+    }
+  }, [currentSemester]);
+
   const [editingSection, setEditingSection] = useState<Section | null>(null);
 
   useEffect(() => {
@@ -159,7 +169,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
           inserts.push({
             course_id: course.id,
             name: abbr, // Just the program abbreviation
-            term: "1st Semester",
+            term: currentSemester || "1st Semester",
             students_estimated: 0,
           });
         }
@@ -167,7 +177,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         inserts.push({
           course_id: course.id,
           name: `${selectedProgram} ${newSection.blockPart.toUpperCase()}`,
-          term: newSection.term,
+          term: currentSemester || "1st Semester",
           students_estimated: parseInt(newSection.students, 10) || 0,
         });
       }
@@ -184,7 +194,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         setSections(prev => [...data, ...prev]);
         showSuccess(isAddingProgramLevel ? "Programs/Blocks created successfully!" : "Block created successfully!");
         setIsAddDialogOpen(false);
-        setNewSection({ selectedDepartmentId: '', selectedProgramAbbrs: [], blockPart: '', term: '1st Semester', students: '0' });
+        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: [], blockPart: '', students: '0' }));
       }
     } catch (err: any) {
       console.error(err);
@@ -201,7 +211,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         .from('sections')
         .update({
           name: editingSection.name,
-          term: editingSection.term,
           students_estimated: editingSection.students_estimated,
         })
         .eq('id', editingSection.id);
@@ -448,34 +457,20 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                   )}
                 </div>
               ) : (
-                <>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Block</label>
-                    <div className="flex items-center">
-                      <span className="px-3 py-2.5 bg-neutral-100 border border-neutral-200 border-r-0 rounded-l-lg text-sm text-neutral-500 font-medium border-r-transparent">
-                        {selectedProgram}{" "}
-                      </span>
-                      <input
-                        placeholder="e.g. 1A, 3B"
-                        value={newSection.blockPart}
-                        onChange={(e) => setNewSection({...newSection, blockPart: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-r-lg"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Block</label>
+                  <div className="flex items-center">
+                    <span className="px-3 py-2.5 bg-neutral-100 border border-neutral-200 border-r-0 rounded-l-lg text-sm text-neutral-500 font-medium border-r-transparent">
+                      {selectedProgram}{" "}
+                    </span>
+                    <input
+                      placeholder="e.g. 1A, 3B"
+                      value={newSection.blockPart}
+                      onChange={(e) => setNewSection({...newSection, blockPart: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-r-lg"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Term</label>
-                    <select
-                      value={newSection.term}
-                      onChange={(e) => setNewSection({...newSection, term: e.target.value})}
-                      className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary/20 text-sm transition-all outline-none"
-                    >
-                      <option value="1st Semester">1st Semester</option>
-                      <option value="2nd Semester">2nd Semester</option>
-                      <option value="Summer">Summer</option>
-                    </select>
-                  </div>
-                </>
+                </div>
               )}
             </div>
             <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
@@ -497,7 +492,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         </div>
       )}
 
-      {/* Edit Modal (Omitted repetitive boilerplate for brevity) */}
+      {/* Edit Modal */}
       {isEditDialogOpen && editingSection && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden fade-in zoom-in duration-200">
@@ -512,18 +507,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                   onChange={(e) => setEditingSection({...editingSection, name: e.target.value})}
                   className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Term</label>
-                <select
-                  value={editingSection.term}
-                  onChange={(e) => setEditingSection({...editingSection, term: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none"
-                >
-                  <option value="1st Semester">1st Semester</option>
-                  <option value="2nd Semester">2nd Semester</option>
-                  <option value="Summer">Summer</option>
-                </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Est. Students</label>
