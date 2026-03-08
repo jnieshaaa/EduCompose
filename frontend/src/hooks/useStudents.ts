@@ -5,6 +5,7 @@ import { initialNewStudentState } from "../data/studentsData";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
+import { useAcademicContext } from "./useAcademicContext";
 
 // Helper to get user ID from authenticated user
 const getTeacherId = async (): Promise<number | null> => {
@@ -58,9 +59,10 @@ export const parseName = (
   }
 };
 
-export function useStudents() {
+export function useStudents(showArchived: boolean = false, ay?: string, term?: string) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
+  const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
 
   // Read filters from URL params (for drill-down from Sections)
   const urlProgramFilter = searchParams.get("program");
@@ -131,6 +133,8 @@ export function useStudents() {
 
   // Load students + programs + sections from Supabase (teacher-end).
   useEffect(() => {
+    if (isLoadingAcademic) return;
+
     const fetchStudents = async () => {
       setIsLoading(true);
       setLoadError(null);
@@ -154,106 +158,108 @@ export function useStudents() {
         const programNameToId = new Map<string, number>();
         const programIds: number[] = [];
 
-        type SupabaseProgramRow = { id: number; name: string };
-
         if (programsData) {
-          (programsData as SupabaseProgramRow[]).forEach((p) => {
+          (programsData as any[]).forEach((p) => {
             programMap.set(p.id, p.name);
             programNameToId.set(p.name, p.id);
             programIds.push(p.id);
           });
-          setAvailablePrograms(
-            (programsData as SupabaseProgramRow[]).map((p) => p.name)
-          );
+          setAvailablePrograms(programsData.map((p: any) => p.name));
           setProgramNameToIdMap(programNameToId);
         }
 
-        // If no programs, then no sections or students to fetch
         if (programIds.length === 0) {
           setStudents([]);
           setIsLoading(false);
           return;
         }
 
-        // 2. Fetch sections belonging to these programs
-        const { data: sectionsData, error: sectionsError } = await supabase
+        // 2. Fetch sections belonging to these programs, filtered by term
+        let sectionsQuery = supabase
           .from("sections")
-          .select("id, name")
-          .in("program_id", programIds)
-          .order("id", { ascending: true });
+          .select("id, name, academic_year, term")
+          .in("program_id", programIds);
+
+        if (!showArchived) {
+          if (currentAY) sectionsQuery = sectionsQuery.eq("academic_year", currentAY);
+          if (currentSemester) sectionsQuery = sectionsQuery.eq("term", currentSemester);
+        } else {
+          // Archive view: allow specific filter OR default to "NOT CURRENT"
+          if (ay && ay !== "all") {
+            sectionsQuery = sectionsQuery.eq("academic_year", ay);
+          }
+          if (term && term !== "all") {
+            sectionsQuery = sectionsQuery.eq("term", term);
+          }
+
+          // If no explicit filters provided for archive, show all EXCEPT current
+          if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
+            sectionsQuery = sectionsQuery.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
+          }
+        }
+
+        const { data: sectionsData, error: sectionsError } = await sectionsQuery.order("id", { ascending: true });
 
         if (sectionsError) throw sectionsError;
 
         const sectionMap = new Map<number, string>();
         const sectionNameToId = new Map<string, number>();
-
-        type SupabaseSectionRow = { id: number; name: string };
+        const sectionIds: number[] = [];
 
         if (sectionsData) {
-          (sectionsData as SupabaseSectionRow[]).forEach((s) => {
+          (sectionsData as any[]).forEach((s) => {
             sectionMap.set(s.id, s.name);
             sectionNameToId.set(s.name, s.id);
+            sectionIds.push(s.id);
           });
-          setAvailableSections(
-            (sectionsData as SupabaseSectionRow[]).map((s) => s.name)
-          );
+          setAvailableSections(sectionsData.map((s: any) => s.name));
           setSectionNameToIdMap(sectionNameToId);
         }
 
-        // 3. Fetch students belonging to these programs
+        if (sectionIds.length === 0) {
+          setStudents([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 3. Fetch students belonging to these sections
         const { data: studentsData, error: studentsError } = await supabase
           .from("students")
           .select("id, student_code, full_name, email, program_id, section_id")
-          .in("program_id", programIds)
+          .in("section_id", sectionIds)
           .order("id", { ascending: true });
 
-        if (studentsError) {
-          throw studentsError;
-        }
-
-        type SupabaseStudentRow = {
-          id: number;
-          student_code: string;
-          full_name?: string | null;
-          email?: string | null;
-          program_id?: number | null;
-          section_id?: number | null;
-        };
+        if (studentsError) throw studentsError;
 
         const codeToDbId = new Map<string, number>();
-        const mapped: Student[] =
-          (studentsData as SupabaseStudentRow[] | undefined)?.map((row) => {
+        const mapped: Student[] = (studentsData as any[] || []).map((row) => {
             codeToDbId.set(row.student_code, row.id);
             return {
               id: row.student_code,
               name: row.full_name ?? "",
               email: row.email ?? "",
-              program:
-                (row.program_id && programMap.get(row.program_id)) ||
-                "Unknown program",
-              section:
-                (row.section_id && sectionMap.get(row.section_id)) ||
-                "Unknown section",
+              program: (row.program_id && programMap.get(row.program_id)) || "Unknown program",
+              section: (row.section_id && sectionMap.get(row.section_id)) || "Unknown section",
               submitted: 0,
               pending: 0,
               missing: 0,
               avgScore: 0,
               yearLevel: "1",
             };
-          }) ?? [];
+          });
 
         setStudentCodeToDbIdMap(codeToDbId);
         setStudents(mapped);
       } catch (error) {
-        console.error("Error loading students from Supabase:", error);
-        setLoadError("Unable to load students from Supabase.");
+        console.error("Error loading students:", error);
+        setLoadError("Unable to load students.");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchStudents();
-  }, []);
+  }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
   // Filter Logic
   const filteredStudents = useMemo(() => {

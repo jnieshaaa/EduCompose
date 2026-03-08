@@ -671,7 +671,7 @@ export const adminApi = {
     const { count: platformRubricsCount } = await supabase
       .from("rubrics")
       .select("id", { count: "exact", head: true })
-      .eq("is_platform_rubric", true);
+      .is("created_by", null);
 
     return {
       total_users: usersCount.count || 0,

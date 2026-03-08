@@ -22,8 +22,12 @@ type SupabaseActivityRow = {
     | null;
 };
 
-// Load activities for the current teacher
-export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
+// Load activities for the current teacher with optional academic context filtering
+export const fetchTeacherActivities = async (
+  academicYear?: string,
+  term?: string,
+  showArchived: boolean = false
+): Promise<EssayActivity[]> => {
   try {
     const teacherId = await fetchTeacherId();
     if (!teacherId) {
@@ -32,13 +36,23 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
     }
 
     // Fetch activities with rubric names
-    const { data: activitiesData, error: activitiesError } = await supabase
+    let query = supabase
       .from("essay_activities")
       .select(
-        "id, teacher_id, title, program_id, section_id, course_id, rubric_id, due_date, instructions, created_at, rubrics(id, name)"
+        "id, teacher_id, title, program_id, section_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)"
       )
-      .eq("teacher_id", teacherId)
-      .order("created_at", { ascending: false });
+      .eq("teacher_id", teacherId);
+
+    if (!showArchived) {
+      if (academicYear) query = query.eq("academic_year", academicYear);
+      if (term) query = query.eq("term", term);
+    } else {
+      if (academicYear && term) {
+        query = query.or(`academic_year.neq.${academicYear},term.neq.${term}`);
+      }
+    }
+
+    const { data: activitiesData, error: activitiesError } = await query.order("created_at", { ascending: false });
 
     if (activitiesError) {
       console.error("Error loading activities:", activitiesError);
@@ -268,6 +282,8 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
         rubric_id: rubricId,
         due_date: activity.dueDate || null,
         instructions: activity.description || null,
+        academic_year: activity.academicYear || null,
+        term: activity.term || null,
       })
       .select()
       .single();
@@ -278,7 +294,7 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
     }
 
     // Map back to EssayActivity format
-    const row = data as SupabaseActivityRow;
+    const row = data as any;
     return {
       id: String(row.id),
       title: row.title,
@@ -288,6 +304,8 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
       createdAt: row.created_at.split("T")[0],
+      academicYear: row.academic_year,
+      term: row.term,
       submissionCount: 0, // New activity has no submissions yet
     };
   } catch (err) {
@@ -333,20 +351,15 @@ export const updateActivity = async (
       }
     }
 
-    const updateData: {
-      title: string;
-      course_id: string | null;
-      section_id: number | null;
-      rubric_id: number | null;
-      due_date: string | null;
-      instructions: string | null;
-    } = {
+    const updateData: any = {
       title: activityData.title,
       course_id: activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
       section_id: sectionId && !isNaN(sectionId) ? sectionId : null,
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
+      academic_year: activityData.academicYear,
+      term: activityData.term,
     };
 
     const { data, error } = await supabase
@@ -363,7 +376,7 @@ export const updateActivity = async (
     }
 
     // Map back to EssayActivity format
-    const row = data as SupabaseActivityRow;
+    const row = data as any;
     return {
       id: String(row.id),
       title: row.title,
@@ -373,6 +386,8 @@ export const updateActivity = async (
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
       createdAt: row.created_at.split("T")[0],
+      academicYear: row.academic_year,
+      term: row.term,
       submissionCount: 0, // Will be updated when activities are reloaded
     };
   } catch (err) {
@@ -638,7 +653,6 @@ export const fetchStudentsByCourseAndSection = async (
     const { data: studentsData, error: studentsError } = await supabase
       .from("students")
       .select("id, student_code, full_name")
-      .eq("course_id", courseId)
       .eq("section_id", sectionId)
       .order("full_name", { ascending: true });
 

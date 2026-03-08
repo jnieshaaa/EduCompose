@@ -16,9 +16,12 @@ import {
   fetchRubrics,
   fetchStudentsByCourseAndSection,
 } from "../services/activityService";
+import { useAcademicContext } from "./useAcademicContext";
 
-export function useActivities() {
+export function useActivities(showArchived: boolean = false, ay?: string, term?: string) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
+
   const [activities, setActivities] = useState<EssayActivity[]>([]);
   const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
   const [sections, setSections] = useState<
@@ -40,12 +43,18 @@ export function useActivities() {
 
   // Load activities, courses, sections, and rubrics from Supabase
   useEffect(() => {
+    if (isLoadingAcademic) return;
+
     const loadData = async () => {
       setIsLoading(true);
       try {
         const [activitiesData, coursesData, sectionsData, rubricsData] =
           await Promise.all([
-            fetchTeacherActivities(),
+            fetchTeacherActivities(
+                ay || currentAY, 
+                term || currentSemester, 
+                showArchived
+            ),
             fetchCourses().then(res => res.map(c => ({ id: c.id, name: c.course_code }))),
             fetchSections(),
             fetchRubrics(),
@@ -63,7 +72,7 @@ export function useActivities() {
     };
 
     loadData();
-  }, []);
+  }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
   // Fetch students for selected course-section
   useEffect(() => {
@@ -140,7 +149,11 @@ export function useActivities() {
   const handleCreateActivity = async (activity: NewActivityForm) => {
     setIsCreating(true);
     try {
-      const created = await createActivity(activity);
+      const created = await createActivity({
+        ...activity,
+        academicYear: currentAY,
+        term: currentSemester
+      });
       setActivities((prev) => [created, ...prev]);
     } catch (err) {
       console.error("Error creating activity:", err);
@@ -156,7 +169,12 @@ export function useActivities() {
   ) => {
     setIsCreating(true);
     try {
-      const updated = await updateActivity(activityId, activity);
+      const currentActivity = activities.find(a => a.id === activityId);
+      const updated = await updateActivity(activityId, {
+        ...activity,
+        academicYear: currentActivity?.academicYear || currentAY,
+        term: currentActivity?.term || currentSemester
+      });
       setActivities((prev) =>
         prev.map((a) => (a.id === activityId ? updated : a))
       );

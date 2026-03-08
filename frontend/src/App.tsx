@@ -22,6 +22,7 @@ import { AdminUsersTab } from "./pages/admin/AdminUsersTab.tsx";
 import { AdminSettingsTab } from "./pages/admin/AdminSettingsTab.tsx";
 import { AdminContentTab } from "./pages/admin/AdminContentTab.tsx";
 import SchoolManagement from "./pages/admin/SchoolManagement.tsx";
+import { AdminArchiveTab } from "./pages/admin/AdminArchiveTab.tsx";
 
 // Import Student Layout and Pages (Placeholders)
 // NOTE: I'm creating a new StudentLayout and placeholder components for the student pages
@@ -51,6 +52,7 @@ import AnalysisResults from "./pages/AnalysisResults"; // General route (no layo
 import { EssayManagementTab } from "./pages/teachers/EssayManagementTab.tsx";
 import { ActivitiesTab } from "./pages/teachers/ActivitiesTab.tsx";
 import { CompareActivitiesTab } from "./pages/teachers/CompareActivitiesTab.tsx";
+import { ArchivePage } from "./pages/teachers/ArchivePage.tsx";
 
 // General/Utility Imports
 import ErrorPage from "./components/ErrorPage";
@@ -142,6 +144,7 @@ const AppContent: React.FC = () => {
           <Route path="Courses" element={<CoursesTab />} />
           <Route path="Rubrics" element={<RubricsTab />} />
           <Route path="Sections" element={<SectionsTab />} />
+          <Route path="Archive" element={<ArchivePage />} />
           <Route path="Notifications" element={<TeacherNotificationsTab />} />
 
           {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
@@ -208,6 +211,7 @@ const AppContent: React.FC = () => {
           <Route path="Content" element={<AdminContentTab />} />
           <Route path="Schools" element={<SchoolManagement />} />
           <Route path="Settings" element={<AdminSettingsTab />} />
+          <Route path="Archive" element={<AdminArchiveTab />} />
 
           {/* Redirect to Dashboard if hitting /Admin without a sub-path */}
           <Route index element={<AdminDashboardTab />} />

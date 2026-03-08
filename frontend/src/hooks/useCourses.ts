@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Course } from "../types/academic";
+import { useAcademicContext } from "./useAcademicContext";
 
 // Helper to get teacher's school and department from public.users
 const getTeacherInfo = async () => {
@@ -35,9 +36,10 @@ const getTeacherInfo = async () => {
   }
 };
 
-export function useCourses() {
+export function useCourses(showArchived: boolean = false, ay?: string, term?: string) {
   const [searchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
+  const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
 
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [departmentCourses, setDepartmentCourses] = useState<Course[]>([]);
@@ -50,6 +52,8 @@ export function useCourses() {
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
   const fetchCourses = async () => {
+    if (isLoadingAcademic) return;
+
     setIsLoading(true);
     setLoadError(null);
     try {
@@ -61,10 +65,12 @@ export function useCourses() {
       setTeacherInfo(info);
 
       // 1. Fetch Teacher's personal loads from teacher_course_loads
-      const { data: loadsData, error: loadsError } = await supabase
+      let query = supabase
         .from("teacher_course_loads")
         .select(`
           course_id,
+          academic_year,
+          term,
           courses (
             *,
             schools(name),
@@ -73,6 +79,27 @@ export function useCourses() {
           )
         `)
         .eq("teacher_id", info.auth_user_id);
+
+      if (!showArchived) {
+        // Filter by current AY and Term
+        if (currentAY) query = query.eq("academic_year", currentAY);
+        if (currentSemester) query = query.eq("term", currentSemester);
+      } else {
+        // Archive view: allow specific filter OR default to "NOT CURRENT"
+        if (ay && ay !== "all") {
+          query = query.eq("academic_year", ay);
+        }
+        if (term && term !== "all") {
+          query = query.eq("term", term);
+        }
+
+        // If no explicit filters provided for archive, show all EXCEPT current
+        if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
+          query = query.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
+        }
+      }
+
+      const { data: loadsData, error: loadsError } = await query;
 
       if (loadsError) throw loadsError;
 
@@ -119,7 +146,7 @@ export function useCourses() {
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
   const myLoadsIds = useMemo(() => new Set(myCourses.map(c => c.id)), [myCourses]);
 
@@ -172,10 +199,12 @@ export function useCourses() {
 
       const newCourse = data as unknown as Course;
       
-      // Automatically add to loads
+      // Automatically add to loads with current AY and Term
       await supabase.from("teacher_course_loads").insert({
         teacher_id: teacherInfo.auth_user_id,
-        course_id: newCourse.id
+        course_id: newCourse.id,
+        academic_year: currentAY,
+        term: currentSemester
       });
 
       setMyCourses((prev) => [newCourse, ...prev]);
@@ -200,16 +229,20 @@ export function useCourses() {
           .from("teacher_course_loads")
           .delete()
           .eq("teacher_id", teacherInfo.auth_user_id)
-          .eq("course_id", courseId);
+          .eq("course_id", courseId)
+          .eq("academic_year", currentAY)
+          .eq("term", currentSemester);
         if (error) throw error;
         setMyCourses(prev => prev.filter(c => c.id !== courseId));
-        showSuccess("Course removed from your loads.");
+        showSuccess("Course removed from your current loads.");
       } else {
         const { error } = await supabase
           .from("teacher_course_loads")
           .insert({
             teacher_id: teacherInfo.auth_user_id,
-            course_id: courseId
+            course_id: courseId,
+            academic_year: currentAY,
+            term: currentSemester
           });
         if (error) throw error;
         
@@ -221,7 +254,7 @@ export function useCourses() {
             // Fallback: refetch
             fetchCourses();
         }
-        showSuccess("Course added to your loads!");
+        showSuccess("Course added to your current loads!");
       }
     } catch (err: any) {
       console.error("Error toggling load:", err);

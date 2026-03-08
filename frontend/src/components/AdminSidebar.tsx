@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ChevronDown,
   GraduationCap,
+  Archive,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -75,6 +76,11 @@ const AdminSidebar: React.FC = () => {
         icon: <BookOpen size={20} />,
         label: "Content Management",
         path: "/Admin/Content",
+      },
+      {
+        icon: <Archive size={20} />,
+        label: "Archive Records",
+        path: "/Admin/Archive",
       },
       {
         icon: <Settings size={20} />,

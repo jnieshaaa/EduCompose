@@ -33,6 +33,7 @@ export interface Section {
   program_id?: number | null;
   name: string;
   term: string;
+  academic_year: string;
   students_estimated: number;
   essays_estimated: number;
   created_at: string;

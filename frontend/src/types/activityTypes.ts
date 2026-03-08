@@ -12,6 +12,8 @@ export type EssayActivity = {
   description?: string;
   createdAt: string;
   submissionCount: number;
+  academicYear?: string;
+  term?: string;
 };
 
 export type CourseSection = {
@@ -43,5 +45,7 @@ export type NewActivityForm = {
   rubricId: string | "";
   dueDate: string;
   description: string;
+  academicYear?: string;
+  term?: string;
 };
 

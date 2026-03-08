@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import type { Section } from "../types/academic";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
+import { useAcademicContext } from "./useAcademicContext";
 
 // Helper to get user ID and academic context
 const getTeacherContext = async () => {
@@ -27,9 +28,10 @@ const getTeacherContext = async () => {
   }
 };
 
-export function useSections() {
+export function useSections(showArchived: boolean = false, ay?: string, term?: string) {
   const [searchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
+  const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
 
   const urlCourseFilter = searchParams.get("course");
   const urlSearchQuery = searchParams.get("search");
@@ -53,7 +55,16 @@ export function useSections() {
     students: "0"
   });
 
+  // Update new section term when academic context loads
   useEffect(() => {
+    if (currentSemester) {
+      setNewSection(prev => ({ ...prev, term: currentSemester }));
+    }
+  }, [currentSemester]);
+
+  useEffect(() => {
+    if (isLoadingAcademic) return;
+
     const fetchData = async () => {
       setIsLoading(true);
       setLoadError(null);
@@ -77,14 +88,34 @@ export function useSections() {
         const courseIds = (coursesData || []).map(c => c.id);
 
         // Load sections for these courses
-        const { data: sectionsData, error: sectionsError } = await supabase
+        let query = supabase
           .from("sections")
           .select(`
             *,
             courses(course_code, course_title)
           `)
-          .in("course_id", courseIds)
-          .order("created_at", { ascending: false });
+          .in("course_id", courseIds);
+
+        if (!showArchived) {
+          // Filter by current AY and Term
+          if (currentAY) query = query.eq("academic_year", currentAY);
+          if (currentSemester) query = query.eq("term", currentSemester);
+        } else {
+          // Archive view: allow specific filter OR default to "NOT CURRENT"
+          if (ay && ay !== "all") {
+            query = query.eq("academic_year", ay);
+          }
+          if (term && term !== "all") {
+            query = query.eq("term", term);
+          }
+
+          // If no explicit filters provided for archive, show all EXCEPT current
+          if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
+            query = query.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
+          }
+        }
+
+        const { data: sectionsData, error: sectionsError } = await query.order("created_at", { ascending: false });
 
         if (sectionsError) throw sectionsError;
         setSections(sectionsData || []);
@@ -97,7 +128,7 @@ export function useSections() {
     };
 
     fetchData();
-  }, []);
+  }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
   const filteredSections = useMemo(() => {
     return sections.filter((section) => {
@@ -133,6 +164,7 @@ export function useSections() {
           course_id: newSection.course_id,
           name: newSection.name,
           term: newSection.term,
+          academic_year: currentAY, // Auto-tag with current AY
           students_estimated: parseInt(newSection.students, 10),
         })
         .select(`
@@ -143,7 +175,7 @@ export function useSections() {
 
       if (error) {
         if (error.code === '23505') {
-          showError("This block already exists for this course and term.");
+          showError("This block already exists for this course, AY, and term.");
         } else {
           showError(`Failed to create block: ${error.message}`);
         }
@@ -153,7 +185,7 @@ export function useSections() {
       setSections((prev) => [data, ...prev]);
       showSuccess("Block created successfully!");
       setIsAddDialogOpen(false);
-      setNewSection({ name: "", course_id: "", term: "", students: "0" });
+      setNewSection({ name: "", course_id: "", term: currentSemester, students: "0" });
     } catch (err: any) {
       showError("An unexpected error occurred.");
     } finally {

@@ -190,22 +190,17 @@ export function DashboardTab() {
           // Get students in teacher's sections
           supabase
             .from("students")
-            .select("id, course_id, section_id")
+            .select("id, section_id, program_id")
             .then(({ data, error }) => {
               if (error) throw error;
-              const typedStudents = (data as { id: number; course_id: string | null; section_id: string | null }[] | null) || [];
+              const typedStudents = (data as { id: number; section_id: number | null; program_id: number | null }[] | null) || [];
               if (sectionIds.length > 0) {
+                // sectionIds are strings in typedTeacherActivities, but numbers in students table
+                const numericSectionIds = sectionIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
                 return typedStudents.filter(
                   (student) =>
                     student.section_id !== null &&
-                    sectionIds.includes(student.section_id),
-                );
-              }
-              if (courseIds.length > 0) {
-                return typedStudents.filter(
-                  (student) =>
-                    student.course_id !== null &&
-                    courseIds.includes(student.course_id),
+                    numericSectionIds.includes(student.section_id),
                 );
               }
               return [];

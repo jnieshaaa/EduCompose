@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   GitCompare,
+  Archive,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -78,6 +79,11 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         icon: <BarChart3 className="w-5 h-5" />,
         label: "Metrics",
         path: "/Teacher/Metrics",
+      },
+      {
+        icon: <Archive className="w-5 h-5" />,
+        label: "Archive",
+        path: "/Teacher/Archive",
       },
       {
         icon: <Settings className="w-5 h-5" />,

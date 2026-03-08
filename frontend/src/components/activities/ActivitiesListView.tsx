@@ -59,6 +59,7 @@ interface ActivitiesListViewProps {
   courses: { id: string; name: string }[];
   sections: { id: string; name: string; courseId: string }[];
   rubrics: { id: string; name: string }[];
+  isReadOnly?: boolean;
 }
 
 export function ActivitiesListView({
@@ -77,6 +78,7 @@ export function ActivitiesListView({
   courses,
   sections,
   rubrics,
+  isReadOnly = false,
 }: ActivitiesListViewProps) {
   const filteredActivities = activities.filter(
     (a) =>
@@ -96,13 +98,15 @@ export function ActivitiesListView({
             Define essay assignments and track submissions
           </p>
         </div>
-        <Button
-          className="bg-primary hover:bg-primary-300"
-          onClick={onCreateActivity}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Activity
-        </Button>
+        {!isReadOnly && (
+          <Button
+            className="bg-primary hover:bg-primary-300"
+            onClick={onCreateActivity}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Activity
+          </Button>
+        )}
       </div>
 
       {/* Summary Stats */}
@@ -202,7 +206,7 @@ export function ActivitiesListView({
               ? "Get started by creating your first essay activity."
               : "Try adjusting your search query."}
           </p>
-          {activities.length === 0 && (
+          {activities.length === 0 && !isReadOnly && (
             <Button
               className="bg-primary hover:bg-primary-300"
               onClick={onCreateActivity}
@@ -254,35 +258,37 @@ export function ActivitiesListView({
                           </h3>
                         </div>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            asChild
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-1"
+                        {!isReadOnly && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => onEditActivity(e, activity.id)}
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit Activity
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => onDeleteActivity(e, activity.id)}
-                              className="text-error-default"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Activity
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-1"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => onEditActivity(e, activity.id)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Activity
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => onDeleteActivity(e, activity.id)}
+                                className="text-error-default"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Activity
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
 
                       {/* Description */}
@@ -458,31 +464,33 @@ export function ActivitiesListView({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => onEditActivity(e, activity.id)}
+                      {!isReadOnly && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Activity
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => onDeleteActivity(e, activity.id)}
-                            className="text-error-default"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Activity
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => onEditActivity(e, activity.id)}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Activity
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => onDeleteActivity(e, activity.id)}
+                              className="text-error-default"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Activity
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
