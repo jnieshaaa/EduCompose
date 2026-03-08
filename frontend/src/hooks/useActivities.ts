@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import type {
   EssayActivity,
   NewActivityForm,
-  ProgramSection,
+  CourseSection,
   Student,
 } from "../types/activityTypes";
 import {
@@ -11,18 +11,18 @@ import {
   createActivity,
   updateActivity,
   deleteActivity,
-  fetchPrograms,
+  fetchCourses,
   fetchSections,
   fetchRubrics,
-  fetchStudentsByProgramAndSection,
+  fetchStudentsByCourseAndSection,
 } from "../services/activityService";
 
 export function useActivities() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activities, setActivities] = useState<EssayActivity[]>([]);
-  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([]);
+  const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
   const [sections, setSections] = useState<
-    { id: string; name: string; programId: string }[]
+    { id: string; name: string; courseId: string }[]
   >([]);
   const [rubrics, setRubrics] = useState<{
     platform: { id: string; name: string }[];
@@ -35,24 +35,24 @@ export function useActivities() {
 
   // URL params
   const activityId = searchParams.get("activityId");
-  const programSection = searchParams.get("programSection");
-  const programName = searchParams.get("programName");
+  const sectionId = searchParams.get("sectionId");
+  const courseId = searchParams.get("courseId");
 
-  // Load activities, programs, sections, and rubrics from Supabase
+  // Load activities, courses, sections, and rubrics from Supabase
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [activitiesData, programsData, sectionsData, rubricsData] =
+        const [activitiesData, coursesData, sectionsData, rubricsData] =
           await Promise.all([
             fetchTeacherActivities(),
-            fetchPrograms(),
+            fetchCourses().then(res => res.map(c => ({ id: c.id, name: c.course_code }))),
             fetchSections(),
             fetchRubrics(),
           ]);
 
         setActivities(activitiesData);
-        setPrograms(programsData);
+        setCourses(coursesData);
         setSections(sectionsData);
         setRubrics(rubricsData);
       } catch (err) {
@@ -65,12 +65,9 @@ export function useActivities() {
     loadData();
   }, []);
 
-  // Fetch students for selected program-section
+  // Fetch students for selected course-section
   useEffect(() => {
-    if (!programSection || !programName) {
-      console.log(
-        "[useActivities] Missing programSection or programName, clearing students"
-      );
+    if (!sectionId || !courseId) {
       setStudents([]);
       return;
     }
@@ -78,9 +75,9 @@ export function useActivities() {
     const loadStudents = async () => {
       setIsLoadingStudents(true);
       try {
-        const studentsData = await fetchStudentsByProgramAndSection(
-          programName,
-          programSection,
+        const studentsData = await fetchStudentsByCourseAndSection(
+          courseId,
+          sectionId,
           activityId || undefined
         );
         setStudents(studentsData);
@@ -93,47 +90,37 @@ export function useActivities() {
     };
 
     loadStudents();
-  }, [programSection, programName, activityId]);
+  }, [sectionId, courseId, activityId]);
 
   // Get current activity
   const currentActivity = activityId
     ? activities.find((a) => a.id === activityId)
     : null;
 
-  // Generate program-sections for current activity
-  const programSections = useMemo(() => {
+  // Generate course-sections for current activity
+  const courseSections = useMemo(() => {
     if (!currentActivity) return [];
 
-    if (currentActivity.programId === "all") {
-      return programs.flatMap((program) => {
-        const programSections = sections.filter(
-          (s) => s.programId === program.id
-        );
-        return programSections.map((section) => ({
-          id: `${program.id}-${section.id}`,
-          name: `${program.name} - ${section.name}`,
-          programName: program.name,
-          sectionName: section.name,
-          studentCount: 0,
-          submissionCount: 0,
-        }));
-      });
-    } else {
-      const program = programs.find((p) => p.id === currentActivity.programId);
-      if (!program) return [];
-      const programSections = sections.filter(
-        (s) => s.programId === program.id
-      );
-      return programSections.map((section) => ({
-        id: `${program.id}-${section.id}`,
-        name: `${program.name} - ${section.name}`,
-        programName: program.name,
+    const relevantSections = sections.filter(s => {
+        if (currentActivity.courseId !== "all" && s.courseId !== currentActivity.courseId) return false;
+        if (currentActivity.blockId !== "all" && s.id !== currentActivity.blockId) return false;
+        return true;
+    });
+
+    return relevantSections.map((section) => {
+      const course = courses.find(c => c.id === section.courseId);
+      return {
+        id: `${section.courseId}-${section.id}`,
+        name: `${course?.name || 'Unknown'} - ${section.name}`,
+        courseName: course?.name || 'Unknown',
         sectionName: section.name,
+        courseId: section.courseId,
+        sectionId: section.id,
         studentCount: 0,
         submissionCount: 0,
-      }));
-    }
-  }, [currentActivity, programs, sections]);
+      };
+    });
+  }, [currentActivity, courses, sections]);
 
   // Stats
   const totalActivities = activities.length;
@@ -202,12 +189,13 @@ export function useActivities() {
     });
   };
 
-  const handleProgramSectionClick = (section: ProgramSection) => {
+  const handleCourseSectionClick = (section: CourseSection) => {
     setSearchParams({
       activityId: activityId || "",
-      activityTitle: currentActivity?.title || "",
-      programSection: section.sectionName,
-      programName: section.programName,
+      sectionId: section.sectionId,
+      courseId: section.courseId,
+      courseName: section.courseName,
+      courseSection: section.sectionName,
     });
   };
 
@@ -222,11 +210,11 @@ export function useActivities() {
   return {
     // State
     activities,
-    programs,
+    courses,
     sections,
     rubrics,
     students,
-    programSections,
+    courseSections,
     currentActivity,
     isLoading,
     isCreating,
@@ -239,9 +227,10 @@ export function useActivities() {
     handleUpdateActivity,
     handleDeleteActivity,
     handleActivityClick,
-    handleProgramSectionClick,
+    handleCourseSectionClick,
     handleBackToSections,
     handleBackToActivities,
     setSearchParams,
   };
 }
+

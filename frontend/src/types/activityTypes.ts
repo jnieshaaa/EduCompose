@@ -1,11 +1,11 @@
-export type Program = { id: string; name: string };
-export type Block = { id: string; name: string; programId: string };
+export type Course = { id: string; name: string };
+export type Block = { id: string; name: string; courseId: string };
 export type Rubric = { id: string; name: string };
 
 export type EssayActivity = {
   id: string;
   title: string;
-  programId: string | "all";
+  courseId: string | "all";
   blockId: string | "all";
   rubricId: string | null;
   dueDate?: string;
@@ -14,11 +14,13 @@ export type EssayActivity = {
   submissionCount: number;
 };
 
-export type ProgramSection = {
+export type CourseSection = {
   id: string;
-  name: string; // e.g., "BS Computer Science - 1A"
-  programName: string;
+  name: string; // e.g., "BSCS-101 - 1A"
+  courseName: string;
   sectionName: string;
+  courseId: string;
+  sectionId: string;
   studentCount: number;
   submissionCount: number;
 };
@@ -36,9 +38,10 @@ export type Student = {
 
 export type NewActivityForm = {
   title: string;
-  programIds: string[]; // Array of selected program IDs, empty means "all"
-  sectionIds: string[]; // Array of selected section IDs, empty means "all"
+  courseIds: string[]; // Array of selected course IDs
+  sectionIds: string[]; // Array of selected section IDs
   rubricId: string | "";
   dueDate: string;
   description: string;
 };
+

@@ -35,9 +35,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [isTablet, setIsTablet] = useState(
-    window.innerWidth >= 768 && window.innerWidth < 1024
-  );
+  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
@@ -54,9 +52,14 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       },
       {
         icon: <Layers className="w-5 h-5" />,
-        label: "Class Management",
-        path: "/Teacher/Programs", // Goes directly to Programs (card grid)
+        label: "Course Management",
+        path: "/Teacher/Courses",
       },
+      // {
+      //   icon: <GitCompare className="w-5 h-5" />,
+      //   label: "Blocks / sections",
+      //   path: "/Teacher/Sections",
+      // },
       {
         icon: <BookOpen className="w-5 h-5" />,
         label: "Activities",
@@ -67,11 +70,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         label: "Compare Essays",
         path: "/Teacher/CompareActivities",
       },
-      // {
-      //   icon: <FileText className='w-5 h-5' />,
-      //   label: "Submissions",
-      //   path: "/Teacher/Essays",
-      // },
       {
         icon: <ClipboardCheck className="w-5 h-5" />,
         label: "Rubrics / Criteria",
@@ -91,9 +89,9 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     []
   );
 
-  // Routes that belong to Class Management section (for highlighting)
-  const classManagementPaths = [
-    "/Teacher/Programs",
+  // Routes that belong to Course Management section (for highlighting)
+  const courseManagementPaths = [
+    "/Teacher/Courses",
     "/Teacher/Sections",
     "/Teacher/Students",
   ];
@@ -111,13 +109,13 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
     );
 
-    // For Class Management sub-routes, show "Class Management" in title
-    const isClassManagementRoute = classManagementPaths.some((p) =>
+    // For Course Management sub-routes, show "Course Management" in title
+    const isCourseManagementRoute = courseManagementPaths.some((p) =>
       location.pathname.toLowerCase().startsWith(p.toLowerCase())
     );
 
-    if (isClassManagementRoute) {
-      document.title = "Class Management";
+    if (isCourseManagementRoute) {
+      document.title = "Course Management";
     } else {
       document.title = currentItem ? currentItem.label : "EduCompose";
     }
@@ -128,10 +126,13 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
       setIsTablet(width >= 768 && width < 1024);
+      if (width < 1024) {
+        setIsSidebarOpen(false);
+      }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [setIsSidebarOpen]);
 
   useEffect(() => {
     setLogoShine(true);
@@ -144,14 +145,14 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
   };
 
-  // Check if a menu item is active (including Class Management sub-routes)
+  // Check if a menu item is active (including Course Management sub-routes)
   const isItemActive = (itemPath: string) => {
     const currentPath = activePath.toLowerCase();
     const targetPath = itemPath.toLowerCase();
 
-    // For Class Management, check if current path is any of its sub-routes
-    if (targetPath === "/teacher/programs") {
-      return classManagementPaths.some((p) =>
+    // For Course Management, check if current path is any of its sub-routes
+    if (targetPath === "/teacher/courses") {
+      return courseManagementPaths.some((p) =>
         currentPath.startsWith(p.toLowerCase())
       );
     }
@@ -167,9 +168,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
         style={{
           width: isSidebarOpen
-            ? isTablet
-              ? "240px"
-              : "280px"
+            ? "280px"
             : isDesktop
             ? "80px"
             : "0px",
@@ -236,30 +235,29 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-rd ${
+                      className={`btn-fade group flex items-center rounded-rd h-10 px-3 ${
                         isActive
                           ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:text-support-superlight"
+                          : "bg-primary text-white hover:bg-primary-600 focus:bg-primary-600 hover:text-support-superlight focus:text-support-superlight"
                       }`}
+                      style={{ width: isSidebarOpen ? "248px" : "48px" }}
                     >
-                      <div className="flex items-center w-full flex-1">
-                        <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                          {item.icon}
-                        </span>
-                        <AnimatePresence>
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial="hidden"
-                              animate="visible"
-                              exit="hidden"
-                              variants={textVariants}
-                              className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                      <span className="flex-shrink-0 flex items-center justify-center w-10 h-10">
+                        {item.icon}
+                      </span>
+                      <AnimatePresence>
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                            variants={textVariants}
+                            className="font-medium text-sm whitespace-nowrap ml-2"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </button>
                   </Tooltip>
                 </li>
@@ -278,26 +276,25 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
           >
             <button
               onClick={() => setIsInfoModalOpen(true)}
-              className="btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight"
+              className="btn-fade group flex items-center rounded-rd h-10 px-3 bg-primary text-white hover:bg-primary-600 focus:bg-primary-600 hover:text-support-superlight focus:text-support-superlight"
+              style={{ width: isSidebarOpen ? "248px" : "48px" }}
             >
-              <div className="flex items-center w-full flex-1">
-                <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                  <Info className="w-5 h-5" />
-                </span>
-                <AnimatePresence>
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={textVariants}
-                      className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                    >
-                      About EduCompose
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
+              <span className="flex-shrink-0 flex items-center justify-center w-10 h-10">
+                <Info className="w-5 h-5" />
+              </span>
+              <AnimatePresence>
+                {isSidebarOpen && (
+                  <motion.span
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={textVariants}
+                    className="font-medium text-sm whitespace-nowrap ml-2"
+                  >
+                    About EduCompose
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           </Tooltip>
         </div>

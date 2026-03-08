@@ -1,24 +1,24 @@
 import type {
-  Program,
+  Course,
   Block,
   Rubric,
   EssayActivity,
-  ProgramSection,
+  CourseSection,
   Student,
 } from "../types/activityTypes";
 
 // Demo data
-export const demoPrograms: Program[] = [
-  { id: "prog-1", name: "BS Computer Science" },
-  { id: "prog-2", name: "BS Education" },
-  { id: "prog-3", name: "BS Information Technology" },
+export const demoCourses: Course[] = [
+  { id: "course-1", name: "CS-101" },
+  { id: "course-2", name: "ENG-202" },
+  { id: "course-3", name: "MATH-303" },
 ];
 
 export const demoBlocks: Block[] = [
-  { id: "block-1", name: "Block A", programId: "prog-1" },
-  { id: "block-2", name: "Block B", programId: "prog-1" },
-  { id: "block-3", name: "Block C", programId: "prog-2" },
-  { id: "block-4", name: "Block A", programId: "prog-3" },
+  { id: "block-1", name: "Block A", courseId: "course-1" },
+  { id: "block-2", name: "Block B", courseId: "course-1" },
+  { id: "block-3", name: "Block C", courseId: "course-2" },
+  { id: "block-4", name: "Block A", courseId: "course-3" },
 ];
 
 export const demoRubrics: Rubric[] = [
@@ -32,7 +32,7 @@ export const initialActivities: EssayActivity[] = [
   {
     id: "activity-1",
     title: "Argumentative Essay on Climate Change",
-    programId: "prog-1",
+    courseId: "course-1",
     blockId: "all",
     rubricId: "rubric-argument",
     dueDate: "2025-12-20",
@@ -41,49 +41,25 @@ export const initialActivities: EssayActivity[] = [
     createdAt: "2025-12-10",
     submissionCount: 24,
   },
-  {
-    id: "activity-2",
-    title: "Machine Learning Ethics Analysis",
-    programId: "prog-1",
-    blockId: "block-1",
-    rubricId: "rubric-standard",
-    dueDate: "2025-12-18",
-    description: "Analyze the ethical implications of AI in healthcare.",
-    createdAt: "2025-12-08",
-    submissionCount: 15,
-  },
-  {
-    id: "activity-3",
-    title: "Creative Writing: Short Story",
-    programId: "prog-2",
-    blockId: "all",
-    rubricId: "rubric-creative",
-    dueDate: "2025-12-25",
-    description: "Write an original short story (500-800 words) on any topic.",
-    createdAt: "2025-12-05",
-    submissionCount: 8,
-  },
 ];
 
-// Generate program-sections for a given program
-// Format: "BS Computer Science - 1A", "BS Computer Science - 1B", etc.
-export const generateProgramSections = (
-  programName: string
-): ProgramSection[] => {
-  const sections: ProgramSection[] = [];
-  const years = [1, 2, 3, 4];
-  const sectionLetters = ["A", "B", "C", "D"];
+// Generate course-sections for a given course
+export const generateCourseSections = (
+  courseName: string
+): CourseSection[] => {
+  const sections: CourseSection[] = [];
+  const sectionNames = ["BSCS-1A", "BSCS-1B", "BSIT-2A"];
 
-  years.forEach((year) => {
-    sectionLetters.forEach((letter) => {
-      sections.push({
-        id: `${programName}-${year}${letter}`,
-        name: `${programName} - ${year}${letter}`,
-        programName: programName,
-        sectionName: `${year}${letter}`,
-        studentCount: Math.floor(Math.random() * 30) + 20, // 20-50 students
-        submissionCount: Math.floor(Math.random() * 25) + 5, // 5-30 submissions
-      });
+  sectionNames.forEach((name) => {
+    sections.push({
+      id: `${courseName}-${name}`,
+      name: `${courseName} - ${name}`,
+      courseName: courseName,
+      sectionName: name,
+      courseId: "1",
+      sectionId: "1",
+      studentCount: Math.floor(Math.random() * 30) + 20,
+      submissionCount: Math.floor(Math.random() * 25) + 5,
     });
   });
 
@@ -96,28 +72,10 @@ export const generateStudents = (sectionName: string): Student[] => {
   const names = [
     "John Doe",
     "Jane Smith",
-    "Michael Johnson",
-    "Emily Davis",
-    "David Wilson",
-    "Sarah Brown",
-    "Robert Taylor",
-    "Jessica Martinez",
-    "William Anderson",
-    "Ashley Thomas",
-    "Christopher Jackson",
-    "Amanda White",
-    "Matthew Harris",
-    "Stephanie Martin",
-    "Daniel Thompson",
-    "Laura Garcia",
-    "James Rodriguez",
-    "Michelle Lewis",
-    "Andrew Lee",
-    "Nicole Walker",
   ];
 
   names.forEach((name, index) => {
-    const hasSubmitted = Math.random() > 0.3; // 70% submission rate
+    const hasSubmitted = Math.random() > 0.3;
     students.push({
       id: `student-${sectionName}-${index}`,
       name: name,
@@ -138,13 +96,13 @@ export const generateStudents = (sectionName: string): Student[] => {
 };
 
 // Helper functions
-export const getProgramLabel = (
-  programId: string | "all",
-  programs: Program[]
+export const getCourseLabel = (
+  courseId: string | "all",
+  courses: Course[]
 ): string =>
-  programId === "all"
-    ? "All Programs"
-    : programs.find((p) => p.id === programId)?.name ?? "Unknown";
+  courseId === "all"
+    ? "All Courses"
+    : courses.find((c) => c.id === courseId)?.name ?? "Unknown";
 
 export const getBlockLabel = (
   blockId: string | "all",
@@ -189,3 +147,4 @@ export const getDueDateStatus = (dueDate?: string) => {
     color: "bg-neutral-100 text-neutral-600 border-neutral-200",
   };
 };
+

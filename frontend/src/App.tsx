@@ -9,7 +9,7 @@ import { SettingsTab } from "./pages/teachers/SettingsTab.tsx";
 import { StudentsTab } from "./pages/teachers/StudentsTab.tsx";
 // import { EssaysTab } from "./pages/teachers/EssaysTab.tsx";
 import { MetricsTab } from "./pages/teachers/MetricsTab.tsx";
-import { ProgramsTab } from "./pages/teachers/ProgramsTab.tsx";
+import { CoursesTab } from "./pages/teachers/CoursesTab.tsx";
 import { RubricsTab } from "./pages/teachers/RubricsTab.tsx";
 import { SectionsTab } from "./pages/teachers/SectionsTab.tsx";
 import { NotificationsTab as TeacherNotificationsTab } from "./pages/teachers/NotificationsTab.tsx";
@@ -139,7 +139,7 @@ const AppContent: React.FC = () => {
           <Route path="CompareActivities" element={<CompareActivitiesTab />} />
           <Route path="EssayManagement" element={<EssayManagementTab />} />
           <Route path="Metrics" element={<MetricsTab />} />
-          <Route path="Programs" element={<ProgramsTab />} />
+          <Route path="Courses" element={<CoursesTab />} />
           <Route path="Rubrics" element={<RubricsTab />} />
           <Route path="Sections" element={<SectionsTab />} />
           <Route path="Notifications" element={<TeacherNotificationsTab />} />

@@ -14,7 +14,7 @@ import {
 import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherId } from "../../services/rubricService";
-import { fetchPrograms, fetchSections } from "../../services/activityService";
+import { fetchCourses, fetchSections } from "../../services/activityService";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -103,17 +103,8 @@ interface DashboardData {
   }>;
 }
 
-interface TeacherActivityRow {
-  id: number | null;
-  program_id: number | null;
-  section_id: number | null;
-}
+// No longer using these legacy interfaces
 
-interface StudentFilterRow {
-  id: number;
-  program_id: number | null;
-  section_id: number | null;
-}
 
 interface EssayRow {
   id: number;
@@ -135,13 +126,8 @@ interface AnalysisResultRow {
   detailed_analysis: Record<string, unknown> | null;
 }
 
-interface ProgramListItem {
-  id: string;
-}
+// No longer using these legacy interfaces
 
-interface SectionListItem {
-  id: string;
-}
 
 interface StudentNameRow {
   id: number;
@@ -164,54 +150,50 @@ export function DashboardTab() {
           throw new Error("Teacher ID not available");
         }
 
-        // Get teacher's activities to find which programs/sections they work with
+        // Get teacher's activities to find which courses/sections they work with
         const { data: teacherActivities, error: activitiesError } =
           await supabase
             .from("essay_activities")
-            .select("id, program_id, section_id")
+            .select("id, course_id, section_id")
             .eq("teacher_id", teacherId);
 
         if (activitiesError) throw activitiesError;
 
-        // Get unique program and section IDs from teacher's activities
         const typedTeacherActivities =
-          (teacherActivities as TeacherActivityRow[] | null) || [];
+          (teacherActivities as { id: number; course_id: string | null; section_id: string | null }[] | null) || [];
 
-        const programIds = [
+        const courseIds = [
           ...new Set(
             typedTeacherActivities
-              .map((activity) => activity.program_id)
-              .filter((id): id is number => id !== null),
+              .map((activity) => activity.course_id)
+              .filter((id): id is string => id !== null),
           ),
         ];
         const sectionIds = [
           ...new Set(
             typedTeacherActivities
               .map((activity) => activity.section_id)
-              .filter((id): id is number => id !== null),
+              .filter((id): id is string => id !== null),
           ),
         ];
 
         // Fetch all data in parallel
         const [
-          allPrograms,
+          allCourses,
           allSections,
           studentsData,
           essaysData,
           analysisResults,
         ] = await Promise.all([
-          fetchPrograms(),
+          fetchCourses(),
           fetchSections(),
-          // Get students in teacher's programs/sections
+          // Get students in teacher's sections
           supabase
             .from("students")
-            .select("id, program_id, section_id")
+            .select("id, course_id, section_id")
             .then(({ data, error }) => {
               if (error) throw error;
-              const typedStudents = (data as StudentFilterRow[] | null) || [];
-              // Scope students to this teacher's activity context.
-              // Prefer section-level filtering to avoid pulling students from
-              // other teachers who share the same program.
+              const typedStudents = (data as { id: number; course_id: string | null; section_id: string | null }[] | null) || [];
               if (sectionIds.length > 0) {
                 return typedStudents.filter(
                   (student) =>
@@ -219,17 +201,13 @@ export function DashboardTab() {
                     sectionIds.includes(student.section_id),
                 );
               }
-
-              // Fallback: if activities don't have section_id, scope by program.
-              if (programIds.length > 0) {
+              if (courseIds.length > 0) {
                 return typedStudents.filter(
                   (student) =>
-                    student.program_id !== null &&
-                    programIds.includes(student.program_id),
+                    student.course_id !== null &&
+                    courseIds.includes(student.course_id),
                 );
               }
-
-              // No teacher scope found yet (no activities/programs/sections)
               return [];
             }),
           // Get essays from teacher's activities
@@ -240,14 +218,7 @@ export function DashboardTab() {
             )
             .then(({ data, error }) => {
               if (error) throw error;
-              // Filter essays by teacher's activities
-              if (typedTeacherActivities.length > 0) {
-                // Note: We need to get activity IDs, but we only have program_id and section_id
-                // So we'll get all essays and filter by checking if they belong to teacher's activities
-                // For now, we'll get all essays and filter later by activity_id
-                return (data as EssayRow[] | null) || [];
-              }
-              return [];
+              return (data as EssayRow[] | null) || [];
             }),
           (async (): Promise<AnalysisResultRow[]> => {
             const { data, error } = await supabase
@@ -291,19 +262,8 @@ export function DashboardTab() {
             activityIds.includes(essay.activity_id),
         );
 
-        // Filter programs and sections to only those the teacher has activities for
-        const teacherPrograms =
-          programIds.length > 0
-            ? (allPrograms as ProgramListItem[]).filter((program) =>
-                programIds.includes(parseInt(program.id, 10)),
-              )
-            : [];
-        const teacherSections =
-          sectionIds.length > 0
-            ? (allSections as SectionListItem[]).filter((section) =>
-                sectionIds.includes(parseInt(section.id, 10)),
-              )
-            : [];
+        const teacherCourses = allCourses.filter(c => courseIds.includes(c.id));
+        const teacherSections = allSections.filter(s => sectionIds.includes(s.id));
 
         const totalStudents = studentsData?.length || 0;
 
@@ -352,9 +312,8 @@ export function DashboardTab() {
             : 0;
 
         // Calculate vocabulary complexity from analysis results
-        // Try to extract from detailed_analysis JSONB field, or use a default
         const vocabScores: number[] = [];
-        analysisResults.forEach((result) => {
+        analysisResults.forEach((result: AnalysisResultRow) => {
           if (
             result.detailed_analysis &&
             typeof result.detailed_analysis === "object"
@@ -369,7 +328,6 @@ export function DashboardTab() {
             const scores = detailed.scores as
               | Record<string, unknown>
               | undefined;
-            // Try to find vocabulary complexity in the detailed analysis
             const vocab =
               (detailed.vocabulary_complexity as number | undefined) ||
               (vocabulary?.complexity as number | undefined) ||
@@ -443,7 +401,6 @@ export function DashboardTab() {
           count: number;
         }> = [];
 
-        // Check for students who haven't submitted essays this week
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         const recentSubmissions = teacherEssays.filter(
@@ -463,7 +420,6 @@ export function DashboardTab() {
           });
         }
 
-        // Check for pending reviews
         if (pendingReviews > 0) {
           alerts.push({
             type: "info",
@@ -472,7 +428,6 @@ export function DashboardTab() {
           });
         }
 
-        // Check for students showing improvement (placeholder - would need historical data)
         if (evaluatedEssays.length > 0) {
           alerts.push({
             type: "info",
@@ -482,7 +437,7 @@ export function DashboardTab() {
         }
 
         setData({
-          totalPrograms: teacherPrograms.length,
+          totalPrograms: teacherCourses.length,
           totalSections: teacherSections.length,
           totalStudents,
           essaysSubmitted,
@@ -554,14 +509,14 @@ export function DashboardTab() {
 
   const statsCards = [
     {
-      label: "Total Programs",
+      label: "Total Courses",
       value: formatNumber(data.totalPrograms),
       icon: BookOpen,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
-      label: "Total Sections",
+      label: "Total Blocks",
       value: formatNumber(data.totalSections),
       icon: Layers,
       color: "text-support",

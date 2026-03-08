@@ -1,23 +1,23 @@
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 
-interface ProgramSelectionModalProps {
+interface CourseSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  programs: { id: string; name: string }[];
-  selectedProgramIds: string[];
-  onSelectionChange: (programIds: string[]) => void;
+  courses: { id: string; name: string }[];
+  selectedCourseIds: string[];
+  onSelectionChange: (courseIds: string[]) => void;
   onSectionReset?: () => void;
 }
 
-export function ProgramSelectionModal({
+export function CourseSelectionModal({
   isOpen,
   onClose,
-  programs,
-  selectedProgramIds,
+  courses,
+  selectedCourseIds,
   onSelectionChange,
   onSectionReset,
-}: ProgramSelectionModalProps) {
+}: CourseSelectionModalProps) {
   const handleToggleAll = (checked: boolean) => {
     if (checked) {
       onSelectionChange([]);
@@ -25,12 +25,12 @@ export function ProgramSelectionModal({
     }
   };
 
-  const handleToggleProgram = (programId: string, checked: boolean) => {
+  const handleToggleCourse = (courseId: string, checked: boolean) => {
     if (checked) {
-      onSelectionChange([...selectedProgramIds, programId]);
+      onSelectionChange([...selectedCourseIds, courseId]);
     } else {
-      const newProgramIds = selectedProgramIds.filter((id) => id !== programId);
-      onSelectionChange(newProgramIds);
+      const newCourseIds = selectedCourseIds.filter((id) => id !== courseId);
+      onSelectionChange(newCourseIds);
     }
   };
 
@@ -38,7 +38,7 @@ export function ProgramSelectionModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Select Programs"
+      title="Select Courses"
       size="md"
       contentClassName="flex flex-col overflow-hidden p-0"
     >
@@ -47,26 +47,26 @@ export function ProgramSelectionModal({
           <label className="flex items-center gap-2 p-2 hover:bg-neutral-50 rounded cursor-pointer">
             <input
               type="checkbox"
-              checked={selectedProgramIds.length === 0}
+              checked={selectedCourseIds.length === 0}
               onChange={(e) => handleToggleAll(e.target.checked)}
               className="w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary"
             />
-            <span className="text-sm font-medium">All Programs</span>
+            <span className="text-sm font-medium">All Courses</span>
           </label>
-          {programs.map((program) => (
+          {courses.map((course) => (
             <label
-              key={program.id}
+              key={course.id}
               className="flex items-center gap-2 p-2 hover:bg-neutral-50 rounded cursor-pointer"
             >
               <input
                 type="checkbox"
-                checked={selectedProgramIds.includes(program.id)}
+                checked={selectedCourseIds.includes(course.id)}
                 onChange={(e) =>
-                  handleToggleProgram(program.id, e.target.checked)
+                  handleToggleCourse(course.id, e.target.checked)
                 }
                 className="w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary"
               />
-              <span className="text-sm">{program.name}</span>
+              <span className="text-sm">{course.name}</span>
             </label>
           ))}
         </div>

@@ -11,33 +11,33 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import type { EssayActivity, ProgramSection } from "../../types/activityTypes";
-import { getProgramLabel, getBlockLabel } from "../../data/activityData";
+import type { EssayActivity, CourseSection } from "../../types/activityTypes";
+import { getCourseLabel, getBlockLabel } from "../../data/activityData";
 import {
-  fetchProgramSectionCounts,
+  fetchCourseSectionCounts,
   fetchDuplicateEssays,
   type DuplicateEssayGroup,
 } from "../../services/activityService";
 
-interface ProgramSectionsViewProps {
+interface CourseSectionsViewProps {
   activity: EssayActivity;
-  programSections: ProgramSection[];
+  courseSections: CourseSection[];
   onBack: () => void;
-  onSectionClick: (section: ProgramSection) => void;
-  programs: { id: string; name: string }[];
-  sections: { id: string; name: string; programId: string }[];
+  onSectionClick: (section: CourseSection) => void;
+  courses: { id: string; name: string }[];
+  sections: { id: string; name: string; courseId: string }[];
 }
 
-export function ProgramSectionsView({
+export function CourseSectionsView({
   activity,
-  programSections,
+  courseSections,
   onBack,
   onSectionClick,
-  programs,
+  courses,
   sections,
-}: ProgramSectionsViewProps) {
+}: CourseSectionsViewProps) {
   const [sectionsWithCounts, setSectionsWithCounts] =
-    useState<ProgramSection[]>(programSections);
+    useState<CourseSection[]>(courseSections);
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>(
     []
@@ -48,10 +48,10 @@ export function ProgramSectionsView({
       setIsLoadingCounts(true);
       try {
         // Fetch counts for all sections in parallel
-        const countsPromises = programSections.map((section: ProgramSection) =>
-          fetchProgramSectionCounts(
-            section.programName,
-            section.sectionName,
+        const countsPromises = courseSections.map((section: CourseSection) =>
+          fetchCourseSectionCounts(
+            section.courseId,
+            section.sectionId,
             activity.id
           ).then(
             (counts: { studentCount: number; submissionCount: number }) => ({
@@ -67,19 +67,19 @@ export function ProgramSectionsView({
       } catch (error) {
         console.error("Error loading counts:", error);
         // Keep original sections if fetch fails
-        setSectionsWithCounts(programSections);
+        setSectionsWithCounts(courseSections);
       } finally {
         setIsLoadingCounts(false);
       }
     };
 
-    if (programSections.length > 0) {
+    if (courseSections.length > 0) {
       loadCounts();
     } else {
-      setSectionsWithCounts(programSections);
+      setSectionsWithCounts(courseSections);
       setIsLoadingCounts(false);
     }
-  }, [programSections, activity.id]);
+  }, [courseSections, activity.id]);
 
   // Load duplicate essays
   useEffect(() => {
@@ -120,9 +120,9 @@ export function ProgramSectionsView({
         )}
         <div className="flex flex-wrap gap-2">
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
-            {getProgramLabel(
-              activity.programId,
-              programs.map((p) => ({ id: p.id, name: p.name }))
+            {getCourseLabel(
+              activity.courseId,
+              courses.map((p) => ({ id: p.id, name: p.name }))
             )}
           </Badge>
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
@@ -131,7 +131,7 @@ export function ProgramSectionsView({
               sections.map((s) => ({
                 id: s.id,
                 name: s.name,
-                programId: s.programId,
+                courseId: s.courseId,
               }))
             )}
           </Badge>
@@ -144,22 +144,22 @@ export function ProgramSectionsView({
         </div>
       </Card>
 
-      {/* Program-Sections Table and Duplicate Essays Warning - Side by Side */}
+      {/* Course-Blocks Table and Duplicate Essays Warning - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Program-Sections Table - Takes 2/3 width on large screens */}
+        {/* Course-Blocks Table - Takes 2/3 width on large screens */}
         <Card className="lg:col-span-2">
           <div className="p-4 border-b">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Program - Sections
+              Course - Blocks
             </h2>
             <p className="text-sm text-neutral-500">
-              Click on a section to view students
+              Click on a block to view students
             </p>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Program - Section</TableHead>
+                <TableHead>Course - Block</TableHead>
                 <TableHead className="text-center">Students</TableHead>
                 <TableHead className="text-center">Submissions</TableHead>
               </TableRow>
@@ -230,7 +230,7 @@ export function ProgramSectionsView({
                 </h3>
                 <p className="text-xs text-neutral-600 mb-3">
                   {duplicateGroups.length > 0
-                    ? "Same content submitted by students from different programs."
+                    ? "Same content submitted by students from different courses."
                     : "No duplicate essays detected. All submissions appear to be unique."}
                 </p>
                 {duplicateGroups.length > 0 ? (
@@ -294,3 +294,4 @@ export function ProgramSectionsView({
     </div>
   );
 }
+

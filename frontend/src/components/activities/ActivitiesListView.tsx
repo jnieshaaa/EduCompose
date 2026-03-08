@@ -37,7 +37,7 @@ import {
 } from "../../components/ui/table";
 import type { EssayActivity } from "../../types/activityTypes";
 import {
-  getProgramLabel,
+  getCourseLabel,
   getBlockLabel,
   getRubricLabel,
   getDueDateStatus,
@@ -56,8 +56,8 @@ interface ActivitiesListViewProps {
   totalActivities: number;
   totalSubmissions: number;
   upcomingDue: number;
-  programs: { id: string; name: string }[];
-  sections: { id: string; name: string; programId: string }[];
+  courses: { id: string; name: string }[];
+  sections: { id: string; name: string; courseId: string }[];
   rubrics: { id: string; name: string }[];
 }
 
@@ -74,7 +74,7 @@ export function ActivitiesListView({
   totalActivities,
   totalSubmissions,
   upcomingDue,
-  programs,
+  courses,
   sections,
   rubrics,
 }: ActivitiesListViewProps) {
@@ -296,9 +296,9 @@ export function ActivitiesListView({
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 text-xs flex items-center gap-1">
                           <Users className="w-3 h-3" />
-                          {getProgramLabel(
-                            activity.programId,
-                            programs.map((p) => ({ id: p.id, name: p.name }))
+                          {getCourseLabel(
+                            activity.courseId,
+                            courses.map((c) => ({ id: c.id, name: c.name }))
                           )}
                         </Badge>
                         <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 text-xs flex items-center gap-1">
@@ -308,7 +308,7 @@ export function ActivitiesListView({
                             sections.map((s) => ({
                               id: s.id,
                               name: s.name,
-                              programId: s.programId,
+                              courseId: s.courseId,
                             }))
                           )}
                         </Badge>
@@ -363,7 +363,7 @@ export function ActivitiesListView({
             <TableHeader>
               <TableRow>
                 <TableHead>Activity Title</TableHead>
-                <TableHead>Program</TableHead>
+                <TableHead>Course</TableHead>
                 <TableHead>Section</TableHead>
                 <TableHead>Rubric</TableHead>
                 <TableHead className="text-center">Due Date</TableHead>
@@ -400,9 +400,9 @@ export function ActivitiesListView({
                         variant="outline"
                         className="bg-primary/10 text-primary border-primary/20 text-xs"
                       >
-                        {getProgramLabel(
-                          activity.programId,
-                          programs.map((p) => ({ id: p.id, name: p.name }))
+                        {getCourseLabel(
+                          activity.courseId,
+                          courses.map((c) => ({ id: c.id, name: c.name }))
                         )}
                       </Badge>
                     </TableCell>
@@ -416,7 +416,7 @@ export function ActivitiesListView({
                           sections.map((s) => ({
                             id: s.id,
                             name: s.name,
-                            programId: s.programId,
+                            courseId: s.courseId,
                           }))
                         )}
                       </Badge>

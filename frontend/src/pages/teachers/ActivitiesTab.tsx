@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ActivitiesListView } from "../../components/activities/ActivitiesListView";
-import { ProgramSectionsView } from "../../components/activities/ProgramSectionsView";
+import { CourseSectionsView } from "../../components/activities/CourseSectionsView";
 import { StudentsView } from "../../components/activities/StudentsView";
 import { CreateActivityModal } from "../../components/activities/CreateActivityModal";
 import { EditActivityModal } from "../../components/activities/EditActivityModal";
@@ -21,11 +21,11 @@ export function ActivitiesTab() {
 
   const {
     activities,
-    programs,
+    courses,
     sections,
     rubrics,
     students,
-    programSections,
+    courseSections,
     currentActivity,
     isLoading,
     isCreating,
@@ -37,14 +37,14 @@ export function ActivitiesTab() {
     handleUpdateActivity,
     handleDeleteActivity,
     handleActivityClick,
-    handleProgramSectionClick,
+    handleCourseSectionClick,
     handleBackToSections,
     handleBackToActivities,
   } = useActivities();
 
   const activityId = searchParams.get("activityId");
-  const programSection = searchParams.get("programSection");
-  const programName = searchParams.get("programName");
+  const sectionId = searchParams.get("sectionId");
+  const courseName = searchParams.get("courseName");
 
   // Sync searchQuery with URL params
   useEffect(() => {
@@ -91,7 +91,7 @@ export function ActivitiesTab() {
 
     return {
       title: activity.title,
-      programIds: activity.programId === "all" ? [] : [activity.programId],
+      courseIds: activity.courseId === "all" ? [] : [activity.courseId],
       sectionIds: activity.blockId === "all" ? [] : [activity.blockId],
       rubricId: activity.rubricId || "",
       dueDate: activity.dueDate || "",
@@ -100,28 +100,29 @@ export function ActivitiesTab() {
   }, [editingActivityId, activities]);
 
   // Render students view
-  if (programSection && programName && currentActivity) {
+  if (sectionId && courseName && currentActivity) {
+    const courseSection = searchParams.get("courseSection") || "";
     return (
       <StudentsView
         activity={currentActivity}
         students={students}
-        programName={programName}
-        programSection={programSection}
+        courseName={courseName}
+        courseSection={courseSection}
         onBack={handleBackToSections}
         isLoading={isLoadingStudents}
       />
     );
   }
 
-  // Render program-sections view
+  // Render course-sections view
   if (activityId && currentActivity) {
     return (
-      <ProgramSectionsView
+      <CourseSectionsView
         activity={currentActivity}
-        programSections={programSections}
+        courseSections={courseSections}
         onBack={handleBackToActivities}
-        onSectionClick={handleProgramSectionClick}
-        programs={programs}
+        onSectionClick={handleCourseSectionClick}
+        courses={courses}
         sections={sections}
       />
     );
@@ -151,7 +152,7 @@ export function ActivitiesTab() {
         totalActivities={totalActivities}
         totalSubmissions={totalSubmissions}
         upcomingDue={upcomingDue}
-        programs={programs}
+        courses={courses}
         sections={sections}
         rubrics={[...rubrics.platform, ...rubrics.teacher]}
       />
@@ -160,8 +161,8 @@ export function ActivitiesTab() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateActivity}
-        programs={programs}
-        sections={sections}
+        courses={courses}
+        sections={sections} // No mapping needed, already has courseId
         rubrics={rubrics}
         isSubmitting={isCreating}
       />
@@ -175,8 +176,8 @@ export function ActivitiesTab() {
           }}
           onSubmit={handleEditSubmit}
           initialData={editActivityInitialData}
-          programs={programs}
-          sections={sections}
+          courses={courses}
+          sections={sections} // No mapping needed, already has courseId
           rubrics={rubrics}
           isSubmitting={isCreating}
         />

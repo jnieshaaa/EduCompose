@@ -49,8 +49,8 @@ import {
 interface StudentsViewProps {
   activity: EssayActivity;
   students: Student[];
-  programName: string;
-  programSection: string;
+  courseName: string;
+  courseSection: string;
   onBack: () => void;
   isLoading?: boolean;
 }
@@ -64,8 +64,8 @@ interface PendingUpload {
 export function StudentsView({
   activity,
   students,
-  programName,
-  programSection,
+  courseName,
+  courseSection,
   onBack,
   isLoading = false,
 }: StudentsViewProps) {
@@ -263,8 +263,8 @@ export function StudentsView({
         selectedFile,
         selectedStudentId,
         activity.id,
-        programName,
-        programSection
+        courseName,
+        courseSection
       );
 
       if (result.success) {
@@ -300,8 +300,8 @@ export function StudentsView({
             upload.file,
             upload.studentId,
             activity.id,
-            programName,
-            programSection
+            courseName,
+            courseSection
           )
         )
       );
@@ -386,8 +386,8 @@ export function StudentsView({
         updateFile,
         selectedStudentForUpdate.id,
         activity.id,
-        programName,
-        programSection
+        courseName,
+        courseSection
       );
 
       if (result.success) {
@@ -474,7 +474,7 @@ export function StudentsView({
           {activity.title}
         </h1>
         <p className="text-neutral-600 mb-2">
-          {programName} - {programSection}
+          {courseName} - {courseSection}
         </p>
         {activity.description && (
           <p className="text-sm text-neutral-500">{activity.description}</p>
@@ -501,8 +501,8 @@ export function StudentsView({
               No students found
             </p>
             <p className="text-sm text-neutral-500">
-              There are no students in {programName} - {programSection}. Please
-              check that the program and section names are correct.
+              There are no students in {courseName} - {courseSection}. Please
+              check that the course and section names are correct.
             </p>
           </div>
         ) : (

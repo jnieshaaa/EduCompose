@@ -11,6 +11,7 @@ type SupabaseActivityRow = {
   title: string;
   program_id: number | null;
   section_id: number | null;
+  course_id: string | null;
   rubric_id: number | null;
   due_date: string | null;
   instructions: string | null;
@@ -34,7 +35,7 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
     const { data: activitiesData, error: activitiesError } = await supabase
       .from("essay_activities")
       .select(
-        "id, teacher_id, title, program_id, section_id, rubric_id, due_date, instructions, created_at, rubrics(id, name)"
+        "id, teacher_id, title, program_id, section_id, course_id, rubric_id, due_date, instructions, created_at, rubrics(id, name)"
       )
       .eq("teacher_id", teacherId)
       .order("created_at", { ascending: false });
@@ -78,7 +79,7 @@ export const fetchTeacherActivities = async (): Promise<EssayActivity[]> => {
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
-      programId: row.program_id ? String(row.program_id) : "all",
+      courseId: row.course_id ? String(row.course_id) : row.program_id ? String(row.program_id) : "all",
       blockId: row.section_id ? String(row.section_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
@@ -224,26 +225,18 @@ const ensurePlatformRubricExists = async (
 };
 
 // Create a new activity
-export const createActivity = async (activity: {
-  title: string;
-  programIds: string[]; // Empty array means "all"
-  sectionIds: string[]; // Empty array means "all"
-  rubricId: string | "";
-  dueDate: string;
-  description: string;
-}): Promise<EssayActivity> => {
+export const createActivity = async (activity: NewActivityForm): Promise<EssayActivity> => {
   try {
     const teacherId = await fetchTeacherId();
     if (!teacherId) {
       throw new Error("Teacher ID not available");
     }
 
-    // For now, store first selected program/section or null if empty (meaning "all")
-    // TODO: Consider adding program_ids JSONB array field to support multiple programs
-    const programId =
-      activity.programIds.length === 0
+    // For now, store first selected course/section or null if empty (meaning "all")
+    const courseId =
+      activity.courseIds.length === 0
         ? null
-        : parseInt(activity.programIds[0], 10) || null;
+        : activity.courseIds[0];
     const sectionId =
       activity.sectionIds.length === 0
         ? null
@@ -270,7 +263,7 @@ export const createActivity = async (activity: {
       .insert({
         teacher_id: teacherId,
         title: activity.title.trim(),
-        program_id: programId,
+        course_id: courseId,
         section_id: sectionId,
         rubric_id: rubricId,
         due_date: activity.dueDate || null,
@@ -289,7 +282,7 @@ export const createActivity = async (activity: {
     return {
       id: String(row.id),
       title: row.title,
-      programId: row.program_id ? String(row.program_id) : "all",
+      courseId: row.course_id ? String(row.course_id) : "all",
       blockId: row.section_id ? String(row.section_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
@@ -346,14 +339,14 @@ export const updateActivity = async (
 
     const updateData: {
       title: string;
-      program_id: number | null;
+      course_id: string | null;
       section_id: number | null;
       rubric_id: number | null;
       due_date: string | null;
       instructions: string | null;
     } = {
       title: activityData.title,
-      program_id: programId && !isNaN(programId) ? programId : null,
+      course_id: activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
       section_id: sectionId && !isNaN(sectionId) ? sectionId : null,
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
@@ -378,7 +371,7 @@ export const updateActivity = async (
     return {
       id: String(row.id),
       title: row.title,
-      programId: row.program_id ? String(row.program_id) : "all",
+      courseId: row.course_id ? String(row.course_id) : "all",
       blockId: row.section_id ? String(row.section_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
@@ -415,8 +408,47 @@ export const deleteActivity = async (activityId: string): Promise<void> => {
   }
 };
 
+// Load courses for the current teacher
+export const fetchCourses = async (): Promise<
+  { id: string; course_code: string; course_title: string }[]
+> => {
+  try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) return [];
+
+    // Get user's school and department to fetch related courses
+    const { data: userData } = await supabase
+      .from("users")
+      .select("school_id, department_id")
+      .eq("id", teacherId)
+      .single();
+
+    if (!userData?.school_id) return [];
+
+    const { data, error } = await supabase
+      .from("courses")
+      .select("id, course_code, course_title")
+      .eq("school_id", userData.school_id)
+      .or(`department_id.eq.${userData.department_id},department_id.is.null`)
+      .order("course_code", { ascending: true });
+
+    if (error) {
+      console.error("Error loading courses:", error);
+      return [];
+    }
+
+    return (data || []).map((c) => ({
+      id: c.id,
+      course_code: c.course_code,
+      course_title: c.course_title,
+    }));
+  } catch (err) {
+    console.error("Unexpected error loading courses:", err);
+    return [];
+  }
+};
+
 // Load programs for dropdown
-// Load programs for dropdown, filtered by teacher
 export const fetchPrograms = async (): Promise<
   { id: string; name: string }[]
 > => {
@@ -447,47 +479,29 @@ export const fetchPrograms = async (): Promise<
   }
 };
 
-// Load sections (blocks) for dropdown, optionally filtered by program and always by teacher
+// Load sections (blocks) for dropdown, optionally filtered by course and always by teacher
 export const fetchSections = async (
-  programId?: string | "all"
-): Promise<{ id: string; name: string; programId: string }[]> => {
+  courseId?: string | "all"
+): Promise<{ id: string; name: string; courseId: string }[]> => {
   try {
     const teacherId = await fetchTeacherId();
     if (!teacherId) {
       return [];
     }
 
-    // First get all programs for this teacher to filter sections
-    const { data: programsData, error: programsError } = await supabase
-      .from("programs")
-      .select("id")
-      .eq("created_by", teacherId);
-
-    if (programsError) {
-      console.error("Error loading teacher programs for sections:", programsError);
-      return [];
-    }
-
-    const programIds = (programsData || []).map(p => p.id);
+    // Get courses first to know which sections to show
+    const courses = await fetchCourses();
+    const courseIds = courses.map(c => c.id);
     
-    if (programIds.length === 0) {
+    if (courseIds.length === 0) {
       return [];
     }
 
-    let query = supabase.from("sections").select("id, name, program_id")
-      .in("program_id", programIds);
+    let query = supabase.from("sections").select("id, name, course_id")
+      .in("course_id", courseIds);
 
-    if (programId && programId !== "all") {
-      const pid = parseInt(programId, 10);
-      if (!isNaN(pid)) {
-        // Ensure the requested program ID belongs to the teacher
-        if (programIds.includes(pid)) {
-          query = query.eq("program_id", pid);
-        } else {
-          // If asking for a program not owned by teacher, return empty
-          return [];
-        }
-      }
+    if (courseId && courseId !== "all") {
+      query = query.eq("course_id", courseId);
     }
 
     const { data, error } = await query.order("name", { ascending: true });
@@ -500,7 +514,7 @@ export const fetchSections = async (
     return (data || []).map((s) => ({
       id: String(s.id),
       name: s.name,
-      programId: String(s.program_id),
+      courseId: String(s.course_id),
     }));
   } catch (err) {
     console.error("Unexpected error loading sections:", err);
@@ -606,10 +620,10 @@ export const fetchRubrics = async (): Promise<{
   }
 };
 
-// Fetch students for a specific program and section, with their submission status for an activity
-export const fetchStudentsByProgramAndSection = async (
-  programName: string,
-  sectionName: string,
+// Fetch students for a specific course and section, with their submission status for an activity
+export const fetchStudentsByCourseAndSection = async (
+  courseId: string,
+  sectionId: string,
   activityId?: string
 ): Promise<
   {
@@ -624,88 +638,17 @@ export const fetchStudentsByProgramAndSection = async (
   }[]
 > => {
   try {
-    // Trim whitespace from names
-    const trimmedProgramName = programName.trim();
-    const trimmedSectionName = sectionName.trim();
-
-    // First, get program and section IDs from names
-    // Try exact match first
-    let { data: programData, error: programError } = await supabase
-      .from("programs")
-      .select("id, name")
-      .eq("name", trimmedProgramName)
-      .single();
-
-    // If exact match fails, try case-insensitive
-    if (programError || !programData) {
-      const { data: programsData } = await supabase
-        .from("programs")
-        .select("id, name")
-        .ilike("name", trimmedProgramName);
-
-      if (programsData && programsData.length > 0) {
-        programData = programsData[0];
-        programError = null;
-      }
-    }
-
-    if (programError || !programData) {
-      console.error(
-        `[fetchStudentsByProgramAndSection] Error finding program "${trimmedProgramName}":`,
-        programError
-      );
-      return [];
-    }
-
-    // Try exact match first for section
-    // Note: Sections can have the same name for different terms, so we might get multiple results
-    let { data: sectionsData, error: sectionError } = await supabase
-      .from("sections")
-      .select("id, name, term")
-      .eq("name", trimmedSectionName)
-      .eq("program_id", programData.id);
-
-    // If exact match fails, try case-insensitive
-    if (sectionError || !sectionsData || sectionsData.length === 0) {
-      const { data: sectionsDataCaseInsensitive } = await supabase
-        .from("sections")
-        .select("id, name, term")
-        .ilike("name", trimmedSectionName)
-        .eq("program_id", programData.id);
-
-      if (
-        sectionsDataCaseInsensitive &&
-        sectionsDataCaseInsensitive.length > 0
-      ) {
-        sectionsData = sectionsDataCaseInsensitive;
-        sectionError = null;
-      }
-    }
-
-    if (sectionError || !sectionsData || sectionsData.length === 0) {
-      console.error(
-        `[fetchStudentsByProgramAndSection] Error finding section "${trimmedSectionName}" in program "${trimmedProgramName}":`,
-        sectionError
-      );
-      return [];
-    }
-
-    // If multiple sections found, we need to get all of them to find students
-    // Students can be in any of these sections (same name, different terms)
-    const sectionIds = sectionsData.map((s) => s.id);
-
-    // Fetch students for this program and any of the matching sections
-    // Since sections can have the same name for different terms, we need to check all matching section IDs
+    // Fetch students for this course and section
     const { data: studentsData, error: studentsError } = await supabase
       .from("students")
       .select("id, student_code, full_name")
-      .eq("program_id", programData.id)
-      .in("section_id", sectionIds)
+      .eq("course_id", courseId)
+      .eq("section_id", sectionId)
       .order("full_name", { ascending: true });
 
     if (studentsError) {
       console.error(
-        `[fetchStudentsByProgramAndSection] Error loading students:`,
+        `[fetchStudentsByCourseAndSection] Error loading students:`,
         studentsError
       );
       return [];
@@ -787,7 +730,7 @@ export const fetchStudentsByProgramAndSection = async (
     return mappedStudents;
   } catch (err) {
     console.error(
-      `[fetchStudentsByProgramAndSection] Unexpected error loading students:`,
+      `[fetchStudentsByCourseAndSection] Unexpected error loading students:`,
       err
     );
     return [];
@@ -799,8 +742,8 @@ export const uploadEssayFile = async (
   file: File,
   studentId: string,
   activityId: string,
-  programName: string,
-  sectionName: string
+  courseId: string,
+  sectionId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -808,22 +751,22 @@ export const uploadEssayFile = async (
       return { success: false, error: "Teacher ID not available" };
     }
 
-    // Get section ID from program name and section name
-    const { data: programData, error: programError } = await supabase
-      .from("programs")
+    // Verify course exists
+    const { data: courseData, error: courseError } = await supabase
+      .from("courses")
       .select("id")
-      .eq("name", programName)
+      .eq("id", courseId)
       .single();
 
-    if (programError || !programData) {
-      return { success: false, error: "Program not found" };
+    if (courseError || !courseData) {
+      return { success: false, error: "Course not found" };
     }
 
+    // Verify section exists
     const { data: sectionData, error: sectionError } = await supabase
       .from("sections")
       .select("id")
-      .eq("name", sectionName)
-      .eq("program_id", programData.id)
+      .eq("id", sectionId)
       .single();
 
     if (sectionError || !sectionData) {
@@ -912,8 +855,8 @@ export const updateEssayFile = async (
   file: File,
   studentId: string,
   activityId: string,
-  programName: string,
-  sectionName: string
+  courseId: string,
+  sectionId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -921,27 +864,8 @@ export const updateEssayFile = async (
       return { success: false, error: "Teacher ID not available" };
     }
 
-    // Get section ID from program name and section name
-    const { data: programData, error: programError } = await supabase
-      .from("programs")
-      .select("id")
-      .eq("name", programName)
-      .single();
+    // Verify session context (not used anymore, but we keep the params)
 
-    if (programError || !programData) {
-      return { success: false, error: "Program not found" };
-    }
-
-    const { data: sectionData, error: sectionError } = await supabase
-      .from("sections")
-      .select("id")
-      .eq("name", sectionName)
-      .eq("program_id", programData.id)
-      .single();
-
-    if (sectionError || !sectionData) {
-      return { success: false, error: "Section not found" };
-    }
 
     // Parse student ID
     let studentDbId = parseInt(studentId, 10);
@@ -1120,43 +1044,19 @@ export const deleteEssay = async (
   }
 };
 
-// Fetch student count and submission count for a program-section-activity combination
-export const fetchProgramSectionCounts = async (
-  programName: string,
-  sectionName: string,
+// Fetch student count and submission count for a course-section-activity combination
+export const fetchCourseSectionCounts = async (
+  courseId: string,
+  sectionId: string,
   activityId: string
 ): Promise<{ studentCount: number; submissionCount: number }> => {
   try {
-    // Get program and section IDs from names
-    const { data: programData, error: programError } = await supabase
-      .from("programs")
-      .select("id")
-      .eq("name", programName)
-      .single();
-
-    if (programError || !programData) {
-      console.error("Error finding program:", programError);
-      return { studentCount: 0, submissionCount: 0 };
-    }
-
-    const { data: sectionData, error: sectionError } = await supabase
-      .from("sections")
-      .select("id")
-      .eq("name", sectionName)
-      .eq("program_id", programData.id)
-      .single();
-
-    if (sectionError || !sectionData) {
-      console.error("Error finding section:", sectionError);
-      return { studentCount: 0, submissionCount: 0 };
-    }
-
-    // Count students for this program and section
+    // Count students for this course and section
     const { count: studentCount, error: studentsCountError } = await supabase
       .from("students")
       .select("*", { count: "exact", head: true })
-      .eq("program_id", programData.id)
-      .eq("section_id", sectionData.id)
+      .eq("course_id", courseId)
+      .eq("section_id", sectionId)
       .eq("is_active", true);
 
     if (studentsCountError) {
@@ -1169,13 +1069,13 @@ export const fetchProgramSectionCounts = async (
       return { studentCount: studentCount || 0, submissionCount: 0 };
     }
 
-    // Count submissions for this activity, program, and section
+    // Count submissions for this activity and section
     const { count: submissionCount, error: submissionsCountError } =
       await supabase
         .from("essays")
         .select("*", { count: "exact", head: true })
         .eq("activity_id", activityDbId)
-        .eq("section_id", sectionData.id);
+        .eq("section_id", sectionId);
 
     if (submissionsCountError) {
       console.error("Error counting submissions:", submissionsCountError);
@@ -1190,6 +1090,7 @@ export const fetchProgramSectionCounts = async (
     return { studentCount: 0, submissionCount: 0 };
   }
 };
+
 
 // Fetch essay submission for a specific student and activity
 export const fetchEssayByStudentAndActivity = async (

@@ -4,9 +4,9 @@ import Button from "../ui/Button";
 interface SectionSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  sectionsByPrograms: Array<{
-    program: { id: string; name: string };
-    sections: { id: string; name: string; programId: string }[];
+  sectionsByCourses: Array<{
+    course: { id: string; name: string };
+    sections: { id: string; name: string; courseId: string }[];
   }>;
   selectedSectionIds: string[];
   onSelectionChange: (sectionIds: string[]) => void;
@@ -16,7 +16,7 @@ interface SectionSelectionModalProps {
 export function SectionSelectionModal({
   isOpen,
   onClose,
-  sectionsByPrograms,
+  sectionsByCourses,
   selectedSectionIds,
   onSelectionChange,
   disabled = false,
@@ -56,14 +56,14 @@ export function SectionSelectionModal({
             <span className="text-sm font-medium">All Sections</span>
           </label>
           <div className="border-t border-neutral-200 pt-2 space-y-3">
-            {sectionsByPrograms.map(
-              ({ program, sections: programSections }) => (
-                <div key={program.id}>
-                  <div className="font-medium text-sm text-neutral-700 mb-2">
-                    {program.name}
+            {sectionsByCourses.map(
+              ({ course, sections: courseSections }) => (
+                <div key={course.id}>
+                   <div className="font-medium text-sm text-neutral-700 mb-2">
+                    {course.name}
                   </div>
                   <div className="ml-4 space-y-1">
-                    {programSections.map((section) => (
+                    {courseSections.map((section) => (
                       <label
                         key={section.id}
                         className="flex items-center gap-2 p-1 hover:bg-neutral-50 rounded cursor-pointer"

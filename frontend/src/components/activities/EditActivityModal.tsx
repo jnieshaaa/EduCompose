@@ -4,7 +4,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import type { NewActivityForm } from "../../types/activityTypes";
-import { ProgramSelectionModal } from "./ProgramSelectionModal";
+import { CourseSelectionModal } from "./CourseSelectionModal";
 import { SectionSelectionModal } from "./SectionSelectionModal";
 
 interface EditActivityModalProps {
@@ -12,8 +12,8 @@ interface EditActivityModalProps {
   onClose: () => void;
   onSubmit: (activity: NewActivityForm) => Promise<void>;
   initialData: NewActivityForm;
-  programs: { id: string; name: string }[];
-  sections: { id: string; name: string; programId: string }[];
+  courses: { id: string; name: string }[];
+  sections: { id: string; name: string; courseId: string }[];
   rubrics: {
     platform: { id: string; name: string }[];
     teacher: { id: string; name: string }[];
@@ -26,13 +26,13 @@ export function EditActivityModal({
   onClose,
   onSubmit,
   initialData,
-  programs,
+  courses,
   sections,
   rubrics,
   isSubmitting,
-}: Omit<EditActivityModalProps, "sectionsBySelectedPrograms">) {
+}: Omit<EditActivityModalProps, "sectionsBySelectedCourses">) {
   const [formData, setFormData] = useState<NewActivityForm>(initialData);
-  const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function EditActivityModal({
   }, [isOpen, initialData]);
 
   const handleClose = () => {
-    setIsProgramModalOpen(false);
+    setIsCourseModalOpen(false);
     setIsSectionModalOpen(false);
     onClose();
   };
@@ -53,34 +53,34 @@ export function EditActivityModal({
     handleClose();
   };
 
-  const handleProgramChange = (programIds: string[]) => {
+  const handleCourseChange = (courseIds: string[]) => {
     setFormData((prev) => {
       const newSectionIds =
-        programIds.length === 0
+        courseIds.length === 0
           ? []
           : prev.sectionIds.filter((sectionId) => {
               const section = sections.find((s) => s.id === sectionId);
-              return section && programIds.includes(section.programId);
+              return section && courseIds.includes(section.courseId);
             });
-      return { ...prev, programIds, sectionIds: newSectionIds };
+      return { ...prev, courseIds, sectionIds: newSectionIds };
     });
   };
 
-  // Compute sections by selected programs dynamically
-  const currentSectionsByPrograms = useMemo(() => {
-    if (formData.programIds.length === 0) {
-      return programs.map((program) => ({
-        program,
-        sections: sections.filter((s) => s.programId === program.id),
+  // Compute sections by selected courses dynamically
+  const currentSectionsByCourses = useMemo(() => {
+    if (formData.courseIds.length === 0) {
+      return courses.map((course) => ({
+        course,
+        sections: sections.filter((s) => s.courseId === course.id),
       }));
     }
-    return programs
-      .filter((p) => formData.programIds.includes(p.id))
-      .map((program) => ({
-        program,
-        sections: sections.filter((s) => s.programId === program.id),
+    return courses
+      .filter((p) => formData.courseIds.includes(p.id))
+      .map((course) => ({
+        course,
+        sections: sections.filter((s) => s.courseId === course.id),
       }));
-  }, [formData.programIds, programs, sections]);
+  }, [formData.courseIds, courses, sections]);
 
   return (
     <>
@@ -101,23 +101,23 @@ export function EditActivityModal({
             required
           />
 
-          {/* Programs Selection */}
+          {/* Courses Selection */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">
-              Programs
+              Courses
             </label>
             <Button
               variant="outline"
-              onClick={() => setIsProgramModalOpen(true)}
+              onClick={() => setIsCourseModalOpen(true)}
               className="w-full justify-between"
             >
               <span className="text-sm">
-                {formData.programIds.length === 0
-                  ? "All Programs"
-                  : formData.programIds.length === 1
-                  ? programs.find((p) => p.id === formData.programIds[0])
+                {formData.courseIds.length === 0
+                  ? "All Courses"
+                  : formData.courseIds.length === 1
+                  ? courses.find((p) => p.id === formData.courseIds[0])
                       ?.name || "Selected"
-                  : `${formData.programIds.length} Programs Selected`}
+                  : `${formData.courseIds.length} Courses Selected`}
               </span>
               <ChevronDown className="w-4 h-4" />
             </Button>
@@ -133,7 +133,7 @@ export function EditActivityModal({
               onClick={() => setIsSectionModalOpen(true)}
               className="w-full justify-between"
               disabled={
-                formData.programIds.length === 0 && programs.length === 0
+                formData.courseIds.length === 0 && courses.length === 0
               }
             >
               <span className="text-sm">
@@ -272,12 +272,12 @@ export function EditActivityModal({
         </div>
       </Modal>
 
-      <ProgramSelectionModal
-        isOpen={isProgramModalOpen}
-        onClose={() => setIsProgramModalOpen(false)}
-        programs={programs}
-        selectedProgramIds={formData.programIds}
-        onSelectionChange={handleProgramChange}
+      <CourseSelectionModal
+        isOpen={isCourseModalOpen}
+        onClose={() => setIsCourseModalOpen(false)}
+        courses={courses}
+        selectedCourseIds={formData.courseIds}
+        onSelectionChange={handleCourseChange}
         onSectionReset={() =>
           setFormData((prev) => ({ ...prev, sectionIds: [] }))
         }
@@ -286,12 +286,12 @@ export function EditActivityModal({
       <SectionSelectionModal
         isOpen={isSectionModalOpen}
         onClose={() => setIsSectionModalOpen(false)}
-        sectionsByPrograms={currentSectionsByPrograms}
+        sectionsByCourses={currentSectionsByCourses}
         selectedSectionIds={formData.sectionIds}
         onSelectionChange={(sectionIds) =>
           setFormData((prev) => ({ ...prev, sectionIds }))
         }
-        disabled={formData.programIds.length === 0 && programs.length === 0}
+        disabled={formData.courseIds.length === 0 && courses.length === 0}
       />
     </>
   );
