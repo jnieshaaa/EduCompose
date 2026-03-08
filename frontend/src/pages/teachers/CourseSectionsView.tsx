@@ -397,12 +397,14 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
             <div className="p-6 space-y-4">
               {!selectedProgram ? (
                 <div className="max-h-80 overflow-y-auto space-y-3">
-                  {departments.map(dept => {
+                  {departments
+                    .filter(dept => !course.department_id || dept.id === course.department_id)
+                    .map(dept => {
                     const deptPrograms = schoolPrograms.filter(p => p.department_id === dept.id);
                     if (deptPrograms.length === 0) return null;
                     return (
                       <div key={dept.id} className="border border-neutral-200 rounded-lg overflow-hidden">
-                        <details className="group">
+                        <details className="group" open={Boolean(course.department_id)}>
                           <summary className="flex items-center justify-between p-3 bg-neutral-50 cursor-pointer user-select-none font-medium text-sm text-neutral-800 hover:bg-neutral-100 transition-colors">
                             {dept.code} - {dept.name}
                             <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>

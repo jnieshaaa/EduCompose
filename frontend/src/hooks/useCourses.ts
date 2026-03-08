@@ -50,6 +50,12 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
+  
+  // New: Metadata for filters
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [programsLookup, setProgramsLookup] = useState<any[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const [selectedProgId, setSelectedProgId] = useState("");
 
   const fetchCourses = async () => {
     if (isLoadingAcademic) return;
@@ -63,6 +69,25 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         return;
       }
       setTeacherInfo(info);
+      
+      // Fetch metadata for filters if not already fetched
+      if (departments.length === 0) {
+        const { data: depts } = await supabase
+          .from("departments")
+          .select("*")
+          .eq("school_id", info.school_id)
+          .order("name");
+        setDepartments(depts || []);
+        
+        if (depts && depts.length > 0) {
+          const { data: progs } = await supabase
+            .from("programs_lookup")
+            .select("*")
+            .in("department_id", depts.map(d => d.id))
+            .order("name");
+          setProgramsLookup(progs || []);
+        }
+      }
 
       // 1. Fetch Teacher's personal loads from teacher_course_loads
       let query = supabase
@@ -151,25 +176,34 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
   const myLoadsIds = useMemo(() => new Set(myCourses.map(c => c.id)), [myCourses]);
 
   const filteredMyCourses = useMemo(() => {
-    return myCourses.filter((course) =>
-      course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.course_title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [myCourses, searchQuery]);
+    return myCourses.filter((course) => {
+      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
+      const matchesProg = !selectedProgId || course.program_id === selectedProgId;
+      return matchesSearch && matchesDept && matchesProg;
+    });
+  }, [myCourses, searchQuery, selectedDeptId, selectedProgId]);
 
   const filteredDepartmentCourses = useMemo(() => {
-    return departmentCourses.filter((course) =>
-      course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.course_title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [departmentCourses, searchQuery]);
+    return departmentCourses.filter((course) => {
+      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
+      const matchesProg = !selectedProgId || course.program_id === selectedProgId;
+      return matchesSearch && matchesDept && matchesProg;
+    });
+  }, [departmentCourses, searchQuery, selectedDeptId, selectedProgId]);
 
   const filteredSchoolCourses = useMemo(() => {
-    return schoolCourses.filter((course) =>
-      course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.course_title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [schoolCourses, searchQuery]);
+    return schoolCourses.filter((course) => {
+      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
+      const matchesProg = !selectedProgId || course.program_id === selectedProgId;
+      return matchesSearch && matchesDept && matchesProg;
+    });
+  }, [schoolCourses, searchQuery, selectedDeptId, selectedProgId]);
 
   const handleCreateCourse = async (courseData: Partial<Course>) => {
     if (isCreating) return;
@@ -236,25 +270,37 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         setMyCourses(prev => prev.filter(c => c.id !== courseId));
         showSuccess("Course removed from your current loads.");
       } else {
-        const { error } = await supabase
-          .from("teacher_course_loads")
-          .insert({
-            teacher_id: teacherInfo.auth_user_id,
-            course_id: courseId,
-            academic_year: currentAY,
-            term: currentSemester
-          });
-        if (error) throw error;
-        
-        // Find course in school catalog to add to state
+        // Find course in school catalog to check department
         const courseToAdd = schoolCourses.find(c => c.id === courseId);
-        if (courseToAdd) {
-            setMyCourses(prev => [courseToAdd, ...prev]);
+        if (!courseToAdd) return;
+
+        const isCrossDept = courseToAdd.department_id && teacherInfo.department_id && courseToAdd.department_id !== teacherInfo.department_id;
+
+        const performAdd = async () => {
+          const { error } = await supabase
+            .from("teacher_course_loads")
+            .insert({
+              teacher_id: teacherInfo.auth_user_id,
+              course_id: courseId,
+              academic_year: currentAY,
+              term: currentSemester
+            });
+          if (error) throw error;
+          
+          setMyCourses(prev => [courseToAdd, ...prev]);
+          showSuccess("Course added to your current loads!");
+        };
+
+        if (isCrossDept) {
+          showWarning(`This course belongs to another department (${courseToAdd.departments?.name || "Other"}). Are you sure you want to add this to your load?`, {
+            title: "Cross-Department Assignment",
+            showCancel: true,
+            confirmText: "Yes, Add Course",
+            onConfirm: performAdd
+          });
         } else {
-            // Fallback: refetch
-            fetchCourses();
+          await performAdd();
         }
-        showSuccess("Course added to your current loads!");
       }
     } catch (err: any) {
       console.error("Error toggling load:", err);
@@ -291,6 +337,12 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     loadError,
     searchQuery,
     setSearchQuery,
+    selectedDeptId,
+    setSelectedDeptId,
+    selectedProgId,
+    setSelectedProgId,
+    departments,
+    programsLookup,
     isAddDialogOpen,
     setIsAddDialogOpen,
     isCreating,

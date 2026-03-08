@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, Edit2, Loader2, BookOpen, Search, Filter } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -16,6 +16,12 @@ export function CoursesTab() {
     isLoading,
     searchQuery,
     setSearchQuery,
+    selectedDeptId,
+    setSelectedDeptId,
+    selectedProgId,
+    setSelectedProgId,
+    departments,
+    programsLookup,
     isAddDialogOpen,
     setIsAddDialogOpen,
     isCreating,
@@ -26,7 +32,19 @@ export function CoursesTab() {
   } = useCourses();
 
   const [activeTab, setActiveTab] = useState<"my" | "dept" | "school">("my");
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
+  // Sync department filter with tab
+  useEffect(() => {
+    if (activeTab === "dept" && teacherInfo?.department_id) {
+      setSelectedDeptId(teacherInfo.department_id);
+    } else if (activeTab === "my" || activeTab === "school") {
+      // Optional: Clear filter or keep? Let's clear if it was forced by dept tab
+      // But maybe user wants to keep it. Let's just set it for dept tab.
+    }
+  }, [activeTab, teacherInfo?.department_id, setSelectedDeptId]);
+
   const [newCourse, setNewCourse] = useState<Partial<Course>>({
     course_code: "",
     course_title: "",
@@ -48,6 +66,9 @@ export function CoursesTab() {
   if (selectedCourse) {
     return <CourseSectionsView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
   }
+
+  // Filter programs based on selected department
+  const availablePrograms = programsLookup.filter(p => !selectedDeptId || p.department_id === selectedDeptId);
 
   return (
     <div className="space-y-6">
@@ -94,20 +115,80 @@ export function CoursesTab() {
 
       {/* Filters */}
       <Card className="p-4 bg-white shadow-sm border border-neutral-200">
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
-            <input
-              type="text"
-              placeholder="Search by code or title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search by code or title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all ${
+                showFilters || selectedDeptId || selectedProgId
+                  ? "bg-primary/5 border-primary text-primary font-bold"
+                  : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+              }`}
+            >
+              <Filter size={16} /> 
+              Filters {(selectedDeptId || selectedProgId) ? "(Active)" : ""}
+            </button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50">
-            <Filter size={16} /> Filters
-          </button>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                <select
+                  value={selectedDeptId}
+                  disabled={activeTab === "dept"}
+                  onChange={(e) => {
+                    setSelectedDeptId(e.target.value);
+                    setSelectedProgId(""); // Reset program when department changes
+                  }}
+                  className={`w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none ${
+                    activeTab === "dept" ? "bg-neutral-50 text-neutral-500 cursor-not-allowed" : "bg-white"
+                  }`}
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                <select
+                  value={selectedProgId}
+                  onChange={(e) => setSelectedProgId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="">All Programs</option>
+                  {availablePrograms.map((prog) => (
+                    <option key={prog.id} value={prog.id}>{prog.name}</option>
+                  ))}
+                </select>
+              </div>
+              {(selectedDeptId || selectedProgId) && (
+                <div className="md:col-span-2 flex justify-end">
+                  <button 
+                    onClick={() => {
+                      setSelectedDeptId("");
+                      setSelectedProgId("");
+                    }}
+                    className="text-xs text-neutral-400 hover:text-red-500 font-medium transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 
