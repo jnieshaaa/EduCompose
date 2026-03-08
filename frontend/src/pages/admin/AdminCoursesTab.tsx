@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2, Loader2, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2, Search, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
 
 
 import { supabase } from "../../lib/supabaseClient";
@@ -38,6 +38,7 @@ export const AdminCoursesTab: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
 
 
@@ -178,6 +179,14 @@ export const AdminCoursesTab: React.FC = () => {
     setSelectedProg("");
   };
 
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const filteredCourses = allCourses.filter(c => {
     if (filters.user && c.user_id !== filters.user) return false;
     if (filters.school && c.school_id !== filters.school) return false;
@@ -194,11 +203,52 @@ export const AdminCoursesTab: React.FC = () => {
   });
 
 
+  // Sorting logic
+  const sortedCourses = React.useMemo(() => {
+    let sortableCourses = [...filteredCourses];
+    if (sortConfig !== null) {
+      sortableCourses.sort((a, b) => {
+        let aValue: any = "";
+        let bValue: any = "";
+
+        switch (sortConfig.key) {
+          case 'course':
+            aValue = a.course_code.toLowerCase();
+            bValue = b.course_code.toLowerCase();
+            break;
+          case 'units':
+            aValue = a.units;
+            bValue = b.units;
+            break;
+          case 'year_sem':
+            aValue = `${a.year_level || ''} ${a.semester || ''}`.toLowerCase();
+            bValue = `${b.year_level || ''} ${b.semester || ''}`.toLowerCase();
+            break;
+          case 'added_by':
+            aValue = a.users ? `${a.users.first_name} ${a.users.last_name}`.toLowerCase() : "";
+            bValue = b.users ? `${b.users.first_name} ${b.users.last_name}`.toLowerCase() : "";
+            break;
+          case 'affiliation':
+            aValue = a.schools?.name.toLowerCase() || "";
+            bValue = b.schools?.name.toLowerCase() || "";
+            break;
+          default:
+            break;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableCourses;
+  }, [filteredCourses, sortConfig]);
+
   // Calculate pagination
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedCourses.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCourses.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = sortedCourses.slice(indexOfFirstItem, indexOfLastItem);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -321,11 +371,46 @@ export const AdminCoursesTab: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-neutral-50 border-b border-neutral-200">
               <tr>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Course</th>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Units</th>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Year & Semester</th>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Added By</th>
-                <th className="px-4 py-3 font-semibold text-neutral-700">Affiliation</th>
+                <th 
+                  className="px-4 py-3 font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+                  onClick={() => requestSort('course')}
+                >
+                  <div className="flex items-center gap-1">
+                    Course {sortConfig?.key === 'course' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="text-neutral-300" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+                  onClick={() => requestSort('units')}
+                >
+                  <div className="flex items-center gap-1">
+                    Units {sortConfig?.key === 'units' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="text-neutral-300" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+                  onClick={() => requestSort('year_sem')}
+                >
+                  <div className="flex items-center gap-1">
+                    Year & Semester {sortConfig?.key === 'year_sem' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="text-neutral-300" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+                  onClick={() => requestSort('added_by')}
+                >
+                  <div className="flex items-center gap-1">
+                    Added By {sortConfig?.key === 'added_by' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="text-neutral-300" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+                  onClick={() => requestSort('affiliation')}
+                >
+                  <div className="flex items-center gap-1">
+                    Affiliation {sortConfig?.key === 'affiliation' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="text-neutral-300" />}
+                  </div>
+                </th>
                 <th className="px-4 py-3 font-semibold text-neutral-700 text-right">Actions</th>
               </tr>
             </thead>
@@ -420,13 +505,13 @@ export const AdminCoursesTab: React.FC = () => {
         </div>
 
         {/* Pagination Controls */}
-        {!isLoading && filteredCourses.length > 0 && (
+        {!isLoading && sortedCourses.length > 0 && (
           <div className="px-4 py-8 bg-white border-t border-neutral-100 space-y-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               {/* Range Indicator (Bottom Left in image, but here we place it in layout) */}
               <div className="order-2 md:order-1 flex flex-col">
                 <div className="text-sm font-medium text-neutral-400">
-                  {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredCourses.length)} of {filteredCourses.length.toLocaleString()}
+                  {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, sortedCourses.length)} of {sortedCourses.length.toLocaleString()}
                 </div>
               </div>
 
