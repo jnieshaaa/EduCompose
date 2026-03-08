@@ -85,7 +85,6 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
       setIsLoadingStudents(true);
       try {
         const studentsData = await fetchStudentsByCourseAndSection(
-          courseId,
           sectionId,
           activityId || undefined
         );

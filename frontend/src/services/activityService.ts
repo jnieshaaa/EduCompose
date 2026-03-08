@@ -631,9 +631,8 @@ export const fetchRubrics = async (): Promise<{
   }
 };
 
-// Fetch students for a specific course and section, with their submission status for an activity
+// Fetch students for a specific section, with their submission status for an activity
 export const fetchStudentsByCourseAndSection = async (
-  courseId: string,
   sectionId: string,
   activityId?: string
 ): Promise<
