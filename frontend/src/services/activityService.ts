@@ -313,10 +313,6 @@ export const updateActivity = async (
     }
 
     // Get first selected program/section or null
-    const programId =
-      activityData.programIds.length > 0
-        ? parseInt(activityData.programIds[0], 10)
-        : null;
     const sectionId =
       activityData.sectionIds.length > 0
         ? parseInt(activityData.sectionIds[0], 10)
@@ -855,8 +851,8 @@ export const updateEssayFile = async (
   file: File,
   studentId: string,
   activityId: string,
-  courseId: string,
-  sectionId: string
+  _courseId: string,
+  _sectionId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();

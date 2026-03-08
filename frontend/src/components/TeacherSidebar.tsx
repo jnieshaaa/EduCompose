@@ -85,15 +85,14 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         path: "/Teacher/Settings",
       },
     ],
-    []
+    [],
   );
 
   // Routes that belong to Course Management section (for highlighting)
-  const courseManagementPaths = [
-    "/Teacher/Courses",
-    "/Teacher/Sections",
-    "/Teacher/Students",
-  ];
+  const courseManagementPaths = useMemo(
+    () => ["/Teacher/Courses", "/Teacher/Sections", "/Teacher/Students"],
+    [],
+  );
 
   const [activePath, setActivePath] = useState(location.pathname);
 
@@ -105,12 +104,12 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
 
   useEffect(() => {
     const currentItem = menuItems.find(
-      (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
+      (item) => item.path.toLowerCase() === location.pathname.toLowerCase(),
     );
 
     // For Course Management sub-routes, show "Course Management" in title
     const isCourseManagementRoute = courseManagementPaths.some((p) =>
-      location.pathname.toLowerCase().startsWith(p.toLowerCase())
+      location.pathname.toLowerCase().startsWith(p.toLowerCase()),
     );
 
     if (isCourseManagementRoute) {
@@ -118,7 +117,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     } else {
       document.title = currentItem ? currentItem.label : "EduCompose";
     }
-  }, [location.pathname, menuItems]);
+  }, [location.pathname, menuItems, courseManagementPaths]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -151,7 +150,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     // For Course Management, check if current path is any of its sub-routes
     if (targetPath === "/teacher/courses") {
       return courseManagementPaths.some((p) =>
-        currentPath.startsWith(p.toLowerCase())
+        currentPath.startsWith(p.toLowerCase()),
       );
     }
 
@@ -165,11 +164,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       <aside
         className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
         style={{
-          width: isSidebarOpen
-            ? "280px"
-            : isDesktop
-            ? "80px"
-            : "0px",
+          width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
           overflow: isSidebarOpen ? "hidden" : "visible",
         }}
