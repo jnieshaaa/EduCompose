@@ -35,7 +35,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
@@ -125,7 +124,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
-      setIsTablet(width >= 768 && width < 1024);
       if (width < 1024) {
         setIsSidebarOpen(false);
       }

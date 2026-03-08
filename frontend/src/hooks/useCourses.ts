@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Course } from "../types/academic";
@@ -36,7 +36,6 @@ const getTeacherInfo = async () => {
 };
 
 export function useCourses() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import type { Section } from "../types/academic";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";

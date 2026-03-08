@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, Trash2, Edit2, Loader2, BookOpen, Search, Filter } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
