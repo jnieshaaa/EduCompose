@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Users, Folder, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Users, Folder, Plus, Trash2, Edit2, Loader2, MoreVertical } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '../../components/ui/dropdown-menu';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { supabase } from '../../lib/supabaseClient';
@@ -26,32 +33,26 @@ interface ProgramLookup {
 }
 
 export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) {
+  const navigate = useNavigate();
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
   const { currentSemester } = useAcademicContext();
   const [sections, setSections] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
 
-  const [departments, setDepartments] = useState<DepartmentLookup[]>([]);
-  const [schoolPrograms, setSchoolPrograms] = useState<ProgramLookup[]>([]);
-
   // Modal states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  
-  const [newSection, setNewSection] = useState<{
-    selectedDepartmentId: string;
-    selectedProgramAbbrs: string[];
-    blockPart: string;
-    term: string;
-    students: string;
-  }>({
+
+  const [departments, setDepartments] = useState<DepartmentLookup[]>([]);
+  const [schoolPrograms, setSchoolPrograms] = useState<ProgramLookup[]>([]);
+
+  const [newSection, setNewSection] = useState({
     selectedDepartmentId: '',
-    selectedProgramAbbrs: [],
+    selectedProgramAbbrs: [] as string[],
     blockPart: '',
     term: '',
-    students: '0'
   });
 
   // Sync term with global settings
@@ -96,7 +97,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
     try {
       const { data, error } = await supabase
         .from('sections')
-        .select('*')
+        .select('*, students:students(count)')
         .eq('course_id', course.id)
         .order('created_at', { ascending: false });
 
@@ -170,7 +171,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
             course_id: course.id,
             name: abbr, // Just the program abbreviation
             term: currentSemester || "1st Semester",
-            students_estimated: 0,
           });
         }
       } else {
@@ -178,7 +178,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
           course_id: course.id,
           name: `${selectedProgram} ${newSection.blockPart.toUpperCase()}`,
           term: currentSemester || "1st Semester",
-          students_estimated: parseInt(newSection.students, 10) || 0,
         });
       }
 
@@ -194,7 +193,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         setSections(prev => [...data, ...prev]);
         showSuccess(isAddingProgramLevel ? "Programs/Blocks created successfully!" : "Block created successfully!");
         setIsAddDialogOpen(false);
-        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: [], blockPart: '', students: '0' }));
+        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: [], blockPart: '' }));
       }
     } catch (err: any) {
       console.error(err);
@@ -211,7 +210,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         .from('sections')
         .update({
           name: editingSection.name,
-          students_estimated: editingSection.students_estimated,
         })
         .eq('id', editingSection.id);
         
@@ -224,6 +222,40 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
        console.error(err);
        showError("Failed to update block.");
     }
+  };
+
+  const handleRemoveProgram = (prog: string) => {
+    showWarning(`Are you sure you want to remove the ${prog} program and all its blocks?`, {
+      title: "Remove Program",
+      showCancel: true,
+      onConfirm: async () => {
+        try {
+          const sectionsToDelete = sections.filter(s => {
+            if (prog === "Other Programs") {
+              return !s.name.includes('-') && !s.name.includes(' ');
+            }
+            return s.name === prog || s.name.startsWith(prog + ' ') || s.name.startsWith(prog + '-');
+          });
+
+          if (sectionsToDelete.length === 0) return;
+
+          const idsToDelete = sectionsToDelete.map(s => s.id);
+          
+          const { error } = await supabase
+            .from('sections')
+            .delete()
+            .in('id', idsToDelete);
+          
+          if (error) throw error;
+          
+          setSections(prev => prev.filter(s => !idsToDelete.includes(s.id)));
+          showSuccess(`Program ${prog} and its blocks removed.`);
+        } catch (err) {
+          console.error(err);
+          showError("Failed to remove program.");
+        }
+      }
+    });
   };
 
   const handleDeleteSection = (id: number) => {
@@ -272,7 +304,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         {selectedProgram && (
            <Button
              onClick={() => {
-               setNewSection(prev => ({ ...prev, name: '' }));
+               setNewSection(prev => ({ ...prev, blockPart: '' }));
                setIsAddDialogOpen(true);
              }}
              className="bg-primary text-white font-medium shadow-md flex items-center gap-2"
@@ -303,26 +335,59 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
              <>
                <div className="flex justify-between items-center">
                  <h2 className="text-lg font-bold text-neutral-800">Programs Enrolled in {course.course_code}</h2>
-                 <Button onClick={() => setIsAddDialogOpen(true)} className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 text-xs px-3 py-1.5">
-                    <Plus size={14} className="mr-1 inline" /> Add Program
-                 </Button>
+                 <Button 
+                    onClick={() => setIsAddDialogOpen(true)} 
+                    variant="outline"
+                    className="text-primary hover:text-primary-600 border-primary/20 hover:border-primary/40 text-xs px-3 py-1.5"
+                  >
+                     <Plus size={14} className="mr-1 inline" /> Add Program
+                  </Button>
                </div>
                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                  {programs.map(prog => {
-                   const count = sections.filter(s => prog === "Other Programs" ? !s.name.includes('-') : s.name.startsWith(prog + '-')).length;
+                   const count = sections.filter(s => {
+                     if (s.name === prog) return false;
+                     if (prog === "Other Programs") return !s.name.includes('-') && !s.name.includes(' ');
+                     return s.name.startsWith(prog + ' ') || s.name.startsWith(prog + '-');
+                   }).length;
                    return (
-                     <Card 
-                       key={prog} 
-                       onClick={() => setSelectedProgram(prog)}
-                       className="p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white relative overflow-hidden"
-                     >
-                       <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-                         <Folder size={100} />
-                       </div>
-                       <div className="flex items-center gap-3 mb-3">
-                         <div className="p-2.5 bg-primary/10 rounded-lg text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                           <Folder size={20} />
-                         </div>
+                      <Card 
+                        key={prog} 
+                        onClick={() => setSelectedProgram(prog)}
+                        className="p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white relative overflow-hidden"
+                      >
+                        <div className="absolute top-3 right-3 z-10">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100 transition-colors">
+                                <MoreVertical size={16} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveProgram(prog);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Remove programs
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                          <Folder size={100} />
+                        </div>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2.5 bg-primary/10 rounded-lg text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                            <Folder size={20} />
+                          </div>
                          <h3 className="font-bold text-lg text-neutral-900">{prog}</h3>
                        </div>
                        <p className="text-sm text-neutral-500 flex items-center gap-1.5">
@@ -334,7 +399,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                </div>
              </>
            )}
-        </div>
+         </div>
       ) : (
         // --- BLOCKS VIEW ---
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
@@ -344,49 +409,49 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                 <p className="text-neutral-500">No blocks found in this program.</p>
              </div>
           ) : (
-             <table className="w-full text-left">
-               <thead className="bg-neutral-50/80 text-neutral-500 text-xs uppercase tracking-wider border-b border-neutral-200">
-                 <tr>
-                   <th className="px-6 py-4 font-bold">Block Name</th>
-                   <th className="px-6 py-4 font-bold">Term</th>
-                   <th className="px-6 py-4 font-bold text-center">Est. Students</th>
-                   <th className="px-6 py-4 font-bold text-right">Actions</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-neutral-100">
-                 {filteredSections.map(section => (
-                   <tr key={section.id} className="hover:bg-neutral-50/50 transition-colors group">
-                     <td className="px-6 py-4">
-                       <span className="font-bold text-neutral-800 text-sm">{section.name}</span>
-                     </td>
-                     <td className="px-6 py-4">
-                       <span className="inline-block px-2.5 py-1 bg-neutral-100 text-neutral-600 text-xs rounded font-medium">
-                         {section.term}
-                       </span>
-                     </td>
-                     <td className="px-6 py-4 text-center">
-                       <span className="text-sm text-neutral-600 font-medium">{section.students_estimated}</span>
-                     </td>
-                     <td className="px-6 py-4">
-                       <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                         <button 
-                           onClick={() => { setEditingSection(section); setIsEditDialogOpen(true); }}
-                           className="p-2 text-neutral-400 hover:text-primary bg-white hover:bg-primary/5 rounded-lg transition-all"
-                         >
-                           <Edit2 size={16} />
-                         </button>
-                         <button 
-                           onClick={() => handleDeleteSection(section.id)}
-                           className="p-2 text-neutral-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-all"
-                         >
-                           <Trash2 size={16} />
-                         </button>
-                       </div>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-             </table>
+            <table className="w-full text-left">
+              <thead className="bg-neutral-50/80 text-neutral-500 text-[10px] font-bold uppercase tracking-wider border-b border-neutral-200">
+                <tr>
+                  <th className="px-6 py-4">BLOCK NAME</th>
+                  <th className="px-6 py-4 text-center">STUDENTS</th>
+                  <th className="px-6 py-4 text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {filteredSections.map(section => (
+                  <tr 
+                    key={section.id} 
+                    className="hover:bg-neutral-50/50 transition-colors group cursor-pointer"
+                    onClick={() => navigate(`/Teacher/Students?courseId=${course.id}&courseCode=${course.course_code}&program=${encodeURIComponent(selectedProgram!)}&section=${encodeURIComponent(section.name)}`)}
+                  >
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-neutral-800 text-sm">{section.name}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm text-neutral-600 font-medium">
+                        {(section as any).students?.[0]?.count || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingSection(section); setIsEditDialogOpen(true); }}
+                          className="p-2 text-neutral-400 hover:text-primary bg-white hover:bg-primary/5 rounded-lg transition-all"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id); }}
+                          className="p-2 text-neutral-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}
@@ -394,12 +459,12 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
       {/* Add Modal */}
       {isAddDialogOpen && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
               <h2 className="text-lg font-bold text-neutral-900">
                 {!selectedProgram ? "Add New Program" : "Add New Block"}
               </h2>
-              {selectedProgram && selectedProgram !== "Other Programs" && (
+              {selectedProgram && (
                 <p className="text-xs text-neutral-500 mt-1">For program: <span className="font-bold text-primary">{selectedProgram}</span></p>
               )}
             </div>
@@ -495,7 +560,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
       {/* Edit Modal */}
       {isEditDialogOpen && editingSection && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
               <h2 className="text-lg font-bold text-neutral-900">Edit Block</h2>
             </div>
@@ -505,15 +570,6 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                 <input
                   value={editingSection.name}
                   onChange={(e) => setEditingSection({...editingSection, name: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Est. Students</label>
-                <input
-                  type="number"
-                  value={editingSection.students_estimated}
-                  onChange={(e) => setEditingSection({...editingSection, students_estimated: parseInt(e.target.value) || 0})}
                   className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none"
                 />
               </div>

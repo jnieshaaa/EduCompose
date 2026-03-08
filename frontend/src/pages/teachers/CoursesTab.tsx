@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Trash2, Edit2, Loader2, BookOpen, Search, Filter } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -7,6 +8,9 @@ import type { Course } from "../../types/academic";
 import { CourseSectionsView } from "./CourseSectionsView";
 
 export function CoursesTab() {
+  const [searchParams] = useSearchParams();
+  const deepCourseId = searchParams.get("courseId");
+
   const {
     teacherInfo,
     myCourses,
@@ -39,11 +43,16 @@ export function CoursesTab() {
   useEffect(() => {
     if (activeTab === "dept" && teacherInfo?.department_id) {
       setSelectedDeptId(teacherInfo.department_id);
-    } else if (activeTab === "my" || activeTab === "school") {
-      // Optional: Clear filter or keep? Let's clear if it was forced by dept tab
-      // But maybe user wants to keep it. Let's just set it for dept tab.
     }
   }, [activeTab, teacherInfo?.department_id, setSelectedDeptId]);
+
+  // Handle deep-link to course
+  useEffect(() => {
+    if (deepCourseId && !selectedCourse && myCourses.length > 0) {
+      const course = myCourses.find(c => String(c.id) === String(deepCourseId));
+      if (course) setSelectedCourse(course);
+    }
+  }, [deepCourseId, myCourses, selectedCourse]);
 
   const [newCourse, setNewCourse] = useState<Partial<Course>>({
     course_code: "",
