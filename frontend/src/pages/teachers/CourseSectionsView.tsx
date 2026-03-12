@@ -28,11 +28,6 @@ interface CourseSectionsViewProps {
   onBack: () => void;
 }
 
-interface DepartmentLookup {
-  id: string;
-  name: string;
-  code: string;
-}
 
 interface ProgramLookup {
   id: string;
@@ -79,7 +74,6 @@ export function CourseSectionsView({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const [departments, setDepartments] = useState<DepartmentLookup[]>([]);
   const [schoolPrograms, setSchoolPrograms] = useState<ProgramLookup[]>([]);
 
   const [newSection, setNewSection] = useState({
@@ -102,23 +96,22 @@ export function CourseSectionsView({
     try {
       if (!course.school_id) return;
 
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("*")
-        .eq("school_id", course.school_id);
+      // Fetch all programs for this school by joining with departments
+      // (or directly if school_id is available in programs_lookup, but typically it follows dept)
+      const { data: progData } = await supabase
+        .from("programs_lookup")
+        .select(`
+          id,
+          name,
+          abbr,
+          department_id,
+          departments!inner (
+            school_id
+          )
+        `)
+        .eq("departments.school_id", course.school_id);
 
-      setDepartments(deptData || []);
-
-      if (deptData && deptData.length > 0) {
-        const { data: progData } = await supabase
-          .from("programs_lookup")
-          .select("*")
-          .in(
-            "department_id",
-            deptData.map((d) => d.id),
-          );
-        setSchoolPrograms(progData || []);
-      }
+      setSchoolPrograms((progData as any) || []);
     } catch (err) {
       console.error("Error fetching school catalogs:", err);
     }
