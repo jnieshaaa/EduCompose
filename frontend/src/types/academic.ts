@@ -8,6 +8,16 @@ export interface Program {
   schools?: { name: string };
 }
 
+export interface Block {
+  id: string;
+  program_id: string;
+  year_level: number;
+  name: string;
+  created_at?: string;
+  // Joined data
+  programs_lookup?: Program;
+}
+
 export interface Course {
   id: string;
   school_id: string;
@@ -30,10 +40,12 @@ export interface Course {
 
 
 export interface Section {
-  id: number;
+  id: string; // This will now represent the assignment ID or block ID depending on context
   course_id: string;
-  program_id?: number | null;
-  name: string;
+  block_id: string;
+  name: string; // The specific block name (e.g., "1A")
+  program_id?: string;
+  year_level?: number;
   term: string;
   academic_year: string;
   students_estimated: number;
@@ -41,6 +53,7 @@ export interface Section {
   created_at: string;
   // For joined data
   courses?: Course;
+  blocks?: Block;
 }
 
 export interface Department {

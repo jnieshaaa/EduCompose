@@ -5,7 +5,7 @@ export async function fetchEssays(): Promise<Essay[]> {
     {
       id: 1,
       student_id: 1,
-      teacher_id: 1,
+      user_id: 1,
       class_id: 1,
       title: "The Impact of Technology on Education",
       content: "Technology has changed the way students learn...",
@@ -17,7 +17,7 @@ export async function fetchEssays(): Promise<Essay[]> {
     {
       id: 2,
       student_id: 2,
-      teacher_id: 1,
+      user_id: 1,
       class_id: 1,
       title: "Climate Change and Responsibility",
       content: "Climate change affects every living creature...",

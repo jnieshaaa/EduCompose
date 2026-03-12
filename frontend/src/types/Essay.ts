@@ -1,7 +1,7 @@
 export interface Essay {
   id: number;
   student_id: number;
-  teacher_id: number;
+  user_id: number;
   class_id: number;
   title: string;
   content: string;
@@ -203,7 +203,7 @@ export interface Class {
   id: number;
   name: string;
   description?: string;
-  teacher_id: number;
+  user_id: number;
   created_at: string;
   is_active: boolean;
 }

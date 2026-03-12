@@ -13,10 +13,11 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   // Dashboard
   "/Teacher/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
   
-  // Class Management section
-  "/Teacher/Programs": { label: "Programs", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
-  "/Teacher/Sections": { label: "Sections", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
-  "/Teacher/Students": { label: "Students", parent: "Class Management", icon: <Layers className="w-4 h-4" /> },
+  // Course Management section
+  "/Teacher/Courses": { label: "Courses", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Programs": { label: "Programs", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Sections": { label: "Sections", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Students": { label: "Students", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
   
   // Essay section
   "/Teacher/Activities": { label: "Activities", icon: <BookOpen className="w-4 h-4" /> },
@@ -69,60 +70,102 @@ const Breadcrumb: React.FC = () => {
       });
     }
 
-    // Handle drill-down paths for Class Management
-    if (config.parent === "Class Management") {
-      if (pathname === "/Teacher/Programs") {
-        // On Programs page - just show "Class Management > Programs"
+    // Handle drill-down paths for Course Management
+    if (config.parent === "Course Management") {
+      const courseId = searchParams.get("courseId");
+      const courseCode = searchParams.get("courseCode");
+
+      if (pathname === "/Teacher/Courses") {
+        if (courseCode) {
+          items.push({
+            label: "Courses",
+            path: "/Teacher/Courses",
+          });
+          items.push({
+            label: courseCode,
+            path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
+          });
+        } else {
+          items.push({
+            label: "Courses",
+            path: "/Teacher/Courses",
+          });
+        }
+      } else if (pathname === "/Teacher/Programs") {
         items.push({
           label: "Programs",
           path: "/Teacher/Programs",
         });
       } else if (pathname === "/Teacher/Sections") {
-        // On Sections page
-        items.push({
-          label: "Programs",
-          path: "/Teacher/Programs",
-        });
+        if (courseCode) {
+            items.push({
+                label: "Courses",
+                path: "/Teacher/Courses",
+            });
+            items.push({
+                label: courseCode,
+                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
+            });
+        } else {
+            items.push({
+                label: "Programs",
+                path: "/Teacher/Programs",
+            });
+        }
         
         if (programFilter) {
-          // Drill-down from a specific program
           items.push({
             label: programFilter,
-            path: `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
+            path: courseCode 
+              ? `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}&program=${encodeURIComponent(programFilter)}`
+              : `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
           });
-        } else {
+        } else if (!courseCode) {
           items.push({
             label: "Sections",
             path: "/Teacher/Sections",
           });
         }
       } else if (pathname === "/Teacher/Students") {
-        // On Students page
-        items.push({
-          label: "Programs",
-          path: "/Teacher/Programs",
-        });
+        if (courseCode) {
+            items.push({
+                label: "Courses",
+                path: "/Teacher/Courses",
+            });
+            items.push({
+                label: courseCode,
+                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
+            });
+        } else {
+            items.push({
+                label: "Programs",
+                path: "/Teacher/Programs",
+            });
+        }
         
         if (programFilter) {
           items.push({
             label: programFilter,
-            path: `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
+            path: courseCode 
+              ? `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}&program=${encodeURIComponent(programFilter)}`
+              : `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
           });
         }
         
         if (sectionFilter) {
           items.push({
             label: sectionFilter,
-            path: `/Teacher/Students?program=${encodeURIComponent(programFilter || "")}&section=${encodeURIComponent(sectionFilter)}`,
+            path: `/Teacher/Students?program=${encodeURIComponent(programFilter || "")}&section=${encodeURIComponent(sectionFilter)}&courseId=${courseId}&courseCode=${courseCode}`,
           });
-        } else if (!programFilter) {
+        } else if (!programFilter && !courseCode) {
           items.push({
             label: "Students",
             path: "/Teacher/Students",
           });
         }
       }
-    } else if (pathname === "/Teacher/Activities") {
+    }
+ else if (pathname === "/Teacher/Activities") {
       // Handle Activities drill-down
       const activityId = searchParams.get("activityId");
       const activityTitle = searchParams.get("activityTitle");

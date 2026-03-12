@@ -86,12 +86,12 @@ const CreateEssayModal: React.FC<CreateEssayModalProps> = ({
     } catch (apiError) {
       console.error(
         "Error creating essay via API, using local fallback:",
-        apiError
+        apiError,
       );
       const fallbackEssay: Essay = {
         id: Date.now(),
         student_id: parsedStudentId,
-        teacher_id: 1,
+        user_id: 1,
         class_id: parsedClassId,
         title: payload.title,
         content: payload.content,
@@ -106,64 +106,64 @@ const CreateEssayModal: React.FC<CreateEssayModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title='Add New Essay' size='lg'>
-      <form className='space-y-4' onSubmit={handleSubmit}>
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+    <Modal isOpen={isOpen} onClose={onClose} title="Add New Essay" size="lg">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label='Essay Title'
+            label="Essay Title"
             value={formState.title}
             onChange={handleChange("title")}
-            placeholder='Enter essay title...'
+            placeholder="Enter essay title..."
             required
           />
           <Input
-            label='Student ID'
+            label="Student ID"
             value={formState.studentId}
             onChange={handleChange("studentId")}
-            placeholder='Enter student ID...'
+            placeholder="Enter student ID..."
             required
           />
         </div>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label='Class ID'
+            label="Class ID"
             value={formState.classId}
             onChange={handleChange("classId")}
-            placeholder='Enter class ID...'
+            placeholder="Enter class ID..."
             required
           />
           2
         </div>
 
         <Input
-          label='Essay Content'
+          label="Essay Content"
           value={formState.content}
           onChange={handleChange("content")}
-          placeholder='Paste or type the essay content...'
-          type='textarea'
+          placeholder="Paste or type the essay content..."
+          type="textarea"
           rows={6}
           required
         />
 
         {error && (
-          <p className='text-sm text-error-default bg-error-50 border border-error-default/20 rounded-rd px-3 py-2'>
+          <p className="text-sm text-error-default bg-error-50 border border-error-default/20 rounded-rd px-3 py-2">
             {error}
           </p>
         )}
 
-        <div className='flex justify-end space-x-3 pt-2'>
+        <div className="flex justify-end space-x-3 pt-2">
           <Button
-            type='button'
-            variant='ghost'
+            type="button"
+            variant="ghost"
             onClick={onClose}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
-            type='submit'
-            variant='primary'
+            type="submit"
+            variant="primary"
             disabled={
               isSubmitting ||
               !formState.title.trim() ||

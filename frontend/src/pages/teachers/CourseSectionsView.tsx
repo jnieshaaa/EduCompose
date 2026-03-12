@@ -1,18 +1,27 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Folder, Plus, Trash2, Edit2, Loader2, MoreVertical } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '../../components/ui/dropdown-menu';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import { supabase } from '../../lib/supabaseClient';
-import { useAlert } from '../../hooks/useAlert';
-import { useAcademicContext } from '../../hooks/useAcademicContext';
-import type { Course, Section } from '../../types/academic';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Users,
+  Folder,
+  Plus,
+  Trash2,
+  Edit2,
+  Loader2,
+  MoreVertical,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import Card from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import { supabase } from "../../lib/supabaseClient";
+import { useAlert } from "../../hooks/useAlert";
+import { useAcademicContext } from "../../hooks/useAcademicContext";
+import type { Course, Section } from "../../types/academic";
 
 interface CourseSectionsViewProps {
   course: Course;
@@ -32,13 +41,38 @@ interface ProgramLookup {
   abbr: string;
 }
 
-export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) {
+export function CourseSectionsView({
+  course,
+  onBack,
+}: CourseSectionsViewProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlProgram = searchParams.get("program");
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
   const { currentSemester } = useAcademicContext();
   const [sections, setSections] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<string | null>(
+    urlProgram,
+  );
+
+  // Sync with URL program param
+  useEffect(() => {
+    if (urlProgram && urlProgram !== selectedProgram) {
+      setSelectedProgram(urlProgram);
+    }
+  }, [urlProgram, selectedProgram]);
+
+  const handleProgramSelect = (programAbbr: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (programAbbr) {
+      newParams.set("program", programAbbr);
+    } else {
+      newParams.delete("program");
+    }
+    setSearchParams(newParams);
+    setSelectedProgram(programAbbr);
+  };
 
   // Modal states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -49,88 +83,123 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
   const [schoolPrograms, setSchoolPrograms] = useState<ProgramLookup[]>([]);
 
   const [newSection, setNewSection] = useState({
-    selectedDepartmentId: '',
-    selectedProgramAbbrs: [] as string[],
-    blockPart: '',
-    term: '',
+    program_id: "",
+    year_level: 1,
+    name: "",
+    term: "",
   });
 
   // Sync term with global settings
   useEffect(() => {
     if (currentSemester) {
-      setNewSection(prev => ({ ...prev, term: currentSemester }));
+      setNewSection((prev) => ({ ...prev, term: currentSemester }));
     }
   }, [currentSemester]);
 
   const [editingSection, setEditingSection] = useState<Section | null>(null);
 
-  useEffect(() => {
-    fetchSections();
-    fetchSchoolCatalogs();
-  }, [course.id]);
-
-  const fetchSchoolCatalogs = async () => {
+  const fetchSchoolCatalogs = useCallback(async () => {
     try {
       if (!course.school_id) return;
-      
+
       const { data: deptData } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('school_id', course.school_id);
+        .from("departments")
+        .select("*")
+        .eq("school_id", course.school_id);
 
       setDepartments(deptData || []);
 
       if (deptData && deptData.length > 0) {
         const { data: progData } = await supabase
-          .from('programs_lookup')
-          .select('*')
-          .in('department_id', deptData.map(d => d.id));
+          .from("programs_lookup")
+          .select("*")
+          .in(
+            "department_id",
+            deptData.map((d) => d.id),
+          );
         setSchoolPrograms(progData || []);
       }
     } catch (err) {
       console.error("Error fetching school catalogs:", err);
     }
-  };
+  }, [course.school_id]);
 
-  const fetchSections = async () => {
+  const fetchSections = useCallback(async () => {
     setIsLoading(true);
     try {
+      // 1. Get the teacher's load (which now links to blocks)
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+
       const { data, error } = await supabase
-        .from('sections')
-        .select('*, students:students(count)')
-        .eq('course_id', course.id)
-        .order('created_at', { ascending: false });
+        .from("teacher_course_loads")
+        .select(`
+          id,
+          academic_year,
+          term,
+          block_id,
+          blocks (
+            id,
+            name,
+            year_level,
+            program_id,
+            block_students (count)
+          )
+        `)
+        .eq("teacher_id", userData.user.id)
+        .eq("course_id", course.id)
+        .not("block_id", "is", null);
 
       if (error) throw error;
-      setSections(data || []);
-    } catch (err: any) {
+
+      const mapped: Section[] = (data || []).map((load) => {
+        const block = Array.isArray(load.blocks) ? load.blocks[0] : load.blocks;
+        return {
+          id: load.id, // Using load ID for UI consistency
+          course_id: course.id,
+          block_id: block.id,
+          name: block.name,
+          program_id: block.program_id,
+          year_level: block.year_level,
+          term: load.term,
+          academic_year: load.academic_year,
+          students_estimated: block.block_students?.[0]?.count || 0,
+          essays_estimated: 0,
+          created_at: "",
+        };
+      });
+
+      setSections(mapped);
+    } catch (err: unknown) {
       console.error(err);
-      showError('Failed to load blocks.');
+      showError("Failed to load blocks.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [course.id, showError]);
 
-  // Derive programs from section names
+  useEffect(() => {
+    fetchSections();
+    fetchSchoolCatalogs();
+  }, [fetchSections, fetchSchoolCatalogs]);
+
+  // Group sections by Program using program_id
   const programs = useMemo(() => {
     const progSet = new Set<string>();
-    sections.forEach(s => {
-      let prog = s.name.trim();
-
-      // If it's something like "BSIT-BA 4B" (separated by space)
-      const spaceIdx = prog.indexOf(' ');
-      if (spaceIdx > 0) {
-        prog = prog.substring(0, spaceIdx);
+    sections.forEach((s) => {
+      // Find program abbreviation from schoolPrograms lookup
+      const prog = schoolPrograms.find(p => p.id === s.program_id);
+      if (prog) {
+        progSet.add(prog.abbr);
       } else {
-        // Legacy support: "BSCS-1A" (separated by dash)
-        // If the section name has a dash, but isn't explicitly defined as a full program in school catalogs
-        const dashIdx = prog.indexOf('-');
-        if (dashIdx > 0 && !schoolPrograms.some(p => p.abbr === prog)) {
-          prog = prog.substring(0, dashIdx);
+        // Fallback to old parsing if program_id missing
+        let name = s.name.trim();
+        const spaceIdx = name.indexOf(" ");
+        if (spaceIdx > 0) {
+          name = name.substring(0, spaceIdx);
         }
+        progSet.add(name || "Other Programs");
       }
-
-      progSet.add(prog || "Other Programs");
     });
     return Array.from(progSet).sort();
   }, [sections, schoolPrograms]);
@@ -138,139 +207,192 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
   // If a program is selected, filter sections
   const filteredSections = useMemo(() => {
     if (!selectedProgram) return [];
-    return sections.filter(s => {
-      // Hide the program folder placeholder itself from the blocks list
-      if (s.name === selectedProgram) return false;
-      
-      if (selectedProgram === "Other Programs") {
-        return !s.name.includes('-') && !s.name.includes(' ');
+    
+    // Find the program ID for the selected abbreviation
+    const selectedProgId = schoolPrograms.find(p => p.abbr === selectedProgram)?.id;
+
+    return sections.filter((s) => {
+      if (selectedProgId) {
+        return s.program_id === selectedProgId;
       }
-      return s.name.startsWith(selectedProgram + ' ') || s.name.startsWith(selectedProgram + '-');
+      
+      // Fallback for sections without program_id
+      if (selectedProgram === "Other Programs") {
+        return !s.program_id && !s.name.includes("-") && !s.name.includes(" ");
+      }
+      
+      return (
+        s.name.startsWith(selectedProgram + " ") ||
+        s.name.startsWith(selectedProgram + "-")
+      );
     });
-  }, [sections, selectedProgram]);
+  }, [sections, selectedProgram, schoolPrograms]);
 
   const handleCreateSection = async () => {
-    const isAddingProgramLevel = !selectedProgram || selectedProgram === "Other Programs";
-
-    if (!isAddingProgramLevel && !newSection.blockPart) {
-      showError("Please enter a block name.");
+    if (!newSection.program_id || !newSection.name) {
+      showError("Please fill in all required fields.");
       return;
     }
 
-    if (isAddingProgramLevel && newSection.selectedProgramAbbrs.length === 0) {
-      showError("Please select at least one program.");
-      return;
-    }
-    
     setIsCreating(true);
     try {
-      const inserts = [];
-      if (isAddingProgramLevel) {
-        for (const abbr of newSection.selectedProgramAbbrs) {
-          inserts.push({
-            course_id: course.id,
-            name: abbr, // Just the program abbreviation
-            term: currentSemester || "1st Semester",
-          });
-        }
-      } else {
-        inserts.push({
-          course_id: course.id,
-          name: `${selectedProgram} ${newSection.blockPart.toUpperCase()}`,
-          term: currentSemester || "1st Semester",
-        });
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) throw new Error("Not authenticated");
+
+      // 1. Find an UNASSIGNED course load for this course
+      const { data: loadData } = await supabase
+        .from("teacher_course_loads")
+        .select("id")
+        .eq("teacher_id", userData.user.id)
+        .eq("course_id", course.id)
+        .is("block_id", null) 
+        .limit(1)
+        .maybeSingle();
+
+      if (!loadData) {
+        throw new Error("No unassigned course slots found. Please contact admin to add more sections to your load.");
       }
 
-      const { data, error } = await supabase
-        .from('sections')
-        .insert(inserts)
-        .select('*');
-        
-      if (error) {
-        if (error.code === '23505') showError("A block with this name and term already exists.");
-        else throw error;
-      } else if (data) {
-        setSections(prev => [...data, ...prev]);
-        showSuccess(isAddingProgramLevel ? "Programs/Blocks created successfully!" : "Block created successfully!");
-        setIsAddDialogOpen(false);
-        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: [], blockPart: '' }));
+      const fullBlockName = `${newSection.name.toUpperCase()}`;
+
+      // 2. Check if block exists
+      let { data: existingBlock } = await supabase
+        .from("blocks")
+        .select("id")
+        .eq("name", fullBlockName)
+        .eq("program_id", newSection.program_id)
+        .eq("year_level", newSection.year_level)
+        .maybeSingle();
+
+      let targetBlockId = existingBlock?.id;
+
+      if (!targetBlockId) {
+        const { data: newBlock, error: blockErr } = await supabase
+          .from("blocks")
+          .insert({
+            name: fullBlockName,
+            program_id: newSection.program_id,
+            year_level: newSection.year_level,
+          })
+          .select()
+          .single();
+        if (blockErr) throw blockErr;
+        targetBlockId = newBlock.id;
       }
-    } catch (err: any) {
+
+      // 3. Link via block_id in teacher_course_loads
+      const { error: assignErr } = await supabase
+        .from("teacher_course_loads")
+        .update({
+          block_id: targetBlockId,
+        })
+        .eq("id", loadData.id);
+
+      if (assignErr) throw assignErr;
+
+      showSuccess("Block created and assigned successfully!");
+      setIsAddDialogOpen(false);
+      setNewSection((prev) => ({
+        ...prev,
+        name: "",
+        program_id: "",
+        year_level: 1
+      }));
+      fetchSections(); 
+    } catch (err: unknown) {
       console.error(err);
-      showError("Unexpected error occurred.");
+      showError(
+        err instanceof Error ? err.message : "An unexpected error occurred.",
+      );
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleUpdateSection = async () => {
-    if (!editingSection) return;
+    if (!editingSection || !editingSection.block_id) return;
     try {
       const { error } = await supabase
-        .from('sections')
+        .from("blocks")
         .update({
           name: editingSection.name,
         })
-        .eq('id', editingSection.id);
-        
+        .eq("id", editingSection.block_id);
+
       if (error) throw error;
-      
-      setSections(prev => prev.map(s => s.id === editingSection.id ? { ...s, ...editingSection } : s));
+
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === editingSection.id ? { ...s, ...editingSection } : s,
+        ),
+      );
       setIsEditDialogOpen(false);
       showSuccess("Block updated!");
     } catch (err) {
-       console.error(err);
-       showError("Failed to update block.");
+      console.error(err);
+      showError("Failed to update block.");
     }
   };
 
   const handleRemoveProgram = (prog: string) => {
-    showWarning(`Are you sure you want to remove the ${prog} program and all its blocks?`, {
-      title: "Remove Program",
-      showCancel: true,
-      onConfirm: async () => {
-        try {
-          const sectionsToDelete = sections.filter(s => {
-            if (prog === "Other Programs") {
-              return !s.name.includes('-') && !s.name.includes(' ');
-            }
-            return s.name === prog || s.name.startsWith(prog + ' ') || s.name.startsWith(prog + '-');
-          });
+    showWarning(
+      `Are you sure you want to remove the ${prog} program and all its blocks?`,
+      {
+        title: "Remove Program",
+        showCancel: true,
+        onConfirm: async () => {
+          try {
+            const sectionsToDelete = sections.filter((s) => {
+              if (prog === "Other Programs") {
+                return !s.name.includes("-") && !s.name.includes(" ");
+              }
+              return (
+                s.name === prog ||
+                s.name.startsWith(prog + " ") ||
+                s.name.startsWith(prog + "-")
+              );
+            });
 
-          if (sectionsToDelete.length === 0) return;
+            if (sectionsToDelete.length === 0) return;
 
-          const idsToDelete = sectionsToDelete.map(s => s.id);
-          
-          const { error } = await supabase
-            .from('sections')
-            .delete()
-            .in('id', idsToDelete);
-          
-          if (error) throw error;
-          
-          setSections(prev => prev.filter(s => !idsToDelete.includes(s.id)));
-          showSuccess(`Program ${prog} and its blocks removed.`);
-        } catch (err) {
-          console.error(err);
-          showError("Failed to remove program.");
-        }
-      }
-    });
+            const idsToDelete = sectionsToDelete.map((s) => s.id);
+
+            const { error } = await supabase
+              .from("teacher_course_loads")
+              .update({ block_id: null })
+              .in("id", idsToDelete);
+
+            if (error) throw error;
+
+            setSections((prev) =>
+              prev.filter((s) => !idsToDelete.includes(s.id)),
+            );
+            showSuccess(`Program ${prog} and its blocks removed.`);
+          } catch (err) {
+            console.error(err);
+            showError("Failed to remove program.");
+          }
+        },
+      },
+    );
   };
 
-  const handleDeleteSection = (id: number) => {
-    showWarning("Are you sure you want to delete this block?", {
-      title: "Delete Block",
+  const handleDeleteSection = (id: string) => {
+    showWarning("Are you sure you want to unassign this block?", {
+      title: "Unassign Block",
       showCancel: true,
       onConfirm: async () => {
-        const { error } = await supabase.from('sections').delete().eq('id', id);
+        const { error } = await supabase
+          .from("teacher_course_loads")
+          .update({ block_id: null })
+          .eq("id", id);
         if (!error) {
-           setSections(prev => prev.filter(s => s.id !== id));
-           showSuccess("Block deleted.");
+          setSections((prev) => prev.filter((s) => s.id !== id));
+          showSuccess("Block unassigned.");
         } else {
-           showError("Failed to delete block.");
+          showError("Failed to unassign block.");
         }
-      }
+      },
     });
   };
 
@@ -278,7 +400,7 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 relative">
       {/* Header */}
       <div className="flex items-center gap-4 border-b border-neutral-200 pb-4">
-        <button 
+        <button
           onClick={onBack}
           className="p-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg transition-colors shadow-sm"
         >
@@ -286,32 +408,43 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-             <div className="p-1 px-2.5 bg-primary/10 text-primary font-mono font-bold text-sm rounded-md">
-               {course.course_code}
-             </div>
-             <h1 className="text-2xl font-bold text-neutral-900 leading-none">{course.course_title}</h1>
+            <div className="p-1 px-2.5 bg-primary/10 text-primary font-mono font-bold text-sm rounded-md">
+              {course.course_code}
+            </div>
+            <h1 className="text-2xl font-bold text-neutral-900 leading-none">
+              {course.course_title}
+            </h1>
           </div>
           <p className="text-neutral-500 text-sm mt-1.5 flex items-center gap-1.5">
             {selectedProgram ? (
               <>
-                <span onClick={() => setSelectedProgram(null)} className="cursor-pointer hover:underline hover:text-primary">Programs</span>
+                <span
+                  onClick={() => handleProgramSelect(null)}
+                  className="cursor-pointer hover:underline hover:text-primary"
+                >
+                  Programs
+                </span>
                 <span>/</span>
-                <span className="font-semibold text-neutral-700">{selectedProgram} Blocks</span>
+                <span className="font-semibold text-neutral-700">
+                  {selectedProgram} Blocks
+                </span>
               </>
-            ) : "Select a Program"}
+            ) : (
+              "Select a Program"
+            )}
           </p>
         </div>
         {selectedProgram && (
-           <Button
-             onClick={() => {
-               setNewSection(prev => ({ ...prev, blockPart: '' }));
-               setIsAddDialogOpen(true);
-             }}
-             className="bg-primary text-white font-medium shadow-md flex items-center gap-2"
-           >
-             <Plus size={18} />
-             Add Block
-           </Button>
+          <Button
+            onClick={() => {
+              setNewSection((prev) => ({ ...prev, blockPart: "" }));
+              setIsAddDialogOpen(true);
+            }}
+            className="bg-primary text-white font-medium shadow-md flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Add Block
+          </Button>
         )}
       </div>
 
@@ -321,93 +454,112 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
         </div>
       ) : !selectedProgram ? (
         // --- PROGRAMS VIEW ---
-         <div className="space-y-6">
-           {programs.length === 0 ? (
-             <Card className="p-12 text-center bg-neutral-50 border-neutral-200 shadow-inner">
-                <Folder className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-neutral-700 mb-1">No Programs Found</h3>
-                <p className="text-neutral-500 text-sm mb-6">Create the first program to start adding class blocks to this course.</p>
-                <Button onClick={() => setIsAddDialogOpen(true)} className="bg-primary text-white mx-auto">
-                   <Plus size={16} className="mr-2 inline" /> Add Program
+        <div className="space-y-6">
+          {programs.length === 0 ? (
+            <Card className="p-12 text-center bg-neutral-50 border-neutral-200 shadow-inner">
+              <Folder className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-neutral-700 mb-1">
+                No Programs Found
+              </h3>
+              <p className="text-neutral-500 text-sm mb-6">
+                Create the first program to start adding class blocks to this
+                course.
+              </p>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-primary text-white mx-auto"
+              >
+                <Plus size={16} className="mr-2 inline" /> Add Program
+              </Button>
+            </Card>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold text-neutral-800">
+                  Programs Enrolled in {course.course_code}
+                </h2>
+                <Button
+                  onClick={() => setIsAddDialogOpen(true)}
+                  variant="outline"
+                  className="text-primary hover:text-primary-600 border-primary/20 hover:border-primary/40 text-xs px-3 py-1.5"
+                >
+                  <Plus size={14} className="mr-1 inline" /> Add Program
                 </Button>
-             </Card>
-           ) : (
-             <>
-               <div className="flex justify-between items-center">
-                 <h2 className="text-lg font-bold text-neutral-800">Programs Enrolled in {course.course_code}</h2>
-                 <Button 
-                    onClick={() => setIsAddDialogOpen(true)} 
-                    variant="outline"
-                    className="text-primary hover:text-primary-600 border-primary/20 hover:border-primary/40 text-xs px-3 py-1.5"
-                  >
-                     <Plus size={14} className="mr-1 inline" /> Add Program
-                  </Button>
-               </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                 {programs.map(prog => {
-                   const count = sections.filter(s => {
-                     if (s.name === prog) return false;
-                     if (prog === "Other Programs") return !s.name.includes('-') && !s.name.includes(' ');
-                     return s.name.startsWith(prog + ' ') || s.name.startsWith(prog + '-');
-                   }).length;
-                   return (
-                      <Card 
-                        key={prog} 
-                        onClick={() => setSelectedProgram(prog)}
-                        className="p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white relative overflow-hidden"
-                      >
-                        <div className="absolute top-3 right-3 z-10">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              asChild
-                              onClick={(e) => e.stopPropagation()}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                {programs.map((prog) => {
+                  const count = sections.filter((s) => {
+                    if (s.name === prog) return false;
+                    if (prog === "Other Programs")
+                      return !s.name.includes("-") && !s.name.includes(" ");
+                    return (
+                      s.name.startsWith(prog + " ") ||
+                      s.name.startsWith(prog + "-")
+                    );
+                  }).length;
+                  return (
+                    <Card
+                      key={prog}
+                      onClick={() => handleProgramSelect(prog)}
+                      className="p-5 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white relative overflow-hidden"
+                    >
+                      <div className="absolute top-3 right-3 z-10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100 transition-colors">
+                              <MoreVertical size={16} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveProgram(prog);
+                              }}
                             >
-                              <button className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100 transition-colors">
-                                <MoreVertical size={16} />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveProgram(prog);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remove programs
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove programs
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
 
-                        <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-                          <Folder size={100} />
+                      <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                        <Folder size={100} />
+                      </div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2.5 bg-primary/10 rounded-lg text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                          <Folder size={20} />
                         </div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2.5 bg-primary/10 rounded-lg text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                            <Folder size={20} />
-                          </div>
-                         <h3 className="font-bold text-lg text-neutral-900">{prog}</h3>
-                       </div>
-                       <p className="text-sm text-neutral-500 flex items-center gap-1.5">
-                         <Users size={14} /> {count} Block{count !== 1 ? 's' : ''}
-                       </p>
-                     </Card>
-                   );
-                 })}
-               </div>
-             </>
-           )}
-         </div>
+                        <h3 className="font-bold text-lg text-neutral-900">
+                          {prog}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-neutral-500 flex items-center gap-1.5">
+                        <Users size={14} /> {count} Block
+                        {count !== 1 ? "s" : ""}
+                      </p>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
       ) : (
         // --- BLOCKS VIEW ---
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
           {filteredSections.length === 0 ? (
-             <div className="p-20 text-center">
-                <Users className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-                <p className="text-neutral-500">No blocks found in this program.</p>
-             </div>
+            <div className="p-20 text-center">
+              <Users className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
+              <p className="text-neutral-500">
+                No blocks found in this program.
+              </p>
+            </div>
           ) : (
             <table className="w-full text-left">
               <thead className="bg-neutral-50/80 text-neutral-500 text-[10px] font-bold uppercase tracking-wider border-b border-neutral-200">
@@ -418,30 +570,43 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {filteredSections.map(section => (
-                  <tr 
-                    key={section.id} 
+                {filteredSections.map((section) => (
+                  <tr
+                    key={section.id}
                     className="hover:bg-neutral-50/50 transition-colors group cursor-pointer"
-                    onClick={() => navigate(`/Teacher/Students?courseId=${course.id}&courseCode=${course.course_code}&program=${encodeURIComponent(selectedProgram!)}&section=${encodeURIComponent(section.name)}`)}
+                    onClick={() =>
+                      navigate(
+                        `/Teacher/Students?courseId=${course.id}&courseCode=${course.course_code}&program=${encodeURIComponent(selectedProgram!)}&section=${encodeURIComponent(section.name)}`,
+                      )
+                    }
                   >
                     <td className="px-6 py-4">
-                      <span className="font-bold text-neutral-800 text-sm">{section.name}</span>
+                      <span className="font-bold text-neutral-800 text-sm">
+                        {section.name}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm text-neutral-600 font-medium">
-                        {(section as any).students?.[0]?.count || 0}
+                        {section.students_estimated || 0}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setEditingSection(section); setIsEditDialogOpen(true); }}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSection(section);
+                            setIsEditDialogOpen(true);
+                          }}
                           className="p-2 text-neutral-400 hover:text-primary bg-white hover:bg-primary/5 rounded-lg transition-all"
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id); }}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSection(section.id);
+                          }}
                           className="p-2 text-neutral-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 size={16} />
@@ -462,95 +627,73 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
               <h2 className="text-lg font-bold text-neutral-900">
-                {!selectedProgram ? "Add New Program" : "Add New Block"}
+                Add New Block
               </h2>
-              {selectedProgram && (
-                <p className="text-xs text-neutral-500 mt-1">For program: <span className="font-bold text-primary">{selectedProgram}</span></p>
-              )}
+              <p className="text-xs text-neutral-500 mt-1">
+                Assign a student block to this course.
+              </p>
             </div>
             <div className="p-6 space-y-4">
-              {!selectedProgram ? (
-                <div className="max-h-80 overflow-y-auto space-y-3">
-                  {departments
-                    .filter(dept => !course.department_id || dept.id === course.department_id)
-                    .map(dept => {
-                    const deptPrograms = schoolPrograms.filter(p => p.department_id === dept.id);
-                    if (deptPrograms.length === 0) return null;
-                    return (
-                      <div key={dept.id} className="border border-neutral-200 rounded-lg overflow-hidden">
-                        <details className="group" open={Boolean(course.department_id)}>
-                          <summary className="flex items-center justify-between p-3 bg-neutral-50 cursor-pointer user-select-none font-medium text-sm text-neutral-800 hover:bg-neutral-100 transition-colors">
-                            {dept.code} - {dept.name}
-                            <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
-                          </summary>
-                          <div className="p-2 bg-white border-t border-neutral-200">
-                            {deptPrograms.map(prog => {
-                              const alreadyAdded = programs.includes(prog.abbr);
-                              return (
-                                <label 
-                                  key={prog.id} 
-                                  className={`flex items-center gap-2 p-2 rounded ${alreadyAdded ? 'opacity-60 cursor-not-allowed bg-neutral-50' : 'hover:bg-neutral-50 cursor-pointer'}`}
-                                >
-                                  <input 
-                                    type="checkbox" 
-                                    checked={alreadyAdded || newSection.selectedProgramAbbrs.includes(prog.abbr)}
-                                    disabled={alreadyAdded}
-                                    onChange={(e) => {
-                                      if (alreadyAdded) return;
-                                      if (e.target.checked) {
-                                        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: [...prev.selectedProgramAbbrs, prog.abbr] }));
-                                      } else {
-                                        setNewSection(prev => ({ ...prev, selectedProgramAbbrs: prev.selectedProgramAbbrs.filter(a => a !== prog.abbr) }));
-                                      }
-                                    }}
-                                    className={`rounded border-neutral-300 text-primary ${alreadyAdded ? '' : 'focus:ring-primary'}`}
-                                  />
-                                  <span className="text-sm font-bold text-neutral-800">
-                                    {prog.abbr} {alreadyAdded && <span className="text-xs font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-sm ml-1">Added</span>}
-                                  </span>
-                                  <span className="text-xs text-neutral-500 truncate">- {prog.name}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </details>
-                      </div>
-                    );
-                  })}
-                  {departments.length === 0 && (
-                    <p className="text-sm text-neutral-500 p-4 text-center">No departments loaded.</p>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Block</label>
-                  <div className="flex items-center">
-                    <span className="px-3 py-2.5 bg-neutral-100 border border-neutral-200 border-r-0 rounded-l-lg text-sm text-neutral-500 font-medium border-r-transparent">
-                      {selectedProgram}{" "}
-                    </span>
-                    <input
-                      placeholder="e.g. 1A, 3B"
-                      value={newSection.blockPart}
-                      onChange={(e) => setNewSection({...newSection, blockPart: e.target.value})}
-                      className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-r-lg"
-                    />
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">
+                  Program
+                </label>
+                <select
+                  value={newSection.program_id}
+                  onChange={(e) => setNewSection({ ...newSection, program_id: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-lg"
+                >
+                  <option value="">Select Program</option>
+                  {schoolPrograms.map(p => (
+                    <option key={p.id} value={p.id}>{p.abbr} - {p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">
+                  Year Level
+                </label>
+                <select
+                  value={newSection.year_level}
+                  onChange={(e) => setNewSection({ ...newSection, year_level: parseInt(e.target.value) })}
+                  className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-lg"
+                >
+                  {[1, 2, 3, 4, 5].map(y => (
+                    <option key={y} value={y}>Year {y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">
+                  Block Name
+                </label>
+                <input
+                  placeholder="e.g. BSA 1A, BSCS 2B"
+                  value={newSection.name}
+                  onChange={(e) => setNewSection({ ...newSection, name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-white border border-neutral-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all rounded-lg"
+                />
+              </div>
             </div>
             <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
-              <button 
-                onClick={() => setIsAddDialogOpen(false)} 
+              <button
+                onClick={() => setIsAddDialogOpen(false)}
                 className="px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors rounded-lg"
               >
                 Cancel
               </button>
-              <Button 
-                onClick={handleCreateSection} 
-                disabled={isCreating} 
+              <Button
+                onClick={handleCreateSection}
+                disabled={isCreating}
                 className="bg-primary text-white text-sm px-6 font-bold shadow-md shadow-primary/20"
               >
-                {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+                {isCreating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Assign Block"
+                )}
               </Button>
             </div>
           </div>
@@ -566,17 +709,34 @@ export function CourseSectionsView({ course, onBack }: CourseSectionsViewProps) 
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">Block Name</label>
+                <label className="block text-xs font-bold text-neutral-500 uppercase mb-1.5 ml-1">
+                  Block Name
+                </label>
                 <input
                   value={editingSection.name}
-                  onChange={(e) => setEditingSection({...editingSection, name: e.target.value})}
+                  onChange={(e) =>
+                    setEditingSection({
+                      ...editingSection,
+                      name: e.target.value,
+                    })
+                  }
                   className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm outline-none"
                 />
               </div>
             </div>
             <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
-              <button onClick={() => setIsEditDialogOpen(false)} className="px-4 py-2 text-sm text-neutral-500">Cancel</button>
-              <Button onClick={handleUpdateSection} className="bg-primary text-white text-sm px-6 font-bold shadow-md shadow-primary/20">Update</Button>
+              <button
+                onClick={() => setIsEditDialogOpen(false)}
+                className="px-4 py-2 text-sm text-neutral-500"
+              >
+                Cancel
+              </button>
+              <Button
+                onClick={handleUpdateSection}
+                className="bg-primary text-white text-sm px-6 font-bold shadow-md shadow-primary/20"
+              >
+                Update
+              </Button>
             </div>
           </div>
         </div>

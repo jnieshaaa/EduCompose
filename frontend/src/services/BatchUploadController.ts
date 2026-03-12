@@ -25,7 +25,7 @@ export class BatchUploadController {
    */
   static async uploadPrograms(
     file: File,
-    existingPrograms: Program[]
+    existingPrograms: Program[],
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
 
@@ -42,7 +42,11 @@ export class BatchUploadController {
     const imported: Program[] = [];
     let nextId =
       existingPrograms.length > 0
-        ? Math.max(...existingPrograms.map((p) => p.id)) + 1
+        ? Math.max(
+            ...existingPrograms.map(
+              (p) => Number.parseInt(String(p.id), 10) || 0,
+            ),
+          ) + 1
         : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
@@ -66,7 +70,7 @@ export class BatchUploadController {
         // Check for duplicates
         if (
           existingPrograms.some(
-            (p) => p.name.toLowerCase() === name.toLowerCase()
+            (p) => p.name.toLowerCase() === name.toLowerCase(),
           ) ||
           imported.some((p) => p.name.toLowerCase() === name.toLowerCase())
         ) {
@@ -75,7 +79,7 @@ export class BatchUploadController {
         }
 
         const program: Program = {
-          id: nextId++,
+          id: String(nextId++),
           name: name.trim(),
         };
 
@@ -84,7 +88,7 @@ export class BatchUploadController {
         errors.push(
           `Row ${rowNum}: ${
             error instanceof Error ? error.message : "Invalid data"
-          }`
+          }`,
         );
       }
     }
@@ -107,7 +111,7 @@ export class BatchUploadController {
     file: File,
     existingSections: Section[],
     availablePrograms: string[],
-    defaultProgram?: string
+    defaultProgram?: string,
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
 
@@ -144,11 +148,7 @@ export class BatchUploadController {
         // Use default program if provided, otherwise read from CSV
         const program =
           defaultProgram ||
-          this.getFieldValue(row, [
-            "program",
-            "program name",
-            "program_name",
-          ]);
+          this.getFieldValue(row, ["program", "program name", "program_name"]);
         const term = this.getFieldValue(row, [
           "term",
           "academic term",
@@ -163,7 +163,7 @@ export class BatchUploadController {
               "expected_students",
               "student_count",
             ]),
-            10
+            10,
           ) || 0;
 
         if (!name) {
@@ -192,18 +192,18 @@ export class BatchUploadController {
             (s) =>
               s.name.toLowerCase() === name.toLowerCase() &&
               s.program.toLowerCase() === program.toLowerCase() &&
-              s.term.toLowerCase() === term.toLowerCase()
+              s.term.toLowerCase() === term.toLowerCase(),
           ) ||
           imported.some(
             (s) =>
               s.name.toLowerCase() === name.toLowerCase() &&
               s.program.toLowerCase() === program.toLowerCase() &&
-              s.term.toLowerCase() === term.toLowerCase()
+              s.term.toLowerCase() === term.toLowerCase(),
           );
 
         if (duplicate) {
           errors.push(
-            `Row ${rowNum}: Section "${name}" already exists for this program and term`
+            `Row ${rowNum}: Section "${name}" already exists for this program and term`,
           );
           continue;
         }
@@ -222,7 +222,7 @@ export class BatchUploadController {
         errors.push(
           `Row ${rowNum}: ${
             error instanceof Error ? error.message : "Invalid data"
-          }`
+          }`,
         );
       }
     }
@@ -247,7 +247,7 @@ export class BatchUploadController {
     availablePrograms: string[],
     availableSections: string[],
     defaultProgram?: string,
-    defaultSection?: string
+    defaultSection?: string,
   ): Promise<UploadResult> {
     const parseResult = await FileParserService.parseFile(file);
 
@@ -311,11 +311,7 @@ export class BatchUploadController {
         // Use default program/section if provided, otherwise read from CSV
         const program =
           defaultProgram ||
-          this.getFieldValue(row, [
-            "program",
-            "program name",
-            "program_name",
-          ]);
+          this.getFieldValue(row, ["program", "program name", "program_name"]);
         const yearLevel = this.getFieldValue(row, [
           "year level",
           "year_level",
@@ -369,7 +365,7 @@ export class BatchUploadController {
           }
         } else if (!availablePrograms.includes(program)) {
           errors.push(
-            `Row ${rowNum}: Default program "${program}" is not available`
+            `Row ${rowNum}: Default program "${program}" is not available`,
           );
           continue;
         }
@@ -382,7 +378,7 @@ export class BatchUploadController {
           }
         } else if (!availableSections.includes(section)) {
           errors.push(
-            `Row ${rowNum}: Default section "${section}" is not available`
+            `Row ${rowNum}: Default section "${section}" is not available`,
           );
           continue;
         }
@@ -420,7 +416,7 @@ export class BatchUploadController {
         errors.push(
           `Row ${rowNum}: ${
             error instanceof Error ? error.message : "Invalid data"
-          }`
+          }`,
         );
       }
     }
@@ -441,7 +437,7 @@ export class BatchUploadController {
    */
   private static getFieldValue(
     row: ParsedRow,
-    possibleNames: string[]
+    possibleNames: string[],
   ): string {
     for (const name of possibleNames) {
       // Try exact match
@@ -449,7 +445,7 @@ export class BatchUploadController {
 
       // Try case-insensitive match
       const key = Object.keys(row).find(
-        (k) => k.toLowerCase().trim() === name.toLowerCase().trim()
+        (k) => k.toLowerCase().trim() === name.toLowerCase().trim(),
       );
       if (key) return String(row[key]);
     }

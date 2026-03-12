@@ -3,7 +3,7 @@
     {
       "id": 1,
       "student_id": 1,
-      "teacher_id": 1,
+      "user_id": 1,
       "class_id": 1,
       "title": "The Impact of Climate Change on Agriculture",
       "content": "Climate change is one of the most pressing issues of our time. It affects every aspect of human life, including agriculture. The changing weather patterns, rising temperatures, and unpredictable rainfall are making it increasingly difficult for farmers to grow crops and raise livestock. This essay will explore the various ways climate change impacts agriculture and discuss potential solutions to mitigate these effects. First, let's examine the direct effects of climate change on crop yields. Rising temperatures can reduce crop productivity, especially for heat-sensitive crops like wheat and rice. Additionally, changes in precipitation patterns can lead to droughts or floods, both of which are detrimental to agricultural production. Furthermore, the increased frequency of extreme weather events such as hurricanes and tornadoes can cause significant damage to crops and infrastructure. However, there are several strategies that can help farmers adapt to these challenges. These include developing drought-resistant crop varieties, implementing water conservation techniques, and using precision agriculture technologies. Governments and international organizations also play a crucial role in supporting farmers through policy changes and financial assistance. In conclusion, climate change poses significant challenges to agriculture, but with proper planning and implementation of adaptive strategies, we can work towards a more sustainable future.",
@@ -43,7 +43,7 @@
     {
       "id": 2,
       "student_id": 2,
-      "teacher_id": 1,
+      "user_id": 1,
       "class_id": 1,
       "title": "The Benefits of Renewable Energy",
       "content": "Renewable energy sources like solar and wind power are becoming increasingly important as we seek to reduce our dependence on fossil fuels. These clean energy sources offer numerous benefits for both the environment and the economy. Solar energy, for example, is abundant and can be harnessed almost anywhere in the world. Wind power is another excellent source of clean energy that has been growing rapidly in recent years. The main advantage of renewable energy is that it produces little to no greenhouse gas emissions, which helps combat climate change. Additionally, renewable energy sources are often more cost-effective in the long run, despite higher initial installation costs. Many countries are investing heavily in renewable energy infrastructure, creating jobs and stimulating economic growth. However, there are still some challenges to overcome, such as energy storage and grid integration. Despite these challenges, the future of renewable energy looks bright as technology continues to improve and costs continue to decrease.",
@@ -70,7 +70,7 @@
     {
       "id": 3,
       "student_id": 3,
-      "teacher_id": 1,
+      "user_id": 1,
       "class_id": 2,
       "title": "The Role of Technology in Modern Education",
       "content": "Technology has revolutionized the way we learn and teach in the 21st century. From interactive whiteboards to online learning platforms, digital tools have transformed traditional classrooms into dynamic learning environments. This essay examines the positive and negative impacts of technology on education, focusing on student engagement, learning outcomes, and the digital divide. One of the most significant benefits of educational technology is increased student engagement. Interactive multimedia content, gamification, and virtual reality experiences make learning more exciting and memorable. Students can access vast amounts of information instantly, collaborate with peers globally, and receive immediate feedback on their work. However, technology also presents challenges. The digital divide creates inequalities between students who have access to technology and those who do not. Additionally, over-reliance on technology may reduce critical thinking skills and face-to-face social interactions. Teachers must find the right balance between traditional teaching methods and technological integration to maximize learning outcomes.",
@@ -114,7 +114,7 @@
       "id": 1,
       "name": "English Composition 101",
       "description": "Introduction to academic writing and essay composition",
-      "teacher_id": 1,
+      "user_id": 1,
       "created_at": "2024-01-01T00:00:00Z",
       "is_active": true
     },
@@ -122,7 +122,7 @@
       "id": 2,
       "name": "Advanced Writing Workshop",
       "description": "Advanced techniques in persuasive and argumentative writing",
-      "teacher_id": 1,
+      "user_id": 1,
       "created_at": "2024-01-01T00:00:00Z",
       "is_active": true
     },
@@ -130,7 +130,7 @@
       "id": 3,
       "name": "Creative Writing",
       "description": "Exploring creative expression through various writing forms",
-      "teacher_id": 1,
+      "user_id": 1,
       "created_at": "2024-01-01T00:00:00Z",
       "is_active": true
     }

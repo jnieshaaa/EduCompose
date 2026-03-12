@@ -26,6 +26,7 @@ export function SectionsTab() {
     editingSection,
     setEditingSection,
     availableCourses,
+    allPrograms,
     handleCreateSection,
     handleDeleteSection,
     handleUpdateSection,
@@ -115,6 +116,7 @@ export function SectionsTab() {
             <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 font-semibold">Block Name</th>
+                <th className="px-6 py-4 font-semibold">Year/Level</th>
                 <th className="px-6 py-4 font-semibold">Course</th>
                 <th className="px-6 py-4 font-semibold">Academic Term</th>
                 <th className="px-6 py-4 font-semibold">Students</th>
@@ -125,6 +127,11 @@ export function SectionsTab() {
               {sections.map((section) => (
                 <tr key={section.id} className="hover:bg-neutral-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-neutral-900">{section.name}</td>
+                  <td className="px-6 py-4 text-neutral-600">
+                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-semibold">
+                      Year {section.year_level}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-neutral-600">
                     <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">
                       {section.courses?.course_code}
@@ -186,6 +193,29 @@ export function SectionsTab() {
                     <option value="">Select Course</option>
                     {availableCourses.map(c => <option key={c.id} value={c.id}>{c.course_code} - {c.course_title}</option>)}
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase">Program</label>
+                  <select
+                      value={newSection.program_id}
+                      onChange={(e) => setNewSection({...newSection, program_id: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg mt-1"
+                  >
+                      <option value="">Select Program</option>
+                      {allPrograms.map(p => <option key={p.id} value={p.id}>{p.abbreviation || p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase">Year Level</label>
+                  <select
+                      value={newSection.year_level}
+                      onChange={(e) => setNewSection({...newSection, year_level: parseInt(e.target.value)})}
+                      className="w-full px-4 py-2 border rounded-lg mt-1"
+                  >
+                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase">Term</label>

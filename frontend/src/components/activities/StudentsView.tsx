@@ -154,8 +154,8 @@ export function StudentsView({
       excludeUploadId === "single-upload"
         ? []
         : selectedStudentId
-        ? [selectedStudentId]
-        : [];
+          ? [selectedStudentId]
+          : [];
 
     return [...batchUploadIds, ...singleUploadId];
   };
@@ -185,7 +185,7 @@ export function StudentsView({
   };
 
   const handleSingleFileSelect = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -211,7 +211,7 @@ export function StudentsView({
   };
 
   const handleBatchFilesSelect = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -243,7 +243,7 @@ export function StudentsView({
 
   const handleAssignStudent = (uploadId: string, studentId: string) => {
     setPendingUploads((prev) =>
-      prev.map((u) => (u.id === uploadId ? { ...u, studentId } : u))
+      prev.map((u) => (u.id === uploadId ? { ...u, studentId } : u)),
     );
   };
 
@@ -264,7 +264,7 @@ export function StudentsView({
         selectedStudentId,
         activity.id,
         courseName,
-        courseSection
+        courseSection,
       );
 
       if (result.success) {
@@ -301,16 +301,16 @@ export function StudentsView({
             upload.studentId,
             activity.id,
             courseName,
-            courseSection
-          )
-        )
+            courseSection,
+          ),
+        ),
       );
 
       const successCount = results.filter(
-        (r: { success: boolean }) => r.success
+        (r: { success: boolean }) => r.success,
       ).length;
       const failedCount = results.filter(
-        (r: { success: boolean }) => !r.success
+        (r: { success: boolean }) => !r.success,
       ).length;
 
       if (failedCount === 0) {
@@ -325,7 +325,7 @@ export function StudentsView({
           .map((r: { error?: string }) => r.error)
           .join(", ");
         alert(
-          `${successCount} file(s) uploaded successfully, ${failedCount} failed. Errors: ${errors}`
+          `${successCount} file(s) uploaded successfully, ${failedCount} failed. Errors: ${errors}`,
         );
         // Remove successful uploads from pending list
         const failedIndices = results
@@ -334,10 +334,10 @@ export function StudentsView({
         setPendingUploads((prev) =>
           prev.filter((_, index) => {
             const uploadIndex = uploadsToSubmit.findIndex(
-              (u) => u.id === prev[index]?.id
+              (u) => u.id === prev[index]?.id,
             );
             return uploadIndex === -1 || !failedIndices.includes(uploadIndex);
-          })
+          }),
         );
       }
     } catch (error) {
@@ -349,7 +349,7 @@ export function StudentsView({
   };
 
   const handleUpdateFileSelect = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -386,8 +386,6 @@ export function StudentsView({
         updateFile,
         selectedStudentForUpdate.id,
         activity.id,
-        courseName,
-        courseSection
       );
 
       if (result.success) {
@@ -417,7 +415,7 @@ export function StudentsView({
     try {
       const result = await deleteEssay(
         selectedStudentForDelete.id,
-        activity.id
+        activity.id,
       );
 
       if (result.success) {
@@ -601,8 +599,8 @@ export function StudentsView({
                           student.score >= 90
                             ? "bg-green-600 text-white"
                             : student.score >= 80
-                            ? "bg-blue-600 text-white"
-                            : "bg-amber-600 text-white"
+                              ? "bg-blue-600 text-white"
+                              : "bg-amber-600 text-white"
                         }
                       >
                         {student.score}%
@@ -630,7 +628,7 @@ export function StudentsView({
                               setIsViewEssayModalOpen(true);
                             } else {
                               alert(
-                                "This student has not submitted an essay yet."
+                                "This student has not submitted an essay yet.",
                               );
                             }
                           }}
@@ -650,13 +648,13 @@ export function StudentsView({
 
                               const isGraded = await checkEssayGraded(
                                 student.id,
-                                activity.id
+                                activity.id,
                               );
                               if (isGraded) {
                                 // Show result
                                 const analysisData = await fetchEssayAnalysis(
                                   student.id,
-                                  activity.id
+                                  activity.id,
                                 );
                                 if (analysisData) {
                                   navigate("/AnalysisResults", {
@@ -702,7 +700,7 @@ export function StudentsView({
                                       });
                                       return newMap;
                                     });
-                                  }
+                                  },
                                 );
 
                                 // Remove from grading map
@@ -721,13 +719,13 @@ export function StudentsView({
                                   });
                                 } else {
                                   alert(
-                                    `Failed to grade essay: ${result.error}`
+                                    `Failed to grade essay: ${result.error}`,
                                   );
                                 }
                               }
                             } else {
                               alert(
-                                "This student has not submitted an essay yet."
+                                "This student has not submitted an essay yet.",
                               );
                             }
                           }}
@@ -764,7 +762,7 @@ export function StudentsView({
                               setIsUpdateModalOpen(true);
                             } else {
                               alert(
-                                "This student has not submitted an essay yet."
+                                "This student has not submitted an essay yet.",
                               );
                             }
                           }}
@@ -784,7 +782,7 @@ export function StudentsView({
                               setIsDeleteModalOpen(true);
                             } else {
                               alert(
-                                "This student has not submitted an essay yet."
+                                "This student has not submitted an essay yet.",
                               );
                             }
                           }}
@@ -1018,7 +1016,7 @@ export function StudentsView({
             {students.map((student) => {
               const isSubmitted = student.status === "submitted";
               const assignedStudentIds = getAssignedStudentIds(
-                currentUploadIdForSelection
+                currentUploadIdForSelection,
               );
               const isAlreadyAssigned = assignedStudentIds.includes(student.id);
               const isDisabled = isSubmitted || isAlreadyAssigned;
@@ -1029,7 +1027,7 @@ export function StudentsView({
                 isCurrentlySelected = selectedStudentId === student.id;
               } else {
                 const currentUpload = pendingUploads.find(
-                  (u) => u.id === currentUploadIdForSelection
+                  (u) => u.id === currentUploadIdForSelection,
                 );
                 isCurrentlySelected = currentUpload?.studentId === student.id;
               }
@@ -1047,8 +1045,8 @@ export function StudentsView({
                     isCurrentlySelected
                       ? "bg-primary/10 border-l-4 border-l-primary"
                       : isDisabled
-                      ? "bg-neutral-50 text-neutral-400 cursor-not-allowed"
-                      : "hover:bg-neutral-50 cursor-pointer"
+                        ? "bg-neutral-50 text-neutral-400 cursor-not-allowed"
+                        : "hover:bg-neutral-50 cursor-pointer"
                   }`}
                 >
                   <div className="flex items-center justify-between">

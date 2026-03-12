@@ -1,7 +1,7 @@
 import { Search, LayoutGrid, List } from "lucide-react";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
-import Badge from "../ui/Badge";
+// import Badge from "../ui/Badge";
 
 interface StudentsFiltersProps {
   searchQuery: string;
@@ -34,7 +34,7 @@ export function StudentsFilters({
   availableSections,
   urlProgramFilter,
   urlSectionFilter,
-  hasActiveFilters,
+  // hasActiveFilters,
   viewMode,
   onViewModeChange,
   loadError,
@@ -42,7 +42,7 @@ export function StudentsFilters({
   return (
     <>
       {/* Active filter summary (no inline clear buttons to avoid duplicate UX with breadcrumbs) */}
-      {hasActiveFilters && (
+      {/* {hasActiveFilters && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-neutral-500">Filtered by:</span>
           {programFilter !== "All Programs" && (
@@ -62,7 +62,7 @@ export function StudentsFilters({
             </Badge>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Search & Filters */}
       <Card className="p-4">

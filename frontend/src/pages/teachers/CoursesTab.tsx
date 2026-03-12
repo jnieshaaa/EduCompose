@@ -8,7 +8,7 @@ import type { Course } from "../../types/academic";
 import { CourseSectionsView } from "./CourseSectionsView";
 
 export function CoursesTab() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const deepCourseId = searchParams.get("courseId");
 
   const {
@@ -70,10 +70,20 @@ export function CoursesTab() {
     }
   };
 
+  const handleCourseClick = (course: Course) => {
+    setSearchParams({ courseId: String(course.id), courseCode: course.course_code });
+    setSelectedCourse(course);
+  };
+
+  const handleBack = () => {
+    setSearchParams({});
+    setSelectedCourse(null);
+  };
+
   const schoolCode = teacherInfo?.schools?.code || "SCHOOL";
 
   if (selectedCourse) {
-    return <CourseSectionsView course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+    return <CourseSectionsView course={selectedCourse} onBack={handleBack} />;
   }
 
   // Filter programs based on selected department
@@ -231,7 +241,7 @@ export function CoursesTab() {
             return (
               <Card 
                 key={course.id} 
-                onClick={() => activeTab === 'my' && setSelectedCourse(course)}
+                onClick={() => activeTab === 'my' && handleCourseClick(course)}
                 className={`group hover:shadow-md transition-all border border-neutral-200 overflow-hidden bg-white ${
                   activeTab === 'my' ? 'cursor-pointer hover:border-primary/50' : ''
                 }`}

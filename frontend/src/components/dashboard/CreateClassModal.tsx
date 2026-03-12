@@ -50,12 +50,15 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
       onCreated(createdClass);
       onClose();
     } catch (apiError) {
-      console.error("Error creating class via API, using local fallback:", apiError);
+      console.error(
+        "Error creating class via API, using local fallback:",
+        apiError,
+      );
       const fallbackClass: Class = {
         id: Date.now(),
         name: payload.name,
         description: payload.description,
-        teacher_id: 1,
+        user_id: 1,
         created_at: new Date().toISOString(),
         is_active: true,
       };
@@ -118,4 +121,3 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
 };
 
 export default CreateClassModal;
-

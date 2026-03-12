@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS essay_analysis_results (
   essay_id              bigint      NOT NULL REFERENCES essays(id) ON DELETE CASCADE,
   student_id            bigint      NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   activity_id           bigint      REFERENCES essay_activities(id) ON DELETE SET NULL,
-  teacher_id            bigint      REFERENCES users(id) ON DELETE SET NULL,
+  user_id               bigint      REFERENCES users(id) ON DELETE SET NULL,
   analysis_type         text        NOT NULL DEFAULT 'comprehensive',
   word_count            integer,
   generated_at         timestamptz NOT NULL DEFAULT now(),
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS essay_analysis_results (
 CREATE INDEX IF NOT EXISTS essay_analysis_results_essay_id_idx ON essay_analysis_results(essay_id);
 CREATE INDEX IF NOT EXISTS essay_analysis_results_student_id_idx ON essay_analysis_results(student_id);
 CREATE INDEX IF NOT EXISTS essay_analysis_results_activity_id_idx ON essay_analysis_results(activity_id);
-CREATE INDEX IF NOT EXISTS essay_analysis_results_teacher_id_idx ON essay_analysis_results(teacher_id);
+CREATE INDEX IF NOT EXISTS essay_analysis_results_user_id_idx ON essay_analysis_results(user_id);
 CREATE INDEX IF NOT EXISTS essay_analysis_results_generated_at_idx ON essay_analysis_results(generated_at DESC);
 CREATE INDEX IF NOT EXISTS essay_analysis_results_overall_score_idx ON essay_analysis_results(overall_score DESC);
 CREATE INDEX IF NOT EXISTS essay_analysis_results_detailed_analysis_idx ON essay_analysis_results USING GIN (detailed_analysis);
@@ -57,35 +57,36 @@ CREATE TRIGGER essay_analysis_results_updated_at
 ALTER TABLE essay_analysis_results ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
-CREATE POLICY "Teachers can view analysis results for their essays"
+CREATE POLICY "Users can view analysis results for their essays"
   ON essay_analysis_results FOR SELECT
   USING (
-    teacher_id IN (
+    user_id IN (
       SELECT id FROM users WHERE auth_user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Teachers can insert analysis results"
+CREATE POLICY "Users can insert analysis results"
   ON essay_analysis_results FOR INSERT
   WITH CHECK (
-    teacher_id IN (
+    user_id IN (
       SELECT id FROM users WHERE auth_user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Teachers can update analysis results"
+CREATE POLICY "Users can update analysis results"
   ON essay_analysis_results FOR UPDATE
   USING (
-    teacher_id IN (
+    user_id IN (
       SELECT id FROM users WHERE auth_user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Teachers can delete analysis results"
+CREATE POLICY "Users can delete analysis results"
   ON essay_analysis_results FOR DELETE
   USING (
-    teacher_id IN (
+    user_id IN (
       SELECT id FROM users WHERE auth_user_id = auth.uid()
     )
   );
+
 

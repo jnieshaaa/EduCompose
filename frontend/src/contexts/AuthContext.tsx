@@ -42,6 +42,14 @@ interface AuthContextType {
   checkAuth: () => Promise<void>;
 }
 
+// PostgrestError type for Supabase errors
+interface PostgrestError {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -90,11 +98,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If timeout occurred or error
       if (result.error || !result.data) {
         // Don't log as error if it's just that the record doesn't exist yet or timeout
-        const isPostgrestError = result.error && "code" in (result.error as any);
+        const isPostgrestError =
+          result.error && "code" in (result.error as PostgrestError);
         if (
           result.error?.message !== "Timeout" &&
           (!isPostgrestError ||
-            (result.error as any).code !== "PGRST116")
+            (result.error as PostgrestError).code !== "PGRST116")
         ) {
           console.warn(
             "User not found in users table, using metadata fallback",

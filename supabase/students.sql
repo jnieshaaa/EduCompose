@@ -8,14 +8,8 @@ CREATE TABLE IF NOT EXISTS students (
   first_name   text        NOT NULL,
   middle_name  text,
   last_name    text        NOT NULL,
-  full_name    text        GENERATED ALWAYS AS (
-    trim(both ' ' from (
-      first_name || ' ' || coalesce(middle_name || ' ', '') || last_name
-    ))
-  ) STORED,
   email        text,
-  program_id   bigint      REFERENCES programs(id) ON DELETE SET NULL,
-  section_id   bigint      REFERENCES sections(id) ON DELETE SET NULL,
+  program_id   uuid        REFERENCES programs_lookup(id) ON DELETE SET NULL,
   is_active    boolean     NOT NULL DEFAULT true,
   created_at   timestamptz NOT NULL DEFAULT now(),
   UNIQUE (student_code)
@@ -29,16 +23,30 @@ WHERE email IS NOT NULL;
 -- Enable Row Level Security
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 
+-- Create index for program_id
+CREATE INDEX IF NOT EXISTS students_program_id_idx ON students(program_id);
+
 -- RLS Policies
-CREATE POLICY "Teachers can view all students" 
+-- Everyone (authenticated) can view all students (adjust as needed for privacy/scaling)
+CREATE POLICY "Allow select for authenticated users" 
 ON students FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Teachers can create students" 
-ON students FOR INSERT TO authenticated WITH CHECK (true);
+-- Only teachers/admins can modify
+CREATE POLICY "Allow insert for authenticated users with teacher role" 
+ON students FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM users WHERE auth_user_id = auth.uid() AND role IN ('teacher', 'admin'))
+);
 
-CREATE POLICY "Teachers can update students" 
-ON students FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow update for authenticated users with teacher role" 
+ON students FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE auth_user_id = auth.uid() AND role IN ('teacher', 'admin'))
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM users WHERE auth_user_id = auth.uid() AND role IN ('teacher', 'admin'))
+);
 
-CREATE POLICY "Teachers can delete students" 
-ON students FOR DELETE TO authenticated USING (true);
+CREATE POLICY "Allow delete for authenticated users with teacher role" 
+ON students FOR DELETE TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE auth_user_id = auth.uid() AND role IN ('teacher', 'admin'))
+);
+
 

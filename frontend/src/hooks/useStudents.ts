@@ -1,11 +1,29 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { createClient } from "@supabase/supabase-js";
 import type { Student } from "../data/studentsData";
 import { initialNewStudentState } from "../data/studentsData";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 import { useAcademicContext } from "./useAcademicContext";
+import { buildFullName } from "../utils/nameUtils";
+
+// Types for Supabase query results
+
+interface EnrollmentRow {
+  block_id: string;
+  student_id: number;
+  students: {
+    id: number;
+    student_code: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    email: string | null;
+    is_active: boolean;
+  }[];
+}
 
 // Helper to get user ID from authenticated user
 const getTeacherId = async (): Promise<number | null> => {
@@ -39,7 +57,7 @@ const getTeacherId = async (): Promise<number | null> => {
 
 // Helper function to parse full name into first, middle, last
 export const parseName = (
-  fullName: string
+  fullName: string,
 ): {
   first_name: string;
   middle_name: string | null;
@@ -59,10 +77,89 @@ export const parseName = (
   }
 };
 
-export function useStudents(showArchived: boolean = false, ay?: string, term?: string) {
+const generateTempPassword = () => {
+  const randomPart = Math.random().toString(36).slice(-8);
+  return `${randomPart}Aa1!`;
+};
+
+const provisionStudentAuthAccount = async (payload: {
+  email: string;
+  student_code: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+}) => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as
+    | string
+    | undefined;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase environment variables are missing.");
+  }
+
+  const isolatedClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+
+  const tempPassword = generateTempPassword();
+  const { error } = await isolatedClient.auth.signUp({
+    email: payload.email.trim().toLowerCase(),
+    password: tempPassword,
+    options: {
+      data: {
+        role: "student",
+        student_code: payload.student_code.toUpperCase(),
+        first_name: payload.first_name,
+        middle_name: payload.middle_name,
+        last_name: payload.last_name,
+        full_name: buildFullName(
+          payload.first_name,
+          payload.middle_name,
+          payload.last_name,
+          payload.student_code,
+        ),
+      },
+    },
+  });
+
+  if (error) {
+    const errorText = error.message.toLowerCase();
+    if (
+      errorText.includes("already") ||
+      errorText.includes("exists") ||
+      errorText.includes("registered")
+    ) {
+      return {
+        created: false,
+        tempPassword: null,
+      };
+    }
+    throw error;
+  }
+
+  return {
+    created: true,
+    tempPassword,
+  };
+};
+
+export function useStudents(
+  showArchived: boolean = false,
+  ay?: string,
+  term?: string,
+) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
-  const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
+  const {
+    currentAY,
+    currentSemester,
+    isLoading: isLoadingAcademic,
+  } = useAcademicContext();
 
   // Read filters from URL params (for drill-down from Sections)
   const urlProgramFilter = searchParams.get("program");
@@ -79,10 +176,10 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
   // FILTER STATES - initialized from URL params
   const [programFilter, setProgramFilter] = useState(
-    urlProgramFilter || "All Programs"
+    urlProgramFilter || "All Programs",
   );
   const [sectionFilter, setSectionFilter] = useState(
-    urlSectionFilter || "All Sections"
+    urlSectionFilter || "All Sections",
   );
   const [searchQuery, setSearchQuery] = useState(urlSearchQuery || "");
 
@@ -99,10 +196,10 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
   // Maps to store name -> id for lookups
   const [programNameToIdMap, setProgramNameToIdMap] = useState<
-    Map<string, number>
+    Map<string, string>
   >(new Map());
   const [sectionNameToIdMap, setSectionNameToIdMap] = useState<
-    Map<string, number>
+    Map<string, string>
   >(new Map());
 
   // Sync filters with URL params
@@ -131,7 +228,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
     }
   }, [isAddDialogOpen, urlProgramFilter, urlSectionFilter]);
 
-  // Load students + programs + sections from Supabase (teacher-end).
+  // Load students + programs from Supabase (teacher-end).
   useEffect(() => {
     if (isLoadingAcademic) return;
 
@@ -145,108 +242,99 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           return;
         }
 
-        // 1. Fetch programs created by this teacher
+        // 1. Fetch Teacher's personal loads to find assigned blocks
+        const { data: loadsData, error: loadsError } = await supabase
+          .from("teacher_course_loads")
+          .select(`
+            id,
+            block_id,
+            blocks (id, name, program_id)
+          `)
+          .eq("teacher_id", teacherId)
+          .eq("academic_year", currentAY)
+          .eq("term", currentSemester);
+
+        if (loadsError) throw loadsError;
+
+        const assignedBlocks = (loadsData || [])
+          .map(l => l.blocks)
+          .filter(b => b !== null) as unknown as {id: string, name: string, program_id: string}[];
+
+        const blockIds = assignedBlocks.map((b) => b.id);
+        const blockMap = new Map<string, string>();
+        const blockNameToId = new Map<string, string>();
+
+        assignedBlocks.forEach((block) => {
+          blockMap.set(block.id, block.name);
+          blockNameToId.set(block.name, block.id);
+        });
+
+        setAvailableSections(Array.from(blockNameToId.keys()));
+        setSectionNameToIdMap(blockNameToId);
+
+        if (blockIds.length === 0) {
+          setStudents([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. Fetch All Available Programs for the Enrollment Form
         const { data: programsData, error: programsError } = await supabase
-          .from("programs")
-          .select("id, name")
-          .eq("created_by", teacherId)
-          .order("id", { ascending: true });
+          .from("programs_lookup")
+          .select("id, name, abbreviation");
 
-        if (programsError) throw programsError;
-
-        const programMap = new Map<number, string>();
-        const programNameToId = new Map<string, number>();
-        const programIds: number[] = [];
-
-        if (programsData) {
-          (programsData as any[]).forEach((p) => {
-            programMap.set(p.id, p.name);
-            programNameToId.set(p.name, p.id);
-            programIds.push(p.id);
+        if (!programsError && programsData) {
+          const pNames = programsData.map((p) => p.abbreviation || p.name);
+          const pMap = new Map<string, string>();
+          programsData.forEach((p) => {
+            pMap.set(p.abbreviation || p.name, p.id);
           });
-          setAvailablePrograms(programsData.map((p: any) => p.name));
-          setProgramNameToIdMap(programNameToId);
+          setAvailablePrograms(pNames);
+          setProgramNameToIdMap(pMap);
         }
 
-        if (programIds.length === 0) {
-          setStudents([]);
-          setIsLoading(false);
-          return;
-        }
+        // 3. Fetch students belonging to these blocks via block_students
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from("block_students")
+          .select(
+            `
+            block_id,
+            student_id,
+            students (*)
+          `,
+          )
+          .in("block_id", blockIds);
 
-        // 2. Fetch sections belonging to these programs, filtered by term
-        let sectionsQuery = supabase
-          .from("sections")
-          .select("id, name, academic_year, term")
-          .in("program_id", programIds);
-
-        if (!showArchived) {
-          if (currentAY) sectionsQuery = sectionsQuery.eq("academic_year", currentAY);
-          if (currentSemester) sectionsQuery = sectionsQuery.eq("term", currentSemester);
-        } else {
-          // Archive view: allow specific filter OR default to "NOT CURRENT"
-          if (ay && ay !== "all") {
-            sectionsQuery = sectionsQuery.eq("academic_year", ay);
-          }
-          if (term && term !== "all") {
-            sectionsQuery = sectionsQuery.eq("term", term);
-          }
-
-          // If no explicit filters provided for archive, show all EXCEPT current
-          if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
-            sectionsQuery = sectionsQuery.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
-          }
-        }
-
-        const { data: sectionsData, error: sectionsError } = await sectionsQuery.order("id", { ascending: true });
-
-        if (sectionsError) throw sectionsError;
-
-        const sectionMap = new Map<number, string>();
-        const sectionNameToId = new Map<string, number>();
-        const sectionIds: number[] = [];
-
-        if (sectionsData) {
-          (sectionsData as any[]).forEach((s) => {
-            sectionMap.set(s.id, s.name);
-            sectionNameToId.set(s.name, s.id);
-            sectionIds.push(s.id);
-          });
-          setAvailableSections(sectionsData.map((s: any) => s.name));
-          setSectionNameToIdMap(sectionNameToId);
-        }
-
-        if (sectionIds.length === 0) {
-          setStudents([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // 3. Fetch students belonging to these sections
-        const { data: studentsData, error: studentsError } = await supabase
-          .from("students")
-          .select("id, student_code, full_name, email, program_id, section_id")
-          .in("section_id", sectionIds)
-          .order("id", { ascending: true });
-
-        if (studentsError) throw studentsError;
+        if (enrollmentError) throw enrollmentError;
 
         const codeToDbId = new Map<string, number>();
-        const mapped: Student[] = (studentsData as any[] || []).map((row) => {
-            codeToDbId.set(row.student_code, row.id);
+        const mapped: Student[] = (
+          (enrollmentData as unknown as EnrollmentRow[]) || []
+        )
+          .map((row) => {
+            const s =
+              row.students && row.students.length > 0 ? row.students[0] : null;
+            if (!s) return null;
+            codeToDbId.set(s.student_code, s.id);
             return {
-              id: row.student_code,
-              name: row.full_name ?? "",
-              email: row.email ?? "",
-              program: (row.program_id && programMap.get(row.program_id)) || "Unknown program",
-              section: (row.section_id && sectionMap.get(row.section_id)) || "Unknown section",
+              id: s.student_code,
+              name: buildFullName(
+                s.first_name,
+                s.middle_name,
+                s.last_name,
+                s.student_code,
+              ),
+              email: s.email ?? "",
+              program: "N/A",
+              section: blockMap.get(row.block_id) || "Unknown",
               submitted: 0,
               pending: 0,
               missing: 0,
               avgScore: 0,
               yearLevel: "1",
             };
-          });
+          })
+          .filter((s) => s !== null) as Student[];
 
         setStudentCodeToDbIdMap(codeToDbId);
         setStudents(mapped);
@@ -328,7 +416,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError(
-          "Please fill in all required fields (First Name, Last Name, Student ID, Email, Program, and Section)."
+          "Please fill in all required fields (First Name, Last Name, Student ID, Email, Program, and Section).",
         );
       }, 100);
       setIsCreatingStudent(false);
@@ -343,7 +431,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError(
-          `Program "${newStudent.program}" not found. Please refresh and try again.`
+          `Program "${newStudent.program}" not found. Please refresh and try again.`,
         );
       }, 100);
       setIsCreatingStudent(false);
@@ -353,46 +441,34 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError(
-          `Section "${newStudent.section}" not found. Please refresh and try again.`
+          `Section "${newStudent.section}" not found. Please refresh and try again.`,
         );
       }, 100);
       setIsCreatingStudent(false);
       return;
     }
 
-    // 3. Get teacher ID for checks and creation
-    const teacherId = await getTeacherId();
-    if (!teacherId) {
-      setIsAddDialogOpen(false);
-      setTimeout(() => {
-        showError("Unable to identify teacher. Please try logging in again.");
-      }, 100);
-      setIsCreatingStudent(false);
-      return;
-    }
-
-    // 4. Check for duplicate email (case-insensitive)
+    // 3. Check for duplicate email (case-insensitive)
     const emailToCheck = newStudent.email.trim().toLowerCase();
     const existingStudentWithEmail = students.find(
-      (s) => s.email.toLowerCase() === emailToCheck
+      (s) => s.email.toLowerCase() === emailToCheck,
     );
     if (existingStudentWithEmail) {
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError(
-          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
+          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`,
         );
       }, 100);
       setIsCreatingStudent(false);
       return;
     }
 
-    // 5. Also check in database to catch any duplicates not in local state (scoped to teacher)
+    // 4. Also check in database to catch any duplicates not in local state
     const { data: existingEmailCheck, error: checkError } = await supabase
       .from("students")
       .select("id, email")
-      .ilike("email", newStudent.email.trim())
-      .eq("created_by", teacherId);
+      .ilike("email", newStudent.email.trim());
 
     if (checkError) {
       console.error("Error checking for duplicate email:", checkError);
@@ -401,66 +477,82 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsAddDialogOpen(false);
       setTimeout(() => {
         showError(
-          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
+          `A student with the email "${newStudent.email}" already exists. Please use a different email address.`,
         );
       }, 100);
       setIsCreatingStudent(false);
       return;
     }
 
-    // 6. Use separate name fields directly
-    const first_name = newStudent.firstName.trim();
-    const middle_name = newStudent.middleName.trim() || null;
-    const last_name = newStudent.lastName.trim();
-
+    // 5. Use separate name fields directly
     try {
-      // 7. Insert into Supabase with created_by
-      const { data, error } = await supabase
+      // 1. Check if student already exists in the general students table
+      const { data: existingStudent } = await supabase
         .from("students")
-        .insert({
-          student_code: newStudent.id.toUpperCase(),
-          first_name: first_name,
-          middle_name: middle_name,
-          last_name: last_name,
-          email: newStudent.email.trim(),
-          program_id: programId,
-          section_id: sectionId,
-          created_by: teacherId,
-        })
-        .select()
-        .single();
+        .select("id, student_code, first_name, middle_name, last_name, email")
+        .eq("student_code", newStudent.id.toUpperCase())
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error creating student:", error);
-        setIsAddDialogOpen(false);
-        // Check if it's a duplicate email error
-        if (
-          error.message?.toLowerCase().includes("duplicate") ||
-          error.message?.toLowerCase().includes("unique") ||
-          error.code === "23505" // PostgreSQL unique violation error code
-        ) {
-          setTimeout(() => {
-            showError(
-              `A student with the email "${newStudent.email}" already exists. Please use a different email address.`
-            );
-          }, 100);
+      let studentDbId: number;
+
+      if (existingStudent) {
+        studentDbId = existingStudent.id;
+      } else {
+        // 2. Create student if they don't exist
+        const { data: createdStudent, error: createError } = await supabase
+          .from("students")
+          .insert({
+            student_code: newStudent.id.toUpperCase(),
+            first_name: newStudent.firstName.trim(),
+            middle_name: newStudent.middleName.trim() || null,
+            last_name: newStudent.lastName.trim(),
+            email: newStudent.email.trim(),
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        studentDbId = createdStudent.id;
+      }
+
+      // 2.5 Ensure a student auth account exists (created on first enrollment)
+      const provisionResult = await provisionStudentAuthAccount({
+        email: newStudent.email.trim(),
+        student_code: newStudent.id.toUpperCase(),
+        first_name: newStudent.firstName.trim(),
+        middle_name: newStudent.middleName.trim() || undefined,
+        last_name: newStudent.lastName.trim(),
+      });
+
+      // 3. Link student to the block
+      const { error: blockStudentError } = await supabase
+        .from("block_students")
+        .insert({
+          block_id: sectionId,
+          student_id: studentDbId,
+        });
+
+      if (blockStudentError) {
+        if (blockStudentError.code === "23505") {
+          showError("This student is already enrolled in this block.");
         } else {
-          setTimeout(() => {
-            showError(`Failed to create student: ${error.message}`);
-          }, 100);
+          throw blockStudentError;
         }
-        setIsCreatingStudent(false);
         return;
       }
 
-      // 7. Map Supabase response to Student type and add to the list
-      const fullName = [first_name, middle_name, last_name]
-        .filter((part) => part)
-        .join(" ");
+      // 4. Update UI
+      const fullName = buildFullName(
+        existingStudent?.first_name ?? newStudent.firstName,
+        existingStudent?.middle_name ?? newStudent.middleName,
+        existingStudent?.last_name ?? newStudent.lastName,
+        newStudent.id.toUpperCase(),
+      );
+
       const newStudentObject: Student = {
-        id: data.student_code,
-        name: data.full_name ?? fullName,
-        email: data.email ?? "",
+        id: newStudent.id.toUpperCase(),
+        name: fullName,
+        email: existingStudent?.email ?? newStudent.email.trim(),
         program: newStudent.program,
         section: newStudent.section,
         submitted: 0,
@@ -470,28 +562,30 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
         yearLevel: "1",
       };
 
-      // Update the student code to db id map
       setStudentCodeToDbIdMap((prev) => {
         const newMap = new Map(prev);
-        newMap.set(data.student_code, data.id);
+        newMap.set(newStudent.id.toUpperCase(), studentDbId);
         return newMap;
       });
 
-      setStudents((prevStudents) => [newStudentObject, ...prevStudents]);
-
-      // 8. Reset form and close dialog
+      setStudents((prev) => [newStudentObject, ...prev]);
       setNewStudent(initialNewStudentState);
       setIsAddDialogOpen(false);
-      setIsCreatingStudent(false);
-      setTimeout(() => {
-        showSuccess("Student created successfully!");
-      }, 100);
-    } catch (err) {
-      console.error("Unexpected error creating student:", err);
-      setIsAddDialogOpen(false);
-      setTimeout(() => {
-        showError("An unexpected error occurred while creating the student.");
-      }, 100);
+      if (provisionResult.created && provisionResult.tempPassword) {
+        showSuccess(
+          `Student enrolled and account created. Temporary password: ${provisionResult.tempPassword}`,
+        );
+      } else {
+        showSuccess(
+          "Student enrolled successfully! Student account already exists.",
+        );
+      }
+    } catch (err: unknown) {
+      console.error("Unexpected error enrolling student:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred.";
+      showError(errorMessage);
+    } finally {
       setIsCreatingStudent(false);
     }
   };
@@ -529,7 +623,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsEditDialogOpen(false);
       setTimeout(() => {
         showError(
-          `Program "${editingStudent.program}" not found. Please refresh and try again.`
+          `Program "${editingStudent.program}" not found. Please refresh and try again.`,
         );
       }, 100);
       return;
@@ -538,7 +632,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsEditDialogOpen(false);
       setTimeout(() => {
         showError(
-          `Section "${editingStudent.section}" not found. Please refresh and try again.`
+          `Section "${editingStudent.section}" not found. Please refresh and try again.`,
         );
       }, 100);
       return;
@@ -546,7 +640,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
     // 3. Parse name into first, middle, last (from the full name string)
     const { first_name, middle_name, last_name } = parseName(
-      editingStudent.name
+      editingStudent.name,
     );
 
     // 4. Get database id from student_code
@@ -555,7 +649,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsEditDialogOpen(false);
       setTimeout(() => {
         showError(
-          "Student not found in database. Please refresh and try again."
+          "Student not found in database. Please refresh and try again.",
         );
       }, 100);
       return;
@@ -565,13 +659,13 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
     const emailToCheck = editingStudent.email.trim().toLowerCase();
     const existingStudentWithEmail = students.find(
       (s) =>
-        s.id !== editingStudent.id && s.email.toLowerCase() === emailToCheck
+        s.id !== editingStudent.id && s.email.toLowerCase() === emailToCheck,
     );
     if (existingStudentWithEmail) {
       setIsEditDialogOpen(false);
       setTimeout(() => {
         showError(
-          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`,
         );
       }, 100);
       return;
@@ -591,7 +685,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       setIsEditDialogOpen(false);
       setTimeout(() => {
         showError(
-          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+          `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`,
         );
       }, 100);
       return;
@@ -608,7 +702,6 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           last_name: last_name,
           email: editingStudent.email.trim(),
           program_id: programId,
-          section_id: sectionId,
         })
         .eq("id", dbId);
 
@@ -623,7 +716,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
         ) {
           setTimeout(() => {
             showError(
-              `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`
+              `A student with the email "${editingStudent.email}" already exists. Please use a different email address.`,
             );
           }, 100);
         } else {
@@ -637,8 +730,8 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
       // 8. Update local state
       setStudents((prevStudents) =>
         prevStudents.map((s) =>
-          s.id === editingStudent.id ? editingStudent : s
-        )
+          s.id === editingStudent.id ? editingStudent : s,
+        ),
       );
 
       // 9. Reset and close dialog
@@ -669,7 +762,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           const dbId = studentCodeToDbIdMap.get(student.id);
           if (!dbId) {
             showError(
-              "Student not found in database. Please refresh and try again."
+              "Student not found in database. Please refresh and try again.",
             );
             return;
           }
@@ -688,7 +781,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
             // Remove from local state
             setStudents((prevStudents) =>
-              prevStudents.filter((s) => s.id !== student.id)
+              prevStudents.filter((s) => s.id !== student.id),
             );
             studentCodeToDbIdMap.delete(student.id);
 
@@ -696,11 +789,11 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           } catch (err) {
             console.error("Unexpected error deleting student:", err);
             showError(
-              "An unexpected error occurred while deleting the student."
+              "An unexpected error occurred while deleting the student.",
             );
           }
         },
-      }
+      },
     );
   };
 
@@ -708,13 +801,6 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
   const handleBatchUploadComplete = async (result: UploadResult) => {
     if (result.success && result.data) {
       const importedStudents = result.data as Student[];
-
-      // Get teacher ID for created_by
-      const teacherId = await getTeacherId();
-      if (!teacherId) {
-        showError("Unable to identify teacher. Please try logging in again.");
-        return;
-      }
 
       // Save each student to Supabase
       const studentsToAdd: Student[] = [];
@@ -728,7 +814,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
           if (!programId || !sectionId) {
             errors.push(
-              `Student ${student.id}: Program or section not found. Skipping.`
+              `Student ${student.id}: Program or section not found. Skipping.`,
             );
             continue;
           }
@@ -737,11 +823,11 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           if (student.email) {
             const emailToCheck = student.email.trim().toLowerCase();
             const existingStudentWithEmail = students.find(
-              (s) => s.email.toLowerCase() === emailToCheck
+              (s) => s.email.toLowerCase() === emailToCheck,
             );
             if (existingStudentWithEmail) {
               errors.push(
-                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`,
               );
               continue;
             }
@@ -750,12 +836,11 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
             const { data: existingEmailCheck } = await supabase
               .from("students")
               .select("id, email")
-              .ilike("email", student.email.trim())
-              .eq("created_by", teacherId);
+              .ilike("email", student.email.trim());
 
             if (existingEmailCheck && existingEmailCheck.length > 0) {
               errors.push(
-                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`,
               );
               continue;
             }
@@ -763,10 +848,10 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
 
           // Parse name into first, middle, last
           const { first_name, middle_name, last_name } = parseName(
-            student.name
+            student.name,
           );
 
-          // Insert into Supabase with created_by
+          // Insert into Supabase
           const { data, error } = await supabase
             .from("students")
             .insert({
@@ -775,9 +860,6 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
               middle_name: middle_name,
               last_name: last_name,
               email: student.email?.trim() || null,
-              program_id: programId,
-              section_id: sectionId,
-              created_by: teacherId,
             })
             .select()
             .single();
@@ -790,7 +872,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
               error.code === "23505"
             ) {
               errors.push(
-                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`
+                `Student ${student.id}: Email "${student.email}" already exists. Skipping.`,
               );
             } else {
               errors.push(`Student ${student.id}: ${error.message}`);
@@ -798,10 +880,53 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
             continue;
           }
 
+          // Provision Auth account for each imported student
+          if (student.email?.trim()) {
+            try {
+              await provisionStudentAuthAccount({
+                email: student.email.trim(),
+                student_code: student.id.toUpperCase(),
+                first_name,
+                middle_name: middle_name || undefined,
+                last_name,
+              });
+            } catch (provisionErr) {
+              errors.push(
+                `Student ${student.id}: enrolled, but account provisioning failed (${provisionErr instanceof Error ? provisionErr.message : "unknown error"}).`,
+              );
+            }
+          }
+
+          // Link student to block
+          const { error: blockStudentError } = await supabase
+            .from("block_students")
+            .insert({
+              block_id: sectionId,
+              student_id: data.id,
+            });
+
+          if (blockStudentError) {
+            if (blockStudentError.code === "23505") {
+              errors.push(
+                `Student ${student.id}: already enrolled in this block.`,
+              );
+            } else {
+              errors.push(
+                `Student ${student.id}: ${blockStudentError.message}`,
+              );
+            }
+            continue;
+          }
+
           // Map Supabase response to Student type
           const newStudentObject: Student = {
             id: data.student_code,
-            name: data.full_name ?? student.name,
+            name: buildFullName(
+              data.first_name,
+              data.middle_name,
+              data.last_name,
+              student.name,
+            ),
             email: data.email ?? "",
             program: student.program,
             section: student.section,
@@ -824,7 +949,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           errors.push(
             `Student ${student.id}: ${
               err instanceof Error ? err.message : "Unknown error"
-            }`
+            }`,
           );
         }
       }
@@ -836,7 +961,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           showSuccess(
             `Successfully imported ${studentsToAdd.length} student(s)${
               errors.length > 0 ? ` (${errors.length} error(s))` : ""
-            }`
+            }`,
           );
         }, 100);
       }
@@ -847,7 +972,7 @@ export function useStudents(showArchived: boolean = false, ay?: string, term?: s
           showError(
             `Failed to import students: ${errors.slice(0, 3).join(", ")}${
               errors.length > 3 ? ` and ${errors.length - 3} more` : ""
-            }`
+            }`,
           );
         }, 100);
       }

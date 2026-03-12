@@ -48,9 +48,12 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
   const [termFilter, setTermFilter] = useState("All Terms");
 
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const [allPrograms, setAllPrograms] = useState<any[]>([]);
   const [newSection, setNewSection] = useState({
     name: "",
     course_id: "",
+    program_id: "",
+    year_level: 1,
     term: "",
     students: "0"
   });
@@ -75,53 +78,75 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           return;
         }
 
-        // Load courses for the teacher's school/dept
-        const { data: coursesData, error: coursesError } = await supabase
-          .from("courses")
-          .select("id, course_code, course_title")
-          .eq("school_id", context.school_id)
-          .or(`department_id.eq.${context.department_id},department_id.is.null`);
-
-        if (coursesError) throw coursesError;
-        setAvailableCourses(coursesData || []);
-
-        const courseIds = (coursesData || []).map(c => c.id);
-
-        // Load sections for these courses
-        let query = supabase
-          .from("sections")
+        // 1. Fetch Teacher's personal course loads with linked blocks
+        const { data: loadsData, error: loadsError } = await supabase
+          .from("teacher_course_loads")
           .select(`
-            *,
-            courses(course_code, course_title)
+            id,
+            course_id,
+            academic_year,
+            term,
+            block_id,
+            blocks (
+              id,
+              name,
+              year_level,
+              program_id
+            ),
+            courses (id, course_code, course_title)
           `)
-          .in("course_id", courseIds);
+          .eq("teacher_id", context.auth_user_id)
+          .eq("academic_year", ay || currentAY)
+          .eq("term", term || currentSemester);
 
-        if (!showArchived) {
-          // Filter by current AY and Term
-          if (currentAY) query = query.eq("academic_year", currentAY);
-          if (currentSemester) query = query.eq("term", currentSemester);
-        } else {
-          // Archive view: allow specific filter OR default to "NOT CURRENT"
-          if (ay && ay !== "all") {
-            query = query.eq("academic_year", ay);
-          }
-          if (term && term !== "all") {
-            query = query.eq("term", term);
-          }
+        if (loadsError) throw loadsError;
 
-          // If no explicit filters provided for archive, show all EXCEPT current
-          if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
-            query = query.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
-          }
+        // Filter out loads that don't have a block assigned if we only want assigned sections
+        const assignedLoads = (loadsData || []).filter(l => l.block_id !== null);
+
+        const availableCoursesList = (loadsData || [])
+          .map(l => l.courses)
+          .filter((c): c is any => c !== null);
+          
+        // Ensure unique courses
+        const uniqueCourses = Array.from(new Map(availableCoursesList.map(c => [c.id, c])).values());
+        setAvailableCourses(uniqueCourses);
+
+        // 2. Fetch all programs for the add section modal
+        const { data: programsData, error: programsError } = await supabase
+          .from("programs_lookup")
+          .select("id, name, abbreviation")
+          .order("name", { ascending: true });
+
+        if (!programsError) {
+          setAllPrograms(programsData || []);
         }
 
-        const { data: sectionsData, error: sectionsError } = await query.order("created_at", { ascending: false });
 
-        if (sectionsError) throw sectionsError;
-        setSections(sectionsData || []);
+        // Map teacher_course_loads to the Section interface for frontend compatibility
+        const mappedSections: Section[] = assignedLoads.map(load => {
+          const blocksAny = load.blocks as any;
+          const coursesAny = load.courses as any;
+          
+          return {
+            id: load.id, // Use the load ID as the section ID
+            course_id: load.course_id,
+            block_id: load.block_id,
+            name: blocksAny.name,
+            year_level: blocksAny.year_level,
+            term: load.term,
+            academic_year: load.academic_year,
+            students_estimated: 0, 
+            essays_estimated: 0,
+            created_at: "", 
+            courses: coursesAny
+          };
+        });
+
+        setSections(mappedSections);
       } catch (error) {
         console.error("Error loading sections:", error);
-        setLoadError("Unable to load blocks/sections.");
+        setLoadError("Unable to load blocks.");
       } finally {
         setIsLoading(false);
       }
@@ -151,75 +176,155 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     if (isCreatingSection) return;
     setIsCreatingSection(true);
 
-    if (!newSection.name || !newSection.course_id || !newSection.term) {
+    if (!newSection.name || !newSection.course_id || !newSection.program_id) {
       showError("Please fill in all required fields.");
       setIsCreatingSection(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from("sections")
-        .insert({
-          course_id: newSection.course_id,
-          name: newSection.name,
-          term: newSection.term,
-          academic_year: currentAY, // Auto-tag with current AY
-          students_estimated: parseInt(newSection.students, 10),
-        })
-        .select(`
-          *,
-          courses(course_code, course_title)
-        `)
+      const context = await getTeacherContext();
+      if (!context) throw new Error("Teacher context not found");
+
+      // 1. Get the teacher's load ID for this course/AY/term
+      const { data: loadData, error: loadError } = await supabase
+        .from("teacher_course_loads")
+        .select("id, block_id")
+        .eq("teacher_id", context.auth_user_id)
+        .eq("course_id", newSection.course_id)
+        .eq("academic_year", currentAY)
+        .eq("term", newSection.term || currentSemester)
         .single();
 
-      if (error) {
-        if (error.code === '23505') {
-          showError("This block already exists for this course, AY, and term.");
-        } else {
-          showError(`Failed to create block: ${error.message}`);
-        }
+      if (loadError || !loadData) throw new Error("Course load not found for this term.");
+      
+      // If load already has a block, we might want to update it or prevent
+      if (loadData.block_id) {
+        showWarning("This course load already has a block assigned. Close this and use Edit if you want to change it.");
+        setIsCreatingSection(false);
         return;
       }
 
-      setSections((prev) => [data, ...prev]);
-      showSuccess("Block created successfully!");
+      // 2. Check if the block already exists (shared across teachers)
+      let { data: blockData } = await supabase
+        .from("blocks")
+        .select("id, name, program_id, year_level")
+        .eq("name", newSection.name)
+        .eq("program_id", newSection.program_id)
+        .eq("year_level", newSection.year_level)
+        .maybeSingle();
+
+      // 3. If block doesn't exist, create it
+      if (!blockData) {
+        const { data: newBlock, error: createBlockError } = await supabase
+          .from("blocks")
+          .insert({
+            name: newSection.name,
+            program_id: newSection.program_id,
+            year_level: newSection.year_level,
+          })
+          .select()
+          .single();
+
+        if (createBlockError) throw createBlockError;
+        blockData = newBlock;
+      }
+
+      // 4. Update the teacher_course_load with the block_id
+      if (!blockData) throw new Error("Could not find or create block.");
+
+      const { data: updatedLoad, error: updateError } = await supabase
+        .from("teacher_course_loads")
+        .update({
+          block_id: blockData.id,
+        })
+        .eq("id", loadData.id)
+        .select(`
+          id,
+          course_id,
+          academic_year,
+          term,
+          block_id,
+          blocks (*),
+          courses (id, course_code, course_title)
+        `)
+        .single();
+
+      if (updateError) throw updateError;
+      if (!updatedLoad) throw new Error("Failed to update course load with block.");
+
+      // 5. Update UI
+      const blocksAny = updatedLoad.blocks as any;
+      const coursesAny = updatedLoad.courses as any;
+
+      const newMappedSection: Section = {
+        id: updatedLoad.id,
+        course_id: updatedLoad.course_id,
+        block_id: updatedLoad.block_id,
+        name: blocksAny.name,
+        year_level: blocksAny.year_level,
+        term: updatedLoad.term,
+        academic_year: updatedLoad.academic_year,
+        students_estimated: 0,
+        essays_estimated: 0,
+        created_at: new Date().toISOString(),
+        courses: coursesAny
+      };
+
+      setSections((prev) => [newMappedSection, ...prev]);
+      showSuccess("Block assigned to course load successfully!");
       setIsAddDialogOpen(false);
-      setNewSection({ name: "", course_id: "", term: currentSemester, students: "0" });
+      setNewSection({ 
+        name: "", 
+        course_id: "", 
+        program_id: "", 
+        year_level: 1, 
+        term: currentSemester, 
+        students: "0" 
+      });
     } catch (err: any) {
-      showError("An unexpected error occurred.");
+      console.error("Error setting block assignment:", err);
+      showError(err.message || "An unexpected error occurred.");
     } finally {
       setIsCreatingSection(false);
     }
   };
 
   const handleDeleteSection = (section: any) => {
-    showWarning(`Delete section "${section.name}"?`, {
+    showWarning(`Unassign block "${section.name}" from this course load?`, {
       onConfirm: async () => {
-        const { error } = await supabase.from("sections").delete().eq("id", section.id);
+        // We set block_id to null in teacher_course_loads
+        const { error } = await supabase
+          .from("teacher_course_loads")
+          .update({ block_id: null })
+          .eq("id", section.id);
+          
         if (!error) {
           setSections(prev => prev.filter(s => s.id !== section.id));
-          showSuccess("Section deleted.");
+          showSuccess("Block unassigned.");
+        } else {
+          showError("Failed to unassign block.");
         }
       }
     });
   };
 
   const handleUpdateSection = async () => {
-    if (!editingSection) return;
+    if (!editingSection || !editingSection.blocks) return;
     const { error } = await supabase
-      .from("sections")
+      .from("blocks")
       .update({
         name: editingSection.name,
-        term: editingSection.term,
-        students_estimated: editingSection.students_estimated,
+        year_level: editingSection.year_level,
       })
-      .eq("id", editingSection.id);
+      .eq("id", editingSection.blocks.id);
 
     if (!error) {
       setSections(prev => prev.map(s => s.id === editingSection.id ? { ...s, ...editingSection } : s));
       setIsEditDialogOpen(false);
-      showSuccess("Section updated.");
+      showSuccess("Block updated.");
+    } else {
+      showError("Failed to update block.");
     }
   };
 
@@ -244,6 +349,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     editingSection,
     setEditingSection,
     availableCourses,
+    allPrograms,
     handleCreateSection,
     handleDeleteSection,
     handleUpdateSection,

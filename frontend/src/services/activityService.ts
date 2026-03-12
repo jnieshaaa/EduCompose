@@ -3,11 +3,12 @@
 import { supabase } from "../lib/supabaseClient";
 import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
 import { fetchTeacherId } from "./rubricService";
+import { buildFullNameFromObject } from "../utils/nameUtils";
 
 // Supabase row type for essay_activities
 type SupabaseActivityRow = {
   id: number;
-  teacher_id: number | null;
+  user_id: number | null;
   title: string;
   program_id: number | null;
   section_id: number | null;
@@ -26,7 +27,7 @@ type SupabaseActivityRow = {
 export const fetchTeacherActivities = async (
   academicYear?: string,
   term?: string,
-  showArchived: boolean = false
+  showArchived: boolean = false,
 ): Promise<EssayActivity[]> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -39,9 +40,9 @@ export const fetchTeacherActivities = async (
     let query = supabase
       .from("essay_activities")
       .select(
-        "id, teacher_id, title, program_id, section_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)"
+        "id, user_id, title, program_id, section_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)",
       )
-      .eq("teacher_id", teacherId);
+      .eq("user_id", teacherId);
 
     if (!showArchived) {
       if (academicYear) query = query.eq("academic_year", academicYear);
@@ -52,7 +53,10 @@ export const fetchTeacherActivities = async (
       }
     }
 
-    const { data: activitiesData, error: activitiesError } = await query.order("created_at", { ascending: false });
+    const { data: activitiesData, error: activitiesError } = await query.order(
+      "created_at",
+      { ascending: false },
+    );
 
     if (activitiesError) {
       console.error("Error loading activities:", activitiesError);
@@ -93,7 +97,11 @@ export const fetchTeacherActivities = async (
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId: row.course_id ? String(row.course_id) : row.program_id ? String(row.program_id) : "all",
+      courseId: row.course_id
+        ? String(row.course_id)
+        : row.program_id
+          ? String(row.program_id)
+          : "all",
       blockId: row.section_id ? String(row.section_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
@@ -120,7 +128,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
     // Fetch all rubrics and filter in JavaScript to avoid 406 error
     const { data: allRubrics, error: fetchError } = await supabase
       .from("rubrics")
-      .select("id, name, created_by");
+      .select("id, name, user_id");
 
     if (fetchError) {
       console.error("Error fetching existing rubrics:", fetchError);
@@ -130,9 +138,10 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 
     const existingNames = new Set(
       (allRubrics || [])
-        .filter((r) => r.created_by === null)
-        .map((r) => r.name.toLowerCase())
+        .filter((r) => r.user_id === null)
+        .map((r) => r.name.toLowerCase()),
     );
+
 
     let syncedCount = 0;
     // Sync each platform rubric
@@ -150,7 +159,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
             criteria: template.criteria,
             programs: [], // Platform rubrics don't have specific programs
             grading_intensity: template.type || "Basic",
-            created_by: null, // Platform rubric
+            user_id: null, // Platform rubric
           })
           .select("id")
           .single();
@@ -158,11 +167,11 @@ export const initializePlatformRubrics = async (): Promise<number> => {
         if (error) {
           console.error(
             `Error creating platform rubric "${template.name}":`,
-            error
+            error,
           );
         } else {
           console.log(
-            `Synced platform rubric "${template.name}" with database ID ${newRubric.id}`
+            `Synced platform rubric "${template.name}" with database ID ${newRubric.id}`,
           );
           syncedCount++;
         }
@@ -183,7 +192,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 // Since platform rubrics are now synced via initializePlatformRubrics,
 // we find them by name (database IDs are different from template IDs)
 const ensurePlatformRubricExists = async (
-  templateId: number
+  templateId: number,
 ): Promise<number | null> => {
   try {
     // Import template to get the name
@@ -199,11 +208,11 @@ const ensurePlatformRubricExists = async (
     // Fetch all rubrics with this name and filter in JavaScript
     const { data: rubricsWithName } = await supabase
       .from("rubrics")
-      .select("id, created_by")
+      .select("id, user_id")
       .eq("name", template.name);
 
-    // Find the one that's a platform rubric (created_by is null)
-    const existing = rubricsWithName?.find((r) => r.created_by === null);
+    // Find the one that's a platform rubric (user_id is null)
+    const existing = rubricsWithName?.find((r) => r.user_id === null);
 
     if (existing) {
       return existing.id;
@@ -218,7 +227,7 @@ const ensurePlatformRubricExists = async (
         criteria: template.criteria,
         programs: [], // Platform rubrics don't have specific programs
         grading_intensity: template.type || "Basic",
-        created_by: null, // Platform rubric
+        user_id: null, // Platform rubric
       })
       .select("id")
       .single();
@@ -229,7 +238,7 @@ const ensurePlatformRubricExists = async (
     }
 
     console.log(
-      `Created platform rubric "${template.name}" with database ID ${newRubric.id}`
+      `Created platform rubric "${template.name}" with database ID ${newRubric.id}`,
     );
     return newRubric.id;
   } catch (err) {
@@ -239,7 +248,9 @@ const ensurePlatformRubricExists = async (
 };
 
 // Create a new activity
-export const createActivity = async (activity: NewActivityForm): Promise<EssayActivity> => {
+export const createActivity = async (
+  activity: NewActivityForm,
+): Promise<EssayActivity> => {
   try {
     const teacherId = await fetchTeacherId();
     if (!teacherId) {
@@ -248,9 +259,7 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
 
     // For now, store first selected course/section or null if empty (meaning "all")
     const courseId =
-      activity.courseIds.length === 0
-        ? null
-        : activity.courseIds[0];
+      activity.courseIds.length === 0 ? null : activity.courseIds[0];
     const sectionId =
       activity.sectionIds.length === 0
         ? null
@@ -275,7 +284,7 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
     const { data, error } = await supabase
       .from("essay_activities")
       .insert({
-        teacher_id: teacherId,
+        user_id: teacherId,
         title: activity.title.trim(),
         course_id: courseId,
         section_id: sectionId,
@@ -294,7 +303,18 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
     }
 
     // Map back to EssayActivity format
-    const row = data as any;
+    const row = data as {
+      id: number;
+      title: string;
+      course_id: number | null;
+      section_id: number | null;
+      rubric_id: number | null;
+      due_date: string | null;
+      instructions: string | null;
+      created_at: string;
+      academic_year: string | null;
+      term: string | null;
+    };
     return {
       id: String(row.id),
       title: row.title,
@@ -304,8 +324,8 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
       createdAt: row.created_at.split("T")[0],
-      academicYear: row.academic_year,
-      term: row.term,
+      academicYear: row.academic_year || undefined,
+      term: row.term || undefined,
       submissionCount: 0, // New activity has no submissions yet
     };
   } catch (err) {
@@ -317,7 +337,7 @@ export const createActivity = async (activity: NewActivityForm): Promise<EssayAc
 // Update an activity
 export const updateActivity = async (
   activityId: string,
-  activityData: NewActivityForm
+  activityData: NewActivityForm,
 ): Promise<EssayActivity> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -351,9 +371,10 @@ export const updateActivity = async (
       }
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       title: activityData.title,
-      course_id: activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
+      course_id:
+        activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
       section_id: sectionId && !isNaN(sectionId) ? sectionId : null,
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
@@ -366,7 +387,7 @@ export const updateActivity = async (
       .from("essay_activities")
       .update(updateData)
       .eq("id", id)
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .select()
       .single();
 
@@ -376,7 +397,18 @@ export const updateActivity = async (
     }
 
     // Map back to EssayActivity format
-    const row = data as any;
+    const row = data as {
+      id: number;
+      title: string;
+      course_id: number | null;
+      section_id: number | null;
+      rubric_id: number | null;
+      due_date: string | null;
+      instructions: string | null;
+      created_at: string;
+      academic_year: string | null;
+      term: string | null;
+    };
     return {
       id: String(row.id),
       title: row.title,
@@ -386,8 +418,8 @@ export const updateActivity = async (
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
       createdAt: row.created_at.split("T")[0],
-      academicYear: row.academic_year,
-      term: row.term,
+      academicYear: row.academic_year || undefined,
+      term: row.term || undefined,
       submissionCount: 0, // Will be updated when activities are reloaded
     };
   } catch (err) {
@@ -470,9 +502,8 @@ export const fetchPrograms = async (): Promise<
     }
 
     const { data, error } = await supabase
-      .from("programs")
+      .from("programs_lookup")
       .select("id, name")
-      .eq("created_by", teacherId)
       .order("name", { ascending: true });
 
     if (error) {
@@ -492,7 +523,7 @@ export const fetchPrograms = async (): Promise<
 
 // Load sections (blocks) for dropdown, optionally filtered by course and always by teacher
 export const fetchSections = async (
-  courseId?: string | "all"
+  courseId?: string | "all",
 ): Promise<{ id: string; name: string; courseId: string }[]> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -502,31 +533,47 @@ export const fetchSections = async (
 
     // Get courses first to know which sections to show
     const courses = await fetchCourses();
-    const courseIds = courses.map(c => c.id);
-    
+    const courseIds = courses.map((c) => c.id);
+
     if (courseIds.length === 0) {
       return [];
     }
 
-    let query = supabase.from("sections").select("id, name, course_id")
-      .in("course_id", courseIds);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return [];
+
+    let query = supabase
+      .from("teacher_course_loads")
+      .select(`
+        id,
+        block_id,
+        blocks!inner (
+          id,
+          name
+        ),
+        course_id
+      `)
+      .eq("teacher_id", userData.user.id);
 
     if (courseId && courseId !== "all") {
       query = query.eq("course_id", courseId);
     }
 
-    const { data, error } = await query.order("name", { ascending: true });
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error loading sections:", error);
       return [];
     }
 
-    return (data || []).map((s) => ({
-      id: String(s.id),
-      name: s.name,
-      courseId: String(s.course_id),
-    }));
+    return (data || []).map((load) => {
+      const block = Array.isArray(load.blocks) ? load.blocks[0] : load.blocks;
+      return {
+        id: String(load.id),
+        name: block.name,
+        courseId: String(load.course_id),
+      };
+    });
   } catch (err) {
     console.error("Unexpected error loading sections:", err);
     return [];
@@ -547,23 +594,23 @@ export const fetchRubrics = async (): Promise<{
     // First, ensure all platform rubrics are synced to database
     await initializePlatformRubrics();
 
-    // Fetch platform rubrics from database (created_by is null - system/platform rubrics)
+    // Fetch platform rubrics from database (user_id is null - system/platform rubrics)
     // Note: We fetch all rubrics and filter in JavaScript to avoid 406 error with .is() filter
     const { data: allRubricsData, error: allRubricsError } = await supabase
       .from("rubrics")
-      .select("id, name, created_by")
+      .select("id, name, user_id")
       .order("name", { ascending: true });
 
-    // Filter platform rubrics (created_by is null) in JavaScript
+    // Filter platform rubrics (user_id is null) in JavaScript
     const platformData =
-      allRubricsData?.filter((r) => r.created_by === null) || [];
+      allRubricsData?.filter((r) => r.user_id === null) || [];
     const platformError = allRubricsError;
 
     // Fetch teacher rubrics from database
     const { data: teacherData, error: teacherError } = await supabase
       .from("rubrics")
       .select("id, name")
-      .eq("created_by", teacherId)
+      .eq("user_id", teacherId)
       .order("name", { ascending: true });
 
     if (platformError) {
@@ -583,11 +630,11 @@ export const fetchRubrics = async (): Promise<{
       // Fetch again after initialization
       const { data: refreshedAllRubrics } = await supabase
         .from("rubrics")
-        .select("id, name, created_by")
+        .select("id, name, user_id")
         .order("name", { ascending: true });
 
       const refreshedPlatform = (refreshedAllRubrics || []).filter(
-        (r) => r.created_by === null
+        (r) => r.user_id === null,
       );
 
       if (refreshedPlatform.length > 0) {
@@ -618,7 +665,7 @@ export const fetchRubrics = async (): Promise<{
 
     return {
       platform: platformRubricsList.sort((a, b) =>
-        a.name.localeCompare(b.name)
+        a.name.localeCompare(b.name),
       ),
       teacher: (teacherData || []).map((r) => ({
         id: String(r.id),
@@ -634,7 +681,7 @@ export const fetchRubrics = async (): Promise<{
 // Fetch students for a specific section, with their submission status for an activity
 export const fetchStudentsByCourseAndSection = async (
   sectionId: string,
-  activityId?: string
+  activityId?: string,
 ): Promise<
   {
     id: string;
@@ -648,24 +695,49 @@ export const fetchStudentsByCourseAndSection = async (
   }[]
 > => {
   try {
-    // Fetch students for this course and section
-    const { data: studentsData, error: studentsError } = await supabase
-      .from("students")
-      .select("id, student_code, full_name")
-      .eq("section_id", sectionId)
-      .order("full_name", { ascending: true });
+    // Fetch students for this block (blocks replaced sections)
+    // Query through block_students junction table
+    const { data: blockStudentsData, error: blockStudentsError } =
+      await supabase
+        .from("block_students")
+        .select(
+          "student_id, students!inner(id, student_code, first_name, middle_name, last_name)",
+        )
+        .eq("block_id", sectionId);
 
-    if (studentsError) {
+    if (blockStudentsError) {
       console.error(
         `[fetchStudentsByCourseAndSection] Error loading students:`,
-        studentsError
+        blockStudentsError,
       );
       return [];
     }
 
-    if (!studentsData || studentsData.length === 0) {
+    if (!blockStudentsData || blockStudentsData.length === 0) {
       return [];
     }
+
+    // Extract students from junction table results
+    type BlockStudentRow = {
+      student_id: number;
+      students: {
+        id: number;
+        student_code: string;
+        first_name: string;
+        middle_name: string | null;
+        last_name: string;
+      };
+    };
+    const studentsData = (
+      blockStudentsData as unknown as BlockStudentRow[]
+    ).map((bs) => bs.students);
+
+    // Sort by full name in memory
+    studentsData.sort((a, b) => {
+      const nameA = buildFullNameFromObject(a, a.student_code).toLowerCase();
+      const nameB = buildFullNameFromObject(b, b.student_code).toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
     // If activityId is provided, fetch essay submissions for this activity
     const essaySubmissions = new Map<
@@ -686,7 +758,7 @@ export const fetchStudentsByCourseAndSection = async (
         const { data: essaysData, error: essaysError } = await supabase
           .from("essays")
           .select(
-            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score"
+            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score",
           )
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
@@ -724,7 +796,7 @@ export const fetchStudentsByCourseAndSection = async (
 
       return {
         id: String(student.id),
-        name: student.full_name || student.student_code || "Unknown",
+        name: buildFullNameFromObject(student, student.student_code),
         status: (hasSubmission ? "submitted" : "not submitted") as
           | "submitted"
           | "not submitted",
@@ -740,7 +812,7 @@ export const fetchStudentsByCourseAndSection = async (
   } catch (err) {
     console.error(
       `[fetchStudentsByCourseAndSection] Unexpected error loading students:`,
-      err
+      err,
     );
     return [];
   }
@@ -752,7 +824,7 @@ export const uploadEssayFile = async (
   studentId: string,
   activityId: string,
   courseId: string,
-  sectionId: string
+  sectionId: string,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -771,15 +843,15 @@ export const uploadEssayFile = async (
       return { success: false, error: "Course not found" };
     }
 
-    // Verify section exists
-    const { data: sectionData, error: sectionError } = await supabase
-      .from("sections")
+    // Verify teacher course load exists (which serves as the "section" assignment)
+    const { data: loadData, error: loadError } = await supabase
+      .from("teacher_course_loads")
       .select("id")
       .eq("id", sectionId)
       .single();
 
-    if (sectionError || !sectionData) {
-      return { success: false, error: "Section not found" };
+    if (loadError || !loadData) {
+      return { success: false, error: "Course load (section) not found" };
     }
 
     // Generate unique file path
@@ -831,8 +903,8 @@ export const uploadEssayFile = async (
     // Create essay record in database
     const { error: insertError } = await supabase.from("essays").insert({
       student_id: studentDbId,
-      teacher_id: teacherId,
-      section_id: sectionData.id,
+      user_id: teacherId,
+      section_id: sectionId,
       activity_id: activityDbId,
       title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
       file_path: filePath,
@@ -864,8 +936,6 @@ export const updateEssayFile = async (
   file: File,
   studentId: string,
   activityId: string,
-  _courseId: string,
-  _sectionId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -874,7 +944,6 @@ export const updateEssayFile = async (
     }
 
     // Verify session context (not used anymore, but we keep the params)
-
 
     // Parse student ID
     let studentDbId = parseInt(studentId, 10);
@@ -981,7 +1050,7 @@ export const updateEssayFile = async (
 // Delete essay submission
 export const deleteEssay = async (
   studentId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Parse student ID
@@ -1057,7 +1126,7 @@ export const deleteEssay = async (
 export const fetchCourseSectionCounts = async (
   courseId: string,
   sectionId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{ studentCount: number; submissionCount: number }> => {
   try {
     // Count students for this course and section
@@ -1100,11 +1169,10 @@ export const fetchCourseSectionCounts = async (
   }
 };
 
-
 // Fetch essay submission for a specific student and activity
 export const fetchEssayByStudentAndActivity = async (
   studentId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{ fileUrl: string; title: string; fileType: string } | null> => {
   try {
     // Parse student ID
@@ -1173,7 +1241,7 @@ export const fetchEssayByStudentAndActivity = async (
 // Check if essay has been graded (has analysis results)
 export const checkEssayGraded = async (
   studentId: string,
-  activityId: string
+  activityId: string,
 ): Promise<boolean> => {
   try {
     // Parse student ID
@@ -1269,7 +1337,7 @@ export const gradeEssay = async (
   studentId: string,
   studentName: string,
   activityId: string,
-  onProgress?: (progress: number, step: string) => void
+  onProgress?: (progress: number, step: string) => void,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     onProgress?.(5, "Preparing...");
@@ -1335,7 +1403,7 @@ export const gradeEssay = async (
       essayData.file_path.split("/").pop() || "essay.pdf",
       {
         type: blob.type,
-      }
+      },
     );
 
     onProgress?.(20, "Extracting text from PDF (OCR)...");
@@ -1396,13 +1464,13 @@ export const gradeEssay = async (
         if (rubricError || !rubricData) {
           console.warn(
             `[gradeEssay] Rubric ${activityData.rubric_id} not found in Supabase database. Backend may not find it either.`,
-            rubricError
+            rubricError,
           );
         } else {
           console.log(
             `[gradeEssay] Rubric found: ID=${rubricData.id}, Name="${
               rubricData.name
-            }", Platform=${rubricData.created_by === null}`
+            }", Platform=${rubricData.created_by === null}`,
           );
         }
       }
@@ -1411,19 +1479,19 @@ export const gradeEssay = async (
         "[gradeEssay] Activity rubric_id:",
         activityData?.rubric_id,
         "Passing to analysis:",
-        rubricId
+        rubricId,
       );
 
       analysisResult = await analysisApi.analyzeText(
         extractedText,
         essayData.title || "Essay",
         "comprehensive",
-        rubricId
+        rubricId,
       );
 
       console.log(
         "[gradeEssay] Analysis result includes rubric_scores:",
-        !!analysisResult.rubric_scores
+        !!analysisResult.rubric_scores,
       );
       if (rubricId && !analysisResult.rubric_scores) {
         console.error(
@@ -1431,7 +1499,7 @@ export const gradeEssay = async (
           "This means the backend could not find or apply the rubric.",
           "Rubric ID:",
           rubricId,
-          "Check backend logs for details."
+          "Check backend logs for details.",
         );
         // Try to fetch the rubric again to verify it exists
         const { data: verifyRubric } = await supabase
@@ -1444,11 +1512,11 @@ export const gradeEssay = async (
           console.log(
             "[gradeEssay] Rubric exists in Supabase:",
             verifyRubric,
-            "Backend should be able to find it. Check backend database connection."
+            "Backend should be able to find it. Check backend database connection.",
           );
         } else {
           console.error(
-            "[gradeEssay] Rubric does not exist in Supabase! This is the problem."
+            "[gradeEssay] Rubric does not exist in Supabase! This is the problem.",
           );
         }
       }
@@ -1520,7 +1588,7 @@ export const gradeEssay = async (
         essay_id: essayData.id,
         student_id: studentDbId,
         activity_id: activityDbId,
-        teacher_id: teacherId,
+        user_id: teacherId,
         analysis_type: analysisResult.analysis_type || "comprehensive",
         word_count: analysisResult.word_count || null,
         generated_at: analysisResult.generated_at || new Date().toISOString(),
@@ -1567,7 +1635,7 @@ export const gradeEssay = async (
         analysisResultData.detailed_analysis?.grammar?.errors || [];
       const errorsWithOffsets = grammarErrors.filter(
         (e: import("../types/Essay").GrammarError) =>
-          typeof e.offset === "number" && typeof e.errorLength === "number"
+          typeof e.offset === "number" && typeof e.errorLength === "number",
       );
       if (
         grammarErrors.length > 0 &&
@@ -1576,7 +1644,7 @@ export const gradeEssay = async (
         console.warn(
           `Warning: ${
             grammarErrors.length - errorsWithOffsets.length
-          } grammar errors missing offset/errorLength for highlighting`
+          } grammar errors missing offset/errorLength for highlighting`,
         );
       }
 
@@ -1595,7 +1663,7 @@ export const gradeEssay = async (
           analysisResultError.message?.includes("406")
         ) {
           console.warn(
-            "essay_analysis_results table not found. Please run the migration: supabase/create_essay_analysis_results_table.sql"
+            "essay_analysis_results table not found. Please run the migration: supabase/create_essay_analysis_results_table.sql",
           );
           console.warn("Analysis results saved to essays table as fallback.");
         } else {
@@ -1607,10 +1675,10 @@ export const gradeEssay = async (
       // Table might not exist - that's okay, we saved to essays table
       console.warn(
         "Could not save to essay_analysis_results table:",
-        tableError
+        tableError,
       );
       console.warn(
-        "Analysis results saved to essays table. Please run migration to enable full features."
+        "Analysis results saved to essays table. Please run migration to enable full features.",
       );
     }
 
@@ -1629,7 +1697,7 @@ export const gradeEssay = async (
 
       // Create notification with metadata including studentId for fetching all results
       await supabase.from("notifications").insert({
-        teacher_id: teacherId,
+        user_id: teacherId,
         type: "essay_graded",
         title: "Essay Graded",
         message: `${studentName}'s essay for "${activityTitle}" has been graded successfully.`,
@@ -1659,7 +1727,7 @@ export const gradeEssay = async (
 // Fetch analysis results for an essay
 export const fetchEssayAnalysis = async (
   studentId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{
   analysis: Omit<import("../types/Essay").AnalysisResponse, "essay_id">;
   text: string;
@@ -1716,7 +1784,7 @@ export const fetchEssayAnalysis = async (
     } catch {
       // Table might not exist - will fall back to essays.analysis_payload
       console.log(
-        "essay_analysis_results table not accessible, using fallback"
+        "essay_analysis_results table not accessible, using fallback",
       );
       analysisError = { code: "TABLE_NOT_FOUND" };
     }
@@ -1747,7 +1815,7 @@ export const fetchEssayAnalysis = async (
               const blob = await response.blob();
               const file = new File(
                 [blob],
-                fallbackEssay.file_path.split("/").pop() || "essay.pdf"
+                fallbackEssay.file_path.split("/").pop() || "essay.pdf",
               );
               const { ocrApi } = await import("../api");
               const ocrResult = await ocrApi.extractTextFromFile(file);
@@ -1806,12 +1874,12 @@ export const fetchEssayAnalysis = async (
       ).rubric_scores = analysisData.rubric_scores;
       console.log(
         "[fetchEssayAnalysis] Found rubric_scores:",
-        analysisData.rubric_scores
+        analysisData.rubric_scores,
       );
     } else {
       console.log(
         "[fetchEssayAnalysis] No rubric_scores in analysis data. Analysis data keys:",
-        Object.keys(analysisData)
+        Object.keys(analysisData),
       );
       // If rubric_scores is missing but we have a rubric_id, try to fetch it from the activity
       if (analysisData.activity_id) {
@@ -1824,7 +1892,7 @@ export const fetchEssayAnalysis = async (
         if (activity?.rubric_id) {
           console.log(
             "[fetchEssayAnalysis] Activity has rubric_id but analysis missing rubric_scores. Rubric ID:",
-            activity.rubric_id
+            activity.rubric_id,
           );
         }
       }
@@ -1845,7 +1913,7 @@ export const fetchEssayAnalysis = async (
 
 // Fetch all analysis results for a student (useful for notifications)
 export const fetchStudentAnalysisResults = async (
-  studentId: string
+  studentId: string,
 ): Promise<
   Array<{
     analysis: import("../types/Essay").TextAnalysisResponse;
@@ -1878,7 +1946,7 @@ export const fetchStudentAnalysisResults = async (
         `
         *,
         essays!inner(id, title, activity_id)
-      `
+      `,
       )
       .eq("student_id", studentDbId)
       .order("generated_at", { ascending: false });
@@ -1939,7 +2007,7 @@ export const fetchStudentAnalysisResults = async (
           activityId: String(essay?.activity_id || ""),
           generatedAt: result.generated_at || new Date().toISOString(),
         };
-      }
+      },
     );
   } catch (err) {
     console.error("Error fetching student analysis results:", err);
@@ -2058,7 +2126,7 @@ const processSimilarityGroups = (
     essays?: unknown;
     id?: number;
   }>,
-  textField: "original_text" | "content"
+  textField: "original_text" | "content",
 ): DuplicateEssayGroup[] => {
   // Get all texts
   const essayTexts = new Map<number, string>();
@@ -2179,7 +2247,7 @@ const processSimilarityGroups = (
 
 // Detect duplicate essays across different programs for an activity
 export const fetchDuplicateEssays = async (
-  activityId: string
+  activityId: string,
 ): Promise<DuplicateEssayGroup[]> => {
   try {
     const activityDbId = parseInt(activityId, 10);
@@ -2199,33 +2267,37 @@ export const fetchDuplicateEssays = async (
           id,
           title,
           submitted_at,
+          section_id,
           students!inner(
             id,
-            full_name,
-            sections!inner(
+            first_name,
+            middle_name,
+            last_name
+          ),
+          sections!inner(
+            id,
+            name,
+            program_id,
+            programs_lookup!inner(
               id,
-              name,
-              programs!inner(
-                id,
-                name
-              )
+              name
             )
           )
         )
-      `
+      `,
       )
       .eq("activity_id", activityDbId);
 
     if (error) {
       console.error(
         "[fetchDuplicateEssays] Error fetching analysis results:",
-        error
+        error,
       );
     }
 
     if (!analysisResults || analysisResults.length === 0) {
       console.log(
-        `[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`
+        `[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`,
       );
       // Try fallback: fetch from essays table if essay_analysis_results doesn't exist
       const { data: essaysData, error: essaysError } = await supabase
@@ -2236,38 +2308,42 @@ export const fetchDuplicateEssays = async (
           title,
           submitted_at,
           content,
+          section_id,
           students!inner(
             id,
-            full_name,
-            sections!inner(
+            first_name,
+            middle_name,
+            last_name
+          ),
+          sections!inner(
+            id,
+            name,
+            program_id,
+            programs_lookup!inner(
               id,
-              name,
-              programs!inner(
-                id,
-                name
-              )
+              name
             )
           )
-        `
+        `,
         )
         .eq("activity_id", activityDbId);
 
       if (essaysError) {
         console.error(
           "[fetchDuplicateEssays] Error fetching essays:",
-          essaysError
+          essaysError,
         );
       }
 
       if (!essaysData || essaysData.length === 0) {
         console.log(
-          `[fetchDuplicateEssays] No essays found for activity ${activityDbId}`
+          `[fetchDuplicateEssays] No essays found for activity ${activityDbId}`,
         );
         return [];
       }
 
       console.log(
-        `[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`
+        `[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`,
       );
 
       // Try to use essays.content if available
@@ -2276,16 +2352,20 @@ export const fetchDuplicateEssays = async (
         title: string;
         submitted_at: string;
         content?: string | null;
+        section_id?: number | null;
         students?: {
           id: number;
-          full_name: string;
-          sections?: {
-            id: number;
+          first_name: string;
+          middle_name: string | null;
+          last_name: string;
+        };
+        sections?: {
+          id: number;
+          name: string;
+          program_id?: string | null;
+          programs_lookup?: {
+            id: string;
             name: string;
-            programs?: {
-              id: number;
-              name: string;
-            };
           };
         };
       };
@@ -2296,7 +2376,7 @@ export const fetchDuplicateEssays = async (
 
       if (essaysWithContent.length < 2) {
         console.log(
-          `[fetchDuplicateEssays] Not enough essays with content for comparison (need at least 2, found ${essaysWithContent.length})`
+          `[fetchDuplicateEssays] Not enough essays with content for comparison (need at least 2, found ${essaysWithContent.length})`,
         );
         return [];
       }
@@ -2311,8 +2391,8 @@ export const fetchDuplicateEssays = async (
         }
 
         const student = essay.students;
-        const section = student?.sections;
-        const program = section?.programs;
+        const section = essay.sections;
+        const program = section?.programs_lookup;
 
         if (!student || !section || !program) {
           continue;
@@ -2321,7 +2401,7 @@ export const fetchDuplicateEssays = async (
         const essayInfo = {
           essayId: essay.id,
           studentId: student.id,
-          studentName: student.full_name || "Unknown",
+          studentName: buildFullNameFromObject(student, "Unknown"),
           programName: program.name || "Unknown",
           sectionName: section.name || "Unknown",
           title: essay.title || "Untitled",
@@ -2342,7 +2422,7 @@ export const fetchDuplicateEssays = async (
           id: e.id,
           content: e.content || null,
         })),
-        "content"
+        "content",
       );
     }
 
@@ -2360,16 +2440,20 @@ export const fetchDuplicateEssays = async (
         id: number;
         title: string;
         submitted_at: string;
+        section_id?: number | null;
         students?: {
           id: number;
-          full_name: string;
-          sections?: {
-            id: number;
+          first_name: string;
+          middle_name: string | null;
+          last_name: string;
+        };
+        sections?: {
+          id: number;
+          name: string;
+          program_id?: string | null;
+          programs_lookup?: {
+            id: string;
             name: string;
-            programs?: {
-              id: number;
-              name: string;
-            };
           };
         };
       };
@@ -2391,8 +2475,8 @@ export const fetchDuplicateEssays = async (
 
       // Type guard to ensure essayData is not null
       const student = essayData.students;
-      const section = student?.sections;
-      const program = section?.programs;
+      const section = essayData.sections;
+      const program = section?.programs_lookup;
 
       if (!student || !section || !program) {
         continue;
@@ -2401,7 +2485,7 @@ export const fetchDuplicateEssays = async (
       const essayInfo = {
         essayId: essayData.id,
         studentId: student.id,
-        studentName: student.full_name || "Unknown",
+        studentName: buildFullNameFromObject(student, "Unknown"),
         programName: program.name || "Unknown",
         sectionName: section.name || "Unknown",
         title: essayData.title || "Untitled",
@@ -2424,7 +2508,7 @@ export const fetchDuplicateEssays = async (
         original_text: r.original_text,
         essays: r.essays,
       })),
-      "original_text"
+      "original_text",
     );
 
     return duplicateGroups;
@@ -2488,7 +2572,7 @@ export interface ComparisonAnalysis {
 
 // Fetch all students who submitted essays for an activity
 export const fetchStudentsForActivity = async (
-  activityId: string
+  activityId: string,
 ): Promise<
   Array<{
     id: string;
@@ -2513,19 +2597,23 @@ export const fetchStudentsForActivity = async (
         `
         id,
         student_id,
+        section_id,
         students!inner(
           id,
-          full_name,
-          sections!inner(
+          first_name,
+          middle_name,
+          last_name
+        ),
+        sections!inner(
+          id,
+          name,
+          program_id,
+          programs_lookup!inner(
             id,
-            name,
-            programs!inner(
-              id,
-              name
-            )
+            name
           )
         )
-      `
+      `,
       )
       .eq("activity_id", activityDbId);
 
@@ -2539,30 +2627,34 @@ export const fetchStudentsForActivity = async (
     type EssayWithStudentData = {
       id: number;
       student_id: number;
+      section_id: number | null;
       students: {
         id: number;
-        full_name: string | null;
-        sections: {
-          id: number;
+        first_name: string;
+        middle_name: string | null;
+        last_name: string;
+      };
+      sections: {
+        id: number;
+        name: string;
+        program_id: string | null;
+        programs_lookup: {
+          id: string;
           name: string;
-          programs: {
-            id: number;
-            name: string;
-          };
         };
       };
     };
 
     return (essaysData as unknown as EssayWithStudentData[]).map((essay) => {
       const student = essay.students;
-      const section = student?.sections;
-      const program = section?.programs;
+      const section = essay.sections;
+      const program = section?.programs_lookup;
 
       return {
         id: String(student.id),
         studentId: student.id,
         essayId: essay.id,
-        name: student.full_name || "Unknown",
+        name: buildFullNameFromObject(student, "Unknown"),
         programName: program?.name || "Unknown",
         sectionName: section?.name || "Unknown",
         hasEssay: true,
@@ -2577,7 +2669,7 @@ export const fetchStudentsForActivity = async (
 // Fetch essay texts for multiple students at once (for comparison)
 export const fetchEssayTextsForStudents = async (
   studentIds: number[],
-  activityId: string
+  activityId: string,
 ): Promise<
   Array<{
     studentId: number;
@@ -2595,7 +2687,9 @@ export const fetchEssayTextsForStudents = async (
     // Fetch essays for these students
     const { data: essaysData, error: essaysError } = await supabase
       .from("essays")
-      .select("id, student_id, students!inner(id, full_name)")
+      .select(
+        "id, student_id, students!inner(id, first_name, middle_name, last_name)",
+      )
       .eq("activity_id", activityDbId)
       .in("student_id", studentIds);
 
@@ -2609,7 +2703,9 @@ export const fetchEssayTextsForStudents = async (
       student_id: number;
       students: {
         id: number;
-        full_name: string;
+        first_name: string;
+        middle_name: string | null;
+        last_name: string;
       };
     };
 
@@ -2619,7 +2715,7 @@ export const fetchEssayTextsForStudents = async (
     };
 
     const essayIds = (essaysData as unknown as EssayWithStudent[]).map(
-      (e) => e.id
+      (e) => e.id,
     );
 
     // Fetch original_text from essay_analysis_results
@@ -2652,9 +2748,9 @@ export const fetchEssayTextsForStudents = async (
           studentId: essay.student_id,
           text: textMap.get(essay.id) || "",
           essayId: essay.id,
-          studentName: student?.full_name || "Unknown",
+          studentName: buildFullNameFromObject(student, "Unknown"),
         };
-      }
+      },
     );
 
     return results;
@@ -2667,7 +2763,7 @@ export const fetchEssayTextsForStudents = async (
 // Fetch essay text content for comparison
 export const fetchEssayText = async (
   studentId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{ text: string; essayId: number } | null> => {
   try {
     const studentDbId = parseInt(studentId, 10);
@@ -2715,7 +2811,7 @@ export const fetchEssayText = async (
 
 // Save comparison analysis
 export const saveComparisonAnalysis = async (
-  comparison: ComparisonAnalysis
+  comparison: ComparisonAnalysis,
 ): Promise<{ success: boolean; id?: number; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -2732,7 +2828,7 @@ export const saveComparisonAnalysis = async (
       .from("essay_comparisons")
       .insert({
         activity_id: activityDbId,
-        teacher_id: teacherId,
+        user_id: teacherId,
         student_ids: comparison.studentIds,
         essay_ids: comparison.essayIds,
         insights: comparison.insights,
@@ -2759,7 +2855,7 @@ export const saveComparisonAnalysis = async (
 
 // Fetch comparison history for an activity
 export const fetchComparisonHistory = async (
-  activityId: string
+  activityId: string,
 ): Promise<ComparisonAnalysis[]> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -2776,7 +2872,7 @@ export const fetchComparisonHistory = async (
       .from("essay_comparisons")
       .select("*")
       .eq("activity_id", activityDbId)
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .order("created_at", { ascending: false });
 
     if (error || !data) {
@@ -2787,7 +2883,7 @@ export const fetchComparisonHistory = async (
     type EssayComparisonRow = {
       id: number;
       activity_id: number;
-      teacher_id: number;
+      user_id: number;
       student_ids: number[];
       essay_ids: number[];
       insights: string;
@@ -2816,7 +2912,7 @@ export const fetchComparisonHistory = async (
 // Analyze essays for similarity using LLM (calls backend API)
 export const analyzeEssaySimilarity = async (
   essayTexts: string[],
-  studentNames: string[]
+  studentNames: string[],
 ): Promise<{
   insights: string;
   highlights: ComparisonHighlight[];
@@ -2938,22 +3034,26 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
         essays!inner(
           id,
           submitted_at,
+          section_id,
           students!inner(
             id,
-            full_name,
-            sections!inner(
+            first_name,
+            middle_name,
+            last_name
+          ),
+          sections!inner(
+            id,
+            name,
+            program_id,
+            programs_lookup!inner(
               id,
-              name,
-              programs!inner(
-                id,
-                name
-              )
+              name
             )
           )
         )
-      `
+      `,
       )
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .order("generated_at", { ascending: false });
 
     if (analysisError) {
@@ -3018,7 +3118,7 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
       }
     }
     const sectionPerformance: SectionPerformanceData[] = Array.from(
-      sectionMap.entries()
+      sectionMap.entries(),
     ).map(([section, data]) => ({
       section,
       avgScore: data.count > 0 ? data.total / data.count : 0,
@@ -3134,14 +3234,16 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
       type EssayWithStudent = {
         students?: {
           id?: number;
-          full_name?: string;
+          first_name?: string;
+          middle_name?: string | null;
+          last_name?: string;
         };
       };
       const essay = result.essays as EssayWithStudent | null | undefined;
       const student = essay?.students;
       if (student?.id && result.overall_score !== null) {
         const existing = studentScores.get(student.id) || {
-          name: student.full_name || "Unknown",
+          name: buildFullNameFromObject(student, "Unknown"),
           scores: [],
           essayCount: 0,
         };
@@ -3154,7 +3256,7 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
       .map(([, data]) => ({
         name: data.name,
         avgScore: Math.round(
-          data.scores.reduce((a, b) => a + b, 0) / data.scores.length
+          data.scores.reduce((a, b) => a + b, 0) / data.scores.length,
         ),
         essays: data.essayCount,
         improvement: "+" + Math.round(Math.random() * 5) + "%", // Placeholder
@@ -3166,7 +3268,7 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
     const atRiskStudents = Array.from(studentScores.entries())
       .map(([, data]) => {
         const avgScore = Math.round(
-          data.scores.reduce((a, b) => a + b, 0) / data.scores.length
+          data.scores.reduce((a, b) => a + b, 0) / data.scores.length,
         );
         const issues: string[] = [];
         // Determine issues based on scores
@@ -3227,7 +3329,7 @@ export const savePlagiarismResult = async (
     | string
     | import("../api").PlagiarismCheckResponse
     | undefined,
-  plagiarismResult?: import("../api").PlagiarismCheckResponse
+  plagiarismResult?: import("../api").PlagiarismCheckResponse,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     let essayId: number;
@@ -3300,7 +3402,7 @@ export const savePlagiarismResult = async (
       console.error(
         "Essay analysis results row not found for essay_id:",
         essayId,
-        checkError
+        checkError,
       );
       return {
         success: false,
@@ -3329,7 +3431,7 @@ export const savePlagiarismResult = async (
     if (!updateData || updateData.length === 0) {
       console.error(
         "Update succeeded but no rows were updated for essay_id:",
-        essayId
+        essayId,
       );
       return {
         success: false,
@@ -3352,7 +3454,7 @@ export const savePlagiarismResult = async (
 // Can be called with either (studentId, activityId) or essayId
 export const loadPlagiarismResult = async (
   studentIdOrEssayId: string | number,
-  activityId?: string
+  activityId?: string,
 ): Promise<import("../api").PlagiarismCheckResponse | null> => {
   try {
     let essayId: number;

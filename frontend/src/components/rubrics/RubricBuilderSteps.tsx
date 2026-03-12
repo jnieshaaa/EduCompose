@@ -29,16 +29,16 @@ export function RubricDetailsForm({
     "Technical",
   ] as const;
   const [programs, setPrograms] = useState<Array<{ id: number; name: string }>>(
-    []
+    [],
   );
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
 
-  // Fetch programs from Supabase
+  // Fetch programs from Supabase  - using programs_lookup
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
         const { data, error } = await supabase
-          .from("programs")
+          .from("programs_lookup")
           .select("id, name")
           .order("name", { ascending: true });
 
@@ -205,7 +205,7 @@ export function RubricCriteriaEditor({
   onBack,
 }: RubricCriteriaEditorProps) {
   const [activeSubTab, setActiveSubTab] = useState<"create" | "preview">(
-    "create"
+    "create",
   );
   const criteriaList = formData.criteria;
 
@@ -235,7 +235,7 @@ export function RubricCriteriaEditor({
   const handleCriteriaTitleChange = (criteriaId: number, newTitle: string) => {
     onFormChange({
       criteria: criteriaList.map((c) =>
-        c.id === criteriaId ? { ...c, title: newTitle } : c
+        c.id === criteriaId ? { ...c, title: newTitle } : c,
       ),
     });
   };
@@ -280,7 +280,7 @@ export function RubricCriteriaEditor({
     criteriaId: number,
     scoreId: number,
     field: keyof ScoreLevel,
-    value: string | number
+    value: string | number,
   ) => {
     onFormChange({
       criteria: criteriaList.map((criteria) => {
@@ -288,7 +288,7 @@ export function RubricCriteriaEditor({
           return {
             ...criteria,
             scores: criteria.scores.map((score) =>
-              score.id === scoreId ? { ...score, [field]: value } : score
+              score.id === scoreId ? { ...score, [field]: value } : score,
             ),
           };
         }
@@ -378,7 +378,7 @@ export function RubricCriteriaEditor({
                             criteria.id,
                             score.id,
                             "title",
-                            value
+                            value,
                           )
                         }
                         className="font-medium p-2 text-center flex-grow"
@@ -391,7 +391,7 @@ export function RubricCriteriaEditor({
                             criteria.id,
                             score.id,
                             "points",
-                            parseInt(value) || 0
+                            parseInt(value) || 0,
                           )
                         }
                         className="w-12 text-center p-2"
@@ -415,7 +415,7 @@ export function RubricCriteriaEditor({
                           criteria.id,
                           score.id,
                           "description",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />

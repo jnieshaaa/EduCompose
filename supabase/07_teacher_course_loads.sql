@@ -7,9 +7,11 @@ CREATE TABLE IF NOT EXISTS teacher_course_loads (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     teacher_id  uuid NOT NULL REFERENCES users(auth_user_id) ON DELETE CASCADE,
     course_id   uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    block_id    uuid REFERENCES blocks(id) ON DELETE SET NULL,
     created_at  timestamptz NOT NULL DEFAULT now(),
     UNIQUE(teacher_id, course_id)
 );
+
 
 -- Enable RLS
 ALTER TABLE teacher_course_loads ENABLE ROW LEVEL SECURITY;

@@ -37,7 +37,7 @@ const getTeacherId = async (): Promise<number | null> => {
 };
 
 type SupabaseProgramRow = {
-  id: number;
+  id: string; // UUID from programs_lookup table
   name: string;
 };
 
@@ -73,10 +73,9 @@ export function usePrograms() {
         }
 
         const { data, error } = await supabase
-          .from("programs")
+          .from("programs_lookup")
           .select("id, name")
-          .eq("created_by", teacherId)
-          .order("id", { ascending: true });
+          .order("name", { ascending: true });
 
         if (error) {
           console.error("Error loading programs from Supabase:", error);
@@ -235,14 +234,15 @@ export function usePrograms() {
         return;
       }
 
-      // 4. Insert into Supabase with created_by (batch insert)
+      // 4. Insert into Supabase (batch insert) - programs_lookup doesn't use created_by
       const programsToInsert = uniqueToInsert.map((program) => ({
         name: program.name,
-        created_by: teacherId,
+        department_id: null, // TODO: Set appropriate department_id
+        abbr: program.name.substring(0, 10).toUpperCase(), // Generate abbreviation
       }));
 
       const { data, error } = await supabase
-        .from("programs")
+        .from("programs_lookup")
         .insert(programsToInsert)
         .select();
 
@@ -336,15 +336,16 @@ export function usePrograms() {
           return;
         }
 
-        // Prepare programs for Supabase insertion
+        // Prepare programs for Supabase insertion - programs_lookup doesn't use created_by
         const programsToInsert = importedPrograms.map((program) => ({
           name: program.name.trim(),
-          created_by: teacherId,
+          department_id: null, // TODO: Set appropriate department_id
+          abbr: program.name.trim().substring(0, 10).toUpperCase(),
         }));
 
         // Insert all programs into Supabase
         const { data: insertedPrograms, error } = await supabase
-          .from("programs")
+          .from("programs_lookup")
           .insert(programsToInsert)
           .select();
 
@@ -387,7 +388,7 @@ export function usePrograms() {
         onConfirm: async () => {
           try {
             const { error } = await supabase
-              .from("programs")
+              .from("programs_lookup")
               .delete()
               .eq("id", program.id);
 

@@ -15,6 +15,7 @@ import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherId } from "../../services/rubricService";
 import { fetchCourses, fetchSections } from "../../services/activityService";
+import { buildFullNameFromObject } from "../../utils/nameUtils";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -105,7 +106,6 @@ interface DashboardData {
 
 // No longer using these legacy interfaces
 
-
 interface EssayRow {
   id: number;
   title: string;
@@ -128,10 +128,11 @@ interface AnalysisResultRow {
 
 // No longer using these legacy interfaces
 
-
 interface StudentNameRow {
   id: number;
-  full_name: string | null;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
 }
 
 export function DashboardTab() {
@@ -155,12 +156,18 @@ export function DashboardTab() {
           await supabase
             .from("essay_activities")
             .select("id, course_id, section_id")
-            .eq("teacher_id", teacherId);
+            .eq("user_id", teacherId);
 
         if (activitiesError) throw activitiesError;
 
         const typedTeacherActivities =
-          (teacherActivities as { id: number; course_id: string | null; section_id: string | null }[] | null) || [];
+          (teacherActivities as
+            | {
+                id: number;
+                course_id: string | null;
+                section_id: string | null;
+              }[]
+            | null) || [];
 
         const courseIds = [
           ...new Set(
@@ -187,20 +194,19 @@ export function DashboardTab() {
         ] = await Promise.all([
           fetchCourses(),
           fetchSections(),
-          // Get students in teacher's sections
+          // Get students in teacher's sections through block_students junction table
           supabase
-            .from("students")
-            .select("id, section_id, program_id")
+            .from("block_students")
+            .select("student_id, block_id")
             .then(({ data, error }) => {
               if (error) throw error;
-              const typedStudents = (data as { id: number; section_id: number | null; program_id: number | null }[] | null) || [];
+              const enrollments =
+                (data as { student_id: number; block_id: string }[] | null) ||
+                [];
               if (sectionIds.length > 0) {
-                // sectionIds are strings in typedTeacherActivities, but numbers in students table
-                const numericSectionIds = sectionIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-                return typedStudents.filter(
-                  (student) =>
-                    student.section_id !== null &&
-                    numericSectionIds.includes(student.section_id),
+                // Filter enrollments to only include teacher's sections
+                return enrollments.filter((enrollment) =>
+                  sectionIds.includes(enrollment.block_id),
                 );
               }
               return [];
@@ -238,14 +244,10 @@ export function DashboardTab() {
         ]);
 
         // Get activity IDs for the teacher
-        const { data: activityIdsData, error: activityIdsError } =
-          await supabase
-            .from("essay_activities")
-            .select("id")
-            .eq("teacher_id", teacherId);
-
-        if (activityIdsError) throw activityIdsError;
-
+        const { data: activityIdsData } = await supabase
+          .from("essay_activities")
+          .select("id")
+          .eq("user_id", teacherId);
         const activityIds = (
           (activityIdsData as Array<{ id: number }> | null) || []
         ).map((activity) => activity.id);
@@ -257,10 +259,18 @@ export function DashboardTab() {
             activityIds.includes(essay.activity_id),
         );
 
-        const teacherCourses = allCourses.filter(c => courseIds.includes(c.id));
-        const teacherSections = allSections.filter(s => sectionIds.includes(s.id));
+        const teacherCourses = allCourses.filter((c) =>
+          courseIds.includes(c.id),
+        );
+        const teacherSections = allSections.filter((s) =>
+          sectionIds.includes(s.id),
+        );
 
-        const totalStudents = studentsData?.length || 0;
+        // Count unique students from enrollments
+        const uniqueStudentIds = new Set(
+          studentsData?.map((enrollment) => enrollment.student_id) || [],
+        );
+        const totalStudents = uniqueStudentIds.size;
 
         // Calculate essay statistics
         const essaysSubmitted = teacherEssays.length;
@@ -352,14 +362,17 @@ export function DashboardTab() {
         ];
         const { data: students, error: studentsErr } = await supabase
           .from("students")
-          .select("id, full_name")
+          .select("id, first_name, middle_name, last_name")
           .in("id", studentIds);
 
         if (studentsErr) throw studentsErr;
 
         const typedStudents = (students as StudentNameRow[] | null) || [];
         const studentMap = new Map(
-          typedStudents.map((student) => [student.id, student.full_name]),
+          typedStudents.map((student) => [
+            student.id,
+            buildFullNameFromObject(student, `Student ${student.id}`),
+          ]),
         );
 
         const recentActivity = recentEssays.map((essay) => {

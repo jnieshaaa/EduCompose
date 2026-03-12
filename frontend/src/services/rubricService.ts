@@ -54,8 +54,9 @@ export const fetchTeacherRubrics = async (
       .select(
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
-      .eq("created_by", teacherId)
+      .eq("user_id", teacherId)
       .order("created_at", { ascending: false });
+
 
     if (rubricsError) {
       console.error("Error loading rubrics:", rubricsError);
@@ -115,7 +116,7 @@ export const savePlatformRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .is("created_by", null) // Platform rubrics
+    .is("user_id", null) // Platform rubrics
     .ilike("name", rubricName);
 
   if (checkError) {
@@ -139,10 +140,11 @@ export const savePlatformRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      created_by: null, // Platform rubric
+      user_id: null, // Platform rubric
     })
     .select()
     .single();
+
 
   if (error) {
     console.error("Error saving platform rubric:", error);
@@ -168,7 +170,7 @@ export const saveRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("created_by", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -193,7 +195,7 @@ export const saveRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      created_by: teacherId,
+      user_id: teacherId,
     })
     .select()
     .single();
@@ -222,7 +224,7 @@ export const saveTemplateRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("created_by", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -247,7 +249,7 @@ export const saveTemplateRubric = async (
       criteria: rubric.criteria,
       programs: [], // Template rubrics don't have specific programs
       grading_intensity: rubric.type, // Use type as intensity
-      created_by: teacherId,
+      user_id: teacherId,
     })
     .select()
     .single();
@@ -287,7 +289,7 @@ export const updateRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("created_by", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -317,7 +319,7 @@ export const updateRubric = async (
       grading_intensity: rubricFormData.gradingIntensity,
     })
     .eq("id", rubricId)
-    .eq("created_by", teacherId) // Ensure only the owner can update
+    .eq("user_id", teacherId) // Ensure only the owner can update
     .select()
     .single();
 

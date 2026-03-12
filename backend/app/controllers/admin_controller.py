@@ -361,8 +361,8 @@ async def get_system_stats(
         }
         
         async with httpx.AsyncClient() as client:
-            # Programs
-            programs_resp = await client.get(f"{base_url}/programs?select=id&limit=1", headers=headers)
+            # Programs (from programs_lookup table)
+            programs_resp = await client.get(f"{base_url}/programs_lookup?select=id&limit=1", headers=headers)
             total_programs = int(programs_resp.headers.get("content-range", "0").split("/")[-1]) if "content-range" in programs_resp.headers else 0
             
             # Sections
@@ -409,7 +409,7 @@ async def get_system_stats(
 async def get_all_programs(
     current_user: User = Depends(require_admin)
 ):
-    """Get all programs across the platform (admin only)"""
+    """Get all programs across the platform (admin only) - uses programs_lookup table"""
     try:
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -419,7 +419,7 @@ async def get_all_programs(
         
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{supabase_url}/rest/v1/programs?select=*&order=created_at.desc",
+                f"{supabase_url}/rest/v1/programs_lookup?select=*,departments(name,school_id,schools(name))&order=created_at.desc",
                 headers={
                     "apikey": supabase_service_role_key,
                     "Authorization": f"Bearer {supabase_service_role_key}",

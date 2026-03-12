@@ -18,6 +18,8 @@ from .auth_schemas import (
     TeacherRegisterRequest,
     VerifySignupRequest,
     ResendSignupCodeRequest,
+    TeacherProvisionStudentRequest,
+    TeacherProvisionStudentResponse,
 )
 from .user_schemas import (
     UserBase,
@@ -58,6 +60,8 @@ __all__ = [
     "TeacherRegisterRequest",
     "VerifySignupRequest",
     "ResendSignupCodeRequest",
+    "TeacherProvisionStudentRequest",
+    "TeacherProvisionStudentResponse",
     "UserBase",
     "UserCreate",
     "UserResponse",

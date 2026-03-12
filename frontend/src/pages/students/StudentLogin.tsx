@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
   DESIGN_MODE_ENABLED,
   DESIGN_MODE_TOKEN,
   DESIGN_MODE_USER,
-} from "../contexts/AuthContext";
-import { supabase } from "../lib/supabaseClient";
+} from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabaseClient";
 
 // Minimal typed shape for Supabase user metadata
 interface UserMetadata {
@@ -17,17 +17,95 @@ interface UserMetadata {
   [key: string]: unknown;
 }
 
+interface StudentRow {
+  id: number;
+  student_code: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  email: string | null;
+  is_active: boolean;
+}
+
+interface StudentLoginLookup {
+  student_id: number;
+  student_code: string;
+  email: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  is_active: boolean;
+}
+
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
+  const [studentCode, setStudentCode] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const buildStudentName = (
+    student: Pick<
+      StudentRow,
+      "first_name" | "middle_name" | "last_name" | "student_code" | "email"
+    >,
+  ) => {
+    const parts = [student.first_name, student.middle_name, student.last_name]
+      .map((value) => value?.trim())
+      .filter(Boolean);
+    return (
+      parts.join(" ") || student.student_code || student.email || "Student"
+    );
+  };
+
+  const handleForgotPassword = async () => {
+    const normalizedStudentCode = studentCode.trim();
+    if (!normalizedStudentCode) {
+      setError("Enter your student code first so we can send a reset link.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    try {
+      const { data: studentIdentity, error: lookupError } = await supabase
+        .rpc("get_student_login_email", {
+          p_student_code: normalizedStudentCode,
+        })
+        .maybeSingle<StudentLoginLookup>();
+
+      if (lookupError) {
+        throw lookupError;
+      }
+
+      if (!studentIdentity?.email) {
+        setError(
+          "Student code not found or no email is assigned to this student.",
+        );
+        return;
+      }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        studentIdentity.email,
+        {
+          redirectTo: `${window.location.origin}/`,
+        },
+      );
+
+      if (resetError) {
+        throw resetError;
+      }
+
+      setError("Password reset link sent. Please check your email.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || "Failed to send reset link.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) {
@@ -36,8 +114,8 @@ const Login: React.FC = () => {
 
     setError("");
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter both email and password");
+    if (!studentCode.trim() || !password.trim()) {
+      setError("Please enter both student code and password");
       return;
     }
 
@@ -45,63 +123,37 @@ const Login: React.FC = () => {
 
     try {
       if (DESIGN_MODE_ENABLED) {
-        login(DESIGN_MODE_TOKEN, DESIGN_MODE_USER);
-        navigate("/Teacher/Dashboard");
+        login(DESIGN_MODE_TOKEN, { ...DESIGN_MODE_USER, role: "student" });
+        navigate("/Student/Dashboard");
         return;
       }
 
-      if (mode === "signup") {
-        // Validate password match
-        if (password !== confirmPassword) {
-          setError("Passwords do not match");
-          setIsLoading(false);
-          return;
-        }
+      const normalizedStudentCode = studentCode.trim();
 
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password.trim(),
-          options: {
-            data: {
-              full_name: email.trim().split("@")[0],
-              role: "teacher",
-            },
-          },
-        });
+      const { data: studentIdentity, error: lookupError } = await supabase
+        .rpc("get_student_login_email", {
+          p_student_code: normalizedStudentCode,
+        })
+        .maybeSingle<StudentLoginLookup>();
 
-        if (error) {
-          throw error;
-        }
+      if (lookupError) {
+        throw lookupError;
+      }
 
-        // Depending on email confirmation settings, session may or may not exist immediately.
-        if (data.session && data.user) {
-          login(data.session.access_token, {
-            id: data.user.id,
-            email: data.user.email ?? "",
-            username: data.user.email ?? "",
-            full_name:
-              ((data.user.user_metadata as UserMetadata)?.full_name as
-                | string
-                | undefined) ??
-              data.user.email ??
-              "",
-            role: "teacher",
-            is_active: true,
-            email_verified: !!data.user.email_confirmed_at,
-          });
-          navigate("/Teacher/Dashboard");
-          return;
-        }
+      if (!studentIdentity?.email) {
+        setError("Invalid student code or password.");
+        return;
+      }
 
+      if (!studentIdentity.is_active) {
         setError(
-          "Sign-up successful. Please check your email to verify your account, then log in."
+          "Your student account is inactive. Please contact your teacher.",
         );
         return;
       }
 
-      // Login mode
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: studentIdentity.email,
         password: password.trim(),
       });
 
@@ -111,26 +163,31 @@ const Login: React.FC = () => {
 
       if (data.session && data.user) {
         login(data.session.access_token, {
-          id: data.user.id,
-          email: data.user.email ?? "",
-          username: data.user.email ?? "",
+          id: studentIdentity.student_id,
+          email: studentIdentity.email ?? data.user.email ?? "",
+          username: studentIdentity.student_code,
           full_name:
             ((data.user.user_metadata as UserMetadata)?.full_name as
               | string
               | undefined) ??
-            data.user.email ??
-            "",
-          role: "teacher",
-          is_active: true,
+            buildStudentName({
+              first_name: studentIdentity.first_name,
+              middle_name: studentIdentity.middle_name,
+              last_name: studentIdentity.last_name,
+              student_code: studentIdentity.student_code,
+              email: studentIdentity.email,
+            }),
+          role: "student",
+          is_active: studentIdentity.is_active,
           email_verified: !!data.user.email_confirmed_at,
         });
-        navigate("/Teacher/Dashboard");
+        navigate("/Student/Dashboard");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(
         message ||
-          "Authentication failed. Please check your credentials and try again."
+          "Authentication failed. Please check your credentials and try again.",
       );
     } finally {
       setIsLoading(false);
@@ -233,26 +290,26 @@ const Login: React.FC = () => {
                 </div>
               )}
 
-              {/* Email Input */}
+              {/* Student Code Input */}
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="studentCode"
                   className="block text-sm font-medium text-neutral-600 mb-2"
                 >
-                  Email
+                  Student Code
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
+                    id="studentCode"
+                    type="text"
+                    value={studentCode}
                     onChange={(e) => {
-                      setEmail(e.target.value);
+                      setStudentCode(e.target.value);
                       setError("");
                     }}
                     className="w-full pl-11 pr-4 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                    placeholder="Enter your email"
+                    placeholder="Enter your student code"
                   />
                 </div>
               </div>
@@ -290,49 +347,7 @@ const Login: React.FC = () => {
                     )}
                   </button>
                 </div>
-                {mode === "signup" && (
-                  <p className="text-xs text-neutral-500 mt-1">
-                    At least 6 characters, 1 uppercase, 1 lowercase, 1 number
-                  </p>
-                )}
               </div>
-
-              {/* Confirm Password Input - Only for Signup */}
-              {mode === "signup" && (
-                <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-neutral-600 mb-2"
-                  >
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                    <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        setError("");
-                      }}
-                      className="w-full pl-11 pr-12 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                      placeholder="Re-enter your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-900 hover:text-neutral-400"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Remember + Forgot */}
               <div className="flex items-center justify-between text-sm">
@@ -342,6 +357,7 @@ const Login: React.FC = () => {
                 </label>
                 <button
                   type="button"
+                  onClick={handleForgotPassword}
                   className="font-semibold text-primary-500 hover:text-primary-50 transition-colors"
                 >
                   Forgot password?
@@ -354,47 +370,11 @@ const Login: React.FC = () => {
                 disabled={isLoading}
                 className="w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading
-                  ? mode === "login"
-                    ? "Logging in..."
-                    : "Creating account..."
-                  : mode === "login"
-                  ? "Login"
-                  : "Sign up"}
+                {isLoading ? "Logging in..." : "Login"}
               </button>
             </form>
-
-            {/* Sign Up */}
             <p className="text-center text-neutral-900 text-sm mt-6">
-              {mode === "login" ? (
-                <>
-                  Don’t have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("signup");
-                      setError("");
-                    }}
-                    className="font-semibold text-primary-500 hover:text-primary-50 transition-colors"
-                  >
-                    Sign up now!
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setError("");
-                    }}
-                    className="font-semibold text-primary-500 hover:text-primary-50 transition-colors"
-                  >
-                    Login instead
-                  </button>
-                </>
-              )}
+              Student accounts are managed by your teacher/admin.
             </p>
           </div>
         </div>

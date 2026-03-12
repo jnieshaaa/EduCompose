@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import os
 import httpx
+import secrets
+import string
 
 from ..schemas import (
     LoginRequest,
@@ -24,11 +26,19 @@ from ..schemas import (
     TeacherRegisterRequest,
     VerifySignupRequest,
     ResendSignupCodeRequest,
+    TeacherProvisionStudentRequest,
+    TeacherProvisionStudentResponse,
 )
 from ..database import get_db
 from ..services import auth_service
 
 auth_router = APIRouter()
+
+
+def _generate_temp_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits
+    core = "".join(secrets.choice(alphabet) for _ in range(length))
+    return f"{core}Aa1!"
 
 @auth_router.post("/login", response_model=LoginResponse)
 async def login(
@@ -555,6 +565,111 @@ async def admin_create_user(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to connect to Supabase: {str(e)}"
+        )
+    except HTTPException:
+        raise
+
+
+@auth_router.post("/teacher/provision-student-account", response_model=TeacherProvisionStudentResponse)
+async def teacher_provision_student_account(
+    payload: TeacherProvisionStudentRequest,
+    current_user = Depends(auth_service.get_current_user),
+):
+    """
+    Create a Supabase Auth account for a student when teacher/admin enrolls them.
+
+    - Allowed roles: teacher, admin
+    - Creates auth user with role=student and student_code metadata
+    - Returns generated temporary password if account is newly created
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers or administrators can provision student accounts.",
+        )
+
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not supabase_service_role_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase configuration is missing.",
+        )
+
+    normalized_email = payload.email.strip().lower()
+    student_code = payload.student_code.strip().upper()
+    full_name = " ".join(
+        [
+            payload.first_name.strip(),
+            (payload.middle_name or "").strip(),
+            payload.last_name.strip(),
+        ]
+    ).strip()
+
+    temp_password = payload.password or _generate_temp_password()
+
+    try:
+        async with httpx.AsyncClient() as client:
+            create_response = await client.post(
+                f"{supabase_url}/auth/v1/admin/users",
+                headers={
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "email": normalized_email,
+                    "password": temp_password,
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "full_name": full_name,
+                        "first_name": payload.first_name.strip(),
+                        "middle_name": (payload.middle_name or "").strip() or None,
+                        "last_name": payload.last_name.strip(),
+                        "student_code": student_code,
+                        "role": "student",
+                    },
+                },
+                timeout=10.0,
+            )
+
+        if create_response.status_code in [200, 201]:
+            return TeacherProvisionStudentResponse(
+                success=True,
+                message="Student account created successfully.",
+                created=True,
+                temp_password=temp_password,
+                email=normalized_email,
+                student_code=student_code,
+            )
+
+        error_text = create_response.text.lower()
+        if create_response.status_code in [400, 409, 422] and (
+            "already" in error_text or "exists" in error_text or "registered" in error_text
+        ):
+            return TeacherProvisionStudentResponse(
+                success=True,
+                message="Student account already exists. Existing credentials remain unchanged.",
+                created=False,
+                temp_password=None,
+                email=normalized_email,
+                student_code=student_code,
+            )
+
+        raise HTTPException(
+            status_code=create_response.status_code,
+            detail=f"Failed to provision student account: {create_response.text}",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Request timeout while provisioning student account.",
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to connect to Supabase: {str(e)}",
         )
     except HTTPException:
         raise

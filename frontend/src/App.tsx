@@ -61,7 +61,7 @@ import ClickEffect from "./components/ClickEffect";
 import LandingPage from "./pages/LandingPage";
 import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
-import Login from "./pages/Login.tsx";
+import Login from "./pages/students/StudentLogin.tsx";
 import EmailConfirmation from "./pages/EmailConfirmation.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
@@ -105,17 +105,17 @@ const AppContent: React.FC = () => {
         <Route path="/Login" element={<Login />} />
         <Route path="/auth/confirm" element={<EmailConfirmation />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
-        
+
         {/* Onboarding Route (Protected but no onboarding check) */}
-        <Route 
-          path="/onboarding" 
+        <Route
+          path="/onboarding"
           element={
             <ProtectedRoute>
               <Onboarding />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+
         <Route path="*" element={<ErrorPage code={404} />} />
 
         {/* ======================================================= */}

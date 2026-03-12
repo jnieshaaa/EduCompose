@@ -1,0 +1,10 @@
+--------------------------------------------------------------------------------
+-- DEPRECATED - DO NOT USE
+-- This migration was for the old 'programs' table which has been removed
+-- The 'programs' table has been replaced by 'programs_lookup' table
+-- See: 05_school_management.sql and 10_cleanup_programs_teachers_tables.sql
+--------------------------------------------------------------------------------
+
+-- OLD MIGRATION (DEPRECATED):
+-- This removed fields from the old programs table
+-- The new programs_lookup table has a different structure

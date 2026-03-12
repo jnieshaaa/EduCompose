@@ -658,8 +658,10 @@ export const adminApi = {
         .from("users")
         .select("id", { count: "exact", head: true })
         .eq("role", "admin"),
-      supabase.from("programs").select("id", { count: "exact", head: true }),
-      supabase.from("sections").select("id", { count: "exact", head: true }),
+      supabase
+        .from("programs_lookup")
+        .select("id", { count: "exact", head: true }),
+      supabase.from("blocks").select("id", { count: "exact", head: true }),
       supabase
         .from("essay_activities")
         .select("id", { count: "exact", head: true }),
@@ -671,7 +673,7 @@ export const adminApi = {
     const { count: platformRubricsCount } = await supabase
       .from("rubrics")
       .select("id", { count: "exact", head: true })
-      .is("created_by", null);
+      .is("user_id", null);
 
     return {
       total_users: usersCount.count || 0,
@@ -689,7 +691,7 @@ export const adminApi = {
 
   getAllPrograms: async () => {
     const { data, error } = await supabase
-      .from("programs")
+      .from("programs_lookup")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -728,7 +730,7 @@ export const adminApi = {
 };
 
 // Dummy data for development - loaded from JSON file
-export const dummyData = dummyDataJson as {
+export const dummyData = dummyDataJson as unknown as {
   essays: Essay[];
   classes: Class[];
   students: Student[];

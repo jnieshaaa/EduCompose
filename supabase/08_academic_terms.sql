@@ -47,10 +47,15 @@ ALTER TABLE teacher_course_loads ADD COLUMN IF NOT EXISTS academic_year text;
 ALTER TABLE teacher_course_loads ADD COLUMN IF NOT EXISTS term text;
 
 -- Update unique constraint for teacher_course_loads
--- First remove the old one
+-- First remove the old ones
 ALTER TABLE teacher_course_loads DROP CONSTRAINT IF EXISTS teacher_course_loads_teacher_id_course_id_key;
--- Add new one
-ALTER TABLE teacher_course_loads ADD CONSTRAINT teacher_course_loads_unique_per_term UNIQUE(teacher_id, course_id, academic_year, term);
+ALTER TABLE teacher_course_loads DROP CONSTRAINT IF EXISTS teacher_course_loads_unique_per_term;
+-- Add new one that includes block_id
+ALTER TABLE teacher_course_loads ADD CONSTRAINT teacher_course_loads_unique_per_term UNIQUE(teacher_id, course_id, block_id, academic_year, term);
+
+-- Add index for block_id
+CREATE INDEX IF NOT EXISTS teacher_course_loads_block_id_idx ON teacher_course_loads(block_id);
+
 
 -- RLS for academic_settings
 ALTER TABLE academic_settings ENABLE ROW LEVEL SECURITY;

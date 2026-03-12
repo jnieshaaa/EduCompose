@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS essays (
   id                bigserial PRIMARY KEY,
   student_id        bigint      NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  teacher_id        bigint      REFERENCES users(id) ON DELETE SET NULL,
+  user_id           bigint      REFERENCES users(id) ON DELETE SET NULL,
   section_id        bigint      REFERENCES sections(id) ON DELETE SET NULL,
   activity_id       bigint      REFERENCES essay_activities(id) ON DELETE SET NULL,
   title             text        NOT NULL,
@@ -25,29 +25,33 @@ CREATE TABLE IF NOT EXISTS essays (
   analysis_payload        jsonb
 );
 
+-- Create index for user_id
+CREATE INDEX IF NOT EXISTS essays_user_id_idx ON essays(user_id);
+
 -- Enable Row Level Security
 ALTER TABLE essays ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
-CREATE POLICY "Teachers can view their own essays" 
+CREATE POLICY "Users can view their own essays" 
 ON essays FOR SELECT TO authenticated USING (
-  teacher_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
+  user_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
 );
 
-CREATE POLICY "Teachers can create essays" 
+CREATE POLICY "Users can create essays" 
 ON essays FOR INSERT TO authenticated WITH CHECK (
-  teacher_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
+  user_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
 );
 
-CREATE POLICY "Teachers can update their own essays" 
+CREATE POLICY "Users can update their own essays" 
 ON essays FOR UPDATE TO authenticated USING (
-  teacher_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
+  user_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
 ) WITH CHECK (
-  teacher_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
+  user_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
 );
 
-CREATE POLICY "Teachers can delete their own essays" 
+CREATE POLICY "Users can delete their own essays" 
 ON essays FOR DELETE TO authenticated USING (
-  teacher_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
+  user_id IN (SELECT id FROM users WHERE auth_user_id = auth.uid())
 );
+
 

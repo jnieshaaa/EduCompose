@@ -3,13 +3,13 @@ import type { Notification } from "../data/notificationsData";
 
 // Fetch notifications for a teacher
 export const fetchTeacherNotifications = async (
-  teacherId: number
+  teacherId: number,
 ): Promise<Notification[]> => {
   try {
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -40,14 +40,14 @@ export const fetchTeacherNotifications = async (
 // Mark notification as read
 export const markNotificationAsRead = async (
   notificationId: string,
-  teacherId: number
+  teacherId: number,
 ): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
       .eq("id", parseInt(notificationId, 10))
-      .eq("teacher_id", teacherId);
+      .eq("user_id", teacherId);
 
     if (error) {
       console.error("Error marking notification as read:", error);
@@ -63,13 +63,13 @@ export const markNotificationAsRead = async (
 
 // Mark all notifications as read
 export const markAllNotificationsAsRead = async (
-  teacherId: number
+  teacherId: number,
 ): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .eq("read", false);
 
     if (error) {
@@ -121,4 +121,3 @@ const formatTimestamp = (timestamp: string | Date): string => {
 
   return date.toLocaleDateString();
 };
-

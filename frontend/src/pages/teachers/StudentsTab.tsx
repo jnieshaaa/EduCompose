@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { Plus, GraduationCap, ChevronRight, Folder, Users } from "lucide-react";
+import { Plus, GraduationCap } from "lucide-react";
 import { BatchUploadDialog } from "../../components/ui/BatchUploadDialog";
 import { useAlert } from "../../hooks/useAlert";
 import { useStudents } from "../../hooks/useStudents";
@@ -22,7 +22,6 @@ export function StudentsTab() {
   // Read filters from URL params (for drill-down from Sections)
   const urlProgramFilter = searchParams.get("program");
   const urlSectionFilter = searchParams.get("section");
-  const urlCourseId = searchParams.get("courseId");
   const urlCourseCode = searchParams.get("courseCode");
 
   const {
@@ -64,51 +63,6 @@ export function StudentsTab() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      {/* Breadcrumbs */}
-      {(urlCourseCode || urlProgramFilter || urlSectionFilter) && (
-        <nav className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-          <button 
-            onClick={() => navigate('/Teacher/Courses')}
-            className="hover:text-primary transition-colors flex items-center gap-1"
-          >
-            <Folder size={12} />
-            Courses
-          </button>
-          
-          {urlCourseCode && (
-            <>
-              <ChevronRight size={12} className="text-neutral-300" />
-              <button 
-                onClick={() => navigate(`/Teacher/Courses?courseId=${urlCourseId}`)}
-                className="hover:text-primary transition-colors"
-              >
-                {urlCourseCode}
-              </button>
-            </>
-          )}
-
-          {urlProgramFilter && (
-            <>
-              <ChevronRight size={12} className="text-neutral-300" />
-              <span className="text-neutral-500">{urlProgramFilter}</span>
-            </>
-          )}
-
-          {urlSectionFilter && (
-            <>
-              <ChevronRight size={12} className="text-neutral-300" />
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-md font-bold">
-                <Users size={12} />
-                {urlSectionFilter}
-              </div>
-            </>
-          )}
-          
-          <ChevronRight size={12} className="text-neutral-300" />
-          <span className="text-neutral-300">Students</span>
-        </nav>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-100 pb-6">
         <div>
