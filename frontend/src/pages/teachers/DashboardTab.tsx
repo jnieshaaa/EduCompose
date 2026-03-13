@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
-import { fetchTeacherId } from "../../services/rubricService";
+import { fetchTeacherUUID } from "../../services/rubricService";
 import { fetchCourses, fetchSections } from "../../services/activityService";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
 
@@ -146,7 +146,7 @@ export function DashboardTab() {
         setLoading(true);
         setError(null);
 
-        const teacherId = await fetchTeacherId();
+        const teacherId = await fetchTeacherUUID();
         if (!teacherId) {
           throw new Error("Teacher ID not available");
         }
@@ -155,8 +155,8 @@ export function DashboardTab() {
         const { data: teacherActivities, error: activitiesError } =
           await supabase
             .from("essay_activities")
-            .select("id, course_id, section_id")
-            .eq("user_id", teacherId);
+            .select("id, course_id, block_id")
+            .eq("teacher_id", teacherId);
 
         if (activitiesError) throw activitiesError;
 
@@ -165,7 +165,7 @@ export function DashboardTab() {
             | {
                 id: number;
                 course_id: string | null;
-                section_id: string | null;
+                block_id: string | null;
               }[]
             | null) || [];
 
@@ -179,7 +179,7 @@ export function DashboardTab() {
         const sectionIds = [
           ...new Set(
             typedTeacherActivities
-              .map((activity) => activity.section_id)
+              .map((activity) => activity.block_id)
               .filter((id): id is string => id !== null),
           ),
         ];
@@ -247,7 +247,7 @@ export function DashboardTab() {
         const { data: activityIdsData } = await supabase
           .from("essay_activities")
           .select("id")
-          .eq("user_id", teacherId);
+          .eq("teacher_id", teacherId);
         const activityIds = (
           (activityIdsData as Array<{ id: number }> | null) || []
         ).map((activity) => activity.id);

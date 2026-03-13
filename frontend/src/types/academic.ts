@@ -8,28 +8,36 @@ export interface Program {
   schools?: { name: string };
 }
 
+export interface TeacherProgramLoad {
+  id: string;
+  course_load_id: string;
+  program_id: string;
+  // Joined
+  programs_lookup?: Program;
+}
+
 export interface Block {
   id: string;
-  program_id: string;
-  year_level: number;
+  program_load_id: string;
+  year: number;
   name: string;
   created_at?: string;
-  // Joined data
-  programs_lookup?: Program;
+  // Joined
+  program_loads?: TeacherProgramLoad;
 }
 
 export interface Course {
   id: string;
   school_id: string;
   department_id?: string;
-  program_id?: string;
+  program_id?: string; // If not null, it's a major course
   user_id?: string;
   course_code: string;
   course_title: string;
   units: number;
   year_level?: string;
   semester?: string;
-  department?: string; // Add this
+  department?: string;
   created_at?: string;
   // For joined data
   schools?: { name: string };
@@ -38,22 +46,32 @@ export interface Course {
   users?: { first_name: string; last_name: string };
 }
 
+export interface Student {
+  id: string;
+  student_code: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  email: string;
+  year: number;
+  block_name: string;
+  program_id: string;
+  teacher_id?: string;
+  created_at?: string;
+  block_students?: { block_id: string }[];
+}
 
 export interface Section {
-  id: string; // This will now represent the assignment ID or block ID depending on context
+  id: string;
   course_id: string;
   block_id: string;
-  name: string; // The specific block name (e.g., "1A")
+  name: string; 
   program_id?: string;
-  year_level?: number;
-  term: string;
-  academic_year: string;
+  year?: number;
+  program_load_id?: string;
   students_estimated: number;
   essays_estimated: number;
   created_at: string;
-  // For joined data
-  courses?: Course;
-  blocks?: Block;
 }
 
 export interface Department {

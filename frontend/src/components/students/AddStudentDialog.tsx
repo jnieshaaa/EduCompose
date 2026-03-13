@@ -1,278 +1,154 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Label } from "../ui/label";
-import Input from "../ui/Input";
-import Button from "../ui/Button";
 import { useState } from "react";
-import type { ChangeEvent } from "react";
+import { X, UserPlus, Loader2, Mail, Hash, User } from "lucide-react";
+import { useStudents } from "../../hooks/useStudents";
+import Button from "../../components/ui/Button";
 
 interface AddStudentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  newStudent: {
-    id: string;
-    firstName: string;
-    middleName: string;
-    lastName: string;
-    email: string;
-    program: string;
-    section: string;
-  };
-  onInputChange: (field: string, value: string) => void;
-  onSubmit: () => void;
-  availablePrograms: string[];
-  availableSections: string[];
-  urlProgramFilter: string | null;
-  urlSectionFilter: string | null;
-  isCreating: boolean;
+  blockId: string;
+  onSuccess?: () => void;
 }
-
-// Regex to allow: a-z, A-Z, spaces, comma, period, and specific accents.
-const NAME_REGEX =
-  /^[a-zA-Z\s,.\u00C0-\u00FF\u0152\u0153\u0178ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØŒÙÚÛÜÝÞàáâãäåæçèéêëìíîïðñòóôõöøœùúûüýþÿ]+$/;
 
 export function AddStudentDialog({
   isOpen,
   onClose,
-  newStudent,
-  onInputChange,
-  onSubmit,
-  availablePrograms,
-  availableSections,
-  urlProgramFilter,
-  urlSectionFilter,
-  isCreating,
+  blockId,
+  onSuccess,
 }: AddStudentDialogProps) {
-  const [nameError, setNameError] = useState<string>("");
+  const { handleCreateStudent } = useStudents(blockId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    student_code: "",
+    first_name: "",
+    middle_name: "",
+    last_name: "",
+    email: "",
+  });
 
-  // Helper function to validate name field
-  const validateNameField = (
-    name: string,
-    fieldName: string
-  ): string | null => {
-    if (!name || name.trim().length === 0) {
-      return `${fieldName} is required.`;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!formData.student_code || !formData.first_name || !formData.last_name) {
+      alert("Please fill in all required fields.");
+      return;
     }
-    if (name.trim().length < 2) {
-      return `${fieldName} must be at least 2 characters long.`;
+
+    setIsSubmitting(true);
+    try {
+      await handleCreateStudent(formData);
+      setFormData({
+        student_code: "",
+        first_name: "",
+        middle_name: "",
+        last_name: "",
+        email: "",
+      });
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
-    if (!NAME_REGEX.test(name)) {
-      return `Invalid characters in ${fieldName}. Only letters, spaces, commas, and periods are allowed.`;
-    }
-    return null;
   };
 
-  // Triggered when user clicks "Add Student"
-  const handleSave = () => {
-    // 1. Validate Name Fields
-    const firstNameError = validateNameField(
-      newStudent.firstName,
-      "First name"
-    );
-    const lastNameError = validateNameField(newStudent.lastName, "Last name");
-    const middleNameError = newStudent.middleName.trim()
-      ? validateNameField(newStudent.middleName, "Middle name")
-      : null;
-
-    // 2. If any error, set it and stop submission
-    if (firstNameError) {
-      setNameError(firstNameError);
-      return;
-    }
-    if (lastNameError) {
-      setNameError(lastNameError);
-      return;
-    }
-    if (middleNameError) {
-      setNameError(middleNameError);
-      return;
-    }
-
-    // 3. If no error, clear error state and submit
-    setNameError("");
-    onSubmit();
-  };
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div>
-            <Label htmlFor="student-id">Student ID</Label>
-            <Input
-              id="student-id"
-              placeholder="e.g., STU009"
-              className="mt-1"
-              value={newStudent.id}
-              // Accept either a string value or a ChangeEvent from native input
-              onChange={(e: ChangeEvent<HTMLInputElement> | string) => {
-                const value = typeof e === "string" ? e : e.target?.value ?? "";
-                onInputChange("id", value);
-              }}
-            />
+    <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-lg text-primary">
+              <UserPlus size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-neutral-900">Add New Student</h2>
+              <p className="text-xs text-neutral-500">Register a new student to this block.</p>
+            </div>
           </div>
-
-          <div>
-            <Label htmlFor="student-first-name">
-              First Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="student-first-name"
-              placeholder="e.g., John"
-              className={`mt-1 ${
-                nameError && nameError.includes("First name")
-                  ? "border-red-500 focus:ring-red-500"
-                  : ""
-              }`}
-              value={newStudent.firstName}
-              onChange={(value: string) => {
-                onInputChange("firstName", value);
-                if (nameError && nameError.includes("First name")) {
-                  const error = validateNameField(value, "First name");
-                  if (!error) {
-                    setNameError("");
-                  }
-                }
-              }}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="student-middle-name">Middle Name</Label>
-            <Input
-              id="student-middle-name"
-              placeholder="e.g., Mark (optional)"
-              className={`mt-1 ${
-                nameError && nameError.includes("Middle name")
-                  ? "border-red-500 focus:ring-red-500"
-                  : ""
-              }`}
-              value={newStudent.middleName}
-              onChange={(value: string) => {
-                onInputChange("middleName", value);
-                if (nameError && nameError.includes("Middle name")) {
-                  const error = validateNameField(value, "Middle name");
-                  if (!error) {
-                    setNameError("");
-                  }
-                }
-              }}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="student-last-name">
-              Last Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="student-last-name"
-              placeholder="e.g., Doe"
-              className={`mt-1 ${
-                nameError && nameError.includes("Last name")
-                  ? "border-red-500 focus:ring-red-500"
-                  : ""
-              }`}
-              value={newStudent.lastName}
-              onChange={(value: string) => {
-                onInputChange("lastName", value);
-                if (nameError && nameError.includes("Last name")) {
-                  const error = validateNameField(value, "Last name");
-                  if (!error) {
-                    setNameError("");
-                  }
-                }
-              }}
-            />
-            {/* Show error message if it exists */}
-            {nameError && (
-              <p className="text-red-500 text-xs mt-1">{nameError}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="student-email">Email</Label>
-            <Input
-              id="student-email"
-              type="email"
-              placeholder="student@example.com"
-              className="mt-1"
-              value={newStudent.email}
-              // Accept either a string value or a ChangeEvent from native input
-              onChange={(e: ChangeEvent<HTMLInputElement> | string) => {
-                const value = typeof e === "string" ? e : e.target?.value ?? "";
-                onInputChange("email", value);
-              }}
-            />
-          </div>
-          <div>
-            <Label htmlFor="student-program">Program</Label>
-            {urlProgramFilter ? (
-              <Input
-                id="student-program"
-                className="mt-1"
-                value={newStudent.program || urlProgramFilter}
-                readOnly
-              />
-            ) : (
-              <select
-                id="student-program"
-                className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md"
-                value={newStudent.program}
-                onChange={(e) => onInputChange("program", e.target.value)}
-              >
-                <option value="Select Program">Select Program</option>
-                {availablePrograms.map((program) => (
-                  <option key={program} value={program}>
-                    {program}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="student-section">Section</Label>
-            {urlSectionFilter ? (
-              <Input
-                id="student-section"
-                className="mt-1"
-                value={newStudent.section || urlSectionFilter}
-                readOnly
-              />
-            ) : (
-              <select
-                id="student-section"
-                className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-md"
-                value={newStudent.section}
-                onChange={(e) => onInputChange("section", e.target.value)}
-              >
-                <option value="Select Section">Select Section</option>
-                {availableSections.map((section) => (
-                  <option key={section} value={section}>
-                    {section}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-primary hover:bg-primary-300"
-              // We use handleSave here instead of direct onSubmit
-              onClick={handleSave}
-              // Only disable if currently loading (sending to backend)
-              disabled={isCreating}
-              aria-busy={isCreating}
-            >
-              {isCreating ? "Adding..." : "Add Student"}
-            </Button>
-          </div>
+          <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-400">
+            <X size={20} />
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Student ID/Code*</label>
+              <div className="relative group">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
+                <input
+                  required
+                  placeholder="2024-0001"
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                  value={formData.student_code}
+                  onChange={(e) => setFormData({ ...formData, student_code: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">First Name*</label>
+              <div className="relative group">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
+                <input
+                  required
+                  placeholder="Juan"
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Middle Name</label>
+              <input
+                placeholder="Dela"
+                className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                value={formData.middle_name}
+                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Last Name*</label>
+              <input
+                required
+                placeholder="Cruz"
+                className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Email (Optional)</label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
+                <input
+                  type="email"
+                  placeholder="juan.cruz@email.com"
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" onClick={onClose} variant="ghost">Cancel</Button>
+            <Button type="submit" disabled={isSubmitting} className="bg-primary text-white px-8">
+              {isSubmitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              Register Student
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

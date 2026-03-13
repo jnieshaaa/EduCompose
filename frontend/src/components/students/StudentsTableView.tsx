@@ -1,4 +1,3 @@
-
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
@@ -17,20 +16,18 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
-import type { Student } from "../../data/studentsData";
+import type { Student } from "../../types/academic";
 
 interface StudentsTableViewProps {
   students: Student[];
-  urlProgramFilter: string | null;
   urlSectionFilter: string | null;
   onEditStudent: (student: Student) => void;
-  onDeleteStudent: (student: Student) => void;
+  onDeleteStudent: (studentId: string) => void; 
   onViewEssayHistory?: (student: Student) => void;
 }
 
 export function StudentsTableView({
   students,
-  urlProgramFilter,
   urlSectionFilter,
   onEditStudent,
   onDeleteStudent,
@@ -43,13 +40,8 @@ export function StudentsTableView({
           <TableRow>
             <TableHead>Student ID</TableHead>
             <TableHead>Name</TableHead>
-            {!urlProgramFilter && <TableHead>Program</TableHead>}
-            {!urlSectionFilter && <TableHead>Section</TableHead>}
+            {!urlSectionFilter && <TableHead>Block</TableHead>}
             <TableHead>Email</TableHead>
-            <TableHead className='text-center'>Submitted</TableHead>
-            <TableHead className='text-center'>Pending</TableHead>
-            <TableHead className='text-center'>Missing</TableHead>
-            <TableHead className='text-center'>Avg Score</TableHead>
             <TableHead className='text-right'>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -57,75 +49,25 @@ export function StudentsTableView({
           {students.map((student) => (
             <TableRow key={student.id}>
               <TableCell>
-                <div className='text-sm text-neutral-600'>{student.id}</div>
+                <div className='text-sm text-neutral-600'>{student.student_code}</div>
               </TableCell>
               <TableCell>
-                <div className='text-neutral-900'>{student.name}</div>
+                <div className='text-neutral-900 font-medium'>
+                  {student.last_name}, {student.first_name} {student.middle_name || ""}
+                </div>
               </TableCell>
-              {!urlProgramFilter && (
-                <TableCell>
-                  <div className='text-sm text-neutral-600'>
-                    {student.program}
-                  </div>
-                </TableCell>
-              )}
               {!urlSectionFilter && (
                 <TableCell>
                   <Badge
                     variant='outline'
-                    className='bg-secondary/10 text-secondary border-secondary/20'
+                    className='bg-secondary/10 text-secondary border-secondary/20 font-bold'
                   >
-                    {student.section}
+                    {student.block_name}
                   </Badge>
                 </TableCell>
               )}
               <TableCell>
                 <div className='text-sm text-neutral-600'>{student.email}</div>
-              </TableCell>
-              <TableCell className='text-center'>
-                <Badge
-                  variant='outline'
-                  className='bg-success-default/10 text-success-default border-success-default/20'
-                >
-                  {student.submitted}
-                </Badge>
-              </TableCell>
-              <TableCell className='text-center'>
-                <Badge
-                  variant='outline'
-                  className={
-                    student.pending > 2
-                      ? "bg-error-default/10 text-error-default border-error-default/20"
-                      : "bg-warning-default/10 text-warning-default border-warning-default/20"
-                  }
-                >
-                  {student.pending}
-                </Badge>
-              </TableCell>
-              <TableCell className='text-center'>
-                <Badge
-                  variant='outline'
-                  className={
-                    student.missing > 0
-                      ? "bg-error-default/10 text-error-default border-error-default/20"
-                      : "bg-neutral-300/10 text-neutral-600 border-neutral-300/20"
-                  }
-                >
-                  {student.missing}
-                </Badge>
-              </TableCell>
-              <TableCell className='text-center'>
-                <Badge
-                  className={
-                    student.avgScore >= 85
-                      ? "bg-green-600 text-white"
-                      : student.avgScore >= 75
-                      ? "bg-blue-600 text-white"
-                      : "bg-amber-600 text-white"
-                  }
-                >
-                  {student.avgScore}%
-                </Badge>
               </TableCell>
               <TableCell className='text-right'>
                 <DropdownMenu>
@@ -137,7 +79,7 @@ export function StudentsTableView({
                   <DropdownMenuContent align='end'>
                     <DropdownMenuItem
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click event if you add one later
+                        e.stopPropagation();
                         if (onViewEssayHistory) onViewEssayHistory(student);
                       }}
                     >
@@ -146,7 +88,7 @@ export function StudentsTableView({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click event
+                        e.stopPropagation();
                         onEditStudent(student);
                       }}
                     >
@@ -156,8 +98,8 @@ export function StudentsTableView({
                     <DropdownMenuItem
                       className='text-error-default'
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click event
-                        onDeleteStudent(student);
+                        e.stopPropagation();
+                        onDeleteStudent(student.id);
                       }}
                     >
                       <Trash2 className='w-4 h-4 mr-2' />

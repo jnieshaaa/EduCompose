@@ -11,22 +11,31 @@ import {
   extractProgramsFromSupabase,
 } from "../data/rubricData";
 
-// Load user ID from Supabase users table
-export const fetchTeacherId = async (): Promise<number | null> => {
+// Get the user's UUID from Supabase auth (matches auth_user_id in users table)
+export const fetchTeacherUUID = async (): Promise<string | null> => {
   try {
     const {
       data: { user },
-      error: userError,
+      error,
     } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error("Error getting user:", userError);
-      return null;
-    }
+    if (error || !user) return null;
+    return user.id;
+  } catch (err) {
+    console.error("Error fetching teacher UUID:", err);
+    return null;
+  }
+};
+
+// Load user ID (bigint) from Supabase users table (legacy compatibility)
+export const fetchTeacherId = async (): Promise<number | null> => {
+  try {
+    const uuid = await fetchTeacherUUID();
+    if (!uuid) return null;
 
     const { data: userData, error: userTableError } = await supabase
       .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", uuid)
       .single();
 
     if (userTableError || !userData) {

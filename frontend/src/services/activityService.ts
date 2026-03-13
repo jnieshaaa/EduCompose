@@ -2,7 +2,7 @@
 
 import { supabase } from "../lib/supabaseClient";
 import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
-import { fetchTeacherId } from "./rubricService";
+import { fetchTeacherId, fetchTeacherUUID } from "./rubricService";
 import { buildFullNameFromObject } from "../utils/nameUtils";
 
 // Supabase row type for essay_activities
@@ -10,8 +10,8 @@ type SupabaseActivityRow = {
   id: number;
   user_id: number | null;
   title: string;
-  program_id: number | null;
-  section_id: number | null;
+  program_id: string | null;
+  block_id: string | null;
   course_id: string | null;
   rubric_id: number | null;
   due_date: string | null;
@@ -30,9 +30,9 @@ export const fetchTeacherActivities = async (
   showArchived: boolean = false,
 ): Promise<EssayActivity[]> => {
   try {
-    const teacherId = await fetchTeacherId();
+    const teacherId = await fetchTeacherUUID();
     if (!teacherId) {
-      console.error("Teacher ID not available");
+      console.error("Teacher UUID not available");
       return [];
     }
 
@@ -40,9 +40,9 @@ export const fetchTeacherActivities = async (
     let query = supabase
       .from("essay_activities")
       .select(
-        "id, user_id, title, program_id, section_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)",
+        "id, teacher_id, title, program_id, block_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)",
       )
-      .eq("user_id", teacherId);
+      .eq("teacher_id", teacherId);
 
     if (!showArchived) {
       if (academicYear) query = query.eq("academic_year", academicYear);
@@ -102,7 +102,7 @@ export const fetchTeacherActivities = async (
         : row.program_id
           ? String(row.program_id)
           : "all",
-      blockId: row.section_id ? String(row.section_id) : "all",
+      blockId: row.block_id ? String(row.block_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -252,9 +252,9 @@ export const createActivity = async (
   activity: NewActivityForm,
 ): Promise<EssayActivity> => {
   try {
-    const teacherId = await fetchTeacherId();
+    const teacherId = await fetchTeacherUUID();
     if (!teacherId) {
-      throw new Error("Teacher ID not available");
+      throw new Error("Teacher UUID not available");
     }
 
     // For now, store first selected course/section or null if empty (meaning "all")
@@ -263,7 +263,7 @@ export const createActivity = async (
     const sectionId =
       activity.sectionIds.length === 0
         ? null
-        : parseInt(activity.sectionIds[0], 10) || null;
+        : activity.sectionIds[0] || null;
 
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
@@ -284,10 +284,10 @@ export const createActivity = async (
     const { data, error } = await supabase
       .from("essay_activities")
       .insert({
-        user_id: teacherId,
+        teacher_id: teacherId,
         title: activity.title.trim(),
         course_id: courseId,
-        section_id: sectionId,
+        block_id: sectionId,
         rubric_id: rubricId,
         due_date: activity.dueDate || null,
         instructions: activity.description || null,
@@ -306,8 +306,8 @@ export const createActivity = async (
     const row = data as {
       id: number;
       title: string;
-      course_id: number | null;
-      section_id: number | null;
+      course_id: string | null;
+      block_id: string | null;
       rubric_id: number | null;
       due_date: string | null;
       instructions: string | null;
@@ -319,7 +319,7 @@ export const createActivity = async (
       id: String(row.id),
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
-      blockId: row.section_id ? String(row.section_id) : "all",
+      blockId: row.block_id ? String(row.block_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -340,9 +340,9 @@ export const updateActivity = async (
   activityData: NewActivityForm,
 ): Promise<EssayActivity> => {
   try {
-    const teacherId = await fetchTeacherId();
+    const teacherId = await fetchTeacherUUID();
     if (!teacherId) {
-      throw new Error("Teacher ID not available");
+      throw new Error("Teacher UUID not available");
     }
 
     const id = parseInt(activityId, 10);
@@ -353,7 +353,7 @@ export const updateActivity = async (
     // Get first selected program/section or null
     const sectionId =
       activityData.sectionIds.length > 0
-        ? parseInt(activityData.sectionIds[0], 10)
+        ? activityData.sectionIds[0]
         : null;
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
@@ -375,7 +375,7 @@ export const updateActivity = async (
       title: activityData.title,
       course_id:
         activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
-      section_id: sectionId && !isNaN(sectionId) ? sectionId : null,
+      block_id: sectionId || null,
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
@@ -387,7 +387,7 @@ export const updateActivity = async (
       .from("essay_activities")
       .update(updateData)
       .eq("id", id)
-      .eq("user_id", teacherId)
+      .eq("teacher_id", teacherId)
       .select()
       .single();
 
@@ -400,8 +400,8 @@ export const updateActivity = async (
     const row = data as {
       id: number;
       title: string;
-      course_id: number | null;
-      section_id: number | null;
+      course_id: string | null;
+      block_id: string | null;
       rubric_id: number | null;
       due_date: string | null;
       instructions: string | null;
@@ -413,7 +413,7 @@ export const updateActivity = async (
       id: String(row.id),
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
-      blockId: row.section_id ? String(row.section_id) : "all",
+      blockId: row.block_id ? String(row.block_id) : "all",
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -543,20 +543,23 @@ export const fetchSections = async (
     if (!userData?.user) return [];
 
     let query = supabase
-      .from("teacher_course_loads")
+      .from("blocks")
       .select(`
         id,
-        block_id,
-        blocks!inner (
-          id,
-          name
-        ),
-        course_id
+        name,
+        teacher_program_loads!inner (
+          course_load_id,
+          teacher_course_loads!inner (
+            id,
+            course_id,
+            teacher_id
+          )
+        )
       `)
-      .eq("teacher_id", userData.user.id);
+      .eq("teacher_program_loads.teacher_course_loads.teacher_id", userData.user.id);
 
     if (courseId && courseId !== "all") {
-      query = query.eq("course_id", courseId);
+      query = query.eq("teacher_program_loads.teacher_course_loads.course_id", courseId);
     }
 
     const { data, error } = await query;
@@ -566,12 +569,12 @@ export const fetchSections = async (
       return [];
     }
 
-    return (data || []).map((load) => {
-      const block = Array.isArray(load.blocks) ? load.blocks[0] : load.blocks;
+    return (data || []).map((block: any) => {
+      const tcl = block.teacher_program_loads?.[0]?.teacher_course_loads || block.teacher_program_loads?.teacher_course_loads;
       return {
-        id: String(load.id),
+        id: String(block.id),
         name: block.name,
-        courseId: String(load.course_id),
+        courseId: String(tcl?.course_id || ""),
       };
     });
   } catch (err) {

@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { Plus, GraduationCap } from "lucide-react";
-import { BatchUploadDialog } from "../../components/ui/BatchUploadDialog";
 import { useAlert } from "../../hooks/useAlert";
 import { useStudents } from "../../hooks/useStudents";
 import { AddStudentDialog } from "../../components/students/AddStudentDialog";
@@ -19,10 +18,9 @@ export function StudentsTab() {
   const { AlertComponent } = useAlert();
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
-  // Read filters from URL params (for drill-down from Sections)
-  const urlProgramFilter = searchParams.get("program");
-  const urlSectionFilter = searchParams.get("section");
-  const urlCourseCode = searchParams.get("courseCode");
+  // Read filters from URL params (for drill-down from Sections/Blocks)
+  const urlBlockId = searchParams.get("block");
+  const urlBlockName = searchParams.get("blockName");
 
   const {
     students,
@@ -32,8 +30,6 @@ export function StudentsTab() {
     programFilter,
     sectionFilter,
     isAddDialogOpen,
-    newStudent,
-    isCreatingStudent,
     isEditDialogOpen,
     editingStudent,
     availablePrograms,
@@ -45,17 +41,14 @@ export function StudentsTab() {
     setIsAddDialogOpen,
     setIsEditDialogOpen,
     setEditingStudent,
-    handleInputChange,
-    handleCreateStudent,
-    handleEditStudent,
     handleUpdateStudent,
     handleDeleteStudent,
+    handleEditStudent,
     handleClearFilters,
     handleClearProgramFilter,
     handleClearSectionFilter,
-    handleBatchUploadComplete,
-    AlertComponent: StudentsAlertComponent,
-  } = useStudents();
+    refreshStudents,
+  } = useStudents(urlBlockId || undefined);
 
   const handleViewEssayHistory = (student: { id: string }) => {
     navigate(`/Teacher/Gradebook?studentId=${encodeURIComponent(student.id)}`);
@@ -64,58 +57,31 @@ export function StudentsTab() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       {/* Header */}
+      {/* Header - Simplified as Breadcrumb shows the path */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-100 pb-6">
         <div>
           <h1 className="text-3xl font-black text-neutral-900 tracking-tight flex items-center gap-3">
-            {urlSectionFilter ? (
+            {urlBlockName ? (
               <>
                 <div className="w-1.5 h-8 bg-primary rounded-full" />
-                {urlSectionFilter}
+                {urlBlockName} Students
               </>
             ) : "Students Management"}
           </h1>
-          <div className="flex items-center gap-2 mt-2">
-            {urlCourseCode && (
-              <span className="px-2 py-1 bg-neutral-100 text-neutral-600 rounded text-xs font-mono font-bold">
-                {urlCourseCode}
-              </span>
-            )}
-            <p className="text-sm text-neutral-500">
-              {urlCourseCode ? (
-                <>Class list and performance tracking</>
-              ) : hasActiveFilters ? (
-                `Viewing ${students.length} filtered records`
-              ) : (
-                "Comprehensive student directory and activity logs"
-              )}
-            </p>
-          </div>
+          <p className="text-sm text-neutral-500 mt-1">
+            {urlBlockName 
+              ? `Managing class list for block ${urlBlockName}` 
+              : "Comprehensive student directory and institutional records"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            className="bg-primary hover:bg-primary-300"
+            className="bg-primary hover:bg-primary-300 shadow-lg shadow-primary/20"
             onClick={() => setIsAddDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Student
           </Button>
-          <BatchUploadDialog
-            type="students"
-            existingStudents={students}
-            availablePrograms={availablePrograms}
-            availableSections={availableSections}
-            defaultProgram={
-              urlProgramFilter && urlProgramFilter !== "All Programs"
-                ? urlProgramFilter
-                : undefined
-            }
-            defaultSection={
-              urlSectionFilter && urlSectionFilter !== "All Sections"
-                ? urlSectionFilter
-                : undefined
-            }
-            onUploadComplete={handleBatchUploadComplete}
-          />
         </div>
       </div>
 
@@ -135,8 +101,8 @@ export function StudentsTab() {
         onSectionFilterChange={setSectionFilter}
         availablePrograms={availablePrograms}
         availableSections={availableSections}
-        urlProgramFilter={urlProgramFilter}
-        urlSectionFilter={urlSectionFilter}
+        urlProgramFilter={null}
+        urlSectionFilter={urlBlockId}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
         onClearProgramFilter={handleClearProgramFilter}
@@ -190,8 +156,7 @@ export function StudentsTab() {
       ) : viewMode === "cards" ? (
         <StudentsCardView
           students={students}
-          urlProgramFilter={urlProgramFilter}
-          urlSectionFilter={urlSectionFilter}
+          urlSectionFilter={urlBlockId}
           onEditStudent={handleEditStudent}
           onDeleteStudent={handleDeleteStudent}
           onViewEssayHistory={handleViewEssayHistory}
@@ -199,8 +164,7 @@ export function StudentsTab() {
       ) : (
         <StudentsTableView
           students={students}
-          urlProgramFilter={urlProgramFilter}
-          urlSectionFilter={urlSectionFilter}
+          urlSectionFilter={urlBlockId}
           onEditStudent={handleEditStudent}
           onDeleteStudent={handleDeleteStudent}
           onViewEssayHistory={handleViewEssayHistory}
@@ -211,14 +175,8 @@ export function StudentsTab() {
       <AddStudentDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
-        newStudent={newStudent}
-        onInputChange={handleInputChange}
-        onSubmit={handleCreateStudent}
-        availablePrograms={availablePrograms}
-        availableSections={availableSections}
-        urlProgramFilter={urlProgramFilter}
-        urlSectionFilter={urlSectionFilter}
-        isCreating={isCreatingStudent}
+        blockId={urlBlockId || ""}
+        onSuccess={refreshStudents}
       />
 
       {/* Edit Student Dialog */}
@@ -233,13 +191,12 @@ export function StudentsTab() {
         onSubmit={handleUpdateStudent}
         availablePrograms={availablePrograms}
         availableSections={availableSections}
-        urlProgramFilter={urlProgramFilter}
-        urlSectionFilter={urlSectionFilter}
+        urlProgramFilter={null}
+        urlSectionFilter={urlBlockId}
       />
 
       {/* Alert Modals */}
       <AlertComponent />
-      <StudentsAlertComponent />
     </div>
   );
 }

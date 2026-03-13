@@ -14,10 +14,10 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Teacher/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
   
   // Course Management section
-  "/Teacher/Courses": { label: "Courses", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Courses": { label: "Course Management", icon: <Layers className="w-4 h-4" /> },
+  "/Teacher/Students": { label: "Course Management", icon: <Layers className="w-4 h-4" /> },
   "/Teacher/Programs": { label: "Programs", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
   "/Teacher/Sections": { label: "Sections", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
-  "/Teacher/Students": { label: "Students", parent: "Course Management", icon: <Layers className="w-4 h-4" /> },
   
   // Essay section
   "/Teacher/Activities": { label: "Activities", icon: <BookOpen className="w-4 h-4" /> },
@@ -55,117 +55,58 @@ const Breadcrumb: React.FC = () => {
   const items: BreadcrumbItem[] = [];
   const config = routeConfig[pathname];
 
-  // Get URL params for drill-down context
-  const programFilter = searchParams.get("program");
-  const sectionFilter = searchParams.get("section");
-
   // Build breadcrumb based on route and context
   if (config) {
-    // Add parent section if exists (e.g., "Class Management" for Programs/Sections/Students)
-    if (config.parent) {
-      items.push({
-        label: config.parent,
-        path: "/Teacher/Programs", // Class Management defaults to Programs
-        icon: <Layers className="w-4 h-4" />,
-      });
-    }
-
     // Handle drill-down paths for Course Management
-    if (config.parent === "Course Management") {
+    if (pathname === "/Teacher/Courses" || pathname === "/Teacher/Students") {
       const courseId = searchParams.get("courseId");
       const courseCode = searchParams.get("courseCode");
+      const programLoadId = searchParams.get("programLoad");
+      const programAbbr = searchParams.get("programAbbr");
+      const blockId = searchParams.get("block");
+      const blockName = searchParams.get("blockName");
 
-      if (pathname === "/Teacher/Courses") {
-        if (courseCode) {
-          items.push({
-            label: "Courses",
-            path: "/Teacher/Courses",
-          });
-          items.push({
-            label: courseCode,
-            path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
-          });
-        } else {
-          items.push({
-            label: "Courses",
-            path: "/Teacher/Courses",
-          });
-        }
-      } else if (pathname === "/Teacher/Programs") {
+      // Root: Course Management
+      items.push({
+        label: "Course Management",
+        path: "/Teacher/Courses",
+        icon: <Layers className="w-4 h-4" />,
+      });
+
+      // Level 1: Course
+      if (courseId && courseCode) {
         items.push({
-          label: "Programs",
-          path: "/Teacher/Programs",
+          label: courseCode,
+          path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
         });
-      } else if (pathname === "/Teacher/Sections") {
-        if (courseCode) {
-            items.push({
-                label: "Courses",
-                path: "/Teacher/Courses",
-            });
-            items.push({
-                label: courseCode,
-                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
-            });
-        } else {
-            items.push({
-                label: "Programs",
-                path: "/Teacher/Programs",
-            });
-        }
-        
-        if (programFilter) {
-          items.push({
-            label: programFilter,
-            path: courseCode 
-              ? `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}&program=${encodeURIComponent(programFilter)}`
-              : `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
-          });
-        } else if (!courseCode) {
-          items.push({
-            label: "Sections",
-            path: "/Teacher/Sections",
-          });
-        }
-      } else if (pathname === "/Teacher/Students") {
-        if (courseCode) {
-            items.push({
-                label: "Courses",
-                path: "/Teacher/Courses",
-            });
-            items.push({
-                label: courseCode,
-                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}`,
-            });
-        } else {
-            items.push({
-                label: "Programs",
-                path: "/Teacher/Programs",
-            });
-        }
-        
-        if (programFilter) {
-          items.push({
-            label: programFilter,
-            path: courseCode 
-              ? `/Teacher/Courses?courseId=${courseId}&courseCode=${courseCode}&program=${encodeURIComponent(programFilter)}`
-              : `/Teacher/Sections?program=${encodeURIComponent(programFilter)}`,
-          });
-        }
-        
-        if (sectionFilter) {
-          items.push({
-            label: sectionFilter,
-            path: `/Teacher/Students?program=${encodeURIComponent(programFilter || "")}&section=${encodeURIComponent(sectionFilter)}&courseId=${courseId}&courseCode=${courseCode}`,
-          });
-        } else if (!programFilter && !courseCode) {
-          items.push({
-            label: "Students",
-            path: "/Teacher/Students",
-          });
+
+        // Level 2: Program (Simplified)
+        if (programLoadId && programAbbr) {
+            // Level 3: Block/Section
+            if (blockId && blockName) {
+                // Add Program as clickable link back to sections view
+                items.push({
+                    label: programAbbr,
+                    path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+                });
+                
+                // Add the specific Block
+                items.push({
+                    label: blockName,
+                    path: pathname === "/Teacher/Students" 
+                        ? `/Teacher/Students?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`
+                        : `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`,
+                });
+            } else {
+                // Just viewing program sections list
+                items.push({
+                    label: programAbbr,
+                    path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+                });
+            }
         }
       }
-    }
- else if (pathname === "/Teacher/Activities") {
+    } else if (pathname === "/Teacher/Activities") {
       // Handle Activities drill-down
       const activityId = searchParams.get("activityId");
       const activityTitle = searchParams.get("activityTitle");
@@ -190,13 +131,19 @@ const Breadcrumb: React.FC = () => {
             label: sectionLabel,
             path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
           });
-          
-          // If we're viewing students, add that to the breadcrumb
-          // (This is implicit - we're already on the students view)
         }
       }
     } else {
-      // Non-Class Management routes - just show the current page
+      // Add parent section if exists (legacy logic)
+      if (config.parent) {
+        items.push({
+          label: config.parent,
+          path: "/Teacher/Courses",
+          icon: <Layers className="w-4 h-4" />,
+        });
+      }
+
+      // Non-drill-down routes - just show the current page
       items.push({
         label: config.label,
         path: pathname,
@@ -276,10 +223,10 @@ const Breadcrumb: React.FC = () => {
 
   return (
     <nav
-      className='flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-white border-b border-neutral-200 text-xs sm:text-sm overflow-x-auto'
+      className='flex items-center px-4 md:px-6 py-3 bg-white border-b border-neutral-200 text-sm overflow-x-auto custom-scrollbar'
       aria-label='Breadcrumb'
     >
-      <ol className='flex items-center space-x-1 sm:space-x-2 min-w-max'>
+      <ol className='flex items-center space-x-2 min-w-max'>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           const isFirst = index === 0;
@@ -287,20 +234,22 @@ const Breadcrumb: React.FC = () => {
           return (
             <li key={`${item.path}-${index}`} className='flex items-center'>
               {index > 0 && (
-                <ChevronRight className='w-4 h-4 text-neutral-400 mx-1 sm:mx-2' />
+                <ChevronRight className='w-4 h-4 text-neutral-300 mx-2' />
               )}
               {isLast ? (
-                <span className='text-neutral-900 font-medium flex items-center'>
-                  {isFirst && item.icon && <span className="mr-1.5">{item.icon}</span>}
-                  {item.label}
-                </span>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${isFirst ? "bg-primary/10 text-primary" : "text-neutral-900 font-bold"}`}>
+                  {item.icon && <span className={isFirst ? "text-primary" : "text-neutral-500"}>{item.icon}</span>}
+                  <span>{item.label}</span>
+                </div>
               ) : (
                 <Link
                   to={item.path}
-                  className='text-neutral-600 hover:text-primary transition-colors flex items-center'
+                  className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all hover:bg-neutral-50 group ${
+                    isFirst ? "text-primary font-bold bg-primary/5 hover:bg-primary/10" : "text-neutral-500 hover:text-primary"
+                  }`}
                 >
-                  {isFirst && item.icon && <span className="mr-1.5">{item.icon}</span>}
-                  {item.label}
+                  {item.icon && <span className={`${isFirst ? "text-primary" : "text-neutral-400 group-hover:text-primary"} transition-colors`}>{item.icon}</span>}
+                  <span>{item.label}</span>
                 </Link>
               )}
             </li>

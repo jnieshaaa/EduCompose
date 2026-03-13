@@ -58,7 +58,7 @@ export function CoursesTab() {
     course_code: "",
     course_title: "",
     units: 3,
-    department: ""
+    department_id: ""
   });
 
   const getActiveCourses = () => {
@@ -358,13 +358,26 @@ export function CoursesTab() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Department</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CCS"
-                    value={newCourse.department}
-                    onChange={(e) => setNewCourse({ ...newCourse, department: e.target.value })}
-                    className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                  />
+                  {departments.length > 0 ? (
+                    <select
+                      value={newCourse.department_id}
+                      onChange={(e) => setNewCourse({ ...newCourse, department_id: e.target.value })}
+                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                    >
+                      <option value="">General Subject (No Dept)</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. CCS"
+                      value={newCourse.department}
+                      onChange={(e) => setNewCourse({ ...newCourse, department: e.target.value })}
+                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                    />
+                  )}
                 </div>
               </div>
               <p className="text-[10px] text-neutral-400 italic px-1">

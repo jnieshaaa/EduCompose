@@ -8,8 +8,8 @@ import {
   Edit,
   Trash2,
   Mail,
-  FileText,
-  AlertCircle,
+  User,
+  GraduationCap
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,20 +17,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import type { Student } from "../../data/studentsData";
+import type { Student } from "../../types/academic";
 
 interface StudentsCardViewProps {
   students: Student[];
-  urlProgramFilter: string | null;
   urlSectionFilter: string | null;
   onEditStudent: (student: Student) => void;
-  onDeleteStudent: (student: Student) => void;
+  onDeleteStudent: (studentId: string) => void;
   onViewEssayHistory?: (student: Student) => void;
 }
 
 export function StudentsCardView({
   students,
-  urlProgramFilter,
   urlSectionFilter,
   onEditStudent,
   onDeleteStudent,
@@ -40,7 +38,6 @@ export function StudentsCardView({
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <AnimatePresence mode="popLayout">
         {students.map((student, index) => {
-          const isAtRisk = student.missing > 2 || student.avgScore < 70;
           return (
             <motion.div
               key={student.id}
@@ -51,33 +48,17 @@ export function StudentsCardView({
               layout
             >
               <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
-                {/* Status indicator bar */}
-                <div
-                  className={`absolute top-0 left-0 right-0 h-1 ${
-                    isAtRisk
-                      ? "bg-gradient-to-r from-error-default to-error-default/60"
-                      : student.avgScore >= 85
-                      ? "bg-gradient-to-r from-success-default to-success-default/60"
-                      : "bg-gradient-to-r from-info-default to-info-default/60"
-                  }`}
-                />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary/60" />
 
                 <div className="p-5">
-                  {/* Header with name and menu */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-bold text-neutral-900 truncate">
-                          {student.name}
+                          {student.last_name}, {student.first_name}
                         </h3>
-                        {isAtRisk && (
-                          <Badge className="bg-error-default/10 text-error-default border-error-default/20 text-xs flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            At Risk
-                          </Badge>
-                        )}
                       </div>
-                      <p className="text-sm text-neutral-500">{student.id}</p>
+                      <p className="text-sm text-neutral-500 font-mono">{student.student_code}</p>
                     </div>
 
                     <DropdownMenu>
@@ -105,7 +86,7 @@ export function StudentsCardView({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-error-default"
-                          onClick={() => onDeleteStudent(student)}
+                          onClick={() => onDeleteStudent(student.id)}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Remove Student
@@ -114,66 +95,27 @@ export function StudentsCardView({
                     </DropdownMenu>
                   </div>
 
-                  {/* Email */}
                   <div className="flex items-center gap-2 text-sm text-neutral-500 mb-3">
                     <Mail className="w-4 h-4" />
-                    <span className="truncate">{student.email}</span>
+                    <span className="truncate">{student.email || "No email"}</span>
                   </div>
 
-                  {/* Program & Section badges */}
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {!urlProgramFilter && (
-                      <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                        {student.program}
-                      </Badge>
-                    )}
+                    <Badge className="bg-primary/10 text-primary border-primary/20 text-xs flex items-center gap-1">
+                      <GraduationCap size={12} />
+                      Year {student.year}
+                    </Badge>
                     {!urlSectionFilter && (
                       <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs">
-                        {student.section}
+                        {student.block_name}
                       </Badge>
                     )}
                   </div>
 
-                  {/* Stats grid */}
-                  <div className="grid grid-cols-4 gap-2 pt-4 border-t border-neutral-100">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-success-default">
-                        <FileText className="w-3 h-3" />
-                        <span className="text-lg font-bold">
-                          {student.submitted}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500">Done</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-warning-default">
-                        <span className="text-lg font-bold">
-                          {student.pending}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500">Pending</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-error-default">
-                        <span className="text-lg font-bold">
-                          {student.missing}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500">Missing</p>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className={`text-lg font-bold ${
-                          student.avgScore >= 85
-                            ? "text-success-default"
-                            : student.avgScore >= 75
-                            ? "text-info-default"
-                            : "text-warning-default"
-                        }`}
-                      >
-                        {student.avgScore}%
-                      </div>
-                      <p className="text-xs text-neutral-500">Avg</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-xs text-neutral-400 font-medium">
+                    <div className="flex items-center gap-1">
+                       <User size={12} />
+                       UID: {student.id.split('-')[0]}...
                     </div>
                   </div>
                 </div>
@@ -185,4 +127,3 @@ export function StudentsCardView({
     </div>
   );
 }
-
