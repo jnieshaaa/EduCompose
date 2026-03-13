@@ -46,6 +46,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [courseFilter, setCourseFilter] = useState(urlCourseFilter || "All Courses");
   const [termFilter, setTermFilter] = useState("All Terms");
+  const [allPrograms, setAllPrograms] = useState<any[]>([]);
 
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [newSection, setNewSection] = useState({
@@ -131,6 +132,14 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
         const uniqueCourses = Array.from(new Map(availableCoursesList.map(c => [c.id, c])).values());
         setAvailableCourses(uniqueCourses);
 
+        // Fetch all programs for assignment
+        const { data: programsData } = await supabase
+          .from("programs_lookup")
+          .select("*")
+          .order("name");
+        
+        setAllPrograms(programsData || []);
+
         // Map blocks to the Section interface for frontend compatibility
         const mappedSections: Section[] = (blocksData as any[] || []).map(b => {
           const tpl = b.teacher_program_loads as any;
@@ -150,7 +159,9 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
             essays_estimated: 0,
             created_at: (b as any).created_at || "", 
             courses: courseData,
-            program_abbr: programData?.abbr
+            program_abbr: programData?.abbr,
+            academic_year: tcl.academic_year,
+            term: tcl.term
           };
         });
 
@@ -365,6 +376,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     handleCreateSection,
     handleDeleteSection,
     handleUpdateSection,
+    allPrograms,
     AlertComponent,
   };
 }

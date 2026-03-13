@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
 
-export function useStudents(blockId?: string) {
+export function useStudents(blockId?: string, ay?: string, term?: string) {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -43,35 +43,56 @@ export function useStudents(blockId?: string) {
         .from("students")
         .select(`
           *,
-          block_students (block_id)
+          block_students (
+            block_id,
+            blocks (
+              id,
+              name,
+              teacher_program_loads (
+                teacher_course_loads (
+                  academic_year,
+                  term
+                )
+              )
+            )
+          )
         `)
         .eq("teacher_id", userData.user.id);
 
       if (blockId) {
-        // If blockId is provided (drill-down), we use inner join via block_students
-        const { data, error } = await supabase
-          .from("students")
-          .select(`
-            *,
-            block_students!inner (block_id)
-          `)
-          .eq("block_students.block_id", blockId)
-          .eq("teacher_id", userData.user.id);
-        
-        if (error) throw error;
-        setStudents(data || []);
-      } else {
-        const { data, error } = await query;
-        if (error) throw error;
-        setStudents(data || []);
+        // Filter by specific block
+        query = query.filter("block_students.block_id", "eq", blockId);
       }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      let result = data || [];
+
+      // Manual filtering for AY and Term since it's deep in the join
+      if (ay && ay !== "all") {
+        result = result.filter(s => 
+          s.block_students?.some((bs: any) => 
+            bs.blocks?.teacher_program_loads?.teacher_course_loads?.academic_year === ay
+          )
+        );
+      }
+      if (term && term !== "all") {
+        result = result.filter(s => 
+          s.block_students?.some((bs: any) => 
+            bs.blocks?.teacher_program_loads?.teacher_course_loads?.term === term
+          )
+        );
+      }
+
+      setStudents(result);
     } catch (err) {
       console.error("Error fetching students:", err);
       setLoadError("Failed to load students.");
     } finally {
       setIsLoading(false);
     }
-  }, [blockId]);
+  }, [blockId, ay, term]);
 
   const fetchCatalogs = useCallback(async () => {
     try {

@@ -37,7 +37,7 @@ export function ArchivePage() {
   const {
     students: archivedStudents,
     isLoading: loadingStudents
-  } = useStudents(true, ayFilter, termFilter);
+  } = useStudents(undefined, ayFilter, termFilter);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
@@ -248,14 +248,16 @@ export function ArchivePage() {
                                 <tr key={student.id} className="hover:bg-neutral-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="font-medium text-neutral-900">{student.name}</span>
-                                            <span className="text-xs text-neutral-400">{student.id}</span>
+                                            <span className="font-medium text-neutral-900">
+                                              {student.last_name}, {student.first_name}
+                                            </span>
+                                            <span className="text-xs text-neutral-400">{student.student_code || student.id}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium">{student.program}</span>
-                                            <span className="text-xs text-neutral-500">{student.section}</span>
+                                            <span className="text-sm font-medium">{student.program_id}</span>
+                                            <span className="text-xs text-neutral-500">{student.block_name}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

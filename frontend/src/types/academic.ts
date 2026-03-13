@@ -72,6 +72,10 @@ export interface Section {
   students_estimated: number;
   essays_estimated: number;
   created_at: string;
+  academic_year?: string;
+  term?: string;
+  courses?: Course;
+  program_abbr?: string;
 }
 
 export interface Department {

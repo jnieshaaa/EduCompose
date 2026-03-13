@@ -129,22 +129,18 @@ export function SectionsTab() {
                   <td className="px-6 py-4 font-medium text-neutral-900">{section.name}</td>
                   <td className="px-6 py-4 text-neutral-600">
                     <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-semibold">
-                      Year {section.year_level}
+                      Year {section.year}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-neutral-600">
                     <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">
-                      {section.courses?.course_code}
+                      {(section as any).courses?.course_code}
                     </span>
-                    <span className="ml-2">{section.courses?.course_title}</span>
+                    <span className="ml-2">{(section as any).courses?.course_title}</span>
                   </td>
                   <td className="px-6 py-4 text-neutral-600">
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium">{section.term}</span>
-                        <span className="text-xs text-neutral-400">A.Y. {section.academic_year}</span>
-                    </div>
+                    {section.students_estimated}
                   </td>
-                  <td className="px-6 py-4 text-neutral-600">{section.students_estimated}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button 
@@ -203,14 +199,14 @@ export function SectionsTab() {
                       className="w-full px-4 py-2 border rounded-lg mt-1"
                   >
                       <option value="">Select Program</option>
-                      {allPrograms.map(p => <option key={p.id} value={p.id}>{p.abbreviation || p.name}</option>)}
+                      {allPrograms.map((p: any) => <option key={p.id} value={p.id}>{p.abbr || p.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-neutral-500 uppercase">Year Level</label>
                   <select
-                      value={newSection.year_level}
-                      onChange={(e) => setNewSection({...newSection, year_level: parseInt(e.target.value)})}
+                      value={newSection.year}
+                      onChange={(e) => setNewSection({...newSection, year: parseInt(e.target.value)})}
                       className="w-full px-4 py-2 border rounded-lg mt-1"
                   >
                       {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
