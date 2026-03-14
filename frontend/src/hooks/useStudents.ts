@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
+import { authApi } from "../api";
+import { sendStudentWelcomeEmail } from "../services/emailService";
 
 export function useStudents(blockId?: string, ay?: string, term?: string) {
   const [students, setStudents] = useState<Student[]>([]);
@@ -176,6 +178,37 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) throw new Error("Not authenticated");
 
+      // 1. Global Uniqueness Check
+      const { data: existingData, error: checkError } = await supabase
+        .from("students")
+        .select(`
+          id,
+          student_code,
+          email,
+          programs_lookup (
+            abbr,
+            departments (code)
+          ),
+          block_students (
+            blocks (name, year)
+          )
+        `)
+        .or(`student_code.eq.${dataToUse.student_code}${dataToUse.email ? `,email.eq.${dataToUse.email}` : ""}`)
+        .limit(1);
+
+      if (checkError) console.error("Check error:", checkError);
+
+      if (existingData && existingData.length > 0) {
+        const existingStudent = existingData[0];
+        const prog = (existingStudent.programs_lookup as any)?.abbr || "???";
+        const dept = (existingStudent.programs_lookup as any)?.departments?.code || "???";
+        const blockObj = (existingStudent.block_students as any[])?.[0]?.blocks;
+        const blockName = blockObj ? `${blockObj.year}${blockObj.name}` : "No Block";
+        
+        const field = existingStudent.student_code === dataToUse.student_code ? "Student ID" : "Email";
+        throw new Error(`${field} already exists in ${dept} > ${prog} ${blockName}`);
+      }
+
       let finalStudentData = { ...dataToUse, teacher_id: userData.user.id };
 
       if (blockId) {
@@ -209,6 +242,32 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
         });
       }
 
+      // 4. Provision Student Account if email exists (Secure Backend Mode)
+      if (newS.email) {
+        try {
+          const provisionResult = await authApi.provisionStudentAccount({
+            email: newS.email,
+            student_code: newS.student_code,
+            first_name: newS.first_name,
+            last_name: newS.last_name,
+            middle_name: newS.middle_name || undefined,
+          });
+
+          // 5. Send Welcome Email if newly created
+          if (provisionResult.created && provisionResult.temp_password) {
+            await sendStudentWelcomeEmail({
+              to_name: `${newS.first_name} ${newS.last_name}`,
+              to_email: newS.email,
+              student_code: newS.student_code,
+              temp_password: provisionResult.temp_password,
+            });
+          }
+        } catch (provisionErr) {
+          console.error("Failed to provision student auth via backend:", provisionErr);
+          showError("Student added, but failed to setup login account via server.");
+        }
+      }
+
       setStudents(prev => [newS, ...prev]);
       showSuccess("Student added successfully!");
       setIsAddDialogOpen(false);
@@ -222,6 +281,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
       return newS;
     } catch (err: any) {
       showError(err.message || "Failed to create student.");
+      throw err;
     } finally {
       setIsCreatingStudent(false);
     }

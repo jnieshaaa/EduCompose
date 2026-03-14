@@ -1,2 +1,5 @@
-﻿
-backend/my_finetuned_distilbert/model.safetensors
+# ML Models
+backend/my_finetuned_distilbert/
+node_modules/
+dist/
+.env*

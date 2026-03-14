@@ -18,6 +18,7 @@ export function AddStudentDialog({
 }: AddStudentDialogProps) {
   const { handleCreateStudent } = useStudents(blockId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     student_code: "",
     first_name: "",
@@ -29,9 +30,10 @@ export function AddStudentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    setError(null);
 
     if (!formData.student_code || !formData.first_name || !formData.last_name) {
-      alert("Please fill in all required fields.");
+      setError("Please fill in all required fields.");
       return;
     }
 
@@ -47,8 +49,9 @@ export function AddStudentDialog({
       });
       if (onSuccess) onSuccess();
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      // console.error(err);
+      setError(err.message || "An error occurred while creating the student.");
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +77,32 @@ export function AddStudentDialog({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 relative">
+          {/* Error Overlay (Centered within form) */}
+          {error && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 animate-in fade-in duration-300">
+              <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-6 text-center space-y-4 max-w-[280px] scale-in-center">
+                <div className="mx-auto w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500">
+                  <X size={24} strokeWidth={3} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-neutral-900">Duplicate Found</h3>
+                  <p className="text-xs text-neutral-500 mt-2 leading-relaxed">
+                    {error}
+                  </p>
+                </div>
+                <Button 
+                  type="button" 
+                  onClick={() => setError(null)} 
+                  className="w-full bg-primary text-white hover:bg-primary-600 shadow-md h-10 text-xs"
+                >
+                  Go Back & Fix
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Student ID/Code*</label>

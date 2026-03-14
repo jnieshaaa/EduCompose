@@ -1,67 +1,80 @@
-import emailjs from "@emailjs/browser";
+import emailjs from '@emailjs/browser';
 
-// EmailJS configuration - these should be set in environment variables
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
+/**
+ * Configure these in your EmailJS Dashboard (https://dashboard.emailjs.com/)
+ */
 
-// Initialize EmailJS
-if (EMAILJS_PUBLIC_KEY) {
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-}
+const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
+const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
 
-interface SendCodeEmailParams {
+// Templates
+const FORGOT_PASSWORD_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
+const STUDENT_WELCOME_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_STUDENT_TEMPLATE_ID || "";
+
+/**
+ * Sends a verification code for forgot password or teacher registration
+ */
+export const sendCodeEmail = async (params: {
   toEmail: string;
   code: string;
-}
-
-export const sendCodeEmail = async ({
-  toEmail,
-  code,
-}: SendCodeEmailParams): Promise<void> => {
-  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-    throw new Error(
-      "EmailJS is not configured. Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY environment variables.",
-    );
+}) => {
+  if (!SERVICE_ID || !FORGOT_PASSWORD_TEMPLATE_ID || !PUBLIC_KEY) {
+    console.warn("EmailJS (Code) not configured. Skipping email.");
+    return;
   }
 
   try {
-    const templateParams = {
-      to_email: toEmail,
-      verification_code: code,
-      message: `Your password reset code is: ${code}. This code will expire in 10 minutes.`,
-    };
-
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    return await emailjs.send(
+      SERVICE_ID,
+      FORGOT_PASSWORD_TEMPLATE_ID,
+      {
+        to_email: params.toEmail,
+        verification_code: params.code,
+        message: `Your verification code is: ${params.code}`,
+      },
+      PUBLIC_KEY
+    );
   } catch (error) {
-    console.error("Error sending email via EmailJS:", error);
-    throw new Error("Failed to send verification code. Please try again.");
+    console.error("EmailJS Error (Code):", error);
+    throw error;
   }
 };
 
-/** Sends 6-digit signup verification code via EmailJS */
-export const sendSignupCodeEmail = async ({
-  toEmail,
-  code,
-}: SendCodeEmailParams): Promise<void> => {
-  const templateId =
-    import.meta.env.VITE_EMAILJS_SIGNUP_TEMPLATE_ID || EMAILJS_TEMPLATE_ID;
-  if (!EMAILJS_SERVICE_ID || !templateId || !EMAILJS_PUBLIC_KEY) {
-    throw new Error(
-      "EmailJS is not configured for signup. Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID (or VITE_EMAILJS_SIGNUP_TEMPLATE_ID), and VITE_EMAILJS_PUBLIC_KEY.",
-    );
+/**
+ * Sends a welcome email to students with their login credentials
+ */
+export const sendStudentWelcomeEmail = async (params: {
+  to_name: string;
+  to_email: string;
+  student_code: string;
+  temp_password: string;
+}) => {
+  // Fallback to FORGOT_PASSWORD_TEMPLATE_ID if student-specific one isn't set
+  const templateId = STUDENT_WELCOME_TEMPLATE_ID || FORGOT_PASSWORD_TEMPLATE_ID;
+
+  if (!SERVICE_ID || !templateId || !PUBLIC_KEY) {
+    console.warn("EmailJS (Student) not configured. Skipping email.");
+    return;
   }
 
   try {
-    const templateParams = {
-      to_email: toEmail,
-      verification_code: code,
-      message: `Your EduCompose signup verification code is: ${code}. This code will expire in 10 minutes.`,
-    };
-
-    await emailjs.send(EMAILJS_SERVICE_ID, templateId, templateParams);
+    return await emailjs.send(
+      SERVICE_ID,
+      templateId,
+      {
+        to_name: params.to_name,
+        to_email: params.to_email,
+        student_code: params.student_code,
+        temp_password: params.temp_password,
+        login_url: `${window.location.origin}/Student/Login`,
+      },
+      PUBLIC_KEY
+    );
   } catch (error) {
-    console.error("Error sending signup code via EmailJS:", error);
-    throw new Error("Failed to send verification code. Please try again.");
+    console.error("EmailJS Error (Student):", error);
+    throw error;
   }
 };
+
+// Alias for existing usages
+export const sendSignupCodeEmail = sendCodeEmail;

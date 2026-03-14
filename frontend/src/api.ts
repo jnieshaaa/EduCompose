@@ -205,6 +205,26 @@ export const authApi = {
       body: JSON.stringify(userData),
     });
   },
+
+  provisionStudentAccount: async (payload: {
+    email: string;
+    student_code: string;
+    first_name: string;
+    last_name: string;
+    middle_name?: string;
+  }) => {
+    return apiRequest<{
+      success: boolean;
+      message: string;
+      created: boolean;
+      temp_password?: string;
+      email: string;
+      student_code: string;
+    }>("/auth/teacher/provision-student-account", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 // User API
