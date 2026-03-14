@@ -1,5 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { UserPlus, Search, Edit2, Trash2, Key, Filter, X, MoreVertical } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  UserPlus,
+  Search,
+  Edit2,
+  Trash2,
+  Key,
+  Filter,
+  X,
+  MoreVertical,
+} from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -36,7 +45,10 @@ export function AdminUsersTab() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpenDropdown(null);
       }
     };
@@ -44,11 +56,8 @@ export function AdminUsersTab() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    loadUsers();
-  }, [roleFilter, searchTerm]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -63,7 +72,11 @@ export function AdminUsersTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleFilter, searchTerm]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleDeleteUser = async (userId: string, email: string) => {
     if (
@@ -258,9 +271,16 @@ export function AdminUsersTab() {
                         : "Never"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="relative" ref={openDropdown === user.id ? dropdownRef : null}>
+                      <div
+                        className="relative"
+                        ref={openDropdown === user.id ? dropdownRef : null}
+                      >
                         <button
-                          onClick={() => setOpenDropdown(openDropdown === user.id ? null : user.id)}
+                          onClick={() =>
+                            setOpenDropdown(
+                              openDropdown === user.id ? null : user.id,
+                            )
+                          }
                           className="p-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
                         >
                           <MoreVertical className="w-4 h-4" />

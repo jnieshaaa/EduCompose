@@ -1,5 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Search, Edit2, Trash2, UserX, UserCheck, MoreVertical, RefreshCw } from "lucide-react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import {
+  Search,
+  Edit2,
+  Trash2,
+  UserX,
+  UserCheck,
+  MoreVertical,
+  RefreshCw,
+} from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -17,7 +25,7 @@ interface Student {
   block_name: string;
   program_id: string;
   is_active: boolean;
-  enrollment_status: 'active' | 'dropped' | 'graduated';
+  enrollment_status: "active" | "dropped" | "graduated";
   programs_lookup?: {
     name: string;
     abbr: string;
@@ -43,7 +51,10 @@ export const AdminStudentsTab: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpenDropdown(null);
       }
     };
@@ -51,14 +62,15 @@ export const AdminStudentsTab: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loadStudents = async () => {
+  const loadStudents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const { data, error: fetchError } = await supabase
         .from("students")
-        .select(`
+        .select(
+          `
           *,
           programs_lookup(
             name,
@@ -68,7 +80,8 @@ export const AdminStudentsTab: React.FC = () => {
               code
             )
           )
-        `)
+        `,
+        )
         .order("last_name", { ascending: true });
 
       if (fetchError) throw fetchError;
@@ -78,19 +91,20 @@ export const AdminStudentsTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleToggleActive = async (student: Student) => {
     try {
-      const newStatus = student.enrollment_status === 'active' ? 'dropped' : 'active';
+      const newStatus =
+        student.enrollment_status === "active" ? "dropped" : "active";
       const { error: updateError } = await supabase
         .from("students")
-        .update({ 
+        .update({
           enrollment_status: newStatus,
-          is_active: newStatus === 'active'
+          is_active: newStatus === "active",
         })
         .eq("id", student.id);
-      
+
       if (updateError) throw updateError;
       await loadStudents();
       setOpenDropdown(null);
@@ -100,14 +114,19 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleDeleteStudent = async (student: Student) => {
-    if (!confirm(`Are you sure you want to delete/archive student ${student.first_name} ${student.last_name}?`)) return;
-    
+    if (
+      !confirm(
+        `Are you sure you want to delete/archive student ${student.first_name} ${student.last_name}?`,
+      )
+    )
+      return;
+
     try {
       const { error: deleteError } = await supabase
         .from("students")
         .delete()
         .eq("id", student.id);
-      
+
       if (deleteError) throw deleteError;
       await loadStudents();
       setOpenDropdown(null);
@@ -118,10 +137,11 @@ export const AdminStudentsTab: React.FC = () => {
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [loadStudents]);
 
-  const filteredStudents = students.filter(s => {
-    const fullSearch = `${s.first_name} ${s.last_name} ${s.student_code} ${s.email}`.toLowerCase();
+  const filteredStudents = students.filter((s) => {
+    const fullSearch =
+      `${s.first_name} ${s.last_name} ${s.student_code} ${s.email}`.toLowerCase();
     return fullSearch.includes(searchTerm.toLowerCase());
   });
 
@@ -130,11 +150,15 @@ export const AdminStudentsTab: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">Students</h1>
-          <p className="text-neutral-600 mt-1">View and manage student records</p>
+          <p className="text-neutral-600 mt-1">
+            View and manage student records
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadStudents}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -175,23 +199,44 @@ export const AdminStudentsTab: React.FC = () => {
             <table className="w-full">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr className="text-left">
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Dept</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Program</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Year/Block</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">Actions</th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Student ID
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Dept
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Program
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Year/Block
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-100">
                 {filteredStudents.map((s) => (
-                  <tr key={s.id} className="hover:bg-neutral-50/50 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-600">{s.student_code}</td>
+                  <tr
+                    key={s.id}
+                    className="hover:bg-neutral-50/50 transition-colors group"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-600">
+                      {s.student_code}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-neutral-900">{`${s.first_name || ""} ${s.last_name || ""}`}</span>
-                        <span className="text-xs text-neutral-400">{s.email || "-"}</span>
+                        <span className="text-xs text-neutral-400">
+                          {s.email || "-"}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -205,30 +250,36 @@ export const AdminStudentsTab: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {s.year || "-"}{s.block_name ? ` • ${s.block_name}` : ""}
+                      {s.year || "-"}
+                      {s.block_name ? ` • ${s.block_name}` : ""}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-[10px] font-bold rounded uppercase ${
-                          s.enrollment_status === 'active'
+                          s.enrollment_status === "active"
                             ? "bg-green-100 text-green-700"
-                            : s.enrollment_status === 'dropped'
-                            ? "bg-red-100 text-red-700"
-                            : "bg-blue-100 text-blue-700"
+                            : s.enrollment_status === "dropped"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-blue-100 text-blue-700"
                         }`}
                       >
                         {s.enrollment_status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <div className="relative inline-block text-left" ref={openDropdown === s.id ? dropdownRef : null}>
+                      <div
+                        className="relative inline-block text-left"
+                        ref={openDropdown === s.id ? dropdownRef : null}
+                      >
                         <button
-                          onClick={() => setOpenDropdown(openDropdown === s.id ? null : s.id)}
+                          onClick={() =>
+                            setOpenDropdown(openDropdown === s.id ? null : s.id)
+                          }
                           className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
                         >
                           <MoreVertical size={16} />
                         </button>
-                        
+
                         {openDropdown === s.id && (
                           <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-neutral-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
                             <button
@@ -245,14 +296,17 @@ export const AdminStudentsTab: React.FC = () => {
                               onClick={() => handleToggleActive(s)}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                             >
-                              {s.enrollment_status === 'active' ? (
+                              {s.enrollment_status === "active" ? (
                                 <>
                                   <UserX size={14} className="text-amber-500" />
                                   Deactivate (Drop)
                                 </>
                               ) : (
                                 <>
-                                  <UserCheck size={14} className="text-green-500" />
+                                  <UserCheck
+                                    size={14}
+                                    className="text-green-500"
+                                  />
                                   Re-activate
                                 </>
                               )}

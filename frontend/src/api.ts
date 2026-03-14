@@ -766,7 +766,23 @@ export const adminApi = {
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return (data || []) as any[];
+    return (data || []) as unknown as {
+      id: string;
+      student_code: string;
+      first_name: string;
+      last_name: string;
+      middle_name?: string;
+      email: string;
+      year?: number;
+      block_name?: string;
+      enrollment_status: string;
+      is_active: boolean;
+      programs_lookup?: {
+        id: string;
+        name: string;
+        abbr: string;
+      };
+    }[];
   },
 };
 
