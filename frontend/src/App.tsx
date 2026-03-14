@@ -108,11 +108,27 @@ const AppContent: React.FC = () => {
         <Route path="/auth/confirm" element={<EmailConfirmation />} />
         <Route path="/AnalysisResults" element={<AnalysisResults />} />
 
-        {/* Onboarding Route (Protected but no onboarding check) */}
+        {/* Onboarding Routes */}
         <Route
           path="/onboarding"
           element={
             <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Student/Onboarding"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Teacher/Onboarding"
+          element={
+            <ProtectedRoute requiredRole="teacher">
               <Onboarding />
             </ProtectedRoute>
           }

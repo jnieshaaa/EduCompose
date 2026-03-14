@@ -46,10 +46,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    // If the user is trying to access a student route, redirect to student login
-    if (location.pathname.toLowerCase().startsWith("/student")) {
+    const path = location.pathname.toLowerCase();
+    
+    // If accessing student routes OR explicit student role is required
+    if (path.startsWith("/student") || requiredRole === "student") {
       return <Navigate to="/Student/Login" state={{ from: location }} replace />;
     }
+
+    // Default for Admin or Teacher - Redirect to Landing Page (where Teacher/Admin AuthModal exists)
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 

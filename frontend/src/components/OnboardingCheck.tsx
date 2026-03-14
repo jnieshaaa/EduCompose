@@ -11,6 +11,7 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -24,6 +25,7 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
 
       try {
         const role = authUser.app_metadata?.role || authUser.user_metadata?.role;
+        setUserRole(role || null);
         
         if (role === 'admin') {
           setOnboardingCompleted(true);
@@ -48,7 +50,7 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
             setOnboardingCompleted(!!data.onboarding_completed);
           }
         } else {
-          // Default behavior for teachers/admins
+          // Default behavior for teachers/course owners
           const { data, error } = await supabase
             .from('users')
             .select('onboarding_completed, title, nickname')
@@ -88,7 +90,11 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
   }
 
   if (!onboardingCompleted) {
-    return <Navigate to="/onboarding" replace />;
+    // Redirect based on role
+    if (userRole === 'student') {
+      return <Navigate to="/Student/Onboarding" replace />;
+    }
+    return <Navigate to="/Teacher/Onboarding" replace />;
   }
 
   return <>{children}</>;

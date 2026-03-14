@@ -1,0 +1,52 @@
+<div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; color: #0F172A; max-width: 600px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden;">
+  <!-- Header Branding -->
+  <div style="background: linear-gradient(135deg, #045568 0%, #067D99 50%, #08A5CB 100%); padding: 32px 24px; text-align: center;">
+    <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+      Edu<span style="color: #10C9F6;">Compose</span>
+    </h1>
+    <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">
+      Student Portal Access
+    </p>
+  </div>
+
+  <!-- Main Body -->
+  <div style="background: #FFFFFF; padding: 40px 32px;">
+    <h2 style="margin: 0 0 16px 0; color: #0F172A; font-size: 20px; font-weight: 700;">
+      Hello, {{to_name}}!
+    </h2>
+    <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px;">
+      Welcome to EduCompose. Your teacher has created your student account. You can now use the credentials below to log in and start your activities.
+    </p>
+
+    <!-- Credentials Box -->
+    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 24px; margin-bottom: 32px;">
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Student ID / Code</label>
+        <span style="font-size: 18px; font-weight: 700; color: #0791B2; font-family: 'Courier New', monospace;">{{student_code}}</span>
+      </div>
+      <div>
+        <label style="display: block; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Temporary Password</label>
+        <span style="font-size: 18px; font-weight: 700; color: #0791B2; font-family: 'Courier New', monospace;">{{temp_password}}</span>
+      </div>
+    </div>
+
+    <!-- CTA Button -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <a href="{{login_url}}" style="background: #067D99; color: #FFFFFF; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(6, 125, 153, 0.2);">
+        Go to Login Page
+      </a>
+    </div>
+
+    <!-- Security Reminder -->
+    <div style="background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 16px; border-radius: 4px;">
+      <p style="margin: 0; color: #92400E; font-size: 13px; line-height: 1.5;">
+        <strong>Security Tip:</strong> Para sa iyong seguridad, mangyaring palitan ang iyong temporary password pagkatapos mong mag-login sa unang pagkakataon.
+      </p>
+    </div>
+
+    <p style="margin: 40px 0 0 0; padding-top: 24px; border-top: 1px solid #F1F5F9; color: #64748B; font-size: 13px; text-align: center;">
+      If you did not expect this email, please contact your school administrator.<br />
+      © 2024 EduCompose. All rights reserved.
+    </p>
+  </div>
+</div>

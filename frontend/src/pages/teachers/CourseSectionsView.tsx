@@ -47,30 +47,16 @@ export function CourseSectionsView({
   const [programLoads, setProgramLoads] = useState<TeacherProgramLoad[]>([]);
   const [blocks, setBlocks] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Current view state
-  const [selectedProgramLoad, setSelectedProgramLoad] =
-    useState<TeacherProgramLoad | null>(null);
-
+  const [selectedProgramLoad, setSelectedProgramLoad] = useState<TeacherProgramLoad | null>(null);
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isAddProgramOpen, setIsAddProgramOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-
-  // Catalogs
+  const [programWideBlocks, setProgramWideBlocks] = useState<{year: number, name: string, student_count: number}[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [availablePrograms, setAvailablePrograms] = useState<ProgramLookup[]>(
-    [],
-  );
-  // Default to course department if it exists
-  const [selectedDept, setSelectedDept] = useState<string>(
-    course.department_id || "",
-  );
+  const [availablePrograms, setAvailablePrograms] = useState<ProgramLookup[]>([]);
+  const [selectedDept, setSelectedDept] = useState<string>(course.department_id || "");
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
-
-  const [newBlock, setNewBlock] = useState({
-    year: 1,
-    name: "",
-  });
+  const [newBlock, setNewBlock] = useState({ year: 1, name: "" });
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -208,6 +194,34 @@ export function CourseSectionsView({
       }));
 
       setBlocks(mapped);
+
+      // Also fetch ALL blocks for this program regardless of course/teacher
+      // to show in the "Existing Blocks" list in the modal
+      const { data: blocks } = await supabase
+        .from("blocks")
+        .select("year, name, teacher_program_loads!inner(program_id)")
+        .eq("teacher_program_loads.program_id", selectedProgramLoad.program_id);
+      
+      if (blocks) {
+        // Unique names and years
+        const uniqueBlocks = blocks.reduce((acc: any[], current: any) => {
+          const exists = acc.find(item => item.name === current.name && item.year === current.year);
+          if (!exists) acc.push({ name: current.name, year: current.year });
+          return acc;
+        }, []);
+
+        const results = await Promise.all(uniqueBlocks.map(async (b) => {
+          const { count } = await supabase
+            .from("students")
+            .select("*", { count: 'exact', head: true })
+            .eq("program_id", selectedProgramLoad.program_id)
+            .eq("year", b.year)
+            .eq("block_name", b.name);
+          return { ...b, student_count: count || 0 };
+        }));
+
+        setProgramWideBlocks(results);
+      }
     } catch (err) {
       console.error(err);
       showError("Failed to load blocks.");
@@ -215,6 +229,7 @@ export function CourseSectionsView({
       setIsLoading(false);
     }
   }, [selectedProgramLoad, course.id, showError]);
+
 
   useEffect(() => {
     fetchProgramLoads();
@@ -315,11 +330,20 @@ export function CourseSectionsView({
     if (!selectedProgramLoad || !newBlock.name) return;
     setIsCreating(true);
     try {
-      const { error } = await supabase.from("blocks").insert({
-        program_load_id: selectedProgramLoad.id,
-        year: newBlock.year,
-        name: newBlock.name.toUpperCase(),
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // 1. Create the block
+      const { data: block, error } = await supabase
+        .from("blocks")
+        .insert({
+          program_load_id: selectedProgramLoad.id,
+          year: newBlock.year,
+          name: newBlock.name.toUpperCase(),
+          teacher_id: user.id
+        })
+        .select()
+        .single();
 
       if (error) {
         if (error.code === "23505")
@@ -327,7 +351,32 @@ export function CourseSectionsView({
         throw error;
       }
 
-      showSuccess("Block created successfully!");
+      let enrollmentCount = 0;
+      // 2. Automatically link existing students
+      if (block) {
+        const { data: matchingStudents } = await supabase
+          .from("students")
+          .select("id")
+          .eq("program_id", selectedProgramLoad.program_id)
+          .eq("year", newBlock.year)
+          .eq("block_name", newBlock.name.toUpperCase());
+
+        if (matchingStudents && matchingStudents.length > 0) {
+          enrollmentCount = matchingStudents.length;
+          const enrollments = matchingStudents.map(s => ({
+            block_id: block.id,
+            student_id: s.id
+          }));
+          
+          const { error: enrollError } = await supabase
+            .from("block_students")
+            .insert(enrollments);
+            
+          if (enrollError) console.error("Auto-enroll error:", enrollError);
+        }
+      }
+
+      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found for auto-enroll."}`);
       setIsAddBlockOpen(false);
       setNewBlock({ year: 1, name: "" });
       fetchBlocks();
@@ -715,7 +764,7 @@ export function CourseSectionsView({
       {/* Add Block Modal */}
       {isAddBlockOpen && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-sm overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
               <h2 className="text-lg font-bold">Create New Block</h2>
               <p className="text-xs text-neutral-500 mt-1">
@@ -728,7 +777,7 @@ export function CourseSectionsView({
                   Year Level
                 </label>
                 <select
-                  className="w-full border rounded-lg p-2.5 text-sm"
+                  className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                   value={newBlock.year}
                   onChange={(e) =>
                     setNewBlock({ ...newBlock, year: parseInt(e.target.value) })
@@ -748,13 +797,47 @@ export function CourseSectionsView({
                 <input
                   type="text"
                   placeholder="e.g. A, B, C"
-                  className="w-full border rounded-lg p-2.5 text-sm uppercase"
+                  className="w-full border rounded-lg p-2.5 text-sm uppercase outline-none focus:ring-2 focus:ring-primary/20"
                   value={newBlock.name}
                   onChange={(e) =>
                     setNewBlock({ ...newBlock, name: e.target.value })
                   }
                 />
               </div>
+
+              {selectedProgramLoad && programWideBlocks.length > 0 && (
+                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
+                    Select Existing Block
+                  </span>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
+                      const isActive = newBlock.year === b.year && newBlock.name === b.name;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setNewBlock({ ...newBlock, year: b.year, name: b.name })}
+                          className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all ${
+                            isActive
+                              ? "bg-primary/10 border-primary text-primary shadow-sm"
+                              : "bg-white border-neutral-200 text-neutral-600 hover:border-primary/50 hover:bg-primary/5"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isActive ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
+                              {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                            </div>
+                            <span className="text-xs font-bold uppercase">{b.year}{b.name}</span>
+                          </div>
+                          <span className={`${isActive ? 'text-primary/70' : 'text-neutral-400'} text-[10px] font-medium`}>
+                            {b.student_count} Students
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="px-6 py-4 bg-neutral-50 flex justify-end gap-2">
               <Button onClick={() => setIsAddBlockOpen(false)} variant="ghost">

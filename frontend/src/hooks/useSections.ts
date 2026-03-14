@@ -57,6 +57,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     term: "",
     students: "0"
   });
+  const [programWideBlocks, setProgramWideBlocks] = useState<{year: number, name: string, student_count: number}[]>([]);
 
   // Update new section term when academic context loads
   useEffect(() => {
@@ -248,6 +249,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           program_load_id: tplData.id,
           year: newSection.year,
           name: newSection.name.toUpperCase(),
+          teacher_id: context.auth_user_id
         })
         .select(`
           id,
@@ -274,7 +276,28 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
         throw createBlockError;
       }
 
-      // 4. Update UI
+      let enrollmentCount = 0;
+      // 4. Automatically link existing students
+      if (blockData) {
+        const { data: matchingStudents } = await supabase
+          .from("students")
+          .select("id")
+          .eq("program_id", newSection.program_id)
+          .eq("year", newSection.year)
+          .eq("block_name", newSection.name.toUpperCase());
+
+        if (matchingStudents && matchingStudents.length > 0) {
+          enrollmentCount = matchingStudents.length;
+          const enrollments = matchingStudents.map(s => ({
+            block_id: blockData.id,
+            student_id: s.id
+          }));
+          
+          await supabase.from("block_students").insert(enrollments);
+        }
+      }
+
+      // 5. Update UI
       const tpl = blockData.teacher_program_loads as any;
       const tcl = tpl.teacher_course_loads as any;
       const courseData = tcl.courses as any;
@@ -297,7 +320,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
       };
 
       setSections((prev) => [newMappedSection, ...prev]);
-      showSuccess("Block created and assigned successfully!");
+      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found for auto-enroll."}`);
       setIsAddDialogOpen(false);
       setNewSection({ 
         name: "", 
@@ -352,6 +375,43 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     }
   };
 
+  const fetchProgramWideBlocks = async (programId: string) => {
+    if (!programId) {
+      setProgramWideBlocks([]);
+      return;
+    }
+    try {
+      // 1. Get all blocks in this program
+      const { data: blocks } = await supabase
+        .from("blocks")
+        .select("year, name, teacher_program_loads!inner(program_id)")
+        .eq("teacher_program_loads.program_id", programId);
+      
+      if (!blocks) return;
+
+      // 2. Map unique blocks and fetch student counts for each
+      const uniqueBlocks = blocks.reduce((acc: any[], current: any) => {
+        const exists = acc.find(item => item.name === current.name && item.year === current.year);
+        if (!exists) acc.push({ name: current.name, year: current.year });
+        return acc;
+      }, []);
+
+      const results = await Promise.all(uniqueBlocks.map(async (b) => {
+        const { count } = await supabase
+          .from("students")
+          .select("*", { count: 'exact', head: true })
+          .eq("program_id", programId)
+          .eq("year", b.year)
+          .eq("block_name", b.name);
+        return { ...b, student_count: count || 0 };
+      }));
+
+      setProgramWideBlocks(results);
+    } catch (err) {
+      console.error("Error fetching program blocks:", err);
+    }
+  };
+
   return {
     sections: filteredSections,
     allSections: sections,
@@ -377,6 +437,8 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     handleDeleteSection,
     handleUpdateSection,
     allPrograms,
+    programWideBlocks,
+    fetchProgramWideBlocks,
     AlertComponent,
   };
 }

@@ -26,10 +26,12 @@ export function SectionsTab() {
     editingSection,
     setEditingSection,
     availableCourses,
-    allPrograms,
     handleCreateSection,
     handleDeleteSection,
     handleUpdateSection,
+    allPrograms,
+    programWideBlocks,
+    fetchProgramWideBlocks,
     AlertComponent,
   } = useSections();
 
@@ -39,6 +41,12 @@ export function SectionsTab() {
       setNewSection(prev => ({ ...prev, term: currentSemester }));
     }
   }, [isAddDialogOpen, currentSemester]);
+
+  useEffect(() => {
+    if (newSection.program_id) {
+      fetchProgramWideBlocks(newSection.program_id);
+    }
+  }, [newSection.program_id]);
 
   return (
     <div className="space-y-6">
@@ -167,7 +175,7 @@ export function SectionsTab() {
       {/* Add Modal */}
       {isAddDialogOpen && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <h2 className="text-xl font-bold">Add New Block</h2>
             <div className="space-y-3">
               <div>
@@ -213,6 +221,41 @@ export function SectionsTab() {
                   </select>
                 </div>
               </div>
+
+              {newSection.program_id && programWideBlocks.length > 0 && (
+                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
+                    Select Existing Block
+                  </span>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
+                      const isActive = newSection.year === b.year && newSection.name === b.name;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setNewSection({ ...newSection, year: b.year, name: b.name })}
+                          className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all ${
+                            isActive
+                              ? "bg-primary/10 border-primary text-primary shadow-sm"
+                              : "bg-white border-neutral-200 text-neutral-600 hover:border-primary/50 hover:bg-primary/5"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isActive ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
+                              {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                            </div>
+                            <span className="text-xs font-bold uppercase">{b.year}{b.name}</span>
+                          </div>
+                          <span className={`${isActive ? 'text-primary/70' : 'text-neutral-400'} text-[10px] font-medium`}>
+                            {b.student_count} Students
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase">Term</label>
                 <select
