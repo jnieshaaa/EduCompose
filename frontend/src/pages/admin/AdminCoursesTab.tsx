@@ -358,7 +358,7 @@ export const AdminCoursesTab: React.FC = () => {
               className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
             >
               <option value="">All Programs</option>
-              {filters.dept && schools.find(s => s.id === filters.school)?.departments.find(d => d.id === filters.dept)?.programs.map(p => (
+              {filters.dept && schools.find(s => s.id === filters.school)?.departments.find(d => d.id === filters.dept)?.programs?.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -636,7 +636,7 @@ export const AdminCoursesTab: React.FC = () => {
                       className="w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none disabled:bg-neutral-100 disabled:cursor-not-allowed"
                     >
                       <option value="">All Programs</option>
-                      {selectedDept && schools.find(s => s.id === selectedSchool)?.departments.find(d => d.id === selectedDept)?.programs.map(p => (
+                      {selectedDept && schools.find(s => s.id === selectedSchool)?.departments.find(d => d.id === selectedDept)?.programs?.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>

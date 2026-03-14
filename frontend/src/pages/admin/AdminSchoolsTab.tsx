@@ -112,7 +112,7 @@ export const AdminSchoolsTab: React.FC = () => {
 
           if (deptError) throw deptError;
 
-          if (dept.programs.length > 0) {
+          if (dept.programs && dept.programs.length > 0) {
             const programsToInsert = dept.programs.map((p) => ({
               department_id: department.id,
               name: p.name,
@@ -377,7 +377,7 @@ export const AdminSchoolsTab: React.FC = () => {
 
                             {expandedDepts.has(deptKey) && (
                               <div className="p-3 bg-white space-y-2">
-                                {dept.programs.length === 0 ? (
+                                {(!dept.programs || dept.programs.length === 0) ? (
                                   <p className="text-xs text-neutral-500 italic">No programs yet</p>
                                 ) : (
                                   dept.programs.map((program) => (
