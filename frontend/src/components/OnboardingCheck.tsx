@@ -31,18 +31,21 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
         }
 
         if (role === 'student') {
-          // Check students table for student onboarding status
+          // Check students table for student onboarding status and enrollment status
           const { data, error } = await supabase
             .from('students')
-            .select('onboarding_completed')
+            .select('onboarding_completed, enrollment_status')
             .eq('auth_user_id', authUser.id)
             .maybeSingle();
 
           if (error) {
-            console.error('Error checking student onboarding status:', error);
+            console.error('Error checking student status:', error);
+            setOnboardingCompleted(false);
+          } else if (!data || data.enrollment_status !== 'active') {
+            // Block access if student record not found or not active
             setOnboardingCompleted(false);
           } else {
-            setOnboardingCompleted(!!data?.onboarding_completed);
+            setOnboardingCompleted(!!data.onboarding_completed);
           }
         } else {
           // Default behavior for teachers/admins

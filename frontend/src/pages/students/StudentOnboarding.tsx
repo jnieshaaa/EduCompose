@@ -42,6 +42,7 @@ interface StudentData {
   };
   year: number | null;
   block_name: string | null;
+  enrollment_status?: 'active' | 'dropped' | 'graduated';
 }
 
 const StudentOnboarding: React.FC = () => {
@@ -233,6 +234,36 @@ const StudentOnboarding: React.FC = () => {
       ],
     },
   ];
+
+  if (studentData && studentData.enrollment_status && studentData.enrollment_status !== 'active') {
+    return (
+      <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl"
+        >
+          <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Access Restricted</h2>
+          <p className="text-neutral-600 mb-8">
+            Your account status is currently set to <span className="font-bold uppercase text-red-600">{studentData.enrollment_status}</span>. 
+            Only active students can proceed to the system.
+          </p>
+          <button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+            className="w-full py-4 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all"
+          >
+            Return to Login
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-white overflow-hidden">

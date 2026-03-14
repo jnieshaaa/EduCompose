@@ -63,6 +63,11 @@ const AdminSidebar: React.FC = () => {
         path: "/Admin/Users",
       },
       {
+        icon: <Users size={20} />,
+        label: "Students",
+        path: "/Admin/Students",
+      },
+      {
         icon: <GraduationCap size={20} />,
         label: "Academics",
         path: "/Admin/Schools",

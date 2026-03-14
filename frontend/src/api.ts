@@ -747,6 +747,27 @@ export const adminApi = {
 
     return data;
   },
+
+  getStudents: async (params?: { search?: string; limit?: number }) => {
+    let query = supabase
+      .from("students")
+      .select(
+        `id, student_code, first_name, middle_name, last_name, email, year, block_name, program_id, created_at, programs_lookup (id, name, abbr)`,
+      )
+      .order("created_at", { ascending: false });
+
+    if (params?.search) {
+      query = query.or(
+        `student_code.ilike.%${params.search}%,first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`,
+      );
+    }
+
+    if (params?.limit) query = query.limit(params.limit);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data || []) as any[];
+  },
 };
 
 // Dummy data for development - loaded from JSON file

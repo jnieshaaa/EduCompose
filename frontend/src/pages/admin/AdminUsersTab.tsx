@@ -57,8 +57,7 @@ export function AdminUsersTab() {
         role: roleFilter !== "all" ? roleFilter : undefined,
         search: searchTerm || undefined,
       });
-      // Filter out admin users
-      setUsers(data.filter(user => user.role !== 'admin'));
+      setUsers(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load users");
     } finally {

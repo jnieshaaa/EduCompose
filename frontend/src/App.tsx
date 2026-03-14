@@ -19,6 +19,7 @@ import AdminLayout from "./layout/AdminLayout.tsx";
 import { AdminDashboardTab } from "./pages/admin/AdminDashboardTab.tsx";
 import { AdminRubricsTab } from "./pages/admin/AdminRubricsTab.tsx";
 import { AdminUsersTab } from "./pages/admin/AdminUsersTab.tsx";
+import { AdminStudentsTab } from "./pages/admin/AdminStudentsTab.tsx";
 import { AdminSettingsTab } from "./pages/admin/AdminSettingsTab.tsx";
 import { AdminContentTab } from "./pages/admin/AdminContentTab.tsx";
 import SchoolManagement from "./pages/admin/SchoolManagement.tsx";
@@ -208,6 +209,7 @@ const AppContent: React.FC = () => {
         >
           <Route path="Dashboard" element={<AdminDashboardTab />} />
           <Route path="Users" element={<AdminUsersTab />} />
+          <Route path="Students" element={<AdminStudentsTab />} />
           <Route path="Rubrics" element={<AdminRubricsTab />} />
           <Route path="Content" element={<AdminContentTab />} />
           <Route path="Schools" element={<SchoolManagement />} />
