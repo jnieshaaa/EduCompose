@@ -31,6 +31,7 @@ class GrammarAnalyzer:
         self.llm_provider = llm_provider
         self.llm_client = None
         self.available_llm = None  # "openai", "gemini", or None
+        self.gemini_model = None  # Store model name for Gemini
         # Don't initialize here - wait until first use to avoid import errors at startup
     
     def _ensure_llm_loaded(self):
@@ -92,44 +93,43 @@ class GrammarAnalyzer:
     def _init_gemini(self):
         """Initialize Gemini client"""
         try:
-            import google.generativeai as genai
+            from google import genai
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 return
             
-            genai.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
+            self.llm_client = client
             
             # Get model name from environment variable, or use fallback list
             env_model_name = os.getenv("GEMINI_MODEL_NAME")
             if env_model_name:
                 # Use the model name from environment variable
                 try:
-                    self.llm_client = genai.GenerativeModel(env_model_name)
+                    # Test if model is reachable
+                    client.models.get(model=env_model_name)
+                    self.gemini_model = env_model_name
                     logger.info(f"Gemini client initialized with model from env: {env_model_name}")
                 except Exception as model_error:
-                    logger.warning(f"Failed to initialize Gemini model '{env_model_name}' from env: {model_error}")
+                    logger.warning(f"Failed to find Gemini model '{env_model_name}' from env: {model_error}")
                     logger.info("Falling back to default model list...")
                     env_model_name = None  # Trigger fallback
             
             if not env_model_name:
                 # Try different model names in order of preference
-                # Updated for Gemini 2.5 models (newer API versions)
                 model_names = [
-                    'models/gemini-2.5-flash',   # Latest 2.5 flash (fastest)
-                    'gemini-2.5-flash',          # Without models/ prefix
-                    'models/gemini-flash-latest', # Latest flash (fallback)
-                    'gemini-flash-latest',        # Without models/ prefix
-                    'models/gemini-2.5-pro',     # Pro version (more capable)
-                    'gemini-2.5-pro',            # Without models/ prefix
-                    'models/gemini-pro-latest',  # Legacy latest
-                    'gemini-pro-latest',         # Without models/ prefix
+                    'gemini-2.0-flash',          # Latest 2.0 flash
+                    'gemini-1.5-flash',          # Stable 1.5 flash
+                    'gemini-1.5-pro',            # Pro version
+                    'gemini-pro-latest',         # Legacy latest
                 ]
                 
-                self.llm_client = None
+                self.gemini_model = None
                 last_error = None
                 for model_name in model_names:
                     try:
-                        self.llm_client = genai.GenerativeModel(model_name)
+                        client.models.get(model=model_name)
+                        self.gemini_model = model_name
                         logger.info(f"Gemini client initialized with model: {model_name}")
                         break
                     except Exception as model_error:
@@ -137,11 +137,12 @@ class GrammarAnalyzer:
                         logger.debug(f"Model {model_name} failed: {model_error}")
                         continue
                 
-                if not self.llm_client:
+                if not self.gemini_model:
                     logger.warning(f"Failed to initialize any Gemini model. Last error: {last_error}")
+                    self.llm_client = None
                 
         except ImportError:
-            logger.debug("google-generativeai package not installed")
+            logger.debug("google-genai package not installed")
         except Exception as e:
             logger.warning(f"Gemini initialization failed: {e}")
             self.llm_client = None
@@ -435,9 +436,10 @@ Please return your response as a valid JSON object with this structure:
                 "max_output_tokens": 8192,  # Maximum for Gemini 2.5 models
             }
             
-            response = self.llm_client.generate_content(
-                full_prompt,
-                generation_config=generation_config
+            response = self.llm_client.models.generate_content(
+                model=self.gemini_model,
+                contents=full_prompt,
+                config=generation_config
             )
             
             # Check if response was truncated by examining finish_reason

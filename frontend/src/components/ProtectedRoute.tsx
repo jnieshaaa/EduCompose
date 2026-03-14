@@ -44,9 +44,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     );
   }
 
-  // Redirect to landing page if not authenticated
-  // The landing page has a login modal that users can use
+  // Redirect if not authenticated
   if (!isAuthenticated) {
+    // If the user is trying to access a student route, redirect to student login
+    if (location.pathname.toLowerCase().startsWith("/student")) {
+      return <Navigate to="/Student/Login" state={{ from: location }} replace />;
+    }
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 

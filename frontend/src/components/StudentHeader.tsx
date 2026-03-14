@@ -97,7 +97,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   const confirmLogout = () => {
     setShowLogoutConfirm(false);
     logout();
-    navigate("/");
+    navigate("/Student/Login");
   };
 
   const cancelLogout = () => {

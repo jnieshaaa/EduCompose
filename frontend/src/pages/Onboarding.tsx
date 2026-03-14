@@ -43,7 +43,7 @@ interface OnboardingData {
   email: string;
 }
 
-const Onboarding: React.FC = () => {
+const TeacherOnboarding: React.FC = () => {
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -622,6 +622,20 @@ const Onboarding: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// Main Onboarding Export with conditional rendering
+import StudentOnboarding from "./students/StudentOnboarding";
+
+const Onboarding: React.FC = () => {
+  const { user } = useAuth();
+  const role = user?.role?.toLowerCase();
+
+  if (role === 'student') {
+    return <StudentOnboarding />;
+  }
+
+  return <TeacherOnboarding />;
 };
 
 export default Onboarding;

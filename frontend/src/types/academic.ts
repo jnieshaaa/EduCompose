@@ -83,7 +83,7 @@ export interface Department {
   school_id?: string;
   code: string;
   name: string;
-  programs: Program[];
+  programs?: Program[];
 }
 
 export interface School {

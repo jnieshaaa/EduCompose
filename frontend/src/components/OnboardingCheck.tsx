@@ -23,23 +23,40 @@ const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
       }
 
       try {
-        // 2. Query using the confirmed UUID from Supabase Auth
-        const { data, error } = await supabase
-          .from('users')
-          .select('onboarding_completed, title, nickname, role')
-          .eq('auth_user_id', authUser.id) // Guaranteed UUID
-          .single();
+        const role = authUser.app_metadata?.role || authUser.user_metadata?.role;
+        
+        if (role === 'admin') {
+          setOnboardingCompleted(true);
+          return;
+        }
 
-        if (error) {
-          console.error('Error checking onboarding status:', error);
-          // If row doesn't exist, they definitely haven't completed onboarding
-          setOnboardingCompleted(false);
-        } else {
-          // Admins skip onboarding
-          if (data?.role === 'admin') {
-            setOnboardingCompleted(true);
+        if (role === 'student') {
+          // Check students table for student onboarding status
+          const { data, error } = await supabase
+            .from('students')
+            .select('onboarding_completed')
+            .eq('auth_user_id', authUser.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error checking student onboarding status:', error);
+            setOnboardingCompleted(false);
           } else {
-            // User must have completed onboarding AND have title/nickname set
+            setOnboardingCompleted(!!data?.onboarding_completed);
+          }
+        } else {
+          // Default behavior for teachers/admins
+          const { data, error } = await supabase
+            .from('users')
+            .select('onboarding_completed, title, nickname')
+            .eq('auth_user_id', authUser.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error checking teacher onboarding status:', error);
+            setOnboardingCompleted(false);
+          } else {
+            // Teacher must have completed onboarding AND have title/nickname set
             const isComplete = data?.onboarding_completed && data?.title && data?.nickname;
             setOnboardingCompleted(!!isComplete);
           }

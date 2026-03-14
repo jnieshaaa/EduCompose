@@ -88,10 +88,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const queryPromise = supabase
         .from("users")
         .select(
-          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname, school, department",
+          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname",
         )
         .eq("auth_user_id", authUserId)
-        .single();
+        .maybeSingle();
 
       const result = await Promise.race([queryPromise, timeoutPromise]);
 
@@ -136,8 +136,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         onboarding_completed: data.onboarding_completed ?? false,
         title: data.title,
         nickname: data.nickname,
-        school: data.school,
-        department: data.department,
       };
     } catch {
       console.warn("Error fetching user from users table, using fallback");

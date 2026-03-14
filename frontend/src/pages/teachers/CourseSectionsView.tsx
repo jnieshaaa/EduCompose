@@ -14,7 +14,13 @@ import Button from "../../components/ui/Button";
 import { supabase } from "../../lib/supabaseClient";
 import { useAlert } from "../../hooks/useAlert";
 import { useAcademicContext } from "../../hooks/useAcademicContext";
-import type { Course, Section, TeacherProgramLoad } from "../../types/academic";
+import type {
+  Course,
+  Section,
+  TeacherProgramLoad,
+  Program,
+  Department,
+} from "../../types/academic";
 
 interface CourseSectionsViewProps {
   course: Course;
@@ -37,23 +43,28 @@ export function CourseSectionsView({
   const urlProgramLoadId = searchParams.get("programLoad");
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
   const { currentAY, currentSemester } = useAcademicContext();
-  
+
   const [programLoads, setProgramLoads] = useState<TeacherProgramLoad[]>([]);
   const [blocks, setBlocks] = useState<Section[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Current view state
-  const [selectedProgramLoad, setSelectedProgramLoad] = useState<TeacherProgramLoad | null>(null);
+  const [selectedProgramLoad, setSelectedProgramLoad] =
+    useState<TeacherProgramLoad | null>(null);
 
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isAddProgramOpen, setIsAddProgramOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   // Catalogs
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [availablePrograms, setAvailablePrograms] = useState<ProgramLookup[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [availablePrograms, setAvailablePrograms] = useState<ProgramLookup[]>(
+    [],
+  );
   // Default to course department if it exists
-  const [selectedDept, setSelectedDept] = useState<string>(course.department_id || "");
+  const [selectedDept, setSelectedDept] = useState<string>(
+    course.department_id || "",
+  );
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
 
   const [newBlock, setNewBlock] = useState({
@@ -73,7 +84,10 @@ export function CourseSectionsView({
         const { data: progData } = await supabase
           .from("programs_lookup")
           .select("id, name, abbr, department_id")
-          .in("department_id", deptData.map(d => d.id));
+          .in(
+            "department_id",
+            deptData.map((d) => d.id),
+          );
         setAvailablePrograms(progData || []);
       }
     } catch (err) {
@@ -117,28 +131,41 @@ export function CourseSectionsView({
       // 3. Fetch program loads
       const { data: pLoads, error } = await supabase
         .from("teacher_program_loads")
-        .select(`
+        .select(
+          `
           id,
           course_load_id,
           program_id,
           programs_lookup (id, name, abbr)
-        `)
+        `,
+        )
         .eq("course_load_id", courseLoadId);
 
       if (error) throw error;
-      
-      const mappedLoads = (pLoads || []).map(pl => ({
-        id: pl.id,
-        course_load_id: pl.course_load_id,
-        program_id: pl.program_id,
-        programs_lookup: pl.programs_lookup as any
-      }));
+
+      type RawProgramLoad = {
+        id: string;
+        course_load_id: string;
+        program_id: string;
+        programs_lookup?: Program | Program[];
+      };
+
+      const mappedLoads: TeacherProgramLoad[] = (pLoads || []).map(
+        (pl: RawProgramLoad) => ({
+          id: pl.id,
+          course_load_id: pl.course_load_id,
+          program_id: pl.program_id,
+          programs_lookup: Array.isArray(pl.programs_lookup)
+            ? pl.programs_lookup[0]
+            : pl.programs_lookup,
+        }),
+      );
 
       setProgramLoads(mappedLoads);
 
       // Handle URL deep link
       if (urlProgramLoadId) {
-        const found = mappedLoads.find(l => l.id === urlProgramLoadId);
+        const found = mappedLoads.find((l) => l.id === urlProgramLoadId);
         if (found) setSelectedProgramLoad(found);
       }
     } catch (err) {
@@ -155,18 +182,20 @@ export function CourseSectionsView({
     try {
       const { data, error } = await supabase
         .from("blocks")
-        .select(`
+        .select(
+          `
           id,
           name,
           year,
           program_load_id,
           block_students (count)
-        `)
+        `,
+        )
         .eq("program_load_id", selectedProgramLoad.id);
 
       if (error) throw error;
 
-      const mapped: Section[] = (data || []).map(b => ({
+      const mapped: Section[] = (data || []).map((b) => ({
         id: b.id,
         course_id: course.id,
         block_id: b.id,
@@ -241,7 +270,7 @@ export function CourseSectionsView({
             teacher_id: userData.user.id,
             course_id: course.id,
             academic_year: currentAY,
-            term: currentSemester
+            term: currentSemester,
           })
           .select()
           .single();
@@ -251,9 +280,9 @@ export function CourseSectionsView({
       }
 
       // 2. Bulk Create program loads
-      const insertData = selectedProgramIds.map(pid => ({
+      const insertData = selectedProgramIds.map((pid) => ({
         course_load_id: courseLoadId,
-        program_id: pid
+        program_id: pid,
       }));
 
       const { error: plErr } = await supabase
@@ -266,18 +295,19 @@ export function CourseSectionsView({
       setSelectedProgramIds([]);
       setIsAddProgramOpen(false);
       fetchProgramLoads();
-    } catch (err: any) {
-      showError(err.message || "Failed to add programs.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showError(msg || "Failed to add programs.");
     } finally {
       setIsCreating(false);
     }
   };
 
   const toggleProgramSelection = (programId: string) => {
-    setSelectedProgramIds(prev => 
-      prev.includes(programId) 
-        ? prev.filter(id => id !== programId) 
-        : [...prev, programId]
+    setSelectedProgramIds((prev) =>
+      prev.includes(programId)
+        ? prev.filter((id) => id !== programId)
+        : [...prev, programId],
     );
   };
 
@@ -285,16 +315,15 @@ export function CourseSectionsView({
     if (!selectedProgramLoad || !newBlock.name) return;
     setIsCreating(true);
     try {
-      const { error } = await supabase
-        .from("blocks")
-        .insert({
-          program_load_id: selectedProgramLoad.id,
-          year: newBlock.year,
-          name: newBlock.name.toUpperCase()
-        });
-      
+      const { error } = await supabase.from("blocks").insert({
+        program_load_id: selectedProgramLoad.id,
+        year: newBlock.year,
+        name: newBlock.name.toUpperCase(),
+      });
+
       if (error) {
-        if (error.code === "23505") throw new Error("A block with this year and name already exists.");
+        if (error.code === "23505")
+          throw new Error("A block with this year and name already exists.");
         throw error;
       }
 
@@ -302,25 +331,29 @@ export function CourseSectionsView({
       setIsAddBlockOpen(false);
       setNewBlock({ year: 1, name: "" });
       fetchBlocks();
-    } catch (err: any) {
-      showError(err.message || "Failed to create block.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showError(msg || "Failed to create block.");
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleDeleteBlock = (id: string) => {
-    showWarning("Delete this block? All student enrollments for this block will be removed.", {
-      onConfirm: async () => {
-        const { error } = await supabase.from("blocks").delete().eq("id", id);
-        if (!error) {
-          showSuccess("Block deleted.");
-          fetchBlocks();
-        } else {
-          showError("Failed to delete block.");
-        }
-      }
-    });
+    showWarning(
+      "Delete this block? All student enrollments for this block will be removed.",
+      {
+        onConfirm: async () => {
+          const { error } = await supabase.from("blocks").delete().eq("id", id);
+          if (!error) {
+            showSuccess("Block deleted.");
+            fetchBlocks();
+          } else {
+            showError("Failed to delete block.");
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -337,15 +370,16 @@ export function CourseSectionsView({
           </button>
           <div>
             <h1 className="text-2xl font-bold text-neutral-900 leading-tight">
-              {selectedProgramLoad 
-                ? `${selectedProgramLoad.programs_lookup?.name} Sections` 
-                : course.course_title
-              }
+              {selectedProgramLoad
+                ? `${selectedProgramLoad.programs_lookup?.name} Sections`
+                : course.course_title}
             </h1>
             {!selectedProgramLoad && (
               <div className="flex gap-2 items-center mt-1">
                 <span className="text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
-                  {course.departments?.name || course.department || "General Subject"}
+                  {course.departments?.name ||
+                    course.department ||
+                    "General Subject"}
                 </span>
                 {course.programs_lookup?.name && (
                   <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
@@ -357,11 +391,17 @@ export function CourseSectionsView({
           </div>
         </div>
         {!selectedProgramLoad ? (
-          <Button onClick={() => setIsAddProgramOpen(true)} className="bg-primary text-white flex items-center gap-2">
+          <Button
+            onClick={() => setIsAddProgramOpen(true)}
+            className="bg-primary text-white flex items-center gap-2"
+          >
             <Plus size={18} /> Add Program
           </Button>
         ) : (
-          <Button onClick={() => setIsAddBlockOpen(true)} className="bg-primary text-white flex items-center gap-2">
+          <Button
+            onClick={() => setIsAddBlockOpen(true)}
+            className="bg-primary text-white flex items-center gap-2"
+          >
             <Plus size={18} /> Add Block
           </Button>
         )}
@@ -377,10 +417,12 @@ export function CourseSectionsView({
           {programLoads.length === 0 ? (
             <div className="col-span-full py-20 text-center">
               <Folder className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-              <p className="text-neutral-500">No programs added to this course yet.</p>
+              <p className="text-neutral-500">
+                No programs added to this course yet.
+              </p>
             </div>
           ) : (
-            programLoads.map(load => (
+            programLoads.map((load) => (
               <Card
                 key={load.id}
                 onClick={() => handleProgramClick(load)}
@@ -409,8 +451,14 @@ export function CourseSectionsView({
           {blocks.length === 0 ? (
             <div className="p-20 text-center">
               <Users className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-              <p className="text-neutral-500">No blocks found in this program.</p>
-              <Button onClick={() => setIsAddBlockOpen(true)} variant="outline" className="mt-4">
+              <p className="text-neutral-500">
+                No blocks found in this program.
+              </p>
+              <Button
+                onClick={() => setIsAddBlockOpen(true)}
+                variant="outline"
+                className="mt-4"
+              >
                 Create First Block
               </Button>
             </div>
@@ -424,21 +472,28 @@ export function CourseSectionsView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {blocks.map(block => (
-                  <tr 
-                    key={block.id} 
+                {blocks.map((block) => (
+                  <tr
+                    key={block.id}
                     className="hover:bg-neutral-50/50 transition-colors cursor-pointer group"
                     onClick={() => {
                       const courseCode = encodeURIComponent(course.course_code);
-                      const programAbbr = encodeURIComponent(selectedProgramLoad.programs_lookup?.abbr || "");
-                      const blockLabel = encodeURIComponent(`${block.year}${block.name}`);
-                      navigate(`/Teacher/Students?courseId=${course.id}&courseCode=${courseCode}&programLoad=${selectedProgramLoad.id}&programAbbr=${programAbbr}&block=${block.id}&blockName=${blockLabel}`);
+                      const programAbbr = encodeURIComponent(
+                        selectedProgramLoad.programs_lookup?.abbr || "",
+                      );
+                      const blockLabel = encodeURIComponent(
+                        `${block.year}${block.name}`,
+                      );
+                      navigate(
+                        `/Teacher/Students?courseId=${course.id}&courseCode=${courseCode}&programLoad=${selectedProgramLoad.id}&programAbbr=${programAbbr}&block=${block.id}&blockName=${blockLabel}`,
+                      );
                     }}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                          {block.year}{block.name}
+                          {block.year}
+                          {block.name}
                         </div>
                         {/* <span className="text-sm font-medium text-neutral-600">{block.year}{block.name}</span> */}
                       </div>
@@ -449,8 +504,11 @@ export function CourseSectionsView({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBlock(block.id);
+                        }}
                         className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 size={16} />
@@ -470,30 +528,41 @@ export function CourseSectionsView({
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
               <h2 className="text-lg font-bold">Add Program to Course</h2>
-              <button onClick={() => setIsAddProgramOpen(false)} className="text-neutral-400 hover:text-neutral-600">
+              <button
+                onClick={() => setIsAddProgramOpen(false)}
+                className="text-neutral-400 hover:text-neutral-600"
+              >
                 <Plus size={20} className="rotate-45" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-5">
               {/* Department Selection - Only shown/enabled if course doesn't have a fixed program or department */}
               {!course.program_id && (
                 <div>
                   <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest block mb-1.5 ml-1">
-                    {course.department_id ? "Department (Fixed)" : "Filter by Department"}
+                    {course.department_id
+                      ? "Department (Fixed)"
+                      : "Filter by Department"}
                   </label>
                   {departments.length > 0 ? (
-                    <select 
+                    <select
                       disabled={!!course.department_id}
                       className={`w-full border rounded-xl p-3 text-sm outline-none transition-all ${
-                        course.department_id ? "bg-neutral-50 text-neutral-500 border-neutral-200" : "bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary border-neutral-200"
+                        course.department_id
+                          ? "bg-neutral-50 text-neutral-500 border-neutral-200"
+                          : "bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary border-neutral-200"
                       }`}
                       value={selectedDept}
                       onChange={(e) => setSelectedDept(e.target.value)}
                     >
-                      {!course.department_id && <option value="">All Departments</option>}
-                      {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                      {!course.department_id && (
+                        <option value="">All Departments</option>
+                      )}
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code})
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -511,9 +580,11 @@ export function CourseSectionsView({
                 </label>
                 <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {(() => {
-                    const alreadyAddedIds = new Set(programLoads.map(p => p.program_id));
-                    
-                    const filtered = availablePrograms.filter(p => {
+                    const alreadyAddedIds = new Set(
+                      programLoads.map((p) => p.program_id),
+                    );
+
+                    const filtered = availablePrograms.filter((p) => {
                       if (course.program_id) return p.id === course.program_id;
                       return !selectedDept || p.department_id === selectedDept;
                     });
@@ -521,47 +592,73 @@ export function CourseSectionsView({
                     if (filtered.length === 0) {
                       return (
                         <div className="py-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                          <p className="text-xs text-neutral-400 px-4">No programs found for this selection.</p>
+                          <p className="text-xs text-neutral-400 px-4">
+                            No programs found for this selection.
+                          </p>
                         </div>
                       );
                     }
 
-                    return filtered.map(p => {
+                    return filtered.map((p) => {
                       const isAlreadyAdded = alreadyAddedIds.has(p.id);
                       const isSelected = selectedProgramIds.includes(p.id);
-                      
+
                       return (
                         <button
                           key={p.id}
-                          onClick={() => !isAlreadyAdded && toggleProgramSelection(p.id)}
+                          onClick={() =>
+                            !isAlreadyAdded && toggleProgramSelection(p.id)
+                          }
                           disabled={isCreating || isAlreadyAdded}
                           className={`text-left p-4 border rounded-xl transition-all flex items-center justify-between group shadow-sm active:scale-[0.98] ${
-                            isAlreadyAdded 
-                              ? "bg-neutral-50 border-neutral-100 opacity-60 cursor-not-allowed" 
+                            isAlreadyAdded
+                              ? "bg-neutral-50 border-neutral-100 opacity-60 cursor-not-allowed"
                               : isSelected
                                 ? "bg-primary/5 border-primary ring-1 ring-primary"
                                 : "bg-white border-neutral-200 hover:bg-primary/5 hover:border-primary/20"
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                              isAlreadyAdded 
-                                ? "bg-success-default border-success-default" 
-                                : isSelected 
-                                  ? "bg-primary border-primary" 
-                                  : "bg-white border-neutral-300 group-hover:border-primary"
-                            }`}>
+                            <div
+                              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                isAlreadyAdded
+                                  ? "bg-success-default border-success-default"
+                                  : isSelected
+                                    ? "bg-primary border-primary"
+                                    : "bg-white border-neutral-300 group-hover:border-primary"
+                              }`}
+                            >
                               {(isAlreadyAdded || isSelected) && (
-                                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                <svg
+                                  className="w-3.5 h-3.5 text-white"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5 13l4 4L19 7"
+                                  />
                                 </svg>
                               )}
                             </div>
                             <div>
-                              <p className={`text-sm font-bold transition-colors ${
-                                isAlreadyAdded ? "text-success-default" : isSelected ? "text-primary" : "text-neutral-900"
-                              }`}>{p.abbr}</p>
-                              <p className="text-[10px] text-neutral-500 font-medium">{p.name}</p>
+                              <p
+                                className={`text-sm font-bold transition-colors ${
+                                  isAlreadyAdded
+                                    ? "text-success-default"
+                                    : isSelected
+                                      ? "text-primary"
+                                      : "text-neutral-900"
+                                }`}
+                              >
+                                {p.abbr}
+                              </p>
+                              <p className="text-[10px] text-neutral-500 font-medium">
+                                {p.name}
+                              </p>
                             </div>
                           </div>
                           {isAlreadyAdded && (
@@ -578,7 +675,8 @@ export function CourseSectionsView({
 
               {course.program_id && (
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-[10px] font-medium leading-relaxed">
-                  This is a Major Course of specific program. Only that program is allowed to be added.
+                  This is a Major Course of specific program. Only that program
+                  is allowed to be added.
                 </div>
               )}
             </div>
@@ -589,7 +687,7 @@ export function CourseSectionsView({
                   {selectedProgramIds.length} programs selected
                 </span>
               )}
-              <button 
+              <button
                 onClick={() => {
                   setSelectedProgramIds([]);
                   setIsAddProgramOpen(false);
@@ -598,12 +696,16 @@ export function CourseSectionsView({
               >
                 Cancel
               </button>
-              <Button 
-                onClick={handleAddProgramsBatch} 
+              <Button
+                onClick={handleAddProgramsBatch}
                 disabled={isCreating || selectedProgramIds.length === 0}
                 className="bg-primary text-white px-6 font-bold shadow-lg shadow-primary/20"
               >
-                {isCreating ? <Loader2 size={18} className="animate-spin" /> : "Save Selected"}
+                {isCreating ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  "Save Selected"
+                )}
               </Button>
             </div>
           </div>
@@ -622,30 +724,52 @@ export function CourseSectionsView({
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">Year Level</label>
-                <select 
+                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">
+                  Year Level
+                </label>
+                <select
                   className="w-full border rounded-lg p-2.5 text-sm"
                   value={newBlock.year}
-                  onChange={(e) => setNewBlock({...newBlock, year: parseInt(e.target.value)})}
+                  onChange={(e) =>
+                    setNewBlock({ ...newBlock, year: parseInt(e.target.value) })
+                  }
                 >
-                  {[1,2,3,4,5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                  {[1, 2, 3, 4, 5].map((y) => (
+                    <option key={y} value={y}>
+                      Year {y}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">Block Name</label>
-                <input 
+                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">
+                  Block Name
+                </label>
+                <input
                   type="text"
                   placeholder="e.g. A, B, C"
                   className="w-full border rounded-lg p-2.5 text-sm uppercase"
                   value={newBlock.name}
-                  onChange={(e) => setNewBlock({...newBlock, name: e.target.value})}
+                  onChange={(e) =>
+                    setNewBlock({ ...newBlock, name: e.target.value })
+                  }
                 />
               </div>
             </div>
             <div className="px-6 py-4 bg-neutral-50 flex justify-end gap-2">
-              <Button onClick={() => setIsAddBlockOpen(false)} variant="ghost">Cancel</Button>
-              <Button onClick={handleCreateBlock} disabled={isCreating} className="bg-primary text-white">
-                {isCreating ? <Loader2 className="animate-spin w-4 h-4" /> : "Create Block"}
+              <Button onClick={() => setIsAddBlockOpen(false)} variant="ghost">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateBlock}
+                disabled={isCreating}
+                className="bg-primary text-white"
+              >
+                {isCreating ? (
+                  <Loader2 className="animate-spin w-4 h-4" />
+                ) : (
+                  "Create Block"
+                )}
               </Button>
             </div>
           </div>

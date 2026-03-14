@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../lib/supabaseClient";
 import Tooltip from "./ui/Tooltip";
 import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
@@ -41,6 +42,13 @@ interface MenuItem {
 interface StudentSidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+interface EnrolledClass {
+  id: string;
+  code: string;
+  name: string;
+  instructor: string;
 }
 
 // Renamed component from ClientSidebar to StudentSidebar
@@ -57,12 +65,111 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Mock classes data
-  const classes = [
-    { id: 1, code: "PC 4121", name: "CS Thesis 1", instructor: "Prof. Smith" },
-    { id: 2, code: "PC 4122", name: "CS Thesis 1", instructor: "Joselle Banocnoc" },
-    { id: 3, code: "TC 4103", name: "Advanced Programming", instructor: "Prof. Johnson" },
-  ];
+  const [enrolledClasses, setEnrolledClasses] = useState<EnrolledClass[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+
+  // Fetch real classes data
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. Get student record (prefer auth_user_id, fallback to email)
+        let { data: student } = await supabase
+          .from("students")
+          .select("id, email, auth_user_id")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+        
+        if (!student && user.email) {
+          const { data: emailData } = await supabase
+            .from("students")
+            .select("id, email, auth_user_id")
+            .eq("email", user.email)
+            .maybeSingle();
+          student = emailData;
+        }
+
+        if (!student) {
+          console.warn("StudentSidebar: No student record found for user", user.id);
+          setIsLoadingClasses(false);
+          return;
+        }
+
+        // 2. Get enrolled blocks and their associated courses/teachers
+        const { data: enrollments, error } = await supabase
+          .from("block_students")
+          .select(`
+            block_id,
+            blocks (
+              teacher_program_loads (
+                teacher_course_loads (
+                  id,
+                  course_id,
+                  teacher_id,
+                  courses (
+                    course_code,
+                    course_title
+                  ),
+                  users:teacher_id (
+                    first_name,
+                    last_name,
+                    title,
+                    nickname
+                  )
+                )
+              )
+            )
+          `)
+          .eq("student_id", student.id);
+
+        if (error) {
+          console.error("StudentSidebar: Query error", error);
+          throw error;
+        }
+
+        // Flatten the data with array support for joins
+        const flattenedClasses: EnrolledClass[] = [];
+        enrollments?.forEach(enrollment => {
+          const block = enrollment.blocks as any;
+          if (!block) return;
+
+          // Supabase might return single object or array depending on relationship
+          const tplData = block.teacher_program_loads;
+          const tpls = Array.isArray(tplData) ? tplData : (tplData ? [tplData] : []);
+
+          tpls.forEach((tpl: any) => {
+            const tclData = tpl.teacher_course_loads;
+            const tcls = Array.isArray(tclData) ? tclData : (tclData ? [tclData] : []);
+
+            tcls.forEach((tcl: any) => {
+              if (tcl && tcl.courses) {
+                flattenedClasses.push({
+                  id: tcl.id,
+                  code: tcl.courses.course_code,
+                  name: tcl.courses.course_title,
+                  instructor: tcl.users 
+                    ? (tcl.users.title && tcl.users.nickname 
+                      ? `${tcl.users.title} ${tcl.users.nickname}` 
+                      : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name}` : tcl.users.last_name))
+                    : "TBA"
+                });
+              }
+            });
+          });
+        });
+
+        setEnrolledClasses(flattenedClasses);
+      } catch (err) {
+        console.error("Error fetching student classes:", err);
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+
+    fetchClasses();
+  }, []);
 
   // Updated menu items for the student role
   const menuItems: MenuItem[] = useMemo(
@@ -312,30 +419,38 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                     exit={{ opacity: 0, height: 0 }}
                     className='ml-12 mt-2 space-y-1 overflow-hidden'
                   >
-                    {classes.map((classItem) => {
-                      const classPath = `/Student/Classes/${classItem.id}`;
-                      const isClassActive = activePath === classPath;
-                      return (
-                        <li key={classItem.id}>
-                          <button
-                            onClick={() => {
-                              navigate(classPath);
-                              if (!isDesktop) setIsSidebarOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                              isClassActive
-                                ? "bg-neutral-100 text-primary font-medium"
-                                : "text-white/80 hover:text-white hover:bg-white/10"
-                            }`}
-                          >
-                            <div className='flex flex-col'>
-                              <span className='font-medium'>#{classItem.id} - {classItem.code}</span>
-                              <span className='text-xs opacity-75'>{classItem.name}</span>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
+                    {enrolledClasses.length > 0 ? (
+                      enrolledClasses.map((classItem) => {
+                        const classPath = `/Student/Classes/${classItem.id}`;
+                        const isClassActive = activePath === classPath;
+                        return (
+                          <li key={classItem.id}>
+                            <Tooltip content={classItem.instructor} position="right" delay={100}>
+                              <button
+                                onClick={() => {
+                                  navigate(classPath);
+                                  if (!isDesktop) setIsSidebarOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                                  isClassActive
+                                    ? "bg-neutral-100 text-primary font-medium"
+                                    : "text-white/80 hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                <div className='flex flex-col'>
+                                  <span className='font-medium'>{classItem.code}</span>
+                                  <span className='text-[10px] opacity-75 truncate'>{classItem.name}</span>
+                                </div>
+                              </button>
+                            </Tooltip>
+                          </li>
+                        );
+                      })
+                    ) : (
+                      <li className="px-3 py-2 text-white/50 text-xs italic">
+                        {isLoadingClasses ? "Loading classes..." : "No classes joined yet"}
+                      </li>
+                    )}
                   </motion.ul>
                 )}
               </AnimatePresence>

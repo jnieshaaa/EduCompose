@@ -86,7 +86,7 @@ pyvis
 # openai
 
 # Google Gemini API for grammar checking (optional)
-google-generativeai
+google-genai
 
 # ============================================
 # OCR Support (for PDF and image text extraction)

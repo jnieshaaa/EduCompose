@@ -242,16 +242,29 @@ CRITICAL INSTRUCTIONS:
         # Try Gemini
         if os.getenv("GEMINI_API_KEY"):
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+                from google import genai
+                client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
                 
-                model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
-                model = genai.GenerativeModel(model_name)
+                # Use model from env or try standard ones
+                model_name = os.getenv("GEMINI_MODEL_NAME")
+                if not model_name:
+                    # Try to find a standard model
+                    for m in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
+                        try:
+                            client.models.get(model=m)
+                            model_name = m
+                            break
+                        except:
+                            continue
                 
-                response = model.generate_content(prompt)
-                llm_response = response.text
-                llm_provider = "gemini"
-                logger.info("Using Gemini for comparison analysis")
+                if model_name:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    llm_response = response.text
+                    llm_provider = "gemini"
+                    logger.info(f"Using Gemini ({model_name}) for comparison analysis")
             except Exception as e:
                 logger.warning(f"Gemini analysis failed: {e}")
         
