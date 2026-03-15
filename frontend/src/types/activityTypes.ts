@@ -6,7 +6,9 @@ export type EssayActivity = {
   id: string;
   title: string;
   courseId: string | "all";
+  courseIds?: string[];
   blockId: string | "all";
+  blockIds?: string[];
   rubricId: string | null;
   dueDate?: string;
   description?: string;
@@ -14,6 +16,8 @@ export type EssayActivity = {
   submissionCount: number;
   academicYear?: string;
   term?: string;
+  programId?: string;
+  programIds?: string[];
 };
 
 export type CourseSection = {

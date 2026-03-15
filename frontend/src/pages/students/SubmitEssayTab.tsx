@@ -1,65 +1,186 @@
-import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/textarea';
 import Badge from '../../components/ui/Badge';
-import { Upload, FileText, X, Clock, FileIcon } from 'lucide-react';
+import { Upload, FileText, X, Clock, FileIcon, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+import { buildFullNameFromObject } from '../../utils/nameUtils';
 
-// 1. UPDATED: Mock data with more than 10 items to test the limit
-const ALL_POSTS = [
-  { id: 1, title: "019__ Thesis Adviser Evaluation Form", date: "Dec 14, 2025 | 5:00 pm", isOverdue: true },
-  { id: 2, title: "007__ Panel Comment Sheet", date: "Dec 12, 2025 | 5:00 pm", isOverdue: false },
-  { id: 3, title: "Chapter III - Methodology", date: "Dec 12, 2025 | 5:00 pm", isOverdue: false },
-  { id: 4, title: "01-LU-AA-FO-11-Thesis Advising Monitoring", date: "Dec 12, 2025 | 5:00 pm", isOverdue: false },
-  { id: 5, title: "Chapter II Review of Related Literature", date: "Nov 14, 2025 | 5:00 pm", isOverdue: false },
-  { id: 6, title: "Lesson 4 Writing the Components of Chapter III", date: "Nov 10, 2025 | 5:00 pm", isOverdue: false },
-  { id: 7, title: "Chapter 1 Research Description", date: "Oct 28, 2025 | 1:00 pm", isOverdue: false },
-  { id: 8, title: "Activity #3 Software Project Schedule", date: "Oct 23, 2025 | 1:00 pm", isOverdue: false },
-  { id: 9, title: "Lesson 3 Writing the Components of Chapter II", date: "Oct 20, 2025 | 5:00 pm", isOverdue: false },
-  { id: 10, title: "Thesis Proposal Outline/Template", date: "Oct 15, 2025 | 5:00 pm", isOverdue: false },
-  { id: 11, title: "010__ LU AA-FO-10 Thesis Advising Form", date: "Sep 24, 2025 | 5:00 pm", isOverdue: false }, // Should be hidden
-  { id: 12, title: "Initial Title Defense Result", date: "Sep 10, 2025 | 5:00 pm", isOverdue: false }, // Should be hidden
-];
+// Types
+interface ActivityDetails {
+  id: string;
+  title: string;
+  course: string;
+  instructor: string;
+  deadline: string;
+  instructions: string;
+  courseId: string;
+  term: string;
+}
 
-// Activity data mapping
-const ACTIVITY_DATA: Record<string, { title: string; course: string; instructor: string; deadline: string; instructions: string }> = {
-  'quiz-1': {
-    title: "QUIZ #1",
-    course: "PC 4122 - CS Thesis 1",
-    instructor: "Joselle Banocnoc",
-    deadline: "October 17, 2025 at 3:00 pm",
-    instructions: "Complete the quiz within the specified time frame."
-  },
-  'eval-form': {
-    title: "019__ Thesis Adviser Evaluation Form",
-    course: "PC 4122 - CS Thesis 1",
-    instructor: "Joselle Banocnoc",
-    deadline: "December 14, 2025 at 5:00 pm",
-    instructions: "Please accomplish the attached form and upload the signed document in pdf format here in iLearnU and..."
-  },
-  'panel-comment': {
-    title: "007__ Panel Comment Sheet",
-    course: "PC 4122 - CS Thesis 1",
-    instructor: "Joselle Banocnoc",
-    deadline: "December 12, 2025 at 5:00 pm",
-    instructions: "Please upload the signed document in pdf format here in iLearnU and in the attached google drive folder..."
-  }
-};
+interface SidebarPost {
+  id: number;
+  title: string;
+  date: string;
+  isOverdue: boolean;
+  isSubmitted: boolean;
+  isCurrent: boolean;
+}
 
 export function SubmitEssayTab() {
   const [searchParams] = useSearchParams();
-  const activityId = searchParams.get('activityId') || 'eval-form';
+  const navigate = useNavigate();
+  const { user } = useAuth();
   
-  const activityData = ACTIVITY_DATA[activityId] || ACTIVITY_DATA['eval-form'];
+  const activityIdParam = searchParams.get('activityId');
+  const classId = searchParams.get('classId'); // teacher_course_loads.id
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<ActivityDetails | null>(null);
+  const [posts, setPosts] = useState<SidebarPost[]>([]);
+  const [studentId, setStudentId] = useState<number | null>(null);
   
   const [activeTab, setActiveTab] = useState('my-work');
-  const [uploadMode, setUploadMode] = useState<'file' | 'text'>('file');
+  const [uploadMode, setUploadMode] = useState<'file' | 'text'>('text');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  
-  // 2. UPDATED: Track if the assignment has been submitted to show the grade placeholder
+  const [essayContent, setEssayContent] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionDate, setSubmissionDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      if (!user?.auth_id || !activityIdParam) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Get Student ID
+        const { data: studentData, error: studentError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('auth_user_id', user.auth_id)
+          .maybeSingle();
+
+        if (studentError) throw studentError;
+        if (!studentData) {
+          setError("Student record not found.");
+          return;
+        }
+        setStudentId(studentData.id);
+
+        // 2. Fetch Activity Details
+        const { data: actRow, error: actError } = await supabase
+          .from('essay_activities')
+          .select(`
+            *,
+            teacher:users (
+              title,
+              nickname,
+              first_name,
+              last_name
+            )
+          `)
+          .eq('id', parseInt(activityIdParam))
+          .single();
+
+        if (actError) throw actError;
+
+        // Fetch Course Details for the header (optional but nice)
+        // We might need to join with courses table if we want the course title
+        let courseCode = "N/A";
+        if (actRow.course_id && actRow.course_id.length > 0) {
+          const { data: courseData } = await supabase
+            .from('courses')
+            .select('course_code, course_title')
+            .eq('id', actRow.course_id[0])
+            .maybeSingle();
+          if (courseData) {
+            courseCode = `${courseData.course_code} - ${courseData.course_title}`;
+          }
+        }
+
+        const instructorName = actRow.teacher 
+          ? (actRow.teacher.title && actRow.teacher.nickname 
+              ? `${actRow.teacher.title} ${actRow.teacher.nickname}` 
+              : buildFullNameFromObject(actRow.teacher))
+          : "TBA";
+
+        setActivity({
+          id: String(actRow.id),
+          title: actRow.title,
+          course: courseCode,
+          instructor: instructorName,
+          deadline: actRow.due_date ? new Date(actRow.due_date).toLocaleString() : "No deadline",
+          instructions: actRow.instructions || "No instructions provided.",
+          courseId: actRow.course_id?.[0] || "",
+          term: actRow.term || "N/A"
+        });
+
+        // 3. Fetch Existing Submission
+        const { data: essayData } = await supabase
+          .from('essays')
+          .select('*')
+          .eq('activity_id', parseInt(activityIdParam))
+          .eq('student_id', studentData.id)
+          .maybeSingle();
+
+        if (essayData) {
+          setIsSubmitted(true);
+          setEssayContent(essayData.content || '');
+          setSubmissionDate(new Date(essayData.submitted_at).toLocaleString());
+          if (essayData.file_path) {
+            setSelectedFile(essayData.file_path.split('/').pop() || 'Submitted File');
+          }
+        }
+
+        // 4. Fetch All Activities in same Course (sidebar)
+        if (actRow.course_id && actRow.course_id.length > 0) {
+          // Fetch all activities for this course
+          const { data: allActs } = await supabase
+            .from('essay_activities')
+            .select('id, title, due_date')
+            .contains('course_id', [actRow.course_id[0]])
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+          // Fetch all submissions for these activities by this student
+          const actIds = allActs?.map(a => a.id) || [];
+          const { data: allSubmissions } = await supabase
+            .from('essays')
+            .select('activity_id')
+            .eq('student_id', studentData.id)
+            .in('activity_id', actIds);
+
+          const submittedIds = new Set(allSubmissions?.map(s => s.activity_id) || []);
+
+          if (allActs) {
+            setPosts(allActs.map(a => ({
+              id: a.id,
+              title: a.title,
+              date: a.due_date ? new Date(a.due_date).toLocaleDateString() : "No date",
+              isOverdue: a.due_date ? new Date(a.due_date) < new Date() : false,
+              isSubmitted: submittedIds.has(a.id),
+              isCurrent: String(a.id) === String(activityIdParam)
+            })));
+          }
+        }
+
+      } catch (err: any) {
+        console.error("Error loading submit page:", err);
+        setError(err.message || "Failed to load content.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadContent();
+  }, [user?.auth_id, activityIdParam]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -73,14 +194,57 @@ export function SubmitEssayTab() {
     }
   };
 
-  const handleSubmit = () => {
-    if (selectedFile) {
+  const handleSubmit = async () => {
+    if (!studentId || !activityIdParam) return;
+    if (uploadMode === 'text' && !essayContent.trim()) return;
+    if (uploadMode === 'file' && !selectedFile) return;
+
+    try {
+      setLoading(true);
+
+      const { error: submitError } = await supabase
+        .from('essays')
+        .insert({
+          student_id: studentId,
+          activity_id: parseInt(activityIdParam),
+          content: uploadMode === 'text' ? essayContent : null,
+          title: activity?.title || "Essay Submission",
+          status: 'submitted'
+        });
+
+      if (submitError) throw submitError;
+
       setIsSubmitted(true);
+      setSubmissionDate(new Date().toLocaleString());
+    } catch (err: any) {
+      console.error("Error submitting essay:", err);
+      alert("Failed to submit: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 3. UPDATED: Logic to slice only the first 10 posts
-  const displayedPosts = ALL_POSTS.slice(0, 10);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-neutral-500 font-medium">Loading activity details...</p>
+      </div>
+    );
+  }
+
+  if (error || !activity) {
+    return (
+      <Card className="text-center py-12">
+        <AlertCircle className="w-12 h-12 text-error-default mx-auto mb-4" />
+        <h2 className="text-xl font-bold">Error</h2>
+        <p className="text-neutral-600 mt-2">{error || "Activity not found."}</p>
+        <Button onClick={() => navigate('/Student/Classes')} className="mt-4">
+          Return to Classes
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto w-full font-sans">
@@ -91,8 +255,8 @@ export function SubmitEssayTab() {
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{activityData.title}</h1>
-            <p className="text-neutral-600 mt-1">{activityData.instructions}</p>
+            <h1 className="text-2xl font-bold text-neutral-900">{activity.title}</h1>
+            <p className="text-neutral-600 mt-1 line-clamp-2">{activity.instructions}</p>
           </div>
         </div>
       </div>
@@ -142,24 +306,24 @@ export function SubmitEssayTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-semibold text-neutral-900 block">Course:</span>
-                    <span className="text-neutral-600">{activityData.course}</span>
+                    <span className="text-neutral-600">{activity.course}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-neutral-900 block">Instructor:</span>
-                    <span className="text-neutral-600">{activityData.instructor}</span>
+                    <span className="text-neutral-600">{activity.instructor}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-neutral-900 block">Term:</span>
-                    <span className="text-neutral-600">Finals</span>
+                    <span className="text-neutral-600">{activity.term}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-neutral-900 block">Deadline:</span>
-                    <span className="text-danger-default font-medium">{activityData.deadline}</span>
+                    <span className="text-danger-default font-medium">{activity.deadline}</span>
                   </div>
                 </div>
                 <div className="border-t border-neutral-200 my-4"></div>
                 <div className="prose text-neutral-700 text-sm">
-                  <p>{activityData.instructions}</p>
+                  <p>{activity.instructions}</p>
                 </div>
                 {/* Attachment Example */}
                 <div className="bg-neutral-50 p-4 rounded-md border border-neutral-200 mt-4">
@@ -215,7 +379,12 @@ export function SubmitEssayTab() {
                     </TabsContent>
 
                     <TabsContent value="text">
-                      <Textarea placeholder="Type your submission..." className="min-h-[300px]" />
+                      <Textarea 
+                        placeholder="Type your submission..." 
+                        className="min-h-[300px]" 
+                        value={essayContent}
+                        onChange={(e) => setEssayContent(e.target.value)}
+                      />
                     </TabsContent>
                   </Tabs>
 
@@ -223,10 +392,10 @@ export function SubmitEssayTab() {
                      <Button variant="outline">Save Draft</Button>
                      <Button 
                        className="bg-primary hover:bg-primary-300" 
-                       disabled={!selectedFile && uploadMode === 'file'}
+                       disabled={loading || (uploadMode === 'file' && !selectedFile) || (uploadMode === 'text' && !essayContent.trim())}
                        onClick={handleSubmit}
                      >
-                       Submit Assignment
+                       {loading ? "Submitting..." : "Submit Assignment"}
                      </Button>
                   </div>
                 </Card>
@@ -238,9 +407,9 @@ export function SubmitEssayTab() {
                         <div className="w-10 h-10 bg-success-default rounded-full flex items-center justify-center text-white">
                           <FileText className="w-5 h-5" />
                         </div>
-                        <div>
+                         <div>
                           <p className="font-medium text-neutral-900">{selectedFile || "Essay Submission"}</p>
-                          <p className="text-xs text-neutral-500">Submitted just now</p>
+                          <p className="text-xs text-neutral-500">Submitted on {submissionDate}</p>
                         </div>
                      </div>
                      <div className="flex items-center gap-2">
@@ -266,28 +435,50 @@ export function SubmitEssayTab() {
 
         {/* RIGHT COLUMN: Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="bg-white shadow-sm border border-neutral-200 sticky top-4">
+          <Card className="bg-white shadow-sm border border-neutral-200 sticky top-4 overflow-hidden">
              <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
                <h3 className="font-semibold text-neutral-700 flex items-center gap-2">
-                 <span className="text-lg">📰</span> Posts in PC 4122
+                 <span className="text-lg">📰</span> Posts in {activity.course.split(' - ')[0]}
                </h3>
              </div>
              
-             {/* 3. UPDATED: Limit to 10 items */}
-             <div className="divide-y divide-neutral-100">
-               {displayedPosts.map((post) => (
-                 <div key={post.id} className="p-4 hover:bg-neutral-50 transition-colors cursor-pointer group">
-                   <h4 className={`text-sm font-medium mb-1 group-hover:text-primary transition-colors ${post.isOverdue ? 'text-success-default' : 'text-neutral-800'}`}>
-                     {post.title}
-                   </h4>
-                   <div className="flex items-center gap-1 text-xs">
-                     <Clock className="w-3 h-3 text-neutral-400" />
-                     <span className={post.isOverdue ? 'text-danger-default font-medium' : 'text-neutral-500'}>
-                       {post.date}
-                     </span>
-                   </div>
-                 </div>
-               ))}
+              <div className="divide-y divide-neutral-100">
+                {posts.length > 0 ? (
+                  posts.map((post) => (
+                    <div 
+                      key={post.id} 
+                      onClick={() => navigate(`/Student/Submit?activityId=${post.id}&classId=${classId}&activityTitle=${encodeURIComponent(post.title)}&courseName=${encodeURIComponent(activity.course.split(' - ')[1] || "")}&courseCode=${encodeURIComponent(activity.course.split(' - ')[0])}`)}
+                      className={`
+                        p-4 hover:bg-neutral-50 transition-colors cursor-pointer group relative
+                        ${post.isCurrent ? 'bg-primary/5 border-l-4 border-l-primary' : ''}
+                      `}
+                    >
+                      <h4 className={`
+                        text-sm font-medium mb-1 transition-colors
+                        ${post.isCurrent ? 'text-primary' : ''}
+                        ${!post.isCurrent && post.isSubmitted ? 'text-success-default' : ''}
+                        ${!post.isCurrent && !post.isSubmitted ? 'text-danger-default' : ''}
+                      `}>
+                        {post.title}
+                      </h4>
+                      <div className="flex items-center gap-1 text-xs">
+                        <Clock className="w-3 h-3 text-neutral-400" />
+                        <span className={post.isOverdue ? 'text-danger-default font-medium' : 'text-neutral-500'}>
+                          {post.date}
+                        </span>
+                      </div>
+                      {post.isSubmitted && (
+                        <div className="mt-2 text-[10px] font-bold text-success-default uppercase tracking-wide">
+                          ✓ Submitted
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-sm text-neutral-500 italic">
+                    No activities found for this course.
+                  </div>
+                )}
                
                {/* View All Button always visible at bottom */}
                <div className="p-4 text-center border-t border-neutral-100">

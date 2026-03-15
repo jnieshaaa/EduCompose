@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 import {
   Menu,
   X,
@@ -11,7 +12,11 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
-import { studentNotifications } from "../data/notificationsData";
+import {
+  fetchUserNotifications,
+  subscribeToNotifications,
+  markNotificationAsRead,
+} from "../services/notificationService";
 
 // Updated interface to include the user's role
 interface StudentHeaderProps {
@@ -29,7 +34,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notifications, setNotifications] = useState(studentNotifications);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
@@ -48,10 +53,46 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAsRead = (id: string) => {
+  // Load and Subscribe to Notifications
+  useEffect(() => {
+    if (!user?.auth_id) return;
+
+    const userId = user.auth_id;
+
+    const loadNotifications = async () => {
+      const fetched = await fetchUserNotifications(userId);
+      setNotifications(fetched);
+    };
+
+    loadNotifications();
+
+    // Subscribe to real-time notifications
+    const channel = subscribeToNotifications(userId, (newNotif) => {
+      setNotifications((prev) => [newNotif, ...prev]);
+      
+      // Optional: Play sound or show toast here
+      if (Notification.permission === "granted") {
+        new window.Notification(newNotif.title, {
+          body: newNotif.message,
+        });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const handleMarkAsRead = async (id: string) => {
+    // Update locally
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    // Update in Supabase
+    if (user?.auth_id) {
+      await markNotificationAsRead(id, user.auth_id);
+    }
   };
 
   // Updated route labels for Student paths

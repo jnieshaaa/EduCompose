@@ -8,14 +8,16 @@ import { buildFullNameFromObject } from "../utils/nameUtils";
 // Supabase row type for essay_activities
 type SupabaseActivityRow = {
   id: number;
-  user_id: number | null;
+  teacher_id: string | null;
   title: string;
-  program_id: string | null;
-  block_id: string | null;
-  course_id: string | null;
+  program_id: string[] | null;
+  block_id: string[] | null;
+  course_id: string[] | null;
   rubric_id: number | null;
   due_date: string | null;
   instructions: string | null;
+  academic_year: string | null;
+  term: string | null;
   created_at: string;
   rubrics?:
     | { id: number; name: string }
@@ -97,17 +99,23 @@ export const fetchTeacherActivities = async (
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId: row.course_id
-        ? String(row.course_id)
-        : row.program_id
-          ? String(row.program_id)
-          : "all",
-      blockId: row.block_id ? String(row.block_id) : "all",
+      courseId: Array.isArray(row.course_id) && row.course_id.length > 0
+        ? String(row.course_id[0])
+        : "all",
+      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0
+        ? String(row.block_id[0])
+        : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
       createdAt: row.created_at.split("T")[0], // Extract date part
       submissionCount: submissionCounts.get(row.id) || 0,
+      programId: Array.isArray(row.program_id) && row.program_id.length > 0
+        ? String(row.program_id[0])
+        : undefined,
+      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
     }));
 
     return mappedActivities;
@@ -250,7 +258,7 @@ const ensurePlatformRubricExists = async (
 // Create a new activity
 export const createActivity = async (
   activity: NewActivityForm,
-): Promise<EssayActivity> => {
+): Promise<EssayActivity[]> => {
   try {
     const teacherId = await fetchTeacherUUID();
     if (!teacherId) {
@@ -258,12 +266,7 @@ export const createActivity = async (
     }
 
     // For now, store first selected course/section or null if empty (meaning "all")
-    const courseId =
-      activity.courseIds.length === 0 ? null : activity.courseIds[0];
-    const sectionId =
-      activity.sectionIds.length === 0
-        ? null
-        : activity.sectionIds[0] || null;
+
 
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
@@ -281,53 +284,137 @@ export const createActivity = async (
       }
     }
 
+
+    const blockToProgram = new Map<string, string | null>();
+    const studentIdsByBlock = new Map<string, string[]>();
+
+    // 1. Fetch program ID for each block (needed for insertion and grouping)
+    if (activity.sectionIds.length > 0) {
+      const { data: blocksData } = await supabase
+        .from("blocks")
+        .select(`
+          id,
+          teacher_program_loads (
+            program_id
+          )
+        `)
+        .in("id", activity.sectionIds);
+
+      if (blocksData) {
+        blocksData.forEach((b: any) => {
+          const tpl = Array.isArray(b.teacher_program_loads) 
+            ? b.teacher_program_loads[0] 
+            : b.teacher_program_loads;
+            
+          blockToProgram.set(
+            String(b.id),
+            tpl?.program_id || null
+          );
+        });
+      }
+
+      // 2. Fetch all student user IDs for notifications, grouped by block
+      const { data: studentsData, error: studentError } = await supabase
+        .from("block_students")
+        .select(`
+          block_id,
+          students (
+            auth_user_id
+          )
+        `)
+        .in("block_id", activity.sectionIds);
+
+      if (studentError) {
+        console.error("Error fetching students for notification:", studentError);
+      }
+
+      if (studentsData && studentsData.length > 0) {
+        studentsData.forEach((row: any) => {
+          const authId = row.students?.auth_user_id;
+          if (authId && row.block_id) {
+            if (!studentIdsByBlock.has(String(row.block_id))) {
+              studentIdsByBlock.set(String(row.block_id), []);
+            }
+            studentIdsByBlock.get(String(row.block_id))?.push(authId);
+          }
+        });
+      }
+    }
+
+    // 3. Create a single activity record with array columns
+    const activityToInsert = {
+      teacher_id: teacherId,
+      title: activity.title.trim(),
+      course_id: activity.courseIds, // Now assigned as array
+      block_id: activity.sectionIds, // Now assigned as array
+      program_id: Array.from(new Set(Array.from(blockToProgram.values()).filter(Boolean))),
+      rubric_id: rubricId,
+      due_date: activity.dueDate || null,
+      instructions: activity.description || null,
+      academic_year: activity.academicYear || null,
+      term: activity.term || null,
+    };
+
     const { data, error } = await supabase
       .from("essay_activities")
-      .insert({
-        teacher_id: teacherId,
-        title: activity.title.trim(),
-        course_id: courseId,
-        block_id: sectionId,
-        rubric_id: rubricId,
-        due_date: activity.dueDate || null,
-        instructions: activity.description || null,
-        academic_year: activity.academicYear || null,
-        term: activity.term || null,
-      })
-      .select()
-      .single();
+      .insert(activityToInsert)
+      .select();
 
     if (error) {
       console.error("Error creating activity:", error);
       throw error;
     }
 
-    // Map back to EssayActivity format
-    const row = data as {
-      id: number;
-      title: string;
-      course_id: string | null;
-      block_id: string | null;
-      rubric_id: number | null;
-      due_date: string | null;
-      instructions: string | null;
-      created_at: string;
-      academic_year: string | null;
-      term: string | null;
-    };
-    return {
+    // 4. Send notifications to students for each block assigned
+    if (data && data.length > 0) {
+      const newActivity = data[0];
+      const notificationsToInsert: any[] = [];
+      
+      activity.sectionIds.forEach((blockId) => {
+        const targetStudentIds = studentIdsByBlock.get(String(blockId)) || [];
+        
+        targetStudentIds.forEach((studentUserId) => {
+          notificationsToInsert.push({
+            user_id: studentUserId,
+            type: "new_activity",
+            title: "New Activity Assigned",
+            message: `A new activity "${activity.title.trim()}" has been posted.`,
+            related_id: String(newActivity.id),
+            related_type: "essay_activities",
+          });
+        });
+      });
+
+      if (notificationsToInsert.length > 0) {
+        supabase
+          .from("notifications")
+          .insert(notificationsToInsert)
+          .then(({ error: notifyError }) => {
+            if (notifyError) {
+              console.error("Failed to notify students:", notifyError);
+            }
+          });
+      }
+    }
+
+    // Map back created activity to EssayActivity formats
+    return (data as any[]).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId: row.course_id ? String(row.course_id) : "all",
-      blockId: row.block_id ? String(row.block_id) : "all",
+      courseId: Array.isArray(row.course_id) && row.course_id.length > 0 ? String(row.course_id[0]) : "all",
+      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
-      createdAt: row.created_at.split("T")[0],
+      createdAt: row.created_at ? row.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+      submissionCount: 0,
       academicYear: row.academic_year || undefined,
       term: row.term || undefined,
-      submissionCount: 0, // New activity has no submissions yet
-    };
+      programId: Array.isArray(row.program_id) && row.program_id.length > 0 ? String(row.program_id[0]) : undefined,
+      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
+    }));
   } catch (err) {
     console.error("Unexpected error creating activity:", err);
     throw err;
@@ -351,10 +438,7 @@ export const updateActivity = async (
     }
 
     // Get first selected program/section or null
-    const sectionId =
-      activityData.sectionIds.length > 0
-        ? activityData.sectionIds[0]
-        : null;
+
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
     if (activityData.rubricId) {
@@ -373,15 +457,34 @@ export const updateActivity = async (
 
     const updateData: Record<string, unknown> = {
       title: activityData.title,
-      course_id:
-        activityData.courseIds.length > 0 ? activityData.courseIds[0] : null,
-      block_id: sectionId || null,
+      course_id: activityData.courseIds,
+      block_id: activityData.sectionIds,
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
       academic_year: activityData.academicYear,
       term: activityData.term,
+      program_id: null, // Will be set below if sections are selected
     };
+
+    // If sections selected, try to update program_id array from the blocks
+    if (activityData.sectionIds.length > 0) {
+      const { data: blocksData } = await supabase
+        .from("blocks")
+        .select("teacher_program_loads(program_id)")
+        .in("id", activityData.sectionIds);
+      
+      if (blocksData) {
+        const programIds = new Set<string>();
+        blocksData.forEach((b: any) => {
+          const tpl = Array.isArray(b.teacher_program_loads) 
+            ? b.teacher_program_loads[0] 
+            : b.teacher_program_loads;
+          if (tpl?.program_id) programIds.add(tpl.program_id);
+        });
+        updateData.program_id = Array.from(programIds);
+      }
+    }
 
     const { data, error } = await supabase
       .from("essay_activities")
@@ -397,23 +500,14 @@ export const updateActivity = async (
     }
 
     // Map back to EssayActivity format
-    const row = data as {
-      id: number;
-      title: string;
-      course_id: string | null;
-      block_id: string | null;
-      rubric_id: number | null;
-      due_date: string | null;
-      instructions: string | null;
-      created_at: string;
-      academic_year: string | null;
-      term: string | null;
-    };
+    const row = data as unknown as SupabaseActivityRow;
     return {
       id: String(row.id),
       title: row.title,
-      courseId: row.course_id ? String(row.course_id) : "all",
-      blockId: row.block_id ? String(row.block_id) : "all",
+      courseId: Array.isArray(row.course_id) && row.course_id.length > 0 ? String(row.course_id[0]) : "all",
+      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -421,6 +515,8 @@ export const updateActivity = async (
       academicYear: row.academic_year || undefined,
       term: row.term || undefined,
       submissionCount: 0, // Will be updated when activities are reloaded
+      programId: Array.isArray(row.program_id) && row.program_id.length > 0 ? String(row.program_id[0]) : undefined,
+      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
     };
   } catch (err) {
     console.error("Unexpected error updating activity:", err);
@@ -451,42 +547,82 @@ export const deleteActivity = async (activityId: string): Promise<void> => {
   }
 };
 
-// Load courses for the current teacher
+// Load courses for the current teacher (only those they are actually teaching)
 export const fetchCourses = async (): Promise<
   { id: string; course_code: string; course_title: string }[]
 > => {
   try {
-    const teacherId = await fetchTeacherId();
-    if (!teacherId) return [];
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return [];
 
-    // Get user's school and department to fetch related courses
-    const { data: userData } = await supabase
-      .from("users")
-      .select("school_id, department_id")
-      .eq("id", teacherId)
-      .single();
-
-    if (!userData?.school_id) return [];
-
+    // Fetch courses through teacher_course_loads
     const { data, error } = await supabase
-      .from("courses")
-      .select("id, course_code, course_title")
-      .eq("school_id", userData.school_id)
-      .or(`department_id.eq.${userData.department_id},department_id.is.null`)
-      .order("course_code", { ascending: true });
+      .from("teacher_course_loads")
+      .select("courses(id, course_code, course_title)")
+      .eq("teacher_id", userData.user.id);
 
     if (error) {
-      console.error("Error loading courses:", error);
+      console.error("Error loading teacher courses:", error);
       return [];
     }
 
-    return (data || []).map((c) => ({
-      id: c.id,
-      course_code: c.course_code,
-      course_title: c.course_title,
-    }));
+    const courses = (data || [])
+      .map((l: any) => l.courses)
+      .filter((c) => c !== null);
+
+    // Remove duplicates
+    const uniqueCourses = Array.from(
+      new Map(courses.map((c) => [c.id, c])).values(),
+    );
+
+    return uniqueCourses.sort((a, b) =>
+      a.course_code.localeCompare(b.course_code),
+    );
   } catch (err) {
     console.error("Unexpected error loading courses:", err);
+    return [];
+  }
+};
+
+// Load program loads for the current teacher, optionally filtered by course
+export const fetchTeacherProgramLoads = async (
+  courseId?: string,
+): Promise<
+  { id: string; program_id: string; program_name: string; course_id: string }[]
+> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return [];
+
+    let query = supabase
+      .from("teacher_program_loads")
+      .select(`
+        id,
+        program_id,
+        programs_lookup(name, abbr),
+        teacher_course_loads!inner(course_id)
+      `)
+      .eq("teacher_course_loads.teacher_id", userData.user.id);
+
+    if (courseId && courseId !== "all") {
+      query = query.eq("teacher_course_loads.course_id", courseId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error loading program loads:", error);
+      return [];
+    }
+
+    return (data || []).map((row: any) => ({
+      id: String(row.id),
+      program_id: String(row.program_id),
+      program_name: row.programs_lookup?.abbr || row.programs_lookup?.name || "Unknown Program",
+      course_id: String(row.teacher_course_loads?.course_id || ""),
+    }));
+  } catch (err) {
+    console.error("Unexpected error loading program loads:", err);
     return [];
   }
 };
@@ -521,24 +657,11 @@ export const fetchPrograms = async (): Promise<
   }
 };
 
-// Load sections (blocks) for dropdown, optionally filtered by course and always by teacher
+// Load sections (blocks) for dropdown, optionally filtered by program load
 export const fetchSections = async (
-  courseId?: string | "all",
-): Promise<{ id: string; name: string; courseId: string }[]> => {
+  programLoadId?: string,
+): Promise<{ id: string; name: string; courseId: string; programLoadId: string }[]> => {
   try {
-    const teacherId = await fetchTeacherId();
-    if (!teacherId) {
-      return [];
-    }
-
-    // Get courses first to know which sections to show
-    const courses = await fetchCourses();
-    const courseIds = courses.map((c) => c.id);
-
-    if (courseIds.length === 0) {
-      return [];
-    }
-
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return [];
 
@@ -547,19 +670,23 @@ export const fetchSections = async (
       .select(`
         id,
         name,
+        year,
+        program_load_id,
         teacher_program_loads!inner (
+          programs_lookup (
+            name,
+            abbr
+          ),
           course_load_id,
           teacher_course_loads!inner (
-            id,
-            course_id,
-            teacher_id
+            course_id
           )
         )
       `)
-      .eq("teacher_program_loads.teacher_course_loads.teacher_id", userData.user.id);
+      .eq("teacher_id", userData.user.id);
 
-    if (courseId && courseId !== "all") {
-      query = query.eq("teacher_program_loads.teacher_course_loads.course_id", courseId);
+    if (programLoadId && programLoadId !== "all") {
+      query = query.eq("program_load_id", programLoadId);
     }
 
     const { data, error } = await query;
@@ -570,11 +697,15 @@ export const fetchSections = async (
     }
 
     return (data || []).map((block: any) => {
-      const tcl = block.teacher_program_loads?.[0]?.teacher_course_loads || block.teacher_program_loads?.teacher_course_loads;
+      const progAbbr = block.teacher_program_loads?.programs_lookup?.abbr || block.teacher_program_loads?.programs_lookup?.name || "";
+      const yearStr = block.year ? `${block.year}` : "";
+      const fullName = [progAbbr, yearStr + block.name].filter(Boolean).join(" ");
+
       return {
         id: String(block.id),
-        name: block.name,
-        courseId: String(tcl?.course_id || ""),
+        name: fullName,
+        programLoadId: String(block.program_load_id),
+        courseId: String(block.teacher_program_loads?.teacher_course_loads?.course_id || ""),
       };
     });
   } catch (err) {
@@ -1127,18 +1258,16 @@ export const deleteEssay = async (
 
 // Fetch student count and submission count for a course-section-activity combination
 export const fetchCourseSectionCounts = async (
-  courseId: string,
+  _courseId: string,
   sectionId: string,
   activityId: string,
 ): Promise<{ studentCount: number; submissionCount: number }> => {
   try {
-    // Count students for this course and section
+    // Count students for this block
     const { count: studentCount, error: studentsCountError } = await supabase
-      .from("students")
+      .from("block_students")
       .select("*", { count: "exact", head: true })
-      .eq("course_id", courseId)
-      .eq("section_id", sectionId)
-      .eq("is_active", true);
+      .eq("block_id", sectionId);
 
     if (studentsCountError) {
       console.error("Error counting students:", studentsCountError);
@@ -1156,7 +1285,7 @@ export const fetchCourseSectionCounts = async (
         .from("essays")
         .select("*", { count: "exact", head: true })
         .eq("activity_id", activityDbId)
-        .eq("section_id", sectionId);
+        .eq("block_id", sectionId);
 
     if (submissionsCountError) {
       console.error("Error counting submissions:", submissionsCountError);
@@ -2270,20 +2399,23 @@ export const fetchDuplicateEssays = async (
           id,
           title,
           submitted_at,
-          section_id,
+          block_id,
           students!inner(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          sections!inner(
+          blocks!inner(
             id,
             name,
-            program_id,
-            programs_lookup!inner(
-              id,
-              name
+            year,
+            teacher_program_loads!inner(
+              programs_lookup!inner(
+                id,
+                name,
+                abbr
+              )
             )
           )
         )
@@ -2311,20 +2443,23 @@ export const fetchDuplicateEssays = async (
           title,
           submitted_at,
           content,
-          section_id,
+          block_id,
           students!inner(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          sections!inner(
+          blocks!inner(
             id,
             name,
-            program_id,
-            programs_lookup!inner(
-              id,
-              name
+            year,
+            teacher_program_loads!inner(
+              programs_lookup!inner(
+                id,
+                name,
+                abbr
+              )
             )
           )
         `,
@@ -2355,20 +2490,23 @@ export const fetchDuplicateEssays = async (
         title: string;
         submitted_at: string;
         content?: string | null;
-        section_id?: number | null;
+        block_id?: string | null;
         students?: {
           id: number;
           first_name: string;
           middle_name: string | null;
           last_name: string;
         };
-        sections?: {
-          id: number;
+        blocks?: {
+          id: string;
           name: string;
-          program_id?: string | null;
-          programs_lookup?: {
-            id: string;
-            name: string;
+          year?: number | null;
+          teacher_program_loads?: {
+            programs_lookup?: {
+              id: string;
+              name: string;
+              abbr: string | null;
+            };
           };
         };
       };
@@ -2394,10 +2532,10 @@ export const fetchDuplicateEssays = async (
         }
 
         const student = essay.students;
-        const section = essay.sections;
-        const program = section?.programs_lookup;
+        const block = essay.blocks;
+        const program = block?.teacher_program_loads?.programs_lookup;
 
-        if (!student || !section || !program) {
+        if (!student || !block || !program) {
           continue;
         }
 
@@ -2405,8 +2543,8 @@ export const fetchDuplicateEssays = async (
           essayId: essay.id,
           studentId: student.id,
           studentName: buildFullNameFromObject(student, "Unknown"),
-          programName: program.name || "Unknown",
-          sectionName: section.name || "Unknown",
+          programName: program.abbr || program.name || "Unknown",
+          sectionName: block.year ? `${block.year}${block.name}` : block.name || "Unknown",
           title: essay.title || "Untitled",
           submittedAt: essay.submitted_at || new Date().toISOString(),
         };
@@ -2443,20 +2581,23 @@ export const fetchDuplicateEssays = async (
         id: number;
         title: string;
         submitted_at: string;
-        section_id?: number | null;
+        block_id?: string | null;
         students?: {
           id: number;
           first_name: string;
           middle_name: string | null;
           last_name: string;
         };
-        sections?: {
-          id: number;
+        blocks?: {
+          id: string;
           name: string;
-          program_id?: string | null;
-          programs_lookup?: {
-            id: string;
-            name: string;
+          year?: number | null;
+          teacher_program_loads?: {
+            programs_lookup?: {
+              id: string;
+              name: string;
+              abbr: string | null;
+            };
           };
         };
       };
@@ -2478,10 +2619,10 @@ export const fetchDuplicateEssays = async (
 
       // Type guard to ensure essayData is not null
       const student = essayData.students;
-      const section = essayData.sections;
-      const program = section?.programs_lookup;
+      const block = essayData.blocks;
+      const program = block?.teacher_program_loads?.programs_lookup;
 
-      if (!student || !section || !program) {
+      if (!student || !block || !program) {
         continue;
       }
 
@@ -2489,8 +2630,8 @@ export const fetchDuplicateEssays = async (
         essayId: essayData.id,
         studentId: student.id,
         studentName: buildFullNameFromObject(student, "Unknown"),
-        programName: program.name || "Unknown",
-        sectionName: section.name || "Unknown",
+        programName: program.abbr || program.name || "Unknown",
+        sectionName: block.year ? `${block.year}${block.name}` : block.name || "Unknown",
         title: essayData.title || "Untitled",
         submittedAt: essayData.submitted_at || new Date().toISOString(),
       };

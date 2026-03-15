@@ -15,6 +15,7 @@ import {
   fetchSections,
   fetchRubrics,
   fetchStudentsByCourseAndSection,
+  fetchTeacherProgramLoads,
 } from "../services/activityService";
 import { useAcademicContext } from "./useAcademicContext";
 
@@ -25,7 +26,10 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
   const [activities, setActivities] = useState<EssayActivity[]>([]);
   const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
   const [sections, setSections] = useState<
-    { id: string; name: string; courseId: string }[]
+    { id: string; name: string; courseId: string; programLoadId: string }[]
+  >([]);
+  const [programLoads, setProgramLoads] = useState<
+    { id: string; program_id: string; program_name: string; course_id: string }[]
   >([]);
   const [rubrics, setRubrics] = useState<{
     platform: { id: string; name: string }[];
@@ -48,20 +52,24 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [activitiesData, coursesData, sectionsData, rubricsData] =
+        const [activitiesData, coursesData, programLoadsData, sectionsData, rubricsData] =
           await Promise.all([
             fetchTeacherActivities(
-                ay || currentAY, 
-                term || currentSemester, 
-                showArchived
+              ay || currentAY,
+              term || currentSemester,
+              showArchived,
             ),
-            fetchCourses().then(res => res.map(c => ({ id: c.id, name: c.course_code }))),
+            fetchCourses().then((res) =>
+              res.map((c) => ({ id: c.id, name: c.course_code })),
+            ),
+            fetchTeacherProgramLoads(),
             fetchSections(),
             fetchRubrics(),
           ]);
 
         setActivities(activitiesData);
         setCourses(coursesData);
+        setProgramLoads(programLoadsData);
         setSections(sectionsData);
         setRubrics(rubricsData);
       } catch (err) {
@@ -109,18 +117,51 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
   const courseSections = useMemo(() => {
     if (!currentActivity) return [];
 
-    const relevantSections = sections.filter(s => {
-        if (currentActivity.courseId !== "all" && s.courseId !== currentActivity.courseId) return false;
-        if (currentActivity.blockId !== "all" && s.id !== currentActivity.blockId) return false;
-        return true;
+    const relevantSections = sections.filter((s) => {
+      // Check if this section is in the activity's selected blocks
+      if (
+        currentActivity.blockIds &&
+        currentActivity.blockIds.length > 0 &&
+        !currentActivity.blockIds.includes(s.id)
+      ) {
+        return false;
+      }
+
+      // Check if this section's course is in the activity's selected courses
+      if (
+        currentActivity.courseIds &&
+        currentActivity.courseIds.length > 0 &&
+        !currentActivity.courseIds.includes(s.courseId)
+      ) {
+        return false;
+      }
+
+      // Fallback to single IDs for backward compatibility
+      if (
+        currentActivity.courseId !== "all" &&
+        s.courseId !== currentActivity.courseId &&
+        (!currentActivity.courseIds || currentActivity.courseIds.length === 0)
+      ) {
+        return false;
+      }
+
+      if (
+        currentActivity.blockId !== "all" &&
+        s.id !== currentActivity.blockId &&
+        (!currentActivity.blockIds || currentActivity.blockIds.length === 0)
+      ) {
+        return false;
+      }
+
+      return true;
     });
 
     return relevantSections.map((section) => {
-      const course = courses.find(c => c.id === section.courseId);
+      const course = courses.find((c) => c.id === section.courseId);
       return {
         id: `${section.courseId}-${section.id}`,
-        name: `${course?.name || 'Unknown'} - ${section.name}`,
-        courseName: course?.name || 'Unknown',
+        name: section.name, // Display only the block name (e.g., "1A")
+        courseName: course?.name || "Unknown",
         sectionName: section.name,
         courseId: section.courseId,
         sectionId: section.id,
@@ -153,7 +194,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
         academicYear: currentAY,
         term: currentSemester
       });
-      setActivities((prev) => [created, ...prev]);
+      setActivities((prev) => [...created, ...prev]);
     } catch (err) {
       console.error("Error creating activity:", err);
       throw err;
@@ -228,6 +269,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     // State
     activities,
     courses,
+    programLoads,
     sections,
     rubrics,
     students,

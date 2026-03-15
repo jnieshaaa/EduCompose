@@ -19,6 +19,7 @@ export const DESIGN_MODE_USER = {
 };
 
 interface User {
+  auth_id: string;
   id: string | number;
   email: string;
   username: string;
@@ -127,6 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return {
         id: data.id.toString(),
+        auth_id: authUserId,
         email: data.email ?? "",
         username: data.email ?? "",
         full_name: fullName,
@@ -172,6 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return {
       id: su.id ?? "",
+      auth_id: su.id?.toString() ?? "",
       email: su.email ?? "",
       username:
         (meta["username"] as string | undefined) || su.email || fullName,

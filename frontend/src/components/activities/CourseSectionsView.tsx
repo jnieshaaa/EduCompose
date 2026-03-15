@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import type { EssayActivity, CourseSection } from "../../types/activityTypes";
-import { getCourseLabel, getBlockLabel } from "../../data/activityData";
+import { getCoursesLabel, getBlocksLabel } from "../../utils/activityUtils";
 import {
   fetchCourseSectionCounts,
   fetchDuplicateEssays,
@@ -120,14 +120,14 @@ export function CourseSectionsView({
         )}
         <div className="flex flex-wrap gap-2">
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
-            {getCourseLabel(
-              activity.courseId,
+            {getCoursesLabel(
+              activity.courseIds,
               courses.map((p) => ({ id: p.id, name: p.name }))
             )}
           </Badge>
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
-            {getBlockLabel(
-              activity.blockId,
+            {getBlocksLabel(
+              activity.blockIds,
               sections.map((s) => ({
                 id: s.id,
                 name: s.name,
@@ -150,7 +150,7 @@ export function CourseSectionsView({
         <Card className="lg:col-span-2">
           <div className="p-4 border-b">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Course - Blocks
+              Blocks
             </h2>
             <p className="text-sm text-neutral-500">
               Click on a block to view students
@@ -159,7 +159,7 @@ export function CourseSectionsView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Course - Block</TableHead>
+                <TableHead>Block</TableHead>
                 <TableHead className="text-center">Students</TableHead>
                 <TableHead className="text-center">Submissions</TableHead>
               </TableRow>

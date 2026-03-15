@@ -145,7 +145,7 @@ export function MyClassesTab() {
             <Card 
               key={classItem.id}
               className="p-6 hover:shadow-lg transition-shadow cursor-pointer group border-none shadow-sm hover:ring-2 hover:ring-primary/20 bg-white"
-              onClick={() => navigate(`/Student/Classes/${classItem.id}`)}
+              onClick={() => navigate(`/Student/Classes/${classItem.id}?courseName=${encodeURIComponent(classItem.name)}&courseCode=${encodeURIComponent(classItem.code)}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-primary/5 rounded-xl group-hover:bg-primary/10 transition-colors">

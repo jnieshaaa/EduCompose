@@ -1,15 +1,15 @@
 import { supabase } from "../lib/supabaseClient";
 import type { Notification } from "../data/notificationsData";
 
-// Fetch notifications for a teacher
-export const fetchTeacherNotifications = async (
-  teacherId: number,
+// Fetch notifications for a user (teacher or student)
+export const fetchUserNotifications = async (
+  userId: string,
 ): Promise<Notification[]> => {
   try {
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
-      .eq("user_id", teacherId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -21,26 +21,55 @@ export const fetchTeacherNotifications = async (
       return [];
     }
 
-    // Convert database format to Notification format
-    return data.map((notif) => ({
-      id: String(notif.id),
-      type: notif.type as Notification["type"],
-      title: notif.title,
-      message: notif.message,
-      read: notif.read,
-      timestamp: formatTimestamp(notif.created_at),
-      relatedId: notif.related_id || undefined,
-    }));
+    return data.map(mapNotificationRow);
   } catch (err) {
-    console.error("Error fetching teacher notifications:", err);
+    console.error("Error fetching user notifications:", err);
     return [];
   }
+};
+
+/**
+ * Maps a database notification row to the frontend Notification interface
+ */
+export const mapNotificationRow = (notif: any): Notification => ({
+  id: String(notif.id),
+  type: notif.type as Notification["type"],
+  title: notif.title,
+  message: notif.message,
+  read: notif.read,
+  timestamp: formatTimestamp(notif.created_at),
+  relatedId: notif.related_id || undefined,
+});
+
+/**
+ * Subscribe to real-time notification updates for a specific user
+ */
+export const subscribeToNotifications = (
+  userId: string,
+  onNewNotification: (notification: Notification) => void,
+) => {
+  return supabase
+    .channel(`user-notifications-${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        const newNotif = mapNotificationRow(payload.new);
+        onNewNotification(newNotif);
+      },
+    )
+    .subscribe();
 };
 
 // Mark notification as read
 export const markNotificationAsRead = async (
   notificationId: string,
-  teacherId: number,
+  teacherId: string,
 ): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -63,7 +92,7 @@ export const markNotificationAsRead = async (
 
 // Mark all notifications as read
 export const markAllNotificationsAsRead = async (
-  teacherId: number,
+  teacherId: string,
 ): Promise<boolean> => {
   try {
     const { error } = await supabase

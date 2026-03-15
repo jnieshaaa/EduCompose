@@ -31,6 +31,16 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Teacher/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
   "/Teacher/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   
+  // Student Dashboard
+  "/Student/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
+  "/Student/Classes": { label: "My Classes", icon: <BookOpen className="w-4 h-4" /> },
+  "/Student/Essays": { label: "My Essays", icon: <FileText className="w-4 h-4" /> },
+  "/Student/Progress": { label: "Progress & Analytics", icon: <BarChart3 className="w-4 h-4" /> },
+  "/Student/Rubric": { label: "Rubric / Criteria", icon: <ClipboardCheck className="w-4 h-4" /> },
+  "/Student/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
+  "/Student/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
+  "/Student/Submit": { label: "Submit Essay", icon: <FileText className="w-4 h-4" /> },
+  
   // Legacy routes
   "/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
   "/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
@@ -56,111 +66,139 @@ const Breadcrumb: React.FC = () => {
   const config = routeConfig[pathname];
 
   // Build breadcrumb based on route and context
-  if (config) {
-    // Handle drill-down paths for Course Management
-    if (pathname === "/Teacher/Courses" || pathname === "/Teacher/Students") {
-      const courseId = searchParams.get("courseId");
-      const courseCode = searchParams.get("courseCode");
-      const programLoadId = searchParams.get("programLoad");
-      const programAbbr = searchParams.get("programAbbr");
-      const blockId = searchParams.get("block");
-      const blockName = searchParams.get("blockName");
+  if (pathname.startsWith("/Teacher/")) {
+    if (config) {
+      if (pathname === "/Teacher/Courses" || pathname === "/Teacher/Students") {
+        const courseId = searchParams.get("courseId");
+        const courseCode = searchParams.get("courseCode");
+        const programLoadId = searchParams.get("programLoad");
+        const programAbbr = searchParams.get("programAbbr");
+        const blockId = searchParams.get("block");
+        const blockName = searchParams.get("blockName");
 
-      // Root: Course Management
-      items.push({
-        label: "Course Management",
-        path: "/Teacher/Courses",
-        icon: <Layers className="w-4 h-4" />,
-      });
-
-      // Level 1: Course
-      if (courseId && courseCode) {
         items.push({
-          label: courseCode,
-          path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
-        });
-
-        // Level 2: Program (Simplified)
-        if (programLoadId && programAbbr) {
-            // Level 3: Block/Section
-            if (blockId && blockName) {
-                // Add Program as clickable link back to sections view
-                items.push({
-                    label: programAbbr,
-                    path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
-                });
-                
-                // Add the specific Block
-                items.push({
-                    label: blockName,
-                    path: pathname === "/Teacher/Students" 
-                        ? `/Teacher/Students?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`
-                        : `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`,
-                });
-            } else {
-                // Just viewing program sections list
-                items.push({
-                    label: programAbbr,
-                    path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
-                });
-            }
-        }
-      }
-    } else if (pathname === "/Teacher/Activities") {
-      // Handle Activities drill-down
-      const activityId = searchParams.get("activityId");
-      const activityTitle = searchParams.get("activityTitle");
-      const programSection = searchParams.get("programSection");
-      const programName = searchParams.get("programName");
-      
-      items.push({
-        label: "Activities",
-        path: "/Teacher/Activities",
-        icon: config.icon,
-      });
-      
-      if (activityId && activityTitle) {
-        items.push({
-          label: activityTitle,
-          path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}`,
-        });
-        
-        if (programSection && programName) {
-          const sectionLabel = `${programName} - ${programSection}`;
-          items.push({
-            label: sectionLabel,
-            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
-          });
-        }
-      }
-    } else {
-      // Add parent section if exists (legacy logic)
-      if (config.parent) {
-        items.push({
-          label: config.parent,
+          label: "Course Management",
           path: "/Teacher/Courses",
           icon: <Layers className="w-4 h-4" />,
         });
-      }
 
-      // Non-drill-down routes - just show the current page
+        if (courseId && courseCode) {
+          items.push({
+            label: courseCode,
+            path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
+          });
+
+          if (programLoadId && programAbbr) {
+            if (blockId && blockName) {
+              items.push({
+                label: programAbbr,
+                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+              });
+              
+              items.push({
+                label: blockName,
+                path: pathname === "/Teacher/Students" 
+                  ? `/Teacher/Students?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`
+                  : `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`,
+              });
+            } else {
+              items.push({
+                label: programAbbr,
+                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+              });
+            }
+          }
+        }
+      } else if (pathname === "/Teacher/Activities") {
+        const activityId = searchParams.get("activityId");
+        const activityTitle = searchParams.get("activityTitle");
+        const programSection = searchParams.get("programSection");
+        const programName = searchParams.get("programName");
+        
+        items.push({
+          label: "Activities",
+          path: "/Teacher/Activities",
+          icon: config.icon,
+        });
+        
+        if (activityId && activityTitle) {
+          items.push({
+            label: activityTitle,
+            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}`,
+          });
+          
+          if (programSection && programName) {
+            items.push({
+              label: `${programName} - ${programSection}`,
+              path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
+            });
+          }
+        }
+      } else {
+        if (config.parent) {
+          items.push({
+            label: config.parent,
+            path: "/Teacher/Courses",
+            icon: <Layers className="w-4 h-4" />,
+          });
+        }
+        items.push({
+          label: config.label,
+          path: pathname,
+          icon: config.icon,
+        });
+      }
+    } else {
+      items.push({
+        label: "Dashboard",
+        path: "/Teacher/Dashboard",
+        icon: <Home className="w-4 h-4" />,
+      });
+    }
+  } else if (pathname.startsWith("/Student/")) {
+    const isSubmit = pathname === "/Student/Submit";
+    const isClassDetail = pathname.startsWith("/Student/Classes/");
+
+    if (pathname === "/Student/Classes" || isClassDetail || isSubmit) {
+      items.push({
+        label: "My Classes",
+        path: "/Student/Classes",
+        icon: <BookOpen className="w-4 h-4" />,
+      });
+
+      if (isClassDetail || isSubmit) {
+        const classId = isClassDetail ? pathname.split("/").pop() : searchParams.get("classId");
+        const courseName = searchParams.get("courseName") || searchParams.get("courseCode") || "Class Detail";
+        
+        if (classId) {
+          items.push({
+            label: courseName,
+            path: `/Student/Classes/${classId}${searchParams.get("courseName") ? `?courseName=${encodeURIComponent(courseName)}` : ""}`,
+          });
+
+          if (isSubmit) {
+            const activityTitle = searchParams.get("activityTitle") || "Submit Essay";
+            items.push({
+              label: activityTitle,
+              path: location.search ? `${pathname}${location.search}` : pathname,
+            });
+          }
+        }
+      }
+    } else if (config) {
       items.push({
         label: config.label,
         path: pathname,
         icon: config.icon,
       });
+    } else {
+      items.push({
+        label: "Dashboard",
+        path: "/Student/Dashboard",
+        icon: <Home className="w-4 h-4" />,
+      });
     }
-  } else {
-    // Fallback for unknown routes
-    items.push({
-      label: "Dashboard",
-      path: "/Teacher/Dashboard",
-      icon: <Home className="w-4 h-4" />,
-    });
-  }
-
-  // Handle legacy ClassManagement route with query params
-  if (pathname === "/ClassManagement" && searchParams.get("programId")) {
+  } else if (pathname === "/ClassManagement" && searchParams.get("programId")) {
     const programId = searchParams.get("programId");
     const programName = searchParams.get("programName") || "Program";
     const blockId = searchParams.get("blockId");
@@ -169,56 +207,38 @@ const Breadcrumb: React.FC = () => {
     const activityTitle = searchParams.get("activityTitle") || "Essay Activity";
     const basePath = `${pathname}?programId=${programId}&programName=${programName}`;
 
-    // Clear and rebuild for legacy route
-    items.length = 0;
     items.push({
       label: "Class Management",
       path: "/ClassManagement",
       icon: <Layers className="w-4 h-4" />,
     });
 
-    // Add program breadcrumb
     items.push({
       label: programName,
       path: basePath,
     });
 
     const blockViewPath = `${basePath}&view=blocks`;
-    const blockPath = `${basePath}${
-      blockId && blockName ? `&blockId=${blockId}&blockName=${blockName}` : ""
-    }`;
+    const blockPath = `${basePath}${blockId && blockName ? `&blockId=${blockId}&blockName=${blockName}` : ""}`;
     const blockLabel = blockName ?? "Block";
-    const blockBreadcrumbPath =
-      blockId && blockName ? blockPath : blockViewPath;
+    const blockBreadcrumbPath = blockId && blockName ? blockPath : blockViewPath;
 
     if (view === "activities") {
-      items.push({
-        label: blockLabel,
-        path: blockBreadcrumbPath,
-      });
-      items.push({
-        label: activityTitle,
-        path: `${blockPath}&view=activities`,
-      });
+      items.push({ label: blockLabel, path: blockBreadcrumbPath });
+      items.push({ label: activityTitle, path: `${blockPath}&view=activities` });
     } else if (view === "students") {
-      items.push({
-        label: blockLabel,
-        path: blockBreadcrumbPath,
-      });
-      items.push({
-        label: activityTitle,
-        path: `${blockPath}&view=activities`,
-      });
-      items.push({
-        label: "Students",
-        path: `${blockPath}&view=students`,
-      });
+      items.push({ label: blockLabel, path: blockBreadcrumbPath });
+      items.push({ label: activityTitle, path: `${blockPath}&view=activities` });
+      items.push({ label: "Students", path: `${blockPath}&view=students` });
     } else if (blockId && blockName) {
-      items.push({
-        label: blockName,
-        path: blockPath,
-      });
+      items.push({ label: blockName, path: blockPath });
     }
+  } else {
+    items.push({
+      label: config?.label || "Dashboard",
+      path: pathname,
+      icon: config?.icon || <Home className="w-4 h-4" />,
+    });
   }
 
   return (

@@ -37,11 +37,11 @@ import {
 } from "../../components/ui/table";
 import type { EssayActivity } from "../../types/activityTypes";
 import {
-  getCourseLabel,
-  getBlockLabel,
   getRubricLabel,
   getDueDateStatus,
-} from "../../data/activityData";
+  getCoursesLabel,
+  getBlocksLabel,
+} from "../../utils/activityUtils";
 
 interface ActivitiesListViewProps {
   activities: EssayActivity[];
@@ -302,15 +302,15 @@ export function ActivitiesListView({
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 text-xs flex items-center gap-1">
                           <Users className="w-3 h-3" />
-                          {getCourseLabel(
-                            activity.courseId,
+                          {getCoursesLabel(
+                            activity.courseIds,
                             courses.map((c) => ({ id: c.id, name: c.name }))
                           )}
                         </Badge>
                         <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 text-xs flex items-center gap-1">
                           <Layers className="w-3 h-3" />
-                          {getBlockLabel(
-                            activity.blockId,
+                          {getBlocksLabel(
+                            activity.blockIds,
                             sections.map((s) => ({
                               id: s.id,
                               name: s.name,
@@ -329,15 +329,7 @@ export function ActivitiesListView({
                       {/* Stats row */}
                       <div className="mt-auto pt-4 border-t border-neutral-100 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <FileText className="w-4 h-4 text-neutral-400" />
-                            <span className="font-semibold text-neutral-900">
-                              {activity.submissionCount}
-                            </span>
-                            <span className="text-neutral-500">
-                              submissions
-                            </span>
-                          </div>
+                          {/* Submissions count removed as requested */}
                         </div>
 
                         {dueDateStatus && (
@@ -370,10 +362,9 @@ export function ActivitiesListView({
               <TableRow>
                 <TableHead>Activity Title</TableHead>
                 <TableHead>Course</TableHead>
-                <TableHead>Section</TableHead>
+                <TableHead>Block</TableHead>
                 <TableHead>Rubric</TableHead>
                 <TableHead className="text-center">Due Date</TableHead>
-                <TableHead className="text-center">Submissions</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -406,8 +397,8 @@ export function ActivitiesListView({
                         variant="outline"
                         className="bg-primary/10 text-primary border-primary/20 text-xs"
                       >
-                        {getCourseLabel(
-                          activity.courseId,
+                        {getCoursesLabel(
+                          activity.courseIds,
                           courses.map((c) => ({ id: c.id, name: c.name }))
                         )}
                       </Badge>
@@ -417,8 +408,8 @@ export function ActivitiesListView({
                         variant="outline"
                         className="bg-secondary/10 text-secondary border-secondary/20 text-xs"
                       >
-                        {getBlockLabel(
-                          activity.blockId,
+                        {getBlocksLabel(
+                          activity.blockIds,
                           sections.map((s) => ({
                             id: s.id,
                             name: s.name,
@@ -450,18 +441,6 @@ export function ActivitiesListView({
                       ) : (
                         <span className="text-sm text-neutral-400">—</span>
                       )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={
-                          activity.submissionCount > 0
-                            ? "bg-success-default/10 text-success-default border-success-default/20"
-                            : "bg-neutral-100 text-neutral-500 border-neutral-200"
-                        }
-                      >
-                        {activity.submissionCount}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       {!isReadOnly && (

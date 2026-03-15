@@ -3,8 +3,8 @@ import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { Bell, Check } from "lucide-react";
-import { fetchTeacherNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
-import { fetchTeacherId } from "../../services/rubricService";
+import { fetchUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
+import { fetchTeacherUUID } from "../../services/rubricService";
 import type { Notification } from "../../data/notificationsData";
 
 export function NotificationsTab() {
@@ -15,9 +15,9 @@ export function NotificationsTab() {
   useEffect(() => {
     const loadNotifications = async () => {
       setIsLoading(true);
-      const teacherId = await fetchTeacherId();
-      if (teacherId) {
-        const fetchedNotifications = await fetchTeacherNotifications(teacherId);
+      const teacherUUID = await fetchTeacherUUID();
+      if (teacherUUID) {
+        const fetchedNotifications = await fetchUserNotifications(teacherUUID);
         setNotifications(fetchedNotifications);
       }
       setIsLoading(false);
@@ -38,9 +38,9 @@ export function NotificationsTab() {
     );
 
     // Update in Supabase
-    const teacherId = await fetchTeacherId();
-    if (teacherId) {
-      await markNotificationAsRead(id, teacherId);
+    const teacherUUID = await fetchTeacherUUID();
+    if (teacherUUID) {
+      await markNotificationAsRead(id, teacherUUID);
     }
   };
 
@@ -49,9 +49,9 @@ export function NotificationsTab() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
     // Update in Supabase
-    const teacherId = await fetchTeacherId();
-    if (teacherId) {
-      await markAllNotificationsAsRead(teacherId);
+    const teacherUUID = await fetchTeacherUUID();
+    if (teacherUUID) {
+      await markAllNotificationsAsRead(teacherUUID);
     }
   };
 

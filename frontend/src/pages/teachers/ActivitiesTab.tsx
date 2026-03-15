@@ -22,6 +22,7 @@ export function ActivitiesTab() {
   const {
     activities,
     courses,
+    programLoads,
     sections,
     rubrics,
     students,
@@ -162,6 +163,7 @@ export function ActivitiesTab() {
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateActivity}
         courses={courses}
+        programLoads={programLoads}
         sections={sections} // No mapping needed, already has courseId
         rubrics={rubrics}
         isSubmitting={isCreating}
@@ -177,6 +179,7 @@ export function ActivitiesTab() {
           onSubmit={handleEditSubmit}
           initialData={editActivityInitialData}
           courses={courses}
+          programLoads={programLoads}
           sections={sections} // No mapping needed, already has courseId
           rubrics={rubrics}
           isSubmitting={isCreating}

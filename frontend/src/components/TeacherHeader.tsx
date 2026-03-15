@@ -11,11 +11,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
+import { supabase } from "../lib/supabaseClient";
 import {
-  fetchTeacherNotifications,
+  fetchUserNotifications,
   markNotificationAsRead,
+  subscribeToNotifications,
 } from "../services/notificationService";
-import { fetchTeacherId } from "../services/rubricService";
+import { fetchTeacherUUID } from "../services/rubricService";
 import type { Notification } from "../data/notificationsData";
 
 // Updated interface to include the user's role
@@ -43,20 +45,32 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   // New state for search input
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch notifications from Supabase
+  // Load and Subscribe to Notifications
   useEffect(() => {
-    const loadNotifications = async () => {
-      const teacherId = await fetchTeacherId();
-      if (teacherId) {
-        const fetchedNotifications = await fetchTeacherNotifications(teacherId);
+    let channel: any;
+
+    const setupNotifications = async () => {
+      const teacherUUID = await fetchTeacherUUID();
+      if (teacherUUID) {
+        // Initial fetch
+        const fetchedNotifications = await fetchUserNotifications(teacherUUID);
         setNotifications(fetchedNotifications);
+
+        // Subscribe to real-time
+        channel = subscribeToNotifications(teacherUUID, (newNotif) => {
+          setNotifications((prev) => [newNotif, ...prev]);
+        });
       }
     };
 
-    loadNotifications();
-    // Refresh notifications every 30 seconds
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+    setupNotifications();
+
+    return () => {
+      if (channel) {
+        // Assuming 'supabase' is imported or available globally
+        supabase.removeChannel(channel);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -86,9 +100,9 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     );
 
     // Update in Supabase
-    const teacherId = await fetchTeacherId();
-    if (teacherId) {
-      await markNotificationAsRead(id, teacherId);
+    const teacherUUID = await fetchTeacherUUID();
+    if (teacherUUID) {
+      await markNotificationAsRead(id, teacherUUID);
     }
   };
 
