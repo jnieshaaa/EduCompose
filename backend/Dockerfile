@@ -43,9 +43,9 @@ RUN python -c "import easyocr; reader = easyocr.Reader(['en'], gpu=False)"
 # Copy the rest of the application
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 8000
+# Expose the port the app runs on (Railway uses PORT env var)
+EXPOSE ${PORT}
 
 # Command to run the application
-# We use uvicorn directly. In production, you might want to wrap it with Gunicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# We use the PORT environment variable provided by Railway
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
