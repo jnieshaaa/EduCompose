@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -15,8 +16,11 @@ import type { Notification } from '../../data/notificationsData';
 
 export function NotificationsTab() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ... (rest of the component)
 
   // Load and Subscribe to Notifications
   useEffect(() => {
@@ -71,6 +75,30 @@ export function NotificationsTab() {
     return Bell; // You can customize icons per type
   };
 
+  const handleNotificationClick = async (notification: Notification) => {
+    // 1. Mark as read if not already
+    if (!notification.read) {
+      await handleMarkAsRead(notification.id);
+    }
+
+    // 2. Navigate based on type
+    if (notification.relatedId) {
+      switch (notification.type) {
+        case "new_activity":
+        case "essay_graded":
+        case "resubmission_open":
+        case "upcoming_deadline":
+        case "revision_requested":
+          // For student, these mostly lead to the Submit Essay page
+          navigate(`/Student/Submit?activityId=${notification.relatedId}`);
+          break;
+        default:
+          // Default or other types
+          break;
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -118,7 +146,7 @@ export function NotificationsTab() {
                     ? "border-l-4 border-l-primary bg-primary/5"
                     : ""
                 }`}
-                onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-4">
                   <div className="bg-primary/10 text-primary p-3 rounded-rd flex-shrink-0">

@@ -10,6 +10,7 @@ export const DESIGN_MODE_ENABLED = false;
 export const DESIGN_MODE_TOKEN = "DESIGN_MODE_AUTH_TOKEN";
 export const DESIGN_MODE_USER = {
   id: 1,
+  auth_id: "demo-auth-id",
   email: "demo@educompose.com",
   username: "demo_user",
   full_name: "Demo Teacher",

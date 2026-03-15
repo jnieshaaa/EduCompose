@@ -113,6 +113,7 @@ export function useAuthModal(onClose: () => void) {
 
         login(data.session.access_token, {
           id: data.user.id,
+          auth_id: data.user.id,
           email: data.user.email ?? "",
           username: data.user.email ?? "",
           full_name: fullName,
@@ -272,6 +273,7 @@ export function useAuthModal(onClose: () => void) {
         const userMeta = (signUpData.user.user_metadata || {}) as UserMetadata;
         login(signUpData.session.access_token, {
           id: signUpData.user.id,
+          auth_id: signUpData.user.id,
           email: signUpData.user.email ?? "",
           username: signUpData.user.email ?? "",
           full_name:

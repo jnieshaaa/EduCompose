@@ -164,6 +164,7 @@ const Login: React.FC = () => {
       if (data.session && data.user) {
         login(data.session.access_token, {
           id: studentIdentity.student_id,
+          auth_id: data.user.id,
           email: studentIdentity.email ?? data.user.email ?? "",
           username: studentIdentity.student_code,
           full_name:
