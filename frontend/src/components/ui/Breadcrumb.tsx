@@ -1,4 +1,4 @@
-import React from "react";
+  import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
 import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare } from "lucide-react";
 
@@ -112,8 +112,8 @@ const Breadcrumb: React.FC = () => {
       } else if (pathname === "/Teacher/Activities") {
         const activityId = searchParams.get("activityId");
         const activityTitle = searchParams.get("activityTitle");
-        const programSection = searchParams.get("programSection");
-        const programName = searchParams.get("programName");
+        const programSection = searchParams.get("programSection") || searchParams.get("courseSection");
+        const programName = searchParams.get("programName") || searchParams.get("courseName");
         
         items.push({
           label: "Activities",
@@ -124,13 +124,13 @@ const Breadcrumb: React.FC = () => {
         if (activityId && activityTitle) {
           items.push({
             label: activityTitle,
-            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}`,
+            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&activityTitle=${encodeURIComponent(activityTitle)}`,
           });
           
           if (programSection && programName) {
             items.push({
               label: `${programName} - ${programSection}`,
-              path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
+              path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&activityTitle=${encodeURIComponent(activityTitle)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
             });
           }
         }

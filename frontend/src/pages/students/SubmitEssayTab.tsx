@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/textarea';
 import Badge from '../../components/ui/Badge';
-import { Upload, FileText, X, Clock, FileIcon, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,6 +20,7 @@ interface ActivityDetails {
   instructions: string;
   courseId: string;
   term: string;
+  teacherId: string;
 }
 
 interface SidebarPost {
@@ -47,10 +48,13 @@ export function SubmitEssayTab() {
   
   const [activeTab, setActiveTab] = useState('my-work');
   const [uploadMode, setUploadMode] = useState<'file' | 'text'>('text');
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [essayContent, setEssayContent] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionDate, setSubmissionDate] = useState<string | null>(null);
+  const [isResubmitRequested, setIsResubmitRequested] = useState(false);
+  const [requestingResubmission, setRequestingResubmission] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -119,7 +123,8 @@ export function SubmitEssayTab() {
           deadline: actRow.due_date ? new Date(actRow.due_date).toLocaleString() : "No deadline",
           instructions: actRow.instructions || "No instructions provided.",
           courseId: actRow.course_id?.[0] || "",
-          term: actRow.term || "N/A"
+          term: actRow.term || "N/A",
+          teacherId: actRow.teacher_id
         });
 
         // 3. Fetch Existing Submission
@@ -134,8 +139,24 @@ export function SubmitEssayTab() {
           setIsSubmitted(true);
           setEssayContent(essayData.content || '');
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleString());
-          if (essayData.file_path) {
-            setSelectedFile(essayData.file_path.split('/').pop() || 'Submitted File');
+          if (essayData.title) {
+            setSelectedFileName(essayData.title);
+          } else if (essayData.file_path) {
+            setSelectedFileName(essayData.file_path.split('/').pop() || 'Submitted File');
+          }
+
+          // Check if resubmission is already requested
+          const { data: requestData } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', actRow.teacher_id)
+            .eq('type', 'resubmission_request')
+            .eq('related_id', activityIdParam)
+            .ilike('message', `%${user.nickname || user.full_name}%`)
+            .maybeSingle();
+
+          if (requestData) {
+            setIsResubmitRequested(true);
           }
         }
 
@@ -190,7 +211,8 @@ export function SubmitEssayTab() {
         alert("File is too large. Maximum size is 10MB.");
         return;
       }
-      setSelectedFile(file.name);
+      setSelectedFile(file);
+      setSelectedFileName(file.name);
     }
   };
 
@@ -202,25 +224,111 @@ export function SubmitEssayTab() {
     try {
       setLoading(true);
 
+      let filePath = null;
+      if (uploadMode === 'file' && selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        filePath = `essays/${activityIdParam}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('essays')
+          .upload(filePath, selectedFile);
+
+        if (uploadError) throw uploadError;
+      }
+
+      console.log("[handleSubmit] Submitting essay:", {
+        studentId,
+        activityId: activityIdParam,
+        blockId: classId,
+        teacherId: activity?.teacherId,
+        uploadMode
+      });
+
       const { error: submitError } = await supabase
         .from('essays')
         .insert({
           student_id: studentId,
           activity_id: parseInt(activityIdParam),
+          block_id: classId ? parseInt(classId) : null,
           content: uploadMode === 'text' ? essayContent : null,
-          title: activity?.title || "Essay Submission",
+          file_path: filePath,
+          title: selectedFileName || activity?.title || "Essay Submission",
           status: 'submitted'
         });
 
-      if (submitError) throw submitError;
+      if (submitError) {
+        console.error("[handleSubmit] Insert error:", submitError);
+        throw submitError;
+      }
+
+      console.log("[handleSubmit] Insert successful");
 
       setIsSubmitted(true);
       setSubmissionDate(new Date().toLocaleString());
+      // Ensure the filename is set in state if it's a file upload
+      if (uploadMode === 'file' && selectedFile) {
+        setSelectedFileName(selectedFile.name);
+      }
+
+      // Notify the teacher
+      if (activity?.teacherId) {
+        console.log("[handleSubmit] Notifying teacher:", activity.teacherId);
+        const studentName = user?.nickname || user?.full_name || "A student";
+        const { error: notifyError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: activity.teacherId,
+            type: 'submission_received',
+            title: 'New Essay Submission',
+            message: `${studentName} has uploaded an activity: "${activity.title}".`,
+            related_id: parseInt(activity.id),
+            related_type: 'essay_activities'
+          });
+
+        if (notifyError) {
+          console.error("[handleSubmit] Notification error:", notifyError);
+        } else {
+          console.log("[handleSubmit] Notification successful");
+        }
+      } else {
+        console.warn("[handleSubmit] No teacherId found, skipping notification");
+      }
     } catch (err: any) {
       console.error("Error submitting essay:", err);
       alert("Failed to submit: " + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestResubmission = async () => {
+    if (!activity?.teacherId || !activityIdParam || isResubmitRequested) return;
+
+    try {
+      setRequestingResubmission(true);
+      const studentName = user?.nickname || user?.full_name || "A student";
+      
+      const { error: requestError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: activity.teacherId,
+          type: 'resubmission_request',
+          title: 'Resubmission Requested',
+          message: `${studentName} is requesting to resubmit their work for activity: "${activity.title}".`,
+          related_id: activity.id,
+          related_type: 'essay_activities'
+        });
+
+      if (requestError) throw requestError;
+
+      setIsResubmitRequested(true);
+      alert("Resubmission request sent to your teacher.");
+    } catch (err: any) {
+      console.error("Error requesting resubmission:", err);
+      alert("Failed to send request: " + err.message);
+    } finally {
+      setRequestingResubmission(false);
     }
   };
 
@@ -321,21 +429,8 @@ export function SubmitEssayTab() {
                     <span className="text-danger-default font-medium">{activity.deadline}</span>
                   </div>
                 </div>
-                <div className="border-t border-neutral-200 my-4"></div>
                 <div className="prose text-neutral-700 text-sm">
                   <p>{activity.instructions}</p>
-                </div>
-                {/* Attachment Example */}
-                <div className="bg-neutral-50 p-4 rounded-md border border-neutral-200 mt-4">
-                  <h4 className="text-sm font-semibold text-neutral-900 mb-3">Attachments:</h4>
-                  <div className="flex items-center gap-3 p-2 bg-white border border-neutral-200 rounded w-fit">
-                    <div className="w-8 h-8 bg-success-default/10 rounded flex items-center justify-center text-success-default">
-                      <FileIcon className="w-4 h-4" />
-                    </div>
-                    <span className="text-sm text-success-default underline cursor-pointer">
-                      019__LU_AA-FO-19_Evaluation_Form.docx
-                    </span>
-                  </div>
                 </div>
               </Card>
             </TabsContent>
@@ -372,8 +467,8 @@ export function SubmitEssayTab() {
                         </div>
                       ) : (
                         <div className="border border-neutral-200 rounded-rd p-4 flex items-center justify-between">
-                          <span className="text-sm font-medium">{selectedFile}</span>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}><X className="w-4 h-4" /></Button>
+                          <span className="text-sm font-medium">{selectedFileName}</span>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedFile(null); setSelectedFileName(null); }}><X className="w-4 h-4" /></Button>
                         </div>
                       )}
                     </TabsContent>
@@ -408,14 +503,21 @@ export function SubmitEssayTab() {
                           <FileText className="w-5 h-5" />
                         </div>
                          <div>
-                          <p className="font-medium text-neutral-900">{selectedFile || "Essay Submission"}</p>
+                          <p className="font-medium text-neutral-900">{selectedFileName || "Essay Submission"}</p>
                           <p className="text-xs text-neutral-500">Submitted on {submissionDate}</p>
                         </div>
                      </div>
-                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setIsSubmitted(false)}>Resubmit</Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleRequestResubmission}
+                          disabled={isResubmitRequested || requestingResubmission}
+                        >
+                          {requestingResubmission ? "Sending..." : isResubmitRequested ? "Request Sent" : "Request Resubmission"}
+                        </Button>
                         <Badge className="bg-success-default text-white">Submitted</Badge>
-                     </div>
+                      </div>
                   </Card>
 
                   {/* 2. UPDATED: Grade Placeholder - Only appears when submitted */}

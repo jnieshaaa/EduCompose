@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 import type {
   EssayActivity,
   NewActivityForm,
@@ -106,6 +107,34 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     };
 
     loadStudents();
+
+    // Subscribe to real-time changes on essays table
+    const subscription = supabase
+      .channel(`essays-changes-${sectionId}-${activityId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events
+          schema: "public",
+          table: "essays",
+          // Filter by activity_id if possible, though multi-tenant isolation is usually enough
+          filter: activityId ? `activity_id=eq.${activityId}` : undefined,
+        },
+        async (payload: any) => {
+          console.log("[useActivities] Essay change detected:", payload);
+          // Re-fetch students to get updated status and scores
+          const updatedStudents = await fetchStudentsByCourseAndSection(
+            sectionId,
+            activityId || undefined
+          );
+          setStudents(updatedStudents);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [sectionId, courseId, activityId]);
 
   // Get current activity
@@ -241,28 +270,51 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
 
   const handleActivityClick = (id: string) => {
     const activity = activities.find((a) => a.id === id);
-    setSearchParams({
-      activityId: id,
-      activityTitle: activity?.title || "",
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("activityId", id);
+      if (activity?.title) {
+        params.set("activityTitle", activity.title);
+      }
+      return params;
     });
   };
 
   const handleCourseSectionClick = (section: CourseSection) => {
-    setSearchParams({
-      activityId: activityId || "",
-      sectionId: section.sectionId,
-      courseId: section.courseId,
-      courseName: section.courseName,
-      courseSection: section.sectionName,
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("activityId", activityId || "");
+      params.set("sectionId", section.sectionId);
+      params.set("courseId", section.courseId);
+      params.set("courseName", section.courseName);
+      params.set("courseSection", section.sectionName);
+      // Preservation of activityTitle is implicit if we use the functional update
+      return params;
     });
   };
 
   const handleBackToSections = () => {
-    setSearchParams({ activityId: activityId || "" });
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("sectionId");
+      params.delete("courseId");
+      params.delete("courseName");
+      params.delete("courseSection");
+      return params;
+    });
   };
 
   const handleBackToActivities = () => {
-    setSearchParams({});
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("activityId");
+      params.delete("activityTitle");
+      params.delete("sectionId");
+      params.delete("courseId");
+      params.delete("courseName");
+      params.delete("courseSection");
+      return params;
+    });
   };
 
   return {

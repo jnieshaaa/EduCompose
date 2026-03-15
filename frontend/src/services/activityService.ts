@@ -1037,8 +1037,7 @@ export const uploadEssayFile = async (
     // Create essay record in database
     const { error: insertError } = await supabase.from("essays").insert({
       student_id: studentDbId,
-      user_id: teacherId,
-      section_id: sectionId,
+      block_id: sectionId,
       activity_id: activityDbId,
       title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
       file_path: filePath,
@@ -1461,6 +1460,59 @@ export const checkEssayGraded = async (
   } catch (err) {
     console.error("Error checking if essay is graded:", err);
     return false;
+  }
+};
+
+// Allow student to resubmit an activity by sending a notification
+export const allowResubmission = async (
+  studentId: string,
+  activityId: string,
+  activityTitle: string,
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // 1. Get student's auth_user_id
+    let studentDbId = parseInt(studentId, 10);
+    let authUserId: string | null = null;
+
+    if (isNaN(studentDbId)) {
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("id, auth_user_id")
+        .eq("student_code", studentId)
+        .single();
+      authUserId = studentData?.auth_user_id || null;
+      studentDbId = studentData?.id || 0;
+    } else {
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("auth_user_id")
+        .eq("id", studentDbId)
+        .single();
+      authUserId = studentData?.auth_user_id || null;
+    }
+
+    if (!authUserId) {
+      return { success: false, error: "Student auth ID not found" };
+    }
+
+    // 2. Create notification
+    const { error: notifyError } = await supabase.from("notifications").insert({
+      user_id: authUserId,
+      type: "resubmission_allowed",
+      title: "Resubmission Allowed",
+      message: `Your teacher has allowed you to resubmit or reupload your work for: "${activityTitle}".`,
+      related_id: String(activityId),
+      related_type: "essay_activities",
+    });
+
+    if (notifyError) {
+      return { success: true, error: "Allowed, but notification failed to send." };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error allowing resubmission:", err);
+    return { success: false, error: "Unexpected error" };
   }
 };
 
@@ -2395,18 +2447,18 @@ export const fetchDuplicateEssays = async (
         essay_id,
         student_id,
         original_text,
-        essays!inner(
+        essays!essays_id_fkey(
           id,
           title,
           submitted_at,
           block_id,
-          students!inner(
+          students!essays_student_id_fkey(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks!inner(
+          blocks!essays_block_id_fkey(
             id,
             name,
             year,
@@ -2444,13 +2496,13 @@ export const fetchDuplicateEssays = async (
           submitted_at,
           content,
           block_id,
-          students!inner(
+          students!essays_student_id_fkey(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks!inner(
+          blocks!essays_block_id_fkey(
             id,
             name,
             year,
@@ -2741,14 +2793,14 @@ export const fetchStudentsForActivity = async (
         `
         id,
         student_id,
-        section_id,
-        students!inner(
+        block_id,
+        students!essays_student_id_fkey(
           id,
           first_name,
           middle_name,
           last_name
         ),
-        sections!inner(
+        blocks!essays_block_id_fkey(
           id,
           name,
           program_id,
@@ -2832,7 +2884,7 @@ export const fetchEssayTextsForStudents = async (
     const { data: essaysData, error: essaysError } = await supabase
       .from("essays")
       .select(
-        "id, student_id, students!inner(id, first_name, middle_name, last_name)",
+        "id, student_id, students!essays_student_id_fkey(id, first_name, middle_name, last_name)",
       )
       .eq("activity_id", activityDbId)
       .in("student_id", studentIds);
@@ -3175,17 +3227,17 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
       .select(
         `
         *,
-        essays!inner(
+        essays!essays_id_fkey(
           id,
           submitted_at,
-          section_id,
-          students!inner(
+          block_id,
+          students!essays_student_id_fkey(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          sections!inner(
+          blocks!essays_block_id_fkey(
             id,
             name,
             program_id,
