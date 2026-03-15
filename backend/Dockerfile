@@ -27,10 +27,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-# We use --no-cache-dir to keep the image size smaller
-# We explicitly install the CPU version of torch to save GBs of space
+# We explicitly install the CPU versions of torch and torchvision to save space and avoid version mismatches
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
 # Download spaCy model
