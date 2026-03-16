@@ -142,8 +142,8 @@ const TeacherOnboarding: React.FC = () => {
         .update({
           title: capitalizedTitle,
           nickname: data.nickname,
-          school: data.school,
-          department: data.department,
+          school_id: data.school, // Use UUID column
+          department_id: data.department, // Use UUID column
           first_name: data.firstName,
           middle_name: data.middleName,
           last_name: data.lastName,
@@ -311,9 +311,13 @@ const TeacherOnboarding: React.FC = () => {
                           <input
                             type="text"
                             value={data.nickname}
-                            onChange={(e) =>
-                              setData({ ...data, nickname: e.target.value })
-                            }
+                            onChange={(e) => {
+                              const titleCaseValue = e.target.value.replace(
+                                /\b\w/g,
+                                (char) => char.toUpperCase()
+                              );
+                              setData({ ...data, nickname: titleCaseValue });
+                            }}
                             placeholder="e.g. Doc Smith"
                             className="w-full pl-12 pr-4 py-3.5 bg-white border border-neutral-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium"
                           />

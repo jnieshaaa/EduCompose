@@ -53,7 +53,7 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
     const { data, error } = await supabase
       .from("users")
       .select(
-        "email, first_name, last_name, middle_name, suffix, title, nickname, school, department",
+        "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
       )
       .eq("id", teacherId)
       .single();
@@ -63,27 +63,11 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       return null;
     }
 
-    // Fetch school name if school ID exists
-    let schoolName = "";
-    if (data.school) {
-      const { data: schoolData } = await supabase
-        .from("schools")
-        .select("name")
-        .eq("id", data.school)
-        .single();
-      schoolName = schoolData?.name || "";
-    }
-
-    // Fetch department name if department ID exists
-    let departmentName = "";
-    if (data.department) {
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("name")
-        .eq("id", data.department)
-        .single();
-      departmentName = deptData?.name || "";
-    }
+    // Extract names from joined tables
+    // @ts-ignore - Supabase types might not perfectly match the joined structure
+    const schoolName = data.schools?.name || "";
+    // @ts-ignore
+    const departmentName = data.departments?.name || "";
 
     return {
       firstName: data.first_name || "",
@@ -92,9 +76,9 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       suffix: data.suffix || "",
       title: data.title || "",
       nickname: data.nickname || "",
-      school: data.school || "",
+      school: data.school_id || "", // TeacherProfile interface probably expects the ID here
       schoolName: schoolName,
-      department: data.department || "",
+      department: data.department_id || "", // TeacherProfile interface expects ID
       departmentName: departmentName,
       email: data.email || "",
     };
@@ -114,7 +98,7 @@ export const fetchTeacherSettings =
       const { data, error } = await supabase
         .from("users")
         .select(
-          "email, first_name, last_name, middle_name, suffix, title, nickname, school, department",
+          "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
         )
         .eq("id", teacherId)
         .single();
@@ -124,27 +108,11 @@ export const fetchTeacherSettings =
         return null;
       }
 
-      // Fetch school name if school ID exists
-      let schoolName = "";
-      if (data.school) {
-        const { data: schoolData } = await supabase
-          .from("schools")
-          .select("name")
-          .eq("id", data.school)
-          .single();
-        schoolName = schoolData?.name || "";
-      }
-
-      // Fetch department name if department ID exists
-      let departmentName = "";
-      if (data.department) {
-        const { data: deptData } = await supabase
-          .from("departments")
-          .select("name")
-          .eq("id", data.department)
-          .single();
-        departmentName = deptData?.name || "";
-      }
+      // Extract names from joined tables
+      // @ts-ignore
+      const schoolName = data.schools?.name || "";
+      // @ts-ignore
+      const departmentName = data.departments?.name || "";
 
       return {
         profile: {
@@ -154,9 +122,9 @@ export const fetchTeacherSettings =
           suffix: data.suffix || "",
           title: data.title || "",
           nickname: data.nickname || "",
-          school: data.school || "",
+          school: data.school_id || "",
           schoolName: schoolName,
-          department: data.department || "",
+          department: data.department_id || "",
           departmentName: departmentName,
           email: data.email || "",
         },
@@ -189,7 +157,7 @@ export const updateTeacherProfile = async (
     const { data: currentData, error: fetchError } = await supabase
       .from("users")
       .select(
-        "first_name, last_name, middle_name, title, nickname, suffix, school, department",
+        "first_name, last_name, middle_name, title, nickname, suffix, school_id, department_id",
       )
       .eq("id", teacherId)
       .single();
@@ -229,9 +197,9 @@ export const updateTeacherProfile = async (
     if (profile.suffix !== undefined) updateData.suffix = profile.suffix;
     if (profile.title !== undefined) updateData.title = profile.title;
     if (profile.nickname !== undefined) updateData.nickname = profile.nickname;
-    if (profile.school !== undefined) updateData.school = profile.school;
+    if (profile.school !== undefined) updateData.school_id = profile.school;
     if (profile.department !== undefined)
-      updateData.department = profile.department;
+      updateData.department_id = profile.department;
 
     const { error } = await supabase
       .from("users")
