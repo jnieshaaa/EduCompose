@@ -90,7 +90,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
             name,
             year,
             program_load_id,
-            teacher_program_loads!inner (
+            teacher_program_loads!fk_block_program_load!inner (
               id,
               course_load_id,
               program_id,
@@ -256,7 +256,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           name,
           year,
           created_at,
-          teacher_program_loads (
+          teacher_program_loads!fk_block_program_load (
             id,
             program_id,
             teacher_course_loads (
@@ -384,7 +384,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
       // 1. Get all blocks in this program
       const { data: blocks } = await supabase
         .from("blocks")
-        .select("year, name, teacher_program_loads!inner(program_id)")
+        .select("year, name, teacher_program_loads!fk_block_program_load!inner(program_id)")
         .eq("teacher_program_loads.program_id", programId);
       
       if (!blocks) return;

@@ -36,6 +36,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
@@ -129,7 +130,8 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
-      if (width < 1024) {
+      setIsTablet(width >= 768 && width < 1024);
+      if (width < 768 && isSidebarOpen) {
         setIsSidebarOpen(false);
       }
     };
@@ -170,7 +172,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       <aside
         className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
         style={{
-          width: isSidebarOpen ? "280px" : isDesktop ? "80px" : "0px",
+          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
           overflow: isSidebarOpen ? "hidden" : "visible",
         }}
@@ -217,7 +219,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul
             className="space-y-2"
             style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
@@ -234,29 +236,30 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group flex items-center rounded-rd h-10 px-3 ${
+                      className={`btn-fade group w-full flex items-center rounded-rd ${
                         isActive
                           ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:bg-primary-600 focus:bg-primary-600 hover:text-support-superlight focus:text-support-superlight"
+                          : "bg-primary text-white hover:text-support-superlight"
                       }`}
-                      style={{ width: isSidebarOpen ? "248px" : "48px" }}
                     >
-                      <span className="flex-shrink-0 flex items-center justify-center w-10 h-10">
-                        {item.icon}
-                      </span>
-                      <AnimatePresence>
-                        {isSidebarOpen && (
-                          <motion.span
-                            initial="hidden"
-                            animate="visible"
-                            exit="hidden"
-                            variants={textVariants}
-                            className="font-medium text-sm whitespace-nowrap ml-2"
-                          >
-                            {item.label}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
+                      <div className="flex items-center w-full flex-1">
+                        <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
+                          {item.icon}
+                        </span>
+                        <AnimatePresence>
+                          {isSidebarOpen && (
+                            <motion.span
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                              variants={textVariants}
+                              className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </button>
                   </Tooltip>
                 </li>
@@ -275,25 +278,26 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
           >
             <button
               onClick={() => setIsInfoModalOpen(true)}
-              className="btn-fade group flex items-center rounded-rd h-10 px-3 bg-primary text-white hover:bg-primary-600 focus:bg-primary-600 hover:text-support-superlight focus:text-support-superlight"
-              style={{ width: isSidebarOpen ? "248px" : "48px" }}
+              className="btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight"
             >
-              <span className="flex-shrink-0 flex items-center justify-center w-10 h-10">
-                <Info className="w-5 h-5" />
-              </span>
-              <AnimatePresence>
-                {isSidebarOpen && (
-                  <motion.span
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={textVariants}
-                    className="font-medium text-sm whitespace-nowrap ml-2"
-                  >
-                    About EduCompose
-                  </motion.span>
-                )}
-              </AnimatePresence>
+              <div className="flex items-center w-full flex-1">
+                <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
+                  <Info className="w-5 h-5" />
+                </span>
+                <AnimatePresence>
+                  {isSidebarOpen && (
+                    <motion.span
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      variants={textVariants}
+                      className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
+                    >
+                      About EduCompose
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
             </button>
           </Tooltip>
         </div>

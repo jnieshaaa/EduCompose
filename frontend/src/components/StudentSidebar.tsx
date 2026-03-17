@@ -103,7 +103,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           .select(`
             block_id,
             blocks (
-              teacher_program_loads (
+              teacher_program_loads!fk_block_program_load (
                 teacher_course_loads (
                   id,
                   course_id,

@@ -672,7 +672,7 @@ export const fetchSections = async (
         name,
         year,
         program_load_id,
-        teacher_program_loads!inner (
+        teacher_program_loads!fk_block_program_load!inner (
           programs_lookup (
             name,
             abbr
@@ -2462,7 +2462,7 @@ export const fetchDuplicateEssays = async (
             id,
             name,
             year,
-            teacher_program_loads!inner(
+            teacher_program_loads!fk_block_program_load!inner(
               programs_lookup!inner(
                 id,
                 name,
@@ -2506,7 +2506,7 @@ export const fetchDuplicateEssays = async (
             id,
             name,
             year,
-            teacher_program_loads!inner(
+            teacher_program_loads!fk_block_program_load!inner(
               programs_lookup!inner(
                 id,
                 name,

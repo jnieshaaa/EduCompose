@@ -38,7 +38,8 @@ export function SubmitEssayTab() {
   const { user } = useAuth();
   
   const activityIdParam = searchParams.get('activityId');
-  const classId = searchParams.get('classId'); // teacher_course_loads.id
+  const classId = searchParams.get('classId'); // teacher_course_loads.id (legacy/backup)
+  const blockId = searchParams.get('blockId'); // blocks.id (UUID)
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,7 +251,8 @@ export function SubmitEssayTab() {
         .insert({
           student_id: studentId,
           activity_id: parseInt(activityIdParam),
-          block_id: classId ? parseInt(classId) : null,
+          block_id: blockId || null, // Use UUID from URL or null
+          teacher_id: activity?.teacherId || null, // Ensure teacher can see it
           content: uploadMode === 'text' ? essayContent : null,
           file_path: filePath,
           title: selectedFileName || activity?.title || "Essay Submission",
@@ -549,7 +551,7 @@ export function SubmitEssayTab() {
                   posts.map((post) => (
                     <div 
                       key={post.id} 
-                      onClick={() => navigate(`/Student/Submit?activityId=${post.id}&classId=${classId}&activityTitle=${encodeURIComponent(post.title)}&courseName=${encodeURIComponent(activity.course.split(' - ')[1] || "")}&courseCode=${encodeURIComponent(activity.course.split(' - ')[0])}`)}
+                      onClick={() => navigate(`/Student/Submit?activityId=${post.id}&classId=${classId}&blockId=${blockId}&activityTitle=${encodeURIComponent(post.title)}&courseName=${encodeURIComponent(activity.course.split(' - ')[1] || "")}&courseCode=${encodeURIComponent(activity.course.split(' - ')[0])}`)}
                       className={`
                         p-4 hover:bg-neutral-50 transition-colors cursor-pointer group relative
                         ${post.isCurrent ? 'bg-primary/5 border-l-4 border-l-primary' : ''}

@@ -35,6 +35,7 @@ export function ClassDetailTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [classData, setClassData] = useState<ClassHeaderData | null>(null);
   const [activities, setActivities] = useState<StudentClassActivity[]>([]);
+  const [blockId, setBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchClassDetails = async () => {
@@ -84,14 +85,14 @@ export function ClassDetailTab() {
             blocks (
               name,
               year,
-              teacher_program_loads (
+              teacher_program_loads!fk_block_program_load (
                 course_load_id
               )
             )
           `)
           .eq("student_id", student.id);
 
-        let blockId: string | null = null;
+        let currentBlockId: string | null = null;
         let programId: string | null = null;
         let sectionName = "N/A";
 
@@ -105,7 +106,7 @@ export function ClassDetailTab() {
             
             const matchingTpl = tpls.find((tpl: any) => String(tpl.course_load_id) === String(classId));
             if (matchingTpl) {
-              blockId = ent.block_id ? String(ent.block_id) : null;
+              currentBlockId = ent.block_id ? String(ent.block_id) : null;
               programId = matchingTpl.program_id ? String(matchingTpl.program_id) : null;
               sectionName = `${block.year}${block.name}`;
               break;
@@ -113,7 +114,8 @@ export function ClassDetailTab() {
           }
         }
 
-        console.log("Context - Course:", tcl.course_id, "Block:", blockId, "Program:", programId);
+        console.log("Context - Course:", tcl.course_id, "Block:", currentBlockId, "Program:", programId);
+        setBlockId(currentBlockId);
 
         const instructors = Array.isArray(tcl.users) ? tcl.users : (tcl.users ? [tcl.users] : []);
         const instructorObj = instructors[0] as any;
@@ -138,7 +140,7 @@ export function ClassDetailTab() {
           .order("created_at", { ascending: false });
 
         const filterParts = [`course_id.cs.{${tcl.course_id}}`];
-        if (blockId && blockId !== "undefined") filterParts.push(`block_id.cs.{${blockId}}`);
+        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.cs.{${currentBlockId}}`);
         if (programId && programId !== "undefined") filterParts.push(`program_id.cs.{${programId}}`);
 
         query = query.or(filterParts.join(','));
@@ -189,7 +191,7 @@ export function ClassDetailTab() {
     const title = activity?.title || "Essay";
     const courseName = classData?.name || "";
     const courseCode = classData?.code || "";
-    navigate(`/Student/Submit?activityId=${activityId}&classId=${classId}&activityTitle=${encodeURIComponent(title)}&courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}`);
+    navigate(`/Student/Submit?activityId=${activityId}&classId=${classId}&blockId=${blockId}&activityTitle=${encodeURIComponent(title)}&courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}`);
   };
 
   if (isLoading) {

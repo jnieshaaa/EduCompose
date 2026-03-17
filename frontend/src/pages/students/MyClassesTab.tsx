@@ -54,7 +54,7 @@ export function MyClassesTab() {
             blocks (
               name,
               year,
-              teacher_program_loads (
+              teacher_program_loads!fk_block_program_load (
                 teacher_course_loads (
                   id,
                   course_id,

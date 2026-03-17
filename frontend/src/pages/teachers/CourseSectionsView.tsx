@@ -199,7 +199,7 @@ export function CourseSectionsView({
       // to show in the "Existing Blocks" list in the modal
       const { data: blocks } = await supabase
         .from("blocks")
-        .select("year, name, teacher_program_loads!inner(program_id)")
+        .select("year, name, teacher_program_loads!fk_block_program_load!inner(program_id)")
         .eq("teacher_program_loads.program_id", selectedProgramLoad.program_id);
       
       if (blocks) {

@@ -50,7 +50,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
             blocks (
               id,
               name,
-              teacher_program_loads (
+              teacher_program_loads!fk_block_program_load (
                 teacher_course_loads (
                   academic_year,
                   term
@@ -120,7 +120,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
           id,
           name,
           year,
-          teacher_program_loads!inner (
+          teacher_program_loads!fk_block_program_load!inner (
             id,
             teacher_course_loads!inner (
               teacher_id
@@ -215,7 +215,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
         // Auto-fill from block if provided
         const { data: bData } = await supabase
           .from("blocks")
-          .select(`name, year, teacher_program_loads (program_id)`)
+          .select(`name, year, teacher_program_loads!fk_block_program_load (program_id)`)
           .eq("id", blockId)
           .single();
         
