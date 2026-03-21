@@ -85,15 +85,21 @@ export function NotificationsTab() {
     if (notification.relatedId) {
       switch (notification.type) {
         case "new_activity":
-        case "essay_graded":
         case "resubmission_open":
         case "upcoming_deadline":
         case "revision_requested":
-          // For student, these mostly lead to the Submit Essay page
+          // Lead to the Submit Essay page
           navigate(`/Student/Submit?activityId=${notification.relatedId}`);
           break;
+        case "essay_graded":
+          // Lead to Feedback page
+          navigate(`/Student/Feedback?essayId=${notification.relatedId}`);
+          break;
         default:
-          // Default or other types
+          // Default: try Submit page if it's an ID
+          if (!isNaN(parseInt(notification.relatedId))) {
+            navigate(`/Student/Submit?activityId=${notification.relatedId}`);
+          }
           break;
       }
     }

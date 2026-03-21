@@ -3,11 +3,13 @@ import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { Bell, Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { fetchUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
 import { fetchTeacherUUID } from "../../services/rubricService";
 import type { Notification } from "../../data/notificationsData";
 
 export function NotificationsTab() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,6 +60,34 @@ export function NotificationsTab() {
   const getNotificationIcon = () => {
     return Bell; // You can customize icons per type
   };
+  
+  const handleNotificationClick = async (notification: Notification) => {
+    // 1. Mark as read if not already handled by child button
+    if (!notification.read) {
+      handleMarkAsRead(notification.id);
+    }
+
+    // 2. Navigate based on type
+    if (notification.relatedId) {
+      switch (notification.type) {
+        case "student_submitted":
+        case "resubmission_requested":
+        case "submission_received":
+          // Navigate to Activities Tab with the specific activity selected
+          navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          break;
+        case "activity_missed":
+          navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          break;
+        default:
+          // Try to navigate to Activities if it looks like an activity ID
+          if (!isNaN(parseInt(notification.relatedId))) {
+             navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          }
+          break;
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -106,7 +136,7 @@ export function NotificationsTab() {
                     ? "border-l-4 border-l-primary bg-primary/5"
                     : ""
                 }`}
-                onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-4">
                   <div className="bg-primary/10 text-primary p-3 rounded-rd flex-shrink-0">

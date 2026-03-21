@@ -6,6 +6,7 @@ export type NotificationType =
   // Teacher notifications
   | "student_submitted"
   | "resubmission_requested"
+  | "submission_received"
   | "activity_missed"
   // Student notifications
   | "essay_graded"
