@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { Bell, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import type { Notification } from "../../data/notificationsData";
+import type { Notification } from "../../types/notification";
 
 interface NotificationDropdownProps {
   notifications: Notification[];
@@ -52,32 +52,88 @@ export function NotificationDropdown({
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read && onMarkAsRead) {
       onMarkAsRead(notification.id);
     }
     setIsOpen(false);
     
-    // Navigate based on notification type and related_id
-    if (notification.relatedId) {
-      try {
-        // Parse related_id if it's JSON (for essay_graded notifications)
-        const relatedData = JSON.parse(notification.relatedId);
-        if (relatedData.studentId && relatedData.activityId && relatedData.studentName) {
-          // Navigate to AnalysisResults with student data
-          navigate("/AnalysisResults", {
-            state: {
-              studentId: relatedData.studentId,
-              studentName: relatedData.studentName,
-              activityId: relatedData.activityId,
-              essayId: relatedData.essayId,
-            },
-          });
-          return;
+    // 2. Extract ID (handle both plain and JSON strings)
+    let rawRelatedId = notification.relatedId;
+    let activityId = "";
+    let essayId = "";
+
+    if (rawRelatedId && rawRelatedId.startsWith("{")) {
+       try {
+         const parsed = JSON.parse(rawRelatedId);
+         activityId = parsed.activityId || "";
+         essayId = parsed.essayId || "";
+         if (!activityId && !essayId) {
+            activityId = parsed.id || rawRelatedId;
+         }
+       } catch (e) {
+         console.error("Failed to parse JSON relatedId:", e);
+         activityId = rawRelatedId;
+       }
+    } else {
+      activityId = rawRelatedId || "";
+      essayId = rawRelatedId || "";
+    }
+
+    // 3. Navigate based on role and type
+    if (role === 'Teacher') {
+      const idToUse = activityId || essayId;
+      if (idToUse) {
+        switch (notification.type) {
+          case "student_submitted":
+          case "resubmission_requested":
+          case "resubmission_request":
+          case "submission_received":
+          case "essay_graded":
+          case "activity_missed":
+            navigate(`/Teacher/Activities?activityId=${idToUse}`);
+            break;
+          default:
+            if (!isNaN(parseInt(idToUse))) {
+               navigate(`/Teacher/Activities?activityId=${idToUse}`);
+            }
+            break;
         }
-      } catch {
-        // If parsing fails, relatedId might be a simple string
-        // Handle other notification types here if needed
+      }
+    } else if (role === 'Student') {
+      if (activityId || essayId) {
+        // Fetch Breadcrumb Info for better header experience
+        const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
+        const info = await fetchActivityBreadcrumbInfo(activityId || essayId);
+
+        const queryParams = new URLSearchParams();
+        queryParams.set("activityId", activityId || essayId);
+        if (info) {
+          if (info.programAbbr) queryParams.set("programAbbr", info.programAbbr);
+          if (info.courseName) queryParams.set("courseName", info.courseName);
+          if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+        }
+
+        switch (notification.type) {
+          case "new_activity":
+          case "resubmission_open":
+          case "resubmission_allowed":
+          case "upcoming_deadline":
+          case "revision_requested":
+            // Lead to the Submit Essay page
+            navigate(`/Student/Submit?${queryParams.toString()}`);
+            break;
+          case "essay_graded":
+            // Lead to Feedback page
+            if (essayId) queryParams.set("essayId", essayId);
+            navigate(`/Student/Feedback?${queryParams.toString()}`);
+            break;
+          default:
+            if (!isNaN(parseInt(activityId))) {
+              navigate(`/Student/Submit?${queryParams.toString()}`);
+            }
+            break;
+        }
       }
     }
   };

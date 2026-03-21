@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import type { Section } from "../../data/sectionsData";
+import type { Section } from "../../types/sections";
 
 interface SectionsCardViewProps {
   sections: Section[];

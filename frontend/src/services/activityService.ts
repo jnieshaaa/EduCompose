@@ -5,6 +5,65 @@ import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
 import { fetchTeacherId, fetchTeacherUUID } from "./rubricService";
 import { buildFullNameFromObject } from "../utils/nameUtils";
 
+/**
+ * Fetches necessary information to build a full breadcrumb for an activity.
+ * Primarily used when navigating from a notification.
+ */
+export const fetchActivityBreadcrumbInfo = async (activityId: string | number) => {
+  try {
+    const id = typeof activityId === 'string' ? parseInt(activityId) : activityId;
+    if (isNaN(id)) return null;
+
+    const { data: activity, error } = await supabase
+      .from("essay_activities")
+      .select(`
+        id,
+        title,
+        program_id,
+        course_id
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error || !activity) return null;
+
+    let programAbbr = "";
+    let courseName = "";
+
+    // Get Program Abbr (take the first if array)
+    if (activity.program_id && activity.program_id.length > 0) {
+      const progId = Array.isArray(activity.program_id) ? activity.program_id[0] : activity.program_id;
+      const { data: prog } = await supabase
+        .from("programs_lookup")
+        .select("abbr")
+        .eq("id", progId)
+        .single();
+      if (prog) programAbbr = prog.abbr;
+    }
+
+    // Get Course Name (take the first if array)
+    if (activity.course_id && activity.course_id.length > 0) {
+       const courseId = Array.isArray(activity.course_id) ? activity.course_id[0] : activity.course_id;
+       const { data: course } = await supabase
+         .from("courses")
+         .select("course_title")
+         .eq("id", courseId)
+         .single();
+       if (course) courseName = course.course_title;
+    }
+
+    return {
+      activityTitle: activity.title,
+      programAbbr,
+      courseName,
+      activityId: activity.id
+    };
+  } catch (err) {
+    console.error("Error fetching breadcrumb info:", err);
+    return null;
+  }
+};
+
 // Supabase row type for essay_activities
 type SupabaseActivityRow = {
   id: number;

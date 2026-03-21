@@ -12,7 +12,7 @@ import {
   markAllNotificationsAsRead,
   subscribeToNotifications 
 } from "../../services/notificationService";
-import type { Notification } from '../../data/notificationsData';
+import type { Notification } from "../../types/notification";
 
 export function NotificationsTab() {
   const { user } = useAuth();
@@ -81,24 +81,66 @@ export function NotificationsTab() {
       await handleMarkAsRead(notification.id);
     }
 
-    // 2. Navigate based on type
-    if (notification.relatedId) {
+    // 2. Extract ID (handle both plain and JSON strings)
+    let rawRelatedId = notification.relatedId;
+    let activityId = "";
+    let essayId = "";
+
+    if (rawRelatedId && rawRelatedId.startsWith("{")) {
+       try {
+         const parsed = JSON.parse(rawRelatedId);
+         activityId = parsed.activityId || "";
+         essayId = parsed.essayId || "";
+         if (!activityId && !essayId) {
+            activityId = parsed.id || rawRelatedId;
+         }
+       } catch (e) {
+         console.error("Failed to parse JSON relatedId:", e);
+         activityId = rawRelatedId;
+       }
+    } else {
+      activityId = rawRelatedId || "";
+      essayId = rawRelatedId || "";
+    }
+
+    // 3. Optional: Fetch Breadcrumb Info for better header experience
+    let info = null;
+    if (activityId || essayId) {
+      const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
+      info = await fetchActivityBreadcrumbInfo(activityId || essayId);
+    }
+
+    const queryParams = new URLSearchParams();
+    if (activityId || essayId) queryParams.set("activityId", activityId || essayId);
+    if (info) {
+      if (info.programAbbr) queryParams.set("programAbbr", info.programAbbr);
+      if (info.courseName) queryParams.set("courseName", info.courseName);
+      if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+    }
+
+    // 4. Navigate based on type
+    if (activityId || essayId) {
       switch (notification.type) {
         case "new_activity":
         case "resubmission_open":
+        case "resubmission_requested":
+        case "resubmission_request":
+        case "resubmission_allowed":
+        case "submission_received":
         case "upcoming_deadline":
         case "revision_requested":
           // Lead to the Submit Essay page
-          navigate(`/Student/Submit?activityId=${notification.relatedId}`);
+          navigate(`/Student/Submit?${queryParams.toString()}`);
           break;
         case "essay_graded":
           // Lead to Feedback page
-          navigate(`/Student/Feedback?essayId=${notification.relatedId}`);
+          if (essayId) queryParams.set("essayId", essayId);
+          navigate(`/Student/Feedback?${queryParams.toString()}`);
           break;
         default:
           // Default: try Submit page if it's an ID
-          if (!isNaN(parseInt(notification.relatedId))) {
-            navigate(`/Student/Submit?activityId=${notification.relatedId}`);
+          if (!isNaN(parseInt(activityId))) {
+            navigate(`/Student/Submit?${queryParams.toString()}`);
           }
           break;
       }

@@ -40,6 +40,7 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Student/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
   "/Student/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   "/Student/Submit": { label: "Submit Essay", icon: <FileText className="w-4 h-4" /> },
+  "/Student/Feedback": { label: "AI Feedback", icon: <ClipboardCheck className="w-4 h-4" /> },
   
   // Legacy routes
   "/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
@@ -159,15 +160,15 @@ const Breadcrumb: React.FC = () => {
     const isSubmit = pathname === "/Student/Submit";
     const isClassDetail = pathname.startsWith("/Student/Classes/");
 
-    if (pathname === "/Student/Classes" || isClassDetail || isSubmit) {
+    if (pathname === "/Student/Classes" || isClassDetail) {
       items.push({
         label: "My Classes",
         path: "/Student/Classes",
         icon: <BookOpen className="w-4 h-4" />,
       });
 
-      if (isClassDetail || isSubmit) {
-        const classId = isClassDetail ? pathname.split("/").pop() : searchParams.get("classId");
+      if (isClassDetail) {
+        const classId = pathname.split("/").pop();
         const courseName = searchParams.get("courseName") || searchParams.get("courseCode") || "Class Detail";
         
         if (classId) {
@@ -175,16 +176,65 @@ const Breadcrumb: React.FC = () => {
             label: courseName,
             path: `/Student/Classes/${classId}${searchParams.get("courseName") ? `?courseName=${encodeURIComponent(courseName)}` : ""}`,
           });
-
-          if (isSubmit) {
-            const activityTitle = searchParams.get("activityTitle") || "Submit Essay";
-            items.push({
-              label: activityTitle,
-              path: location.search ? `${pathname}${location.search}` : pathname,
-            });
-          }
         }
       }
+    } else if (isSubmit) {
+      const classId = searchParams.get("classId");
+      const courseName = searchParams.get("courseName") || searchParams.get("courseCode");
+      const activityTitle = searchParams.get("activityTitle") || "Submit Essay";
+
+      items.push({
+        label: "My Classes",
+        path: "/Student/Classes",
+        icon: <BookOpen className="w-4 h-4" />,
+      });
+
+      if (courseName) {
+        items.push({
+          label: courseName,
+          path: classId 
+            ? `/Student/Classes/${classId}?courseName=${encodeURIComponent(courseName)}`
+            : `/Student/Classes?courseName=${encodeURIComponent(courseName)}`,
+        });
+      }
+      
+      items.push({
+        label: activityTitle,
+        path: location.search ? `${pathname}${location.search}` : pathname,
+        icon: config?.icon,
+      });
+    } else if (pathname === "/Student/Feedback") {
+      const classId = searchParams.get("classId");
+      const courseName = searchParams.get("courseName") || searchParams.get("courseCode");
+      const activityTitle = searchParams.get("activityTitle");
+
+      if (courseName) {
+        items.push({
+          label: "My Classes",
+          path: "/Student/Classes",
+          icon: <BookOpen className="w-4 h-4" />,
+        });
+        
+        items.push({
+          label: courseName,
+          path: classId 
+           ? `/Student/Classes/${classId}?courseName=${encodeURIComponent(courseName)}`
+           : `/Student/Classes?courseName=${encodeURIComponent(courseName)}`,
+        });
+      }
+      
+      if (activityTitle) {
+        items.push({
+          label: activityTitle,
+          path: `/Student/Submit?activityId=${searchParams.get("activityId")}&classId=${classId}&courseName=${encodeURIComponent(courseName || "")}&activityTitle=${encodeURIComponent(activityTitle)}`,
+        });
+      }
+
+      items.push({
+        label: "AI Feedback",
+        path: location.search ? `${pathname}${location.search}` : pathname,
+        icon: config?.icon,
+      });
     } else if (config) {
       items.push({
         label: config.label,

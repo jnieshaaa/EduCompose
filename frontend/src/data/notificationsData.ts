@@ -6,12 +6,14 @@ export type NotificationType =
   // Teacher notifications
   | "student_submitted"
   | "resubmission_requested"
+  | "resubmission_request"
   | "submission_received"
   | "activity_missed"
   // Student notifications
   | "essay_graded"
   | "new_activity"
   | "resubmission_open"
+  | "resubmission_allowed"
   | "upcoming_deadline"
   | "revision_requested";
 

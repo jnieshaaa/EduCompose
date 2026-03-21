@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import type { Program } from "../../data/programsData";
+import type { Program } from "../../types/programs";
 
 interface ProgramsCardViewProps {
   programs: Program[];

@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { MoreVertical, Edit, Trash2, Users } from "lucide-react";
-import type { Section } from "../../data/sectionsData";
+import type { Section } from "../../types/sections";
 
 interface SectionsTableViewProps {
   sections: Section[];

@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
-import type { Section } from "../../data/sectionsData";
+import type { Section } from "../../types/sections";
 
 interface EditSectionDialogProps {
   isOpen: boolean;

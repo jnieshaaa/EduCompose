@@ -19,8 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import type { RubricTemplate, PlatformRubric } from "../../types/rubricTypes";
-// import { getTypeBadgeColor } from "../../data/rubricData";
-import { platformRubrics } from "../../data/rubricData";
+import { platformRubrics } from "./types";
 import { EmptyRubricState } from "./EmptyRubricState";
 import { PlatformRubricCard } from "./PlatformRubricCard";
 

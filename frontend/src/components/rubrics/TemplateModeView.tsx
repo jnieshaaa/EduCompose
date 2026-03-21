@@ -5,8 +5,8 @@ import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import type { PlatformRubric } from "../../types/rubricTypes";
-import { getTypeBadgeColor } from "../../data/rubricData";
-import { platformRubrics } from "../../data/rubricData";
+import { getTypeBadgeColor } from "../../services/rubricService";
+import { platformRubrics } from "../../components/rubrics/types";
 
 interface TemplateModeViewProps {
   onCancel: () => void;

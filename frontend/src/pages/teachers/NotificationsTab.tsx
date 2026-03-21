@@ -6,7 +6,7 @@ import { Bell, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
 import { fetchTeacherUUID } from "../../services/rubricService";
-import type { Notification } from "../../data/notificationsData";
+import type { Notification } from "../../types/notification";
 
 export function NotificationsTab() {
   const navigate = useNavigate();
@@ -67,22 +67,36 @@ export function NotificationsTab() {
       handleMarkAsRead(notification.id);
     }
 
-    // 2. Navigate based on type
-    if (notification.relatedId) {
+    // 2. Extract ID (handle both plain and JSON strings)
+    let relatedId = notification.relatedId;
+    if (relatedId && relatedId.startsWith("{")) {
+       try {
+         const parsed = JSON.parse(relatedId);
+         // Prioritize activityId as Teachers need to go to the activity view
+         relatedId = parsed.activityId || parsed.essayId || parsed.id || relatedId;
+       } catch (e) {
+         console.error("Failed to parse JSON relatedId:", e);
+       }
+    }
+
+    // 3. Navigate based on type
+    if (relatedId) {
       switch (notification.type) {
         case "student_submitted":
         case "resubmission_requested":
+        case "resubmission_request":
         case "submission_received":
+        case "essay_graded":
           // Navigate to Activities Tab with the specific activity selected
-          navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          navigate(`/Teacher/Activities?activityId=${relatedId}`);
           break;
         case "activity_missed":
-          navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          navigate(`/Teacher/Activities?activityId=${relatedId}`);
           break;
         default:
-          // Try to navigate to Activities if it looks like an activity ID
-          if (!isNaN(parseInt(notification.relatedId))) {
-             navigate(`/Teacher/Activities?activityId=${notification.relatedId}`);
+          // Try to navigate to Activities if it looks like an ID
+          if (!isNaN(parseInt(relatedId))) {
+             navigate(`/Teacher/Activities?activityId=${relatedId}`);
           }
           break;
       }

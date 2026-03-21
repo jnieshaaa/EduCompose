@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
-import { PROGRAM_DETAILS } from "../../data/classOptions";
+import { PROGRAM_DETAILS } from "../../utils/programOptions";
 import { Plus, X } from "lucide-react";
 
 interface AddProgramDialogProps {

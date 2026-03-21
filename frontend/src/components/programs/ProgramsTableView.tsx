@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { MoreVertical, Edit, Archive } from "lucide-react";
-import type { Program } from "../../data/programsData";
+import type { Program } from "../../types/programs";
 
 interface ProgramsTableViewProps {
   programs: Program[];

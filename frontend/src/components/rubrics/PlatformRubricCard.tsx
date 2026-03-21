@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import type { PlatformRubric } from "../../types/rubricTypes";
-import { getTypeBadgeColor } from "../../data/rubricData";
+import { getTypeBadgeColor } from "../../services/rubricService";
 
 interface PlatformRubricCardProps {
   rubric: PlatformRubric;

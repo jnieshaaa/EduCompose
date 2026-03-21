@@ -15,9 +15,9 @@ import Button from "./Button";
 import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 import { BatchUploadController } from "../../services/BatchUploadController";
 import type { UploadResult } from "../../services/BatchUploadController";
-import type { Program } from "../../data/programsData";
-import type { Section } from "../../data/sectionsData";
-import type { Student } from "../../data/studentsData";
+import type { Program } from "../../types/programs";
+import type { Section } from "../../types/sections";
+import type { Student } from "../../types/students";
 
 interface BatchUploadDialogProps {
   type: "programs" | "sections" | "students";

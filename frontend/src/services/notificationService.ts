@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import type { Notification } from "../data/notificationsData";
+import type { Notification } from "../types/notification";
 
 // Fetch notifications for a user (teacher or student)
 export const fetchUserNotifications = async (

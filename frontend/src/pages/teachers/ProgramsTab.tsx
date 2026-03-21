@@ -10,7 +10,7 @@ import { ProgramsStatsCards } from "../../components/programs/ProgramsStatsCards
 import { ProgramsFilters } from "../../components/programs/ProgramsFilters";
 import { ProgramsCardView } from "../../components/programs/ProgramsCardView";
 import { ProgramsTableView } from "../../components/programs/ProgramsTableView";
-import type { Program } from "../../data/programsData";
+import type { Program } from "../../types/programs";
 
 export function ProgramsTab() {
   const { showSuccess } = useAlert();
