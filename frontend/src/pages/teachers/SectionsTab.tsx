@@ -44,9 +44,9 @@ export function SectionsTab() {
 
   useEffect(() => {
     if (newSection.program_id) {
-      fetchProgramWideBlocks(newSection.program_id);
+      fetchProgramWideBlocks(newSection.program_id, newSection.course_id);
     }
-  }, [newSection.program_id]);
+  }, [newSection.program_id, newSection.course_id]);
 
   return (
     <div className="space-y-6">
@@ -179,13 +179,23 @@ export function SectionsTab() {
             <h2 className="text-xl font-bold">Add New Block</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase">Block Name</label>
-                <input
-                    placeholder="e.g. BSCS-1A"
-                    value={newSection.name}
-                    onChange={(e) => setNewSection({...newSection, name: e.target.value})}
-                    className="w-full px-4 py-2 border rounded-lg mt-1"
-                />
+                <label className="text-xs font-bold text-neutral-500 uppercase">Create New Block (Optional)</label>
+                <div className="flex gap-2">
+                  <input
+                      placeholder="e.g. A"
+                      value={newSection.name}
+                      onChange={(e) => setNewSection({...newSection, name: e.target.value.toUpperCase()})}
+                      className="w-full px-4 py-2 border rounded-lg mt-1 block uppercase"
+                  />
+                  <select
+                      value={newSection.year}
+                      onChange={(e) => setNewSection({...newSection, year: parseInt(e.target.value)})}
+                      className="px-4 py-2 border rounded-lg mt-1 bg-white"
+                  >
+                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Y{y}</option>)}
+                  </select>
+                </div>
+                <p className="text-[10px] text-neutral-400 mt-1">Use this if the block doesn't exist below yet.</p>
               </div>
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase">Course</label>
@@ -225,28 +235,52 @@ export function SectionsTab() {
               {newSection.program_id && programWideBlocks.length > 0 && (
                 <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                    Select Existing Block
+                    Select Existing Blocks
                   </span>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
-                      const isActive = newSection.year === b.year && newSection.name === b.name;
+                      const isSelected = newSection.selectedExistingBlocks.some(
+                        sel => sel.year === b.year && sel.name === b.name
+                      );
                       return (
                         <button
                           key={idx}
-                          onClick={() => setNewSection({ ...newSection, year: b.year, name: b.name })}
+                          onClick={() => {
+                            setNewSection(prev => {
+                              const alreadySelected = prev.selectedExistingBlocks.some(
+                                sel => sel.year === b.year && sel.name === b.name
+                              );
+                              if (alreadySelected) {
+                                return {
+                                  ...prev,
+                                  selectedExistingBlocks: prev.selectedExistingBlocks.filter(
+                                    sel => !(sel.year === b.year && sel.name === b.name)
+                                  )
+                                };
+                              } else {
+                                return {
+                                  ...prev,
+                                  selectedExistingBlocks: [...prev.selectedExistingBlocks, { year: b.year, name: b.name }]
+                                };
+                              }
+                            });
+                          }}
                           className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all ${
-                            isActive
+                            isSelected
                               ? "bg-primary/10 border-primary text-primary shadow-sm"
                               : "bg-white border-neutral-200 text-neutral-600 hover:border-primary/50 hover:bg-primary/5"
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isActive ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
-                              {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${isSelected ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
+                              {isSelected && <Plus className="w-2.5 h-2.5 text-white transform rotate-45 scale-125" style={{ transform: 'none' }} />}
+                              {isSelected && <div className="w-2 h-0.5 bg-white transform rotate-0" />}
+                              {!isSelected && <div className="w-2 h-2 rounded-sm" />}
+                              {isSelected && <span className="text-white text-[10px]">✓</span>}
                             </div>
                             <span className="text-xs font-bold uppercase">{b.year}{b.name}</span>
                           </div>
-                          <span className={`${isActive ? 'text-primary/70' : 'text-neutral-400'} text-[10px] font-medium`}>
+                          <span className={`${isSelected ? 'text-primary/70' : 'text-neutral-400'} text-[10px] font-medium`}>
                             {b.student_count} Students
                           </span>
                         </button>

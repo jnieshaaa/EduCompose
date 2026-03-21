@@ -18,6 +18,7 @@ type SupabaseActivityRow = {
   instructions: string | null;
   academic_year: string | null;
   term: string | null;
+  min_word_count: number;
   created_at: string;
   rubrics?:
     | { id: number; name: string }
@@ -42,7 +43,7 @@ export const fetchTeacherActivities = async (
     let query = supabase
       .from("essay_activities")
       .select(
-        "id, teacher_id, title, program_id, block_id, course_id, rubric_id, academic_year, term, due_date, instructions, created_at, rubrics(id, name)",
+        "id, teacher_id, title, program_id, block_id, course_id, rubric_id, academic_year, term, due_date, instructions, min_word_count, created_at, rubrics(id, name)",
       )
       .eq("teacher_id", teacherId);
 
@@ -99,23 +100,29 @@ export const fetchTeacherActivities = async (
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId: Array.isArray(row.course_id) && row.course_id.length > 0
-        ? String(row.course_id[0])
-        : "all",
+      courseId:
+        Array.isArray(row.course_id) && row.course_id.length > 0
+          ? String(row.course_id[0])
+          : "all",
       courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId: Array.isArray(row.block_id) && row.block_id.length > 0
-        ? String(row.block_id[0])
-        : "all",
+      blockId:
+        Array.isArray(row.block_id) && row.block_id.length > 0
+          ? String(row.block_id[0])
+          : "all",
       blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
-      dueDate: row.due_date || undefined,
+      term: row.term || undefined,
       description: row.instructions || undefined,
+      minWordCount: row.min_word_count || 150,
       createdAt: row.created_at.split("T")[0], // Extract date part
       submissionCount: submissionCounts.get(row.id) || 0,
-      programId: Array.isArray(row.program_id) && row.program_id.length > 0
-        ? String(row.program_id[0])
-        : undefined,
-      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
+      programId:
+        Array.isArray(row.program_id) && row.program_id.length > 0
+          ? String(row.program_id[0])
+          : undefined,
+      programIds: Array.isArray(row.program_id)
+        ? row.program_id.map(String)
+        : [],
     }));
 
     return mappedActivities;
@@ -149,7 +156,6 @@ export const initializePlatformRubrics = async (): Promise<number> => {
         .filter((r) => r.user_id === null)
         .map((r) => r.name.toLowerCase()),
     );
-
 
     let syncedCount = 0;
     // Sync each platform rubric
@@ -267,7 +273,6 @@ export const createActivity = async (
 
     // For now, store first selected course/section or null if empty (meaning "all")
 
-
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
     if (activity.rubricId) {
@@ -284,7 +289,6 @@ export const createActivity = async (
       }
     }
 
-
     const blockToProgram = new Map<string, string | null>();
     const studentIdsByBlock = new Map<string, string[]>();
 
@@ -292,40 +296,44 @@ export const createActivity = async (
     if (activity.sectionIds.length > 0) {
       const { data: blocksData } = await supabase
         .from("blocks")
-        .select(`
+        .select(
+          `
           id,
           teacher_program_loads (
             program_id
           )
-        `)
+        `,
+        )
         .in("id", activity.sectionIds);
 
       if (blocksData) {
         blocksData.forEach((b: any) => {
-          const tpl = Array.isArray(b.teacher_program_loads) 
-            ? b.teacher_program_loads[0] 
+          const tpl = Array.isArray(b.teacher_program_loads)
+            ? b.teacher_program_loads[0]
             : b.teacher_program_loads;
-            
-          blockToProgram.set(
-            String(b.id),
-            tpl?.program_id || null
-          );
+
+          blockToProgram.set(String(b.id), tpl?.program_id || null);
         });
       }
 
       // 2. Fetch all student user IDs for notifications, grouped by block
       const { data: studentsData, error: studentError } = await supabase
         .from("block_students")
-        .select(`
+        .select(
+          `
           block_id,
           students (
             auth_user_id
           )
-        `)
+        `,
+        )
         .in("block_id", activity.sectionIds);
 
       if (studentError) {
-        console.error("Error fetching students for notification:", studentError);
+        console.error(
+          "Error fetching students for notification:",
+          studentError,
+        );
       }
 
       if (studentsData && studentsData.length > 0) {
@@ -347,10 +355,13 @@ export const createActivity = async (
       title: activity.title.trim(),
       course_id: activity.courseIds, // Now assigned as array
       block_id: activity.sectionIds, // Now assigned as array
-      program_id: Array.from(new Set(Array.from(blockToProgram.values()).filter(Boolean))),
+      program_id: Array.from(
+        new Set(Array.from(blockToProgram.values()).filter(Boolean)),
+      ),
       rubric_id: rubricId,
       due_date: activity.dueDate || null,
       instructions: activity.description || null,
+      min_word_count: activity.minWordCount || 150,
       academic_year: activity.academicYear || null,
       term: activity.term || null,
     };
@@ -369,10 +380,10 @@ export const createActivity = async (
     if (data && data.length > 0) {
       const newActivity = data[0];
       const notificationsToInsert: any[] = [];
-      
+
       activity.sectionIds.forEach((blockId) => {
         const targetStudentIds = studentIdsByBlock.get(String(blockId)) || [];
-        
+
         targetStudentIds.forEach((studentUserId) => {
           notificationsToInsert.push({
             user_id: studentUserId,
@@ -398,22 +409,36 @@ export const createActivity = async (
     }
 
     // Map back created activity to EssayActivity formats
-    return (data as any[]).map((row) => ({
+    return (data as SupabaseActivityRow[]).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId: Array.isArray(row.course_id) && row.course_id.length > 0 ? String(row.course_id[0]) : "all",
+      courseId:
+        Array.isArray(row.course_id) && row.course_id.length > 0
+          ? String(row.course_id[0])
+          : "all",
       courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockId:
+        Array.isArray(row.block_id) && row.block_id.length > 0
+          ? String(row.block_id[0])
+          : "all",
       blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
-      createdAt: row.created_at ? row.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+      minWordCount: row.min_word_count || 150,
+      createdAt: row.created_at
+        ? row.created_at.split("T")[0]
+        : new Date().toISOString().split("T")[0],
       submissionCount: 0,
       academicYear: row.academic_year || undefined,
       term: row.term || undefined,
-      programId: Array.isArray(row.program_id) && row.program_id.length > 0 ? String(row.program_id[0]) : undefined,
-      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
+      programId:
+        Array.isArray(row.program_id) && row.program_id.length > 0
+          ? String(row.program_id[0])
+          : undefined,
+      programIds: Array.isArray(row.program_id)
+        ? row.program_id.map(String)
+        : [],
     }));
   } catch (err) {
     console.error("Unexpected error creating activity:", err);
@@ -462,6 +487,7 @@ export const updateActivity = async (
       rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
+      min_word_count: activityData.minWordCount || 150,
       academic_year: activityData.academicYear,
       term: activityData.term,
       program_id: null, // Will be set below if sections are selected
@@ -473,12 +499,12 @@ export const updateActivity = async (
         .from("blocks")
         .select("teacher_program_loads(program_id)")
         .in("id", activityData.sectionIds);
-      
+
       if (blocksData) {
         const programIds = new Set<string>();
         blocksData.forEach((b: any) => {
-          const tpl = Array.isArray(b.teacher_program_loads) 
-            ? b.teacher_program_loads[0] 
+          const tpl = Array.isArray(b.teacher_program_loads)
+            ? b.teacher_program_loads[0]
             : b.teacher_program_loads;
           if (tpl?.program_id) programIds.add(tpl.program_id);
         });
@@ -504,9 +530,15 @@ export const updateActivity = async (
     return {
       id: String(row.id),
       title: row.title,
-      courseId: Array.isArray(row.course_id) && row.course_id.length > 0 ? String(row.course_id[0]) : "all",
+      courseId:
+        Array.isArray(row.course_id) && row.course_id.length > 0
+          ? String(row.course_id[0])
+          : "all",
       courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockId:
+        Array.isArray(row.block_id) && row.block_id.length > 0
+          ? String(row.block_id[0])
+          : "all",
       blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
@@ -515,8 +547,13 @@ export const updateActivity = async (
       academicYear: row.academic_year || undefined,
       term: row.term || undefined,
       submissionCount: 0, // Will be updated when activities are reloaded
-      programId: Array.isArray(row.program_id) && row.program_id.length > 0 ? String(row.program_id[0]) : undefined,
-      programIds: Array.isArray(row.program_id) ? row.program_id.map(String) : [],
+      programId:
+        Array.isArray(row.program_id) && row.program_id.length > 0
+          ? String(row.program_id[0])
+          : undefined,
+      programIds: Array.isArray(row.program_id)
+        ? row.program_id.map(String)
+        : [],
     };
   } catch (err) {
     console.error("Unexpected error updating activity:", err);
@@ -567,7 +604,7 @@ export const fetchCourses = async (): Promise<
     }
 
     const courses = (data || [])
-      .map((l: any) => l.courses)
+      .map((l: { courses: any }) => l.courses)
       .filter((c) => c !== null);
 
     // Remove duplicates
@@ -596,12 +633,14 @@ export const fetchTeacherProgramLoads = async (
 
     let query = supabase
       .from("teacher_program_loads")
-      .select(`
+      .select(
+        `
         id,
         program_id,
         programs_lookup(name, abbr),
         teacher_course_loads!inner(course_id)
-      `)
+      `,
+      )
       .eq("teacher_course_loads.teacher_id", userData.user.id);
 
     if (courseId && courseId !== "all") {
@@ -615,12 +654,22 @@ export const fetchTeacherProgramLoads = async (
       return [];
     }
 
-    return (data || []).map((row: any) => ({
-      id: String(row.id),
-      program_id: String(row.program_id),
-      program_name: row.programs_lookup?.abbr || row.programs_lookup?.name || "Unknown Program",
-      course_id: String(row.teacher_course_loads?.course_id || ""),
-    }));
+    return (data || []).map(
+      (row: {
+        id: any;
+        program_id: any;
+        programs_lookup: any;
+        teacher_course_loads: any;
+      }) => ({
+        id: String(row.id),
+        program_id: String(row.program_id),
+        program_name:
+          row.programs_lookup?.abbr ||
+          row.programs_lookup?.name ||
+          "Unknown Program",
+        course_id: String(row.teacher_course_loads?.course_id || ""),
+      }),
+    );
   } catch (err) {
     console.error("Unexpected error loading program loads:", err);
     return [];
@@ -660,14 +709,17 @@ export const fetchPrograms = async (): Promise<
 // Load sections (blocks) for dropdown, optionally filtered by program load
 export const fetchSections = async (
   programLoadId?: string,
-): Promise<{ id: string; name: string; courseId: string; programLoadId: string }[]> => {
+): Promise<
+  { id: string; name: string; courseId: string; programLoadId: string }[]
+> => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return [];
 
     let query = supabase
       .from("blocks")
-      .select(`
+      .select(
+        `
         id,
         name,
         year,
@@ -682,7 +734,8 @@ export const fetchSections = async (
             course_id
           )
         )
-      `)
+      `,
+      )
       .eq("teacher_id", userData.user.id);
 
     if (programLoadId && programLoadId !== "all") {
@@ -697,15 +750,22 @@ export const fetchSections = async (
     }
 
     return (data || []).map((block: any) => {
-      const progAbbr = block.teacher_program_loads?.programs_lookup?.abbr || block.teacher_program_loads?.programs_lookup?.name || "";
+      const progAbbr =
+        block.teacher_program_loads?.programs_lookup?.abbr ||
+        block.teacher_program_loads?.programs_lookup?.name ||
+        "";
       const yearStr = block.year ? `${block.year}` : "";
-      const fullName = [progAbbr, yearStr + block.name].filter(Boolean).join(" ");
+      const fullName = [progAbbr, yearStr + block.name]
+        .filter(Boolean)
+        .join(" ");
 
       return {
         id: String(block.id),
         name: fullName,
         programLoadId: String(block.program_load_id),
-        courseId: String(block.teacher_program_loads?.teacher_course_loads?.course_id || ""),
+        courseId: String(
+          block.teacher_program_loads?.teacher_course_loads?.course_id || "",
+        ),
       };
     });
   } catch (err) {
@@ -821,11 +881,9 @@ export const fetchStudentsByCourseAndSection = async (
     id: string;
     name: string;
     status: "submitted" | "not submitted";
-    coherence?: number;
-    readability?: number;
-    argumentative?: number;
-    grammar?: number;
     score?: number;
+    wordCount?: number;
+    gradingError?: string;
   }[]
 > => {
   try {
@@ -877,11 +935,13 @@ export const fetchStudentsByCourseAndSection = async (
     const essaySubmissions = new Map<
       number,
       {
+        grammar?: number;
+        score?: number;
+        wordCount?: number;
+        gradingError?: string;
         coherence?: number;
         readability?: number;
         argumentative?: number;
-        grammar?: number;
-        score?: number;
       }
     >();
 
@@ -892,7 +952,7 @@ export const fetchStudentsByCourseAndSection = async (
         const { data: essaysData, error: essaysError } = await supabase
           .from("essays")
           .select(
-            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score",
+            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error",
           )
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
@@ -917,6 +977,8 @@ export const fetchStudentsByCourseAndSection = async (
               score: essay.overall_score
                 ? Number(essay.overall_score)
                 : undefined,
+              wordCount: essay.word_count || undefined,
+              gradingError: essay.grading_error || undefined,
             });
           });
         }
@@ -939,6 +1001,8 @@ export const fetchStudentsByCourseAndSection = async (
         argumentative: submission?.argumentative,
         grammar: submission?.grammar,
         score: submission?.score,
+        wordCount: submission?.wordCount,
+        gradingError: submission?.gradingError,
       };
     });
 
@@ -1463,14 +1527,14 @@ export const checkEssayGraded = async (
   }
 };
 
-// Allow student to resubmit an activity by sending a notification
+// Allow student to resubmit an activity by sending a notification and removing existing submission
 export const allowResubmission = async (
   studentId: string,
   activityId: string,
   activityTitle: string,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // 1. Get student's auth_user_id
+    // 1. Get student's auth_user_id and DB ID
     let studentDbId = parseInt(studentId, 10);
     let authUserId: string | null = null;
 
@@ -1485,17 +1549,40 @@ export const allowResubmission = async (
     } else {
       const { data: studentData } = await supabase
         .from("students")
-        .select("auth_user_id")
+        .select("id, auth_user_id")
         .eq("id", studentDbId)
         .single();
       authUserId = studentData?.auth_user_id || null;
+      studentDbId = studentData?.id || 0;
     }
 
-    if (!authUserId) {
-      return { success: false, error: "Student auth ID not found" };
+    if (!authUserId || !studentDbId) {
+      return { success: false, error: "Student record not found" };
     }
 
-    // 2. Create notification
+    // 2. Remove existing submission if it exists
+    // We do this first so the student can immediately see the upload prompt
+    const { data: existingEssay } = await supabase
+      .from("essays")
+      .select("id, file_path")
+      .eq("student_id", studentDbId)
+      .eq("activity_id", parseInt(activityId, 10))
+      .maybeSingle();
+
+    if (existingEssay) {
+      // Delete file from storage
+      if (existingEssay.file_path) {
+        await supabase.storage.from("essays").remove([existingEssay.file_path]);
+      }
+
+      // Delete database record (cascades to analysis results)
+      await supabase.from("essays").delete().eq("id", existingEssay.id);
+      console.log(
+        `Deleted existing essay ${existingEssay.id} for resubmission.`,
+      );
+    }
+
+    // 3. Create notification
     const { error: notifyError } = await supabase.from("notifications").insert({
       user_id: authUserId,
       type: "resubmission_allowed",
@@ -1506,13 +1593,20 @@ export const allowResubmission = async (
     });
 
     if (notifyError) {
-      return { success: true, error: "Allowed, but notification failed to send." };
+      console.error("Notification error:", notifyError);
+      return {
+        success: true,
+        error: "Submission removed, but notification failed to send.",
+      };
     }
 
     return { success: true };
   } catch (err) {
     console.error("Error allowing resubmission:", err);
-    return { success: false, error: "Unexpected error" };
+    return {
+      success: false,
+      error: "Unexpected error during resubmission setup.",
+    };
   }
 };
 
@@ -1550,7 +1644,7 @@ export const gradeEssay = async (
     // Fetch essay record
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, file_path, title")
+      .select("id, file_path, title, essay_activities(min_word_count)")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -1599,6 +1693,29 @@ export const gradeEssay = async (
     try {
       const ocrResult = await ocrApi.extractTextFromFile(file);
       extractedText = ocrResult.text;
+
+      const wordCount = extractedText
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 0).length;
+
+      const essay_activities = essayData.essay_activities;
+      const minWordCount = (Array.isArray(essay_activities) 
+        ? essay_activities[0]?.min_word_count 
+        : (essay_activities as any)?.min_word_count) || 150;
+
+      // Update essay with word count immediately
+      await supabase
+        .from("essays")
+        .update({
+          word_count: wordCount,
+          grading_error:
+            wordCount < minWordCount
+              ? `Essay will not be graded because it did not reach the minimum word count of ${minWordCount} words.`
+              : null,
+        })
+        .eq("id", essayData.id);
+
       if (!extractedText || extractedText.trim().length < 10) {
         return {
           success: false,
@@ -1606,7 +1723,15 @@ export const gradeEssay = async (
             "Failed to extract text from PDF. The file may be corrupted or unreadable.",
         };
       }
-      onProgress?.(40, "Text extracted successfully, analyzing essay...");
+
+      if (wordCount < minWordCount) {
+        return {
+          success: false,
+          error: `Essay is too short (${wordCount} words). Minimum required is ${minWordCount} words.`,
+        };
+      }
+
+      onProgress?.(40, `Text extracted (${wordCount} words). Analyzing...`);
     } catch (ocrErr) {
       console.error("OCR error:", ocrErr);
       return {
@@ -2596,7 +2721,9 @@ export const fetchDuplicateEssays = async (
           studentId: student.id,
           studentName: buildFullNameFromObject(student, "Unknown"),
           programName: program.abbr || program.name || "Unknown",
-          sectionName: block.year ? `${block.year}${block.name}` : block.name || "Unknown",
+          sectionName: block.year
+            ? `${block.year}${block.name}`
+            : block.name || "Unknown",
           title: essay.title || "Untitled",
           submittedAt: essay.submitted_at || new Date().toISOString(),
         };
@@ -2683,7 +2810,9 @@ export const fetchDuplicateEssays = async (
         studentId: student.id,
         studentName: buildFullNameFromObject(student, "Unknown"),
         programName: program.abbr || program.name || "Unknown",
-        sectionName: block.year ? `${block.year}${block.name}` : block.name || "Unknown",
+        sectionName: block.year
+          ? `${block.year}${block.name}`
+          : block.name || "Unknown",
         title: essayData.title || "Untitled",
         submittedAt: essayData.submitted_at || new Date().toISOString(),
       };

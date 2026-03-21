@@ -21,6 +21,7 @@ interface ActivityDetails {
   courseId: string;
   term: string;
   teacherId: string;
+  minWordCount: number;
 }
 
 interface SidebarPost {
@@ -125,7 +126,8 @@ export function SubmitEssayTab() {
           instructions: actRow.instructions || "No instructions provided.",
           courseId: actRow.course_id?.[0] || "",
           term: actRow.term || "N/A",
-          teacherId: actRow.teacher_id
+          teacherId: actRow.teacher_id,
+          minWordCount: actRow.min_word_count || 150
         });
 
         // 3. Fetch Existing Submission
@@ -430,6 +432,10 @@ export function SubmitEssayTab() {
                     <span className="font-semibold text-neutral-900 block">Deadline:</span>
                     <span className="text-danger-default font-medium">{activity.deadline}</span>
                   </div>
+                  <div>
+                    <span className="font-semibold text-neutral-900 block">Min. Word Count:</span>
+                    <span className="text-neutral-600">{activity.minWordCount} words</span>
+                  </div>
                 </div>
                 <div className="prose text-neutral-700 text-sm">
                   <p>{activity.instructions}</p>
@@ -476,12 +482,28 @@ export function SubmitEssayTab() {
                     </TabsContent>
 
                     <TabsContent value="text">
-                      <Textarea 
-                        placeholder="Type your submission..." 
-                        className="min-h-[300px]" 
-                        value={essayContent}
-                        onChange={(e) => setEssayContent(e.target.value)}
-                      />
+                      <div className="space-y-2">
+                        <Textarea 
+                          placeholder="Type your submission..." 
+                          className="min-h-[300px]" 
+                          value={essayContent}
+                          onChange={(e) => setEssayContent(e.target.value)}
+                        />
+                        <div className="flex justify-between items-center px-1">
+                          <span className={`text-xs font-medium ${
+                            essayContent.trim().split(/\s+/).filter(w => w.length > 0).length < activity.minWordCount 
+                              ? 'text-danger-default' 
+                              : 'text-success-default'
+                          }`}>
+                            Word Count: {essayContent.trim().split(/\s+/).filter(w => w.length > 0).length} / {activity.minWordCount}
+                          </span>
+                          {essayContent.trim().split(/\s+/).filter(w => w.length > 0).length < activity.minWordCount && (
+                             <span className="text-[10px] text-danger-default italic">
+                               * Below minimum requirement
+                             </span>
+                          )}
+                        </div>
+                      </div>
                     </TabsContent>
                   </Tabs>
 

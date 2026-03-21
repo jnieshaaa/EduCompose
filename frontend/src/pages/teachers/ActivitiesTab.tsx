@@ -16,7 +16,7 @@ export function ActivitiesTab() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(
-    null
+    null,
   );
 
   const {
@@ -41,6 +41,7 @@ export function ActivitiesTab() {
     handleCourseSectionClick,
     handleBackToSections,
     handleBackToActivities,
+    reloadStudents,
   } = useActivities();
 
   const activityId = searchParams.get("activityId");
@@ -72,7 +73,7 @@ export function ActivitiesTab() {
     e.stopPropagation();
     if (
       !confirm(
-        "Are you sure you want to delete this activity? This action cannot be undone."
+        "Are you sure you want to delete this activity? This action cannot be undone.",
       )
     ) {
       return;
@@ -92,11 +93,12 @@ export function ActivitiesTab() {
 
     return {
       title: activity.title,
-      courseIds: activity.courseId === "all" ? [] : [activity.courseId],
-      sectionIds: activity.blockId === "all" ? [] : [activity.blockId],
+      courseIds: activity.courseIds || [],
+      sectionIds: activity.blockIds || [],
       rubricId: activity.rubricId || "",
       dueDate: activity.dueDate || "",
       description: activity.description || "",
+      minWordCount: activity.minWordCount || 150,
     };
   }, [editingActivityId, activities]);
 
@@ -111,6 +113,7 @@ export function ActivitiesTab() {
         courseSection={courseSection}
         onBack={handleBackToSections}
         isLoading={isLoadingStudents}
+        onRefresh={reloadStudents}
       />
     );
   }

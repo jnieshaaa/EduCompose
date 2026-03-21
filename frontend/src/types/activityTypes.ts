@@ -18,6 +18,7 @@ export type EssayActivity = {
   term?: string;
   programId?: string;
   programIds?: string[];
+  minWordCount?: number;
 };
 
 export type CourseSection = {
@@ -40,6 +41,8 @@ export type Student = {
   argumentative?: number;
   grammar?: number;
   score?: number;
+  wordCount?: number;
+  gradingError?: string;
 };
 
 export type NewActivityForm = {
@@ -49,6 +52,7 @@ export type NewActivityForm = {
   rubricId: string | "";
   dueDate: string;
   description: string;
+  minWordCount: number;
   academicYear?: string;
   term?: string;
 };

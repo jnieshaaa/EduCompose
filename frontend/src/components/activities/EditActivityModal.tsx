@@ -347,6 +347,29 @@ export function EditActivityModal({
           }
         />
 
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Minimum Word Count
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="10"
+              max="10000"
+              value={formData.minWordCount}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setFormData((prev) => ({ ...prev, minWordCount: isNaN(val) ? 0 : val }));
+              }
+              }
+              className="w-32 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <span className="text-sm text-neutral-500 italic">
+              * Essays below this count will not be graded automatically.
+            </span>
+          </div>
+        </div>
+
         <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={handleClose}>
             Cancel

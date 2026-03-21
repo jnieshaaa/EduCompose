@@ -10,6 +10,7 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import Tooltip from "../ui/Tooltip";
 import { ViewEssayModal } from "./ViewEssayModal";
 import { GradingProgressIndicator } from "./GradingProgressIndicator";
 import Card from "../../components/ui/Card";
@@ -47,6 +48,7 @@ interface StudentsViewProps {
   courseSection: string;
   onBack: () => void;
   isLoading?: boolean;
+  onRefresh?: () => Promise<void>;
 }
 
 export function StudentsView({
@@ -56,6 +58,7 @@ export function StudentsView({
   courseSection,
   onBack,
   isLoading = false,
+  onRefresh,
 }: StudentsViewProps) {
   const [isViewEssayModalOpen, setIsViewEssayModalOpen] = useState(false);
   const [selectedStudentForView, setSelectedStudentForView] = useState<{
@@ -73,6 +76,7 @@ export function StudentsView({
   >(new Map());
   const [gradedStudents, setGradedStudents] = useState<Set<string>>(new Set());
   const [isAllowingResubmission, setIsAllowingResubmission] = useState<string | null>(null);
+  const [isGradingAll, setIsGradingAll] = useState(false);
   const navigate = useNavigate();
 
   // Check which students have been graded
@@ -107,7 +111,6 @@ export function StudentsView({
     }
   }, [students, activity.id]);
 
-
   const handleDeleteEssay = async () => {
     if (!selectedStudentForDelete) {
       return;
@@ -124,7 +127,7 @@ export function StudentsView({
         alert("Essay deleted successfully!");
         setIsDeleteModalOpen(false);
         setSelectedStudentForDelete(null);
-        window.location.reload();
+        if (onRefresh) await onRefresh();
       } else {
         alert(`Failed to delete essay: ${result.error || "Unknown error"}`);
       }
@@ -142,6 +145,9 @@ export function StudentsView({
       const result = await allowResubmission(studentId, activity.id, activity.title);
       if (result.success) {
         alert("Notification sent to student allowing resubmission or reupload.");
+        if (onRefresh) {
+          await onRefresh();
+        }
       } else {
         alert(`Failed to send notification: ${result.error}`);
       }
@@ -153,18 +159,109 @@ export function StudentsView({
     }
   };
 
+  const handleGradeAll = async () => {
+    // Find all submitted students who are not yet graded and not disqualified by word count
+    const toGrade = students.filter(
+      (s) => s.status === "submitted" && 
+             !gradedStudents.has(s.id) && 
+             !gradingStudents.has(s.id) &&
+             (!s.wordCount || s.wordCount >= (activity.minWordCount || 150))
+    );
+
+    if (toGrade.length === 0) {
+      const allSubmitted = students.filter(s => s.status === "submitted" && !gradedStudents.has(s.id));
+      if (allSubmitted.length > 0) {
+        alert(`No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`);
+      } else {
+        alert("No pending essays to grade.");
+      }
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to grade all ${toGrade.length} pending essays?`)) {
+      return;
+    }
+
+    setIsGradingAll(true);
+    
+    // Grade them sequentially to avoid overwhelming the API
+    for (const student of toGrade) {
+      setGradingStudents((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(student.id, { progress: 0, step: "Waiting..." });
+        return newMap;
+      });
+
+      try {
+        const result = await gradeEssay(
+          student.id,
+          student.name,
+          activity.id,
+          (progress, step) => {
+            setGradingStudents((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(student.id, { progress, step });
+              return newMap;
+            });
+          }
+        );
+
+        if (result.success) {
+          setGradedStudents((prev) => {
+            const newSet = new Set(prev);
+            newSet.add(student.id);
+            return newSet;
+          });
+        }
+      } catch (err) {
+        console.error(`Error grading student ${student.id}:`, err);
+      } finally {
+        setGradingStudents((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(student.id);
+          return newMap;
+        });
+      }
+    }
+    
+    if (onRefresh) await onRefresh();
+    setIsGradingAll(false);
+    alert("Batch grading process completed.");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center justify-between gap-4">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Sections
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGradeAll}
+            disabled={isGradingAll || isLoading}
+            className="flex items-center gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary font-semibold"
+          >
+            {isGradingAll ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Grading All...
+              </>
+            ) : (
+              <>
+                <Edit className="w-4 h-4" />
+                Grade All Pending
+              </>
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Sections
+          </Button>
+        </div>
       </div>
 
       {/* Activity Header */}
@@ -220,8 +317,34 @@ export function StudentsView({
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
+                <TableRow 
+                  key={student.id}
+                  className={`transition-colors h-16 ${
+                    student.wordCount && student.wordCount < (activity.minWordCount || 150)
+                      ? "border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
+                      : "hover:bg-neutral-50"
+                  }`}
+                >
+                  <TableCell className="font-medium whitespace-nowrap py-4">
+                    {student.wordCount && student.wordCount < (activity.minWordCount || 150) ? (
+                      <Tooltip content={student.gradingError || `Essay is too short (minimum ${activity.minWordCount || 150} words).`} position="right">
+                        <div className="flex flex-col">
+                          <span className="text-red-700 font-semibold">{student.name}</span>
+                          <span className="text-xs text-red-500 italic flex items-center gap-1"> 
+                            <XCircle className="w-3 h-3" />
+                            Low Word Count ({student.wordCount} words) 
+                          </span>
+                        </div>
+                      </Tooltip>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span>{student.name}</span>
+                        {student.wordCount && (
+                           <span className="text-xs text-neutral-400">{student.wordCount} words</span>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-center">
                     {gradingStudents.has(student.id) ? (
                       <div className="flex items-center justify-center gap-2">
@@ -417,10 +540,12 @@ export function StudentsView({
                                     newSet.add(student.id);
                                     return newSet;
                                   });
+                                  if (onRefresh) await onRefresh();
                                 } else {
                                   alert(
                                     `Failed to grade essay: ${result.error}`,
                                   );
+                                  if (onRefresh) await onRefresh();
                                 }
                               }
                             } else {

@@ -137,6 +137,22 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     };
   }, [sectionId, courseId, activityId]);
 
+  const reloadStudents = async () => {
+    if (!sectionId || !courseId) return;
+    setIsLoadingStudents(true);
+    try {
+      const studentsData = await fetchStudentsByCourseAndSection(
+        sectionId,
+        activityId || undefined
+      );
+      setStudents(studentsData);
+    } catch (err) {
+      console.error("[useActivities] Error reloading students:", err);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
   // Get current activity
   const currentActivity = activityId
     ? activities.find((a) => a.id === activityId)
@@ -342,6 +358,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     handleBackToSections,
     handleBackToActivities,
     setSearchParams,
+    reloadStudents,
   };
 }
 

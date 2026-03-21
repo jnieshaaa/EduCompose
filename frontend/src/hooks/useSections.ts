@@ -50,12 +50,13 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
 
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [newSection, setNewSection] = useState({
-    name: "", // Block Name (A, B, C)
+    name: "", // For single/new block creation
     course_id: "",
     program_id: "",
-    year: 1, // Year (1-5)
+    year: 1, 
     term: "",
-    students: "0"
+    students: "0",
+    selectedExistingBlocks: [] as {year: number, name: string}[] // Added for multi-select
   });
   const [programWideBlocks, setProgramWideBlocks] = useState<{year: number, name: string, student_count: number}[]>([]);
 
@@ -196,10 +197,30 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     if (isCreatingSection) return;
     setIsCreatingSection(true);
 
-    if (!newSection.name || !newSection.course_id || !newSection.program_id) {
-      showError("Please fill in all required fields.");
+    if (!newSection.course_id || !newSection.program_id) {
+      showError("Course and Program are required.");
       setIsCreatingSection(false);
       return;
+    }
+
+    const hasNewBlock = newSection.name && newSection.year;
+    const hasSelectedBlocks = newSection.selectedExistingBlocks.length > 0;
+
+    if (!hasNewBlock && !hasSelectedBlocks) {
+      showError("Please specify at least one block.");
+      setIsCreatingSection(false);
+      return;
+    }
+
+    const blocksToProcess = [...newSection.selectedExistingBlocks];
+    if (hasNewBlock) {
+      // Check if the manual name is already in selected blocks to avoid dupes
+      const alreadySelected = blocksToProcess.some(b => 
+        b.name === newSection.name.toUpperCase() && b.year === newSection.year
+      );
+      if (!alreadySelected) {
+        blocksToProcess.push({ year: newSection.year, name: newSection.name.toUpperCase() });
+      }
     }
 
     try {
@@ -242,85 +263,110 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
       
       if (!tplData) throw new Error("Failed to create program load.");
 
-      // 3. Create the block
-      const { data: blockData, error: createBlockError } = await supabase
-        .from("blocks")
-        .insert({
-          program_load_id: tplData.id,
-          year: newSection.year,
-          name: newSection.name.toUpperCase(),
-          teacher_id: context.auth_user_id
-        })
-        .select(`
-          id,
-          name,
-          year,
-          created_at,
-          teacher_program_loads!fk_block_program_load (
-            id,
-            program_id,
-            teacher_course_loads (
+      let createdCount = 0;
+      let skippedCount = 0;
+      let totalEnrollment = 0;
+
+      const createdSections: Section[] = [];
+      
+      // 3. Loop through and create blocks
+      for (const blockDataToCreate of blocksToProcess) {
+        try {
+          // Global check: Is this block already assigned to this course by ANY teacher?
+          const { data: globalCheck } = await supabase.rpc('get_assigned_blocks_for_course', {
+            p_program_id: newSection.program_id,
+            p_course_id: newSection.course_id
+          });
+
+          if (globalCheck && globalCheck.some((b: any) => 
+            b.year === blockDataToCreate.year && b.name === blockDataToCreate.name
+          )) {
+            skippedCount++;
+            continue;
+          }
+
+          const { data: blockRecord, error: createBlockError } = await supabase
+            .from("blocks")
+            .insert({
+              program_load_id: tplData.id,
+              year: blockDataToCreate.year,
+              name: blockDataToCreate.name,
+              teacher_id: context.auth_user_id
+            })
+            .select(`
               id,
-              course_id,
-              courses (*)
-            ),
-            programs_lookup (*)
-          )
-        `)
-        .single();
+              name,
+              year,
+              created_at,
+              teacher_program_loads!fk_block_program_load (
+                id,
+                program_id,
+                teacher_course_loads (
+                  id,
+                  course_id,
+                  courses (*)
+                ),
+                programs_lookup (*)
+              )
+            `)
+            .single();
 
-      if (createBlockError) {
-        if (createBlockError.code === "23505") {
-          throw new Error("A block with this year and name already exists for this program.");
+          if (createBlockError) {
+            if (createBlockError.code === "23505") {
+              skippedCount++;
+              continue;
+            }
+            throw createBlockError;
+          }
+
+          if (blockRecord) {
+            createdCount++;
+            // Link existing students
+            const { data: matchingStudents } = await supabase
+              .from("students")
+              .select("id")
+              .eq("program_id", newSection.program_id)
+              .eq("year", blockDataToCreate.year)
+              .eq("block_name", blockDataToCreate.name);
+
+            if (matchingStudents && matchingStudents.length > 0) {
+              const enrollments = matchingStudents.map(s => ({
+                block_id: blockRecord.id,
+                student_id: s.id
+              }));
+              await supabase.from("block_students").insert(enrollments);
+              totalEnrollment += matchingStudents.length;
+            }
+
+            // Collect created block for UI update
+            const tplR = blockRecord.teacher_program_loads as any;
+            const tclR = tplR.teacher_course_loads as any;
+            createdSections.push({
+              id: blockRecord.id,
+              course_id: tclR.course_id,
+              block_id: blockRecord.id,
+              name: blockRecord.name,
+              year: blockRecord.year,
+              program_id: tplR.program_id,
+              program_load_id: tplR.id,
+              students_estimated: 0,
+              essays_estimated: 0,
+              created_at: blockRecord.created_at || new Date().toISOString(),
+              courses: tclR.courses,
+              program_abbr: tplR.programs_lookup?.abbr
+            });
+          }
+        } catch (err) {
+          console.error(`Error adding block ${blockDataToCreate.year}${blockDataToCreate.name}:`, err);
+          skippedCount++;
         }
-        throw createBlockError;
       }
 
-      let enrollmentCount = 0;
-      // 4. Automatically link existing students
-      if (blockData) {
-        const { data: matchingStudents } = await supabase
-          .from("students")
-          .select("id")
-          .eq("program_id", newSection.program_id)
-          .eq("year", newSection.year)
-          .eq("block_name", newSection.name.toUpperCase());
-
-        if (matchingStudents && matchingStudents.length > 0) {
-          enrollmentCount = matchingStudents.length;
-          const enrollments = matchingStudents.map(s => ({
-            block_id: blockData.id,
-            student_id: s.id
-          }));
-          
-          await supabase.from("block_students").insert(enrollments);
-        }
+      // Update UI list ONCE after all blocks are processed
+      if (createdSections.length > 0) {
+        setSections((prev) => [...createdSections, ...prev]);
       }
-
-      // 5. Update UI
-      const tpl = blockData.teacher_program_loads as any;
-      const tcl = tpl.teacher_course_loads as any;
-      const courseData = tcl.courses as any;
-      const progData = tpl.programs_lookup as any;
-
-      const newMappedSection: Section = {
-        id: blockData.id,
-        course_id: tcl.course_id,
-        block_id: blockData.id,
-        name: blockData.name,
-        year: blockData.year,
-        program_id: tpl.program_id,
-        program_load_id: tpl.id,
-        students_estimated: 0,
-        essays_estimated: 0,
-        created_at: blockData.created_at || new Date().toISOString(),
-        // @ts-ignore
-        courses: courseData,
-        program_abbr: progData?.abbr
-      };
-
-      setSections((prev) => [newMappedSection, ...prev]);
-      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found for auto-enroll."}`);
+      showSuccess(`Created ${createdCount} block(s). ${skippedCount > 0 ? `${skippedCount} blocks already had this course.` : ""} ${totalEnrollment > 0 ? `${totalEnrollment} students auto-enrolled.` : ""}`);
       setIsAddDialogOpen(false);
       setNewSection({ 
         name: "", 
@@ -328,7 +374,8 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
         program_id: "", 
         year: 1, 
         term: currentSemester, 
-        students: "0" 
+        students: "0",
+        selectedExistingBlocks: []
       });
     } catch (err: any) {
       console.error("Error creating block:", err);
@@ -375,38 +422,34 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
     }
   };
 
-  const fetchProgramWideBlocks = async (programId: string) => {
+  const fetchProgramWideBlocks = async (programId: string, courseId?: string) => {
     if (!programId) {
       setProgramWideBlocks([]);
       return;
     }
     try {
-      // 1. Get all blocks in this program
-      const { data: blocks } = await supabase
-        .from("blocks")
-        .select("year, name, teacher_program_loads!fk_block_program_load!inner(program_id)")
-        .eq("teacher_program_loads.program_id", programId);
+      // 1. Get all blocks in this program (global view through RPC)
+      const { data: allBlocks } = await supabase.rpc('get_all_blocks_in_program', {
+        p_program_id: programId
+      });
       
-      if (!blocks) return;
+      if (!allBlocks) return;
 
-      // 2. Map unique blocks and fetch student counts for each
-      const uniqueBlocks = blocks.reduce((acc: any[], current: any) => {
-        const exists = acc.find(item => item.name === current.name && item.year === current.year);
-        if (!exists) acc.push({ name: current.name, year: current.year });
-        return acc;
-      }, []);
+      // 2. Filter out blocks that already have this course (global cross-teacher check through RPC)
+      let filteredBlocks = allBlocks;
+      if (courseId) {
+        const { data: assignedBlocks } = await supabase.rpc('get_assigned_blocks_for_course', {
+          p_program_id: programId,
+          p_course_id: courseId
+        });
+        
+        if (assignedBlocks) {
+          const assignedKeys = new Set(assignedBlocks.map((b: any) => `${b.year}${b.name}`));
+          filteredBlocks = allBlocks.filter((b: any) => !assignedKeys.has(`${b.year}${b.name}`));
+        }
+      }
 
-      const results = await Promise.all(uniqueBlocks.map(async (b) => {
-        const { count } = await supabase
-          .from("students")
-          .select("*", { count: 'exact', head: true })
-          .eq("program_id", programId)
-          .eq("year", b.year)
-          .eq("block_name", b.name);
-        return { ...b, student_count: count || 0 };
-      }));
-
-      setProgramWideBlocks(results);
+      setProgramWideBlocks(filteredBlocks || []);
     } catch (err) {
       console.error("Error fetching program blocks:", err);
     }
