@@ -19,6 +19,7 @@ import {
   fetchTeacherProgramLoads,
 } from "../services/activityService";
 import { useAcademicContext } from "./useAcademicContext";
+import { readSecureParams } from "../utils/secureUrl";
 
 export function useActivities(showArchived: boolean = false, ay?: string, term?: string) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,9 +43,10 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   // URL params
-  const activityId = searchParams.get("activityId");
-  const sectionId = searchParams.get("sectionId");
-  const courseId = searchParams.get("courseId");
+  const secureParams = readSecureParams(searchParams.toString());
+  const activityId = secureParams?.activityId || searchParams.get("activityId");
+  const sectionId = secureParams?.sectionId || searchParams.get("sectionId");
+  const courseId = secureParams?.courseId || searchParams.get("courseId");
 
   // Load activities, courses, sections, and rubrics from Supabase
   useEffect(() => {
@@ -275,7 +277,9 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     try {
       await deleteActivity(activityId);
       setActivities((prev) => prev.filter((a) => a.id !== activityId));
-      if (searchParams.get("activityId") === activityId) {
+      const secureParams = readSecureParams(searchParams.toString());
+      const currentUrlActivityId = secureParams?.activityId || searchParams.get("activityId");
+      if (currentUrlActivityId === activityId) {
         setSearchParams({});
       }
     } catch (err) {

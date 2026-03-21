@@ -7,6 +7,7 @@ import { CreateActivityModal } from "../../components/activities/CreateActivityM
 import { EditActivityModal } from "../../components/activities/EditActivityModal";
 import { useActivities } from "../../hooks/useActivities";
 import type { NewActivityForm } from "../../types/activityTypes";
+import { readSecureParams } from "../../utils/secureUrl";
 
 export function ActivitiesTab() {
   const [searchParams] = useSearchParams();
@@ -43,9 +44,11 @@ export function ActivitiesTab() {
     reloadStudents,
   } = useActivities();
 
-  const activityId = searchParams.get("activityId");
-  const sectionId = searchParams.get("sectionId");
-  const courseName = searchParams.get("courseName");
+  // Decode secure URL params (with fallback to raw searchParams)
+  const secureParams = readSecureParams(window.location.search);
+  const activityId = secureParams?.activityId || searchParams.get("activityId");
+  const sectionId = secureParams?.sectionId || searchParams.get("sectionId");
+  const courseName = secureParams?.courseName || searchParams.get("courseName");
 
   // Sync searchQuery with URL params
   useEffect(() => {
@@ -103,7 +106,7 @@ export function ActivitiesTab() {
 
   // Render students view
   if (sectionId && courseName && currentActivity) {
-    const courseSection = searchParams.get("courseSection") || "";
+    const courseSection = secureParams?.courseSection || searchParams.get("courseSection") || "";
     return (
       <StudentsView
         activity={currentActivity}

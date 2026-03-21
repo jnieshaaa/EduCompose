@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../services/notificationService";
 import { fetchTeacherUUID } from "../../services/rubricService";
 import type { Notification } from "../../types/notification";
+import { buildSecureUrl } from "../../utils/secureUrl";
 
 export function NotificationsTab() {
   const navigate = useNavigate();
@@ -93,14 +94,14 @@ export function NotificationsTab() {
         essayId || ""
       );
 
-      const queryParams = new URLSearchParams();
-      if (relatedId || essayId) queryParams.set("activityId", relatedId || essayId);
+      const params: Record<string, string> = {};
+      if (relatedId || essayId) params.activityId = relatedId || essayId;
       if (info) {
-        if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
-        if (info.courseName) queryParams.set("courseName", info.courseName);
-        if (info.courseId) queryParams.set("courseId", info.courseId);
-        if (info.sectionId) queryParams.set("sectionId", info.sectionId);
-        if (info.courseSection) queryParams.set("courseSection", info.courseSection);
+        if (info.activityTitle) params.activityTitle = info.activityTitle;
+        if (info.courseName) params.courseName = info.courseName;
+        if (info.courseId) params.courseId = info.courseId;
+        if (info.sectionId) params.sectionId = info.sectionId;
+        if (info.courseSection) params.courseSection = info.courseSection;
       }
 
       switch (notification.type) {
@@ -110,12 +111,12 @@ export function NotificationsTab() {
         case "submission_received":
         case "essay_graded":
         case "activity_missed":
-          navigate(`/Teacher/Activities?${queryParams.toString()}`);
+          navigate(buildSecureUrl('/Teacher/Activities', params));
           break;
         default:
           // Try to navigate to Activities if it looks like an ID
           if (!isNaN(parseInt(relatedId || essayId || ""))) {
-             navigate(`/Teacher/Activities?${queryParams.toString()}`);
+             navigate(buildSecureUrl('/Teacher/Activities', params));
           }
           break;
       }

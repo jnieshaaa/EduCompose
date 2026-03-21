@@ -8,6 +8,7 @@ import { Bell, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { Notification } from "../../types/notification";
+import { buildSecureUrl } from "../../utils/secureUrl";
 
 interface NotificationDropdownProps {
   notifications: Notification[];
@@ -94,14 +95,14 @@ export function NotificationDropdown({
           essayId || ""
         );
 
-        const queryParams = new URLSearchParams();
-        if (idToUse) queryParams.set("activityId", idToUse);
+        const params: Record<string, string> = {};
+        if (idToUse) params.activityId = idToUse;
         if (info) {
-          if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
-          if (info.courseName) queryParams.set("courseName", info.courseName);
-          if (info.courseId) queryParams.set("courseId", info.courseId);
-          if (info.sectionId) queryParams.set("sectionId", info.sectionId);
-          if (info.courseSection) queryParams.set("courseSection", info.courseSection);
+          if (info.activityTitle) params.activityTitle = info.activityTitle;
+          if (info.courseName) params.courseName = info.courseName;
+          if (info.courseId) params.courseId = info.courseId;
+          if (info.sectionId) params.sectionId = info.sectionId;
+          if (info.courseSection) params.courseSection = info.courseSection;
         }
 
         switch (notification.type) {
@@ -111,11 +112,11 @@ export function NotificationDropdown({
           case "submission_received":
           case "essay_graded":
           case "activity_missed":
-            navigate(`/Teacher/Activities?${queryParams.toString()}`);
+            navigate(buildSecureUrl('/Teacher/Activities', params));
             break;
           default:
             if (!isNaN(parseInt(idToUse))) {
-               navigate(`/Teacher/Activities?${queryParams.toString()}`);
+               navigate(buildSecureUrl('/Teacher/Activities', params));
             }
             break;
         }
@@ -126,12 +127,13 @@ export function NotificationDropdown({
         const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
         const info = await fetchActivityBreadcrumbInfo(activityId || essayId);
 
-        const queryParams = new URLSearchParams();
-        queryParams.set("activityId", activityId || essayId);
+        const params: Record<string, string> = {
+          activityId: activityId || essayId,
+        };
         if (info) {
-          if (info.programAbbr) queryParams.set("programAbbr", info.programAbbr);
-          if (info.courseName) queryParams.set("courseName", info.courseName);
-          if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+          if (info.programAbbr) params.programAbbr = info.programAbbr;
+          if (info.courseName) params.courseName = info.courseName;
+          if (info.activityTitle) params.activityTitle = info.activityTitle;
         }
 
         switch (notification.type) {
@@ -141,16 +143,16 @@ export function NotificationDropdown({
           case "upcoming_deadline":
           case "revision_requested":
             // Lead to the Submit Essay page
-            navigate(`/Student/Submit?${queryParams.toString()}`);
+            navigate(buildSecureUrl('/Student/Submit', params));
             break;
           case "essay_graded":
             // Lead to Feedback page
-            if (essayId) queryParams.set("essayId", essayId);
-            navigate(`/Student/Feedback?${queryParams.toString()}`);
+            if (essayId) params.essayId = essayId;
+            navigate(buildSecureUrl('/Student/Feedback', params));
             break;
           default:
             if (!isNaN(parseInt(activityId))) {
-              navigate(`/Student/Submit?${queryParams.toString()}`);
+              navigate(buildSecureUrl('/Student/Submit', params));
             }
             break;
         }

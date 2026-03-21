@@ -39,6 +39,7 @@ import {
   fetchEssayAnalysis,
   allowResubmission,
 } from "../../services/activityService";
+import { buildSecureUrl } from "../../utils/secureUrl";
 
 interface StudentsViewProps {
   activity: EssayActivity;
@@ -403,7 +404,7 @@ export function StudentsView({
                   </TableCell>
                   <TableCell className="text-center">
                     {student.coherence !== undefined ? (
-                      <span className="font-medium">{student.coherence}%</span>
+                      <span className="font-medium">{Number(student.coherence).toFixed(2)}%</span>
                     ) : (
                       <span className="text-neutral-400">—</span>
                     )}
@@ -411,7 +412,7 @@ export function StudentsView({
                   <TableCell className="text-center">
                     {student.readability !== undefined ? (
                       <span className="font-medium">
-                        {student.readability}%
+                        {Number(student.readability).toFixed(2)}%
                       </span>
                     ) : (
                       <span className="text-neutral-400">—</span>
@@ -420,7 +421,7 @@ export function StudentsView({
                   <TableCell className="text-center">
                     {student.argumentative !== undefined ? (
                       <span className="font-medium">
-                        {student.argumentative}%
+                        {Number(student.argumentative).toFixed(2)}%
                       </span>
                     ) : (
                       <span className="text-neutral-400">—</span>
@@ -428,7 +429,7 @@ export function StudentsView({
                   </TableCell>
                   <TableCell className="text-center">
                     {student.grammar !== undefined ? (
-                      <span className="font-medium">{student.grammar}%</span>
+                      <span className="font-medium">{Number(student.grammar).toFixed(2)}%</span>
                     ) : (
                       <span className="text-neutral-400">—</span>
                     )}
@@ -444,7 +445,7 @@ export function StudentsView({
                               : "bg-amber-600 text-white"
                         }
                       >
-                        {student.score}%
+                        {Number(student.score).toFixed(2)}%
                       </Badge>
                     ) : (
                       <span className="text-neutral-400">—</span>
@@ -512,7 +513,10 @@ export function StudentsView({
                                   activity.id,
                                 );
                                 if (analysisData) {
-                                  navigate("/AnalysisResults", {
+                                  navigate(buildSecureUrl('/AnalysisResults', {
+                                    s: student.id,
+                                    a: activity.id,
+                                  }), {
                                     state: {
                                       analysis: analysisData.analysis,
                                       text: analysisData.text,

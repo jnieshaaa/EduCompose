@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import { BookOpen, ChevronRight, Users, Calendar, GraduationCap } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { buildSecureUrl } from '../../utils/secureUrl';
 
 interface AcademicClass {
   id: string; // teacher_course_load_id
@@ -145,7 +146,7 @@ export function MyClassesTab() {
             <Card 
               key={classItem.id}
               className="p-6 hover:shadow-lg transition-shadow cursor-pointer group border-none shadow-sm hover:ring-2 hover:ring-primary/20 bg-white"
-              onClick={() => navigate(`/Student/Classes/${classItem.id}?courseName=${encodeURIComponent(classItem.name)}&courseCode=${encodeURIComponent(classItem.code)}`)}
+              onClick={() => navigate(buildSecureUrl(`/Student/Classes/${classItem.id}`, { courseName: classItem.name, courseCode: classItem.code }))}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-primary/5 rounded-xl group-hover:bg-primary/10 transition-colors">

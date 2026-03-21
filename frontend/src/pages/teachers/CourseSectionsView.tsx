@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { buildSecureUrl, readSecureParams } from "../../utils/secureUrl";
 import {
   ArrowLeft,
   Users,
@@ -40,7 +41,8 @@ export function CourseSectionsView({
 }: CourseSectionsViewProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlProgramLoadId = searchParams.get("programLoad");
+  const secureParams = readSecureParams(window.location.search);
+  const urlProgramLoadId = secureParams?.programLoad || searchParams.get("programLoad");
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
   const { currentAY, currentSemester } = useAcademicContext();
 
@@ -526,15 +528,15 @@ export function CourseSectionsView({
                     key={block.id}
                     className="hover:bg-neutral-50/50 transition-colors cursor-pointer group"
                     onClick={() => {
-                      const courseCode = encodeURIComponent(course.course_code);
-                      const programAbbr = encodeURIComponent(
-                        selectedProgramLoad.programs_lookup?.abbr || "",
-                      );
-                      const blockLabel = encodeURIComponent(
-                        `${block.year}${block.name}`,
-                      );
                       navigate(
-                        `/Teacher/Students?courseId=${course.id}&courseCode=${courseCode}&programLoad=${selectedProgramLoad.id}&programAbbr=${programAbbr}&block=${block.id}&blockName=${blockLabel}`,
+                        buildSecureUrl('/Teacher/Students', {
+                          courseId: course.id,
+                          courseCode: course.course_code,
+                          programLoad: selectedProgramLoad.id,
+                          programAbbr: selectedProgramLoad.programs_lookup?.abbr || '',
+                          block: block.id,
+                          blockName: `${block.year}${block.name}`,
+                        }),
                       );
                     }}
                   >

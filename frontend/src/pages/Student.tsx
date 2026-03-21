@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, type ChangeEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { readSecureParams } from "../utils/secureUrl";
 import {
   Users,
   UserPlus,
@@ -69,10 +70,11 @@ export default function BlockPage({
   setStudents,
 }: BlockPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activityId = searchParams.get("activityId");
-  const activityBlockId = searchParams.get("blockId") ?? undefined;
-  const blockName = searchParams.get("blockName") ?? "";
-  const activityTitle = searchParams.get("activityTitle") ?? "";
+  const secureParams = readSecureParams(window.location.search);
+  const activityId = secureParams?.activityId || searchParams.get("activityId");
+  const activityBlockId = (secureParams?.blockId || searchParams.get("blockId")) ?? undefined;
+  const blockName = (secureParams?.blockName || searchParams.get("blockName")) ?? "";
+  const activityTitle = (secureParams?.activityTitle || searchParams.get("activityTitle")) ?? "";
   const headerTitle = blockName || activityTitle || programName;
   const secondaryTitle =
     blockName && activityTitle && blockName !== activityTitle

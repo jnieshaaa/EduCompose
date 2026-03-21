@@ -11,6 +11,7 @@ import { StudentsStatsCards } from "../../components/students/StudentsStatsCards
 import { StudentsFilters } from "../../components/students/StudentsFilters";
 import { StudentsCardView } from "../../components/students/StudentsCardView";
 import { StudentsTableView } from "../../components/students/StudentsTableView";
+import { buildSecureUrl, readSecureParams } from "../../utils/secureUrl";
 
 export function StudentsTab() {
   const [searchParams] = useSearchParams();
@@ -19,8 +20,9 @@ export function StudentsTab() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   // Read filters from URL params (for drill-down from Sections/Blocks)
-  const urlBlockId = searchParams.get("block");
-  const urlBlockName = searchParams.get("blockName");
+  const secureParams = readSecureParams(window.location.search);
+  const urlBlockId = secureParams?.block || searchParams.get("block");
+  const urlBlockName = secureParams?.blockName || searchParams.get("blockName");
 
   const {
     students,
@@ -51,7 +53,7 @@ export function StudentsTab() {
   } = useStudents(urlBlockId || undefined);
 
   const handleViewEssayHistory = (student: { id: string }) => {
-    navigate(`/Teacher/Gradebook?studentId=${encodeURIComponent(student.id)}`);
+    navigate(buildSecureUrl('/Teacher/Gradebook', { studentId: student.id }));
   };
 
   return (

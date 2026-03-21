@@ -6,6 +6,7 @@ import { AlertCircle, Calendar, ArrowLeft, BookOpen, ChevronRight } from 'lucide
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { buildSecureUrl } from '../../utils/secureUrl';
 
 interface StudentClassActivity {
   id: string;
@@ -191,7 +192,14 @@ export function ClassDetailTab() {
     const title = activity?.title || "Essay";
     const courseName = classData?.name || "";
     const courseCode = classData?.code || "";
-    navigate(`/Student/Submit?activityId=${activityId}&classId=${classId}&blockId=${blockId}&activityTitle=${encodeURIComponent(title)}&courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}`);
+    navigate(buildSecureUrl('/Student/Submit', {
+      activityId,
+      classId: classId || '',
+      blockId: blockId || '',
+      activityTitle: title,
+      courseName,
+      courseCode,
+    }));
   };
 
   if (isLoading) {

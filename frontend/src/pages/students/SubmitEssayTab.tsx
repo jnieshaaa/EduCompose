@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
+import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
 
 // Types
 interface ActivityDetails {
@@ -38,10 +39,12 @@ export function SubmitEssayTab() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  const activityIdParam = searchParams.get('activityId');
-  const classId = searchParams.get('classId'); // teacher_course_loads.id (legacy/backup)
-  const blockId = searchParams.get('blockId'); // blocks.id (UUID)
+
+  // Decode secure URL params (with fallback to raw searchParams for backwards compatibility)
+  const secureParams = readSecureParams(window.location.search);
+  const activityIdParam = secureParams?.activityId || searchParams.get('activityId');
+  const classId = secureParams?.classId || searchParams.get('classId');
+  const blockId = secureParams?.blockId || searchParams.get('blockId');
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -589,7 +592,14 @@ export function SubmitEssayTab() {
                   posts.map((post) => (
                     <div 
                       key={post.id} 
-                      onClick={() => navigate(`/Student/Submit?activityId=${post.id}&classId=${classId}&blockId=${blockId}&activityTitle=${encodeURIComponent(post.title)}&courseName=${encodeURIComponent(activity.course.split(' - ')[1] || "")}&courseCode=${encodeURIComponent(activity.course.split(' - ')[0])}`)}
+                      onClick={() => navigate(buildSecureUrl('/Student/Submit', {
+                        activityId: String(post.id),
+                        classId: classId || '',
+                        blockId: blockId || '',
+                        activityTitle: post.title,
+                        courseName: activity.course.split(' - ')[1] || '',
+                        courseCode: activity.course.split(' - ')[0],
+                      }))}
                       className={`
                         p-4 hover:bg-neutral-50 transition-colors cursor-pointer group relative
                         ${post.isCurrent ? 'bg-primary/5 border-l-4 border-l-primary' : ''}

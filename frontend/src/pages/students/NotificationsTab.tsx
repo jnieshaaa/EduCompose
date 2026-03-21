@@ -13,6 +13,7 @@ import {
   subscribeToNotifications 
 } from "../../services/notificationService";
 import type { Notification } from "../../types/notification";
+import { buildSecureUrl } from "../../utils/secureUrl";
 
 export function NotificationsTab() {
   const { user } = useAuth();
@@ -110,12 +111,12 @@ export function NotificationsTab() {
       info = await fetchActivityBreadcrumbInfo(activityId || essayId);
     }
 
-    const queryParams = new URLSearchParams();
-    if (activityId || essayId) queryParams.set("activityId", activityId || essayId);
+    const params: Record<string, string> = {};
+    if (activityId || essayId) params.activityId = activityId || essayId;
     if (info) {
-      if (info.programAbbr) queryParams.set("programAbbr", info.programAbbr);
-      if (info.courseName) queryParams.set("courseName", info.courseName);
-      if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+      if (info.programAbbr) params.programAbbr = info.programAbbr;
+      if (info.courseName) params.courseName = info.courseName;
+      if (info.activityTitle) params.activityTitle = info.activityTitle;
     }
 
     // 4. Navigate based on type
@@ -130,17 +131,17 @@ export function NotificationsTab() {
         case "upcoming_deadline":
         case "revision_requested":
           // Lead to the Submit Essay page
-          navigate(`/Student/Submit?${queryParams.toString()}`);
+          navigate(buildSecureUrl('/Student/Submit', params));
           break;
         case "essay_graded":
           // Lead to Feedback page
-          if (essayId) queryParams.set("essayId", essayId);
-          navigate(`/Student/Feedback?${queryParams.toString()}`);
+          if (essayId) params.essayId = essayId;
+          navigate(buildSecureUrl('/Student/Feedback', params));
           break;
         default:
           // Default: try Submit page if it's an ID
           if (!isNaN(parseInt(activityId))) {
-            navigate(`/Student/Submit?${queryParams.toString()}`);
+            navigate(buildSecureUrl('/Student/Submit', params));
           }
           break;
       }

@@ -105,31 +105,36 @@ export function EssayTextDisplay({
       return { segments: [{ type: 'text', text: originalText }], errors: [] as HighlightError[] };
     }
 
-    // Deep clone errors array to prevent mutations
-    const clonedErrors = grammarErrors.map((error) => ({
-      ...error,
-      offset: error.offset,
-      errorLength: error.errorLength,
-    }));
+    // Deep clone errors array to validate types properly
+    const clonedErrors = grammarErrors.map((error) => {
+      const parsedOffset = Number(error.offset);
+      const parsedErrorLength = Number(error.errorLength || (error as any).length); // Fallback to 'length' in case LLM used that
+      return {
+        ...error,
+        offset: isNaN(parsedOffset) ? -1 : parsedOffset,
+        errorLength: isNaN(parsedErrorLength) ? 0 : parsedErrorLength,
+      };
+    });
 
     // Validate errors and ensure offsets match the actual text
     const validErrors = clonedErrors
       .filter((error): error is HighlightError => {
         if (
-          typeof error.offset !== 'number' ||
-          typeof error.errorLength !== 'number' ||
           error.errorLength <= 0 ||
           error.offset < 0 ||
           error.offset >= originalText.length
         ) {
+          console.log("Filtered out (invalid offset/length):", error);
           return false;
         }
         if (error.offset + error.errorLength > originalText.length) {
+          console.log("Filtered out (exceeds length):", error, "text length:", originalText.length);
           return false;
         }
         const textAtOffset = originalText.slice(error.offset, error.offset + error.errorLength);
         // Allow whitespace-only errors (e.g., multiple spaces, tabs) but ensure there's actual content
         if (textAtOffset.length === 0) {
+          console.log("Filtered out (empty text at offset):", error);
           return false;
         }
         return true;

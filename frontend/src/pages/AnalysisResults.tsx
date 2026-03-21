@@ -27,6 +27,7 @@ import { platformRubrics } from '../data/rubricData';
 import type { PlatformRubric } from '../components/rubrics/types';
 import { savePlagiarismResult, loadPlagiarismResult } from '../services/activityService';
 import { useAuth } from '../contexts/AuthContext';
+import { readSecureParams } from '../utils/secureUrl';
 
 const STORAGE_KEY = 'essay_analysis_results';
 
@@ -361,6 +362,50 @@ const AnalysisResults: React.FC = () => {
       setError(state.error);
       if (state.text) setOriginalText(state.text);
       return;
+    }
+
+    // Check if we have a ref token in the URL (encoded studentId + activityId)
+    const secureParams = readSecureParams(window.location.search);
+
+    // If no state but we have a ref token, fetch from Supabase
+    if (!state?.analysis && !state?.text && !state?.preview && secureParams) {
+      const refStudentId = secureParams.s;
+      const refActivityId = secureParams.a;
+
+      if (refStudentId && refActivityId) {
+        setStudentId(refStudentId);
+        setActivityId(refActivityId);
+        setLoading(true);
+
+        const fetchFromRef = async () => {
+          try {
+            const { fetchEssayAnalysis } = await import('../services/activityService');
+            const analysisData = await fetchEssayAnalysis(refStudentId, refActivityId);
+            if (analysisData) {
+              const stableAnalysis = JSON.parse(JSON.stringify(analysisData.analysis));
+              const stableText = analysisData.text || '';
+              const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
+
+              stableAnalysisRef.current = stableAnalysis;
+              stableTextRef.current = stableText;
+
+              setAnalysis(stableAnalysis);
+              setOriginalText(stableText);
+              setAnalysisKey(newAnalysisKey);
+            } else {
+              setError('Analysis results not found. The essay may not have been graded yet.');
+            }
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis results';
+            setError(errorMessage);
+            console.error('Error loading analysis from ref token:', err);
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchFromRef();
+        return;
+      }
     }
 
     // Check for preview mode

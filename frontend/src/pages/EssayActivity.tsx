@@ -10,6 +10,7 @@ import {
   saveActivities,
 } from "../utils/activityStorage.ts";
 import type { ActivityItem } from "../utils/activityStorage.ts";
+import { readSecureParams } from "../utils/secureUrl";
 
 type NewActivityState = {
   title: string;
@@ -35,14 +36,15 @@ const ActivityList: React.FC<ActivityListProps> = ({ students }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const blockId = searchParams.get("blockId");
-  const programId = searchParams.get("programId");
-  const programName = searchParams.get("programName");
-  const blockName = searchParams.get("blockName");
+  const secureParams = readSecureParams(window.location.search);
+  const blockId = secureParams?.blockId || searchParams.get("blockId");
+  const programId = secureParams?.programId || searchParams.get("programId");
+  const programName = secureParams?.programName || searchParams.get("programName");
+  const blockName = secureParams?.blockName || searchParams.get("blockName");
   const searchParamStudentCount =
-    Number(searchParams.get("studentCount") ?? "0") || 0;
+    Number(secureParams?.studentCount || (searchParams.get("studentCount") ?? "0")) || 0;
 
-  const activityTitleParam = searchParams.get("activityTitle");
+  const activityTitleParam = secureParams?.activityTitle || searchParams.get("activityTitle");
   const headingTitle = blockName || "Essay Activity";
 
   const [activities, setActivities] = useState<ActivityItem[]>(() =>

@@ -22,6 +22,7 @@ import Modal from "../components/ui/Modal";
 import ProgressBar from "../components/ui/ProgressBar";
 import type { Class, Student, Essay } from "../types/Essay";
 import { dummyData } from "../api";
+import { readSecureParams } from "../utils/secureUrl";
 
 interface GradebookEntry {
   student: Student;
@@ -73,7 +74,8 @@ const Gradebook: React.FC = () => {
 
   // If navigated from StudentsTab with a studentId in the URL, open that student's essay history
   useEffect(() => {
-    const studentIdFromUrl = searchParams.get("studentId");
+    const secureParams = readSecureParams(window.location.search);
+    const studentIdFromUrl = secureParams?.studentId || searchParams.get("studentId");
     if (!studentIdFromUrl || hasOpenedFromUrl || students.length === 0) {
       return;
     }
