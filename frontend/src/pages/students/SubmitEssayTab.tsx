@@ -21,6 +21,7 @@ interface ActivityDetails {
   courseId: string;
   term: string;
   teacherId: string;
+  teacherUUID: string;
   minWordCount: number;
 }
 
@@ -89,7 +90,8 @@ export function SubmitEssayTab() {
               title,
               nickname,
               first_name,
-              last_name
+              last_name,
+              auth_user_id
             )
           `)
           .eq('id', parseInt(activityIdParam))
@@ -127,6 +129,7 @@ export function SubmitEssayTab() {
           courseId: actRow.course_id?.[0] || "",
           term: actRow.term || "N/A",
           teacherId: actRow.teacher_id,
+          teacherUUID: actRow.teacher?.auth_user_id || "",
           minWordCount: actRow.min_word_count || 150
         });
 
@@ -279,14 +282,27 @@ export function SubmitEssayTab() {
       if (activity?.teacherId) {
         console.log("[handleSubmit] Notifying teacher:", activity.teacherId);
         const studentName = user?.nickname || user?.full_name || "A student";
+        const { data: latestEssay } = await supabase
+          .from('essays')
+          .select('id')
+          .eq('student_id', studentId)
+          .eq('activity_id', activityIdParam)
+          .order('submitted_at', { ascending: false })
+          .limit(1)
+          .single();
+
         const { error: notifyError } = await supabase
           .from('notifications')
           .insert({
-            user_id: activity.teacherId,
+            user_id: activity.teacherUUID,
             type: 'submission_received',
             title: 'New Essay Submission',
             message: `${studentName} has uploaded an activity: "${activity.title}".`,
-            related_id: parseInt(activity.id),
+            related_id: JSON.stringify({
+              activityId: String(activity.id),
+              studentId: String(studentId),
+              essayId: String(latestEssay?.id || "")
+            }),
             related_type: 'essay_activities'
           });
 

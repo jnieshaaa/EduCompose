@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft,
   FileText,
   Edit,
   MoreVertical,
@@ -56,7 +55,6 @@ export function StudentsView({
   students,
   courseName,
   courseSection,
-  onBack,
   isLoading = false,
   onRefresh,
 }: StudentsViewProps) {
@@ -75,7 +73,9 @@ export function StudentsView({
     Map<string, { progress: number; step: string }>
   >(new Map());
   const [gradedStudents, setGradedStudents] = useState<Set<string>>(new Set());
-  const [isAllowingResubmission, setIsAllowingResubmission] = useState<string | null>(null);
+  const [isAllowingResubmission, setIsAllowingResubmission] = useState<
+    string | null
+  >(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
   const navigate = useNavigate();
 
@@ -142,9 +142,15 @@ export function StudentsView({
   const handleAllowResubmission = async (studentId: string) => {
     setIsAllowingResubmission(studentId);
     try {
-      const result = await allowResubmission(studentId, activity.id, activity.title);
+      const result = await allowResubmission(
+        studentId,
+        activity.id,
+        activity.title,
+      );
       if (result.success) {
-        alert("Notification sent to student allowing resubmission or reupload.");
+        alert(
+          "Notification sent to student allowing resubmission or reupload.",
+        );
         if (onRefresh) {
           await onRefresh();
         }
@@ -162,28 +168,37 @@ export function StudentsView({
   const handleGradeAll = async () => {
     // Find all submitted students who are not yet graded and not disqualified by word count
     const toGrade = students.filter(
-      (s) => s.status === "submitted" && 
-             !gradedStudents.has(s.id) && 
-             !gradingStudents.has(s.id) &&
-             (!s.wordCount || s.wordCount >= (activity.minWordCount || 150))
+      (s) =>
+        s.status === "submitted" &&
+        !gradedStudents.has(s.id) &&
+        !gradingStudents.has(s.id) &&
+        (!s.wordCount || s.wordCount >= (activity.minWordCount || 150)),
     );
 
     if (toGrade.length === 0) {
-      const allSubmitted = students.filter(s => s.status === "submitted" && !gradedStudents.has(s.id));
+      const allSubmitted = students.filter(
+        (s) => s.status === "submitted" && !gradedStudents.has(s.id),
+      );
       if (allSubmitted.length > 0) {
-        alert(`No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`);
+        alert(
+          `No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`,
+        );
       } else {
         alert("No pending essays to grade.");
       }
       return;
     }
 
-    if (!confirm(`Are you sure you want to grade all ${toGrade.length} pending essays?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to grade all ${toGrade.length} pending essays?`,
+      )
+    ) {
       return;
     }
 
     setIsGradingAll(true);
-    
+
     // Grade them sequentially to avoid overwhelming the API
     for (const student of toGrade) {
       setGradingStudents((prev) => {
@@ -203,7 +218,7 @@ export function StudentsView({
               newMap.set(student.id, { progress, step });
               return newMap;
             });
-          }
+          },
         );
 
         if (result.success) {
@@ -223,7 +238,7 @@ export function StudentsView({
         });
       }
     }
-    
+
     if (onRefresh) await onRefresh();
     setIsGradingAll(false);
     alert("Batch grading process completed.");
@@ -252,14 +267,6 @@ export function StudentsView({
                 Grade All Pending
               </>
             )}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Sections
           </Button>
         </div>
       </div>
@@ -317,22 +324,32 @@ export function StudentsView({
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow 
+                <TableRow
                   key={student.id}
                   className={`transition-colors h-16 ${
-                    student.wordCount && student.wordCount < (activity.minWordCount || 150)
+                    student.wordCount &&
+                    student.wordCount < (activity.minWordCount || 150)
                       ? "border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
                       : "hover:bg-neutral-50"
                   }`}
                 >
                   <TableCell className="font-medium whitespace-nowrap py-4">
-                    {student.wordCount && student.wordCount < (activity.minWordCount || 150) ? (
-                      <Tooltip content={student.gradingError || `Essay is too short (minimum ${activity.minWordCount || 150} words).`} position="right">
+                    {student.wordCount &&
+                    student.wordCount < (activity.minWordCount || 150) ? (
+                      <Tooltip
+                        content={
+                          student.gradingError ||
+                          `Essay is too short (minimum ${activity.minWordCount || 150} words).`
+                        }
+                        position="right"
+                      >
                         <div className="flex flex-col">
-                          <span className="text-red-700 font-semibold">{student.name}</span>
-                          <span className="text-xs text-red-500 italic flex items-center gap-1"> 
+                          <span className="text-red-700 font-semibold">
+                            {student.name}
+                          </span>
+                          <span className="text-xs text-red-500 italic flex items-center gap-1">
                             <XCircle className="w-3 h-3" />
-                            Low Word Count ({student.wordCount} words) 
+                            Low Word Count ({student.wordCount} words)
                           </span>
                         </div>
                       </Tooltip>
@@ -340,7 +357,9 @@ export function StudentsView({
                       <div className="flex flex-col">
                         <span>{student.name}</span>
                         {student.wordCount && (
-                           <span className="text-xs text-neutral-400">{student.wordCount} words</span>
+                          <span className="text-xs text-neutral-400">
+                            {student.wordCount} words
+                          </span>
                         )}
                       </div>
                     )}
@@ -446,8 +465,12 @@ export function StudentsView({
                           }}
                           disabled={isAllowingResubmission === student.id}
                         >
-                          <Loader2 className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "animate-spin" : "hidden"}`} />
-                          <CheckCircle2 className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "hidden" : ""}`} />
+                          <Loader2
+                            className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "animate-spin" : "hidden"}`}
+                          />
+                          <CheckCircle2
+                            className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "hidden" : ""}`}
+                          />
                           Allow Resubmission
                         </DropdownMenuItem>
 
@@ -620,7 +643,6 @@ export function StudentsView({
           activityId={activity.id}
         />
       )}
-
 
       {/* Delete Essay Confirmation Modal */}
       <Modal

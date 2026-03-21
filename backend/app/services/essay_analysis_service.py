@@ -104,15 +104,10 @@ class EssayAnalysisService:
         """
         analysis_start = time.time()
         
-        # Validate essay length (150-1000 words as per scope)
+        # Calculate word count
         word_count = len(content.split())
-        if word_count < 150:
-            return {
-                "error": "Essay too short",
-                "message": "Essays must be at least 150 words for meaningful analysis",
-                "word_count": word_count
-            }
-
+        
+        # Compute content quality metrics
         quality_metrics = self._compute_content_quality_metrics(content)
         quality_issue = self._validate_content_quality(quality_metrics)
         if quality_issue:

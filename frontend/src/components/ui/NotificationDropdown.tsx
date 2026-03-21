@@ -62,12 +62,14 @@ export function NotificationDropdown({
     let rawRelatedId = notification.relatedId;
     let activityId = "";
     let essayId = "";
+    let studentId = "";
 
     if (rawRelatedId && rawRelatedId.startsWith("{")) {
        try {
          const parsed = JSON.parse(rawRelatedId);
          activityId = parsed.activityId || "";
          essayId = parsed.essayId || "";
+         studentId = parsed.studentId || "";
          if (!activityId && !essayId) {
             activityId = parsed.id || rawRelatedId;
          }
@@ -84,6 +86,24 @@ export function NotificationDropdown({
     if (role === 'Teacher') {
       const idToUse = activityId || essayId;
       if (idToUse) {
+        // Fetch Metadata for Breadcrumbs and Deep Linking
+        const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
+        const info = await fetchActivityBreadcrumbInfo(
+          activityId || "", 
+          studentId || "",
+          essayId || ""
+        );
+
+        const queryParams = new URLSearchParams();
+        if (idToUse) queryParams.set("activityId", idToUse);
+        if (info) {
+          if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+          if (info.courseName) queryParams.set("courseName", info.courseName);
+          if (info.courseId) queryParams.set("courseId", info.courseId);
+          if (info.sectionId) queryParams.set("sectionId", info.sectionId);
+          if (info.courseSection) queryParams.set("courseSection", info.courseSection);
+        }
+
         switch (notification.type) {
           case "student_submitted":
           case "resubmission_requested":
@@ -91,11 +111,11 @@ export function NotificationDropdown({
           case "submission_received":
           case "essay_graded":
           case "activity_missed":
-            navigate(`/Teacher/Activities?activityId=${idToUse}`);
+            navigate(`/Teacher/Activities?${queryParams.toString()}`);
             break;
           default:
             if (!isNaN(parseInt(idToUse))) {
-               navigate(`/Teacher/Activities?activityId=${idToUse}`);
+               navigate(`/Teacher/Activities?${queryParams.toString()}`);
             }
             break;
         }

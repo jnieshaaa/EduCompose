@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, AlertTriangle } from "lucide-react";
+import { Calendar, AlertTriangle } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import Button from "../../components/ui/Button";
 import {
   Table,
   TableBody,
@@ -22,7 +21,6 @@ import {
 interface CourseSectionsViewProps {
   activity: EssayActivity;
   courseSections: CourseSection[];
-  onBack: () => void;
   onSectionClick: (section: CourseSection) => void;
   courses: { id: string; name: string }[];
   sections: { id: string; name: string; courseId: string }[];
@@ -31,7 +29,6 @@ interface CourseSectionsViewProps {
 export function CourseSectionsView({
   activity,
   courseSections,
-  onBack,
   onSectionClick,
   courses,
   sections,
@@ -40,7 +37,7 @@ export function CourseSectionsView({
     useState<CourseSection[]>(courseSections);
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>(
-    []
+    [],
   );
 
   useEffect(() => {
@@ -52,14 +49,14 @@ export function CourseSectionsView({
           fetchCourseSectionCounts(
             section.courseId,
             section.sectionId,
-            activity.id
+            activity.id,
           ).then(
             (counts: { studentCount: number; submissionCount: number }) => ({
               ...section,
               studentCount: counts.studentCount,
               submissionCount: counts.submissionCount,
-            })
-          )
+            }),
+          ),
         );
 
         const sectionsWithCounts = await Promise.all(countsPromises);
@@ -98,18 +95,6 @@ export function CourseSectionsView({
 
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Activities
-        </Button>
-      </div>
-
       {/* Activity Header */}
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <h1 className="text-2xl font-bold text-neutral-900 mb-2">
@@ -122,7 +107,7 @@ export function CourseSectionsView({
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
             {getCoursesLabel(
               activity.courseIds,
-              courses.map((p) => ({ id: p.id, name: p.name }))
+              courses.map((p) => ({ id: p.id, name: p.name })),
             )}
           </Badge>
           <Badge className="bg-support/90 text-neutral-900/70 border-primary/90 font-light">
@@ -132,7 +117,7 @@ export function CourseSectionsView({
                 id: s.id,
                 name: s.name,
                 courseId: s.courseId,
-              }))
+              })),
             )}
           </Badge>
           {activity.dueDate && (
@@ -149,9 +134,7 @@ export function CourseSectionsView({
         {/* Course-Blocks Table - Takes 2/3 width on large screens */}
         <Card className="lg:col-span-2">
           <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Blocks
-            </h2>
+            <h2 className="text-lg font-semibold text-neutral-900">Blocks</h2>
             <p className="text-sm text-neutral-500">
               Click on a block to view students
             </p>
@@ -212,18 +195,22 @@ export function CourseSectionsView({
         </Card>
 
         {/* Duplicate Essays Warning - Takes 1/3 width on large screens */}
-        <Card className={`lg:col-span-1 ${
-          duplicateGroups.length > 0
-            ? "border-warning-default/30 bg-warning-default/5"
-            : "border-neutral-200 bg-neutral-50"
-        }`}>
+        <Card
+          className={`lg:col-span-1 ${
+            duplicateGroups.length > 0
+              ? "border-warning-default/30 bg-warning-default/5"
+              : "border-neutral-200 bg-neutral-50"
+          }`}
+        >
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                duplicateGroups.length > 0
-                  ? "text-warning-default"
-                  : "text-neutral-400"
-              }`} />
+              <AlertTriangle
+                className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  duplicateGroups.length > 0
+                    ? "text-warning-default"
+                    : "text-neutral-400"
+                }`}
+              />
               <div className="flex-1">
                 <h3 className="font-semibold text-neutral-900 mb-2 text-sm">
                   Duplicate Essays Detected
@@ -253,7 +240,7 @@ export function CourseSectionsView({
                             {group.essays.map(
                               (
                                 essay: DuplicateEssayGroup["essays"][0],
-                                essayIndex: number
+                                essayIndex: number,
                               ) => (
                                 <div
                                   key={essayIndex}
@@ -274,7 +261,7 @@ export function CourseSectionsView({
                                     "{essay.title}"
                                   </div>
                                 </div>
-                              )
+                              ),
                             )}
                           </div>
                         </div>
@@ -294,4 +281,3 @@ export function CourseSectionsView({
     </div>
   );
 }
-

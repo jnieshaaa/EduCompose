@@ -69,9 +69,13 @@ export function NotificationsTab() {
 
     // 2. Extract ID (handle both plain and JSON strings)
     let relatedId = notification.relatedId;
+    let essayId = "";
+    let studentId = "";
     if (relatedId && relatedId.startsWith("{")) {
        try {
          const parsed = JSON.parse(relatedId);
+         essayId = parsed.essayId || "";
+         studentId = parsed.studentId || "";
          // Prioritize activityId as Teachers need to go to the activity view
          relatedId = parsed.activityId || parsed.essayId || parsed.id || relatedId;
        } catch (e) {
@@ -80,23 +84,38 @@ export function NotificationsTab() {
     }
 
     // 3. Navigate based on type
-    if (relatedId) {
+    if (relatedId || essayId) {
+      // Fetch Metadata for Breadcrumbs and Deep Linking
+      const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
+      const info = await fetchActivityBreadcrumbInfo(
+        relatedId || "", 
+        studentId || "", 
+        essayId || ""
+      );
+
+      const queryParams = new URLSearchParams();
+      if (relatedId || essayId) queryParams.set("activityId", relatedId || essayId);
+      if (info) {
+        if (info.activityTitle) queryParams.set("activityTitle", info.activityTitle);
+        if (info.courseName) queryParams.set("courseName", info.courseName);
+        if (info.courseId) queryParams.set("courseId", info.courseId);
+        if (info.sectionId) queryParams.set("sectionId", info.sectionId);
+        if (info.courseSection) queryParams.set("courseSection", info.courseSection);
+      }
+
       switch (notification.type) {
         case "student_submitted":
         case "resubmission_requested":
         case "resubmission_request":
         case "submission_received":
         case "essay_graded":
-          // Navigate to Activities Tab with the specific activity selected
-          navigate(`/Teacher/Activities?activityId=${relatedId}`);
-          break;
         case "activity_missed":
-          navigate(`/Teacher/Activities?activityId=${relatedId}`);
+          navigate(`/Teacher/Activities?${queryParams.toString()}`);
           break;
         default:
           // Try to navigate to Activities if it looks like an ID
-          if (!isNaN(parseInt(relatedId))) {
-             navigate(`/Teacher/Activities?activityId=${relatedId}`);
+          if (!isNaN(parseInt(relatedId || essayId || ""))) {
+             navigate(`/Teacher/Activities?${queryParams.toString()}`);
           }
           break;
       }

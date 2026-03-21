@@ -40,7 +40,6 @@ export function ActivitiesTab() {
     handleActivityClick,
     handleCourseSectionClick,
     handleBackToSections,
-    handleBackToActivities,
     reloadStudents,
   } = useActivities();
 
@@ -124,7 +123,6 @@ export function ActivitiesTab() {
       <CourseSectionsView
         activity={currentActivity}
         courseSections={courseSections}
-        onBack={handleBackToActivities}
         onSectionClick={handleCourseSectionClick}
         courses={courses}
         sections={sections}

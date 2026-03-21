@@ -6,60 +6,82 @@ import { fetchTeacherId, fetchTeacherUUID } from "./rubricService";
 import { buildFullNameFromObject } from "../utils/nameUtils";
 
 /**
- * Fetches necessary information to build a full breadcrumb for an activity.
- * Primarily used when navigating from a notification.
+ * Fetches necessary information to build a full breadcrumb and navigation context.
  */
-export const fetchActivityBreadcrumbInfo = async (activityId: string | number) => {
+export const fetchActivityBreadcrumbInfo = async (
+  activityId: string | number, 
+  studentId?: string | number,
+  essayId?: string | number
+) => {
   try {
-    const id = typeof activityId === 'string' ? parseInt(activityId) : activityId;
-    if (isNaN(id)) return null;
+    const actId = typeof activityId === 'string' ? parseInt(activityId) : activityId;
+    if (isNaN(actId)) return null;
 
-    const { data: activity, error } = await supabase
+    // 1. Fetch Activity Basic Info
+    const { data: activity, error: actErr } = await supabase
       .from("essay_activities")
-      .select(`
-        id,
-        title,
-        program_id,
-        course_id
-      `)
-      .eq("id", id)
+      .select("id, title, program_id, course_id, block_id")
+      .eq("id", actId)
       .single();
 
-    if (error || !activity) return null;
+    if (actErr || !activity) return null;
 
     let programAbbr = "";
     let courseName = "";
+    let sectionId = "";
+    let courseSectionName = "";
+    let courseId = "";
 
-    // Get Program Abbr (take the first if array)
+    // 2. Resolve Program Abbr
     if (activity.program_id && activity.program_id.length > 0) {
-      const progId = Array.isArray(activity.program_id) ? activity.program_id[0] : activity.program_id;
-      const { data: prog } = await supabase
-        .from("programs_lookup")
-        .select("abbr")
-        .eq("id", progId)
-        .single();
+      const pId = Array.isArray(activity.program_id) ? activity.program_id[0] : activity.program_id;
+      const { data: prog } = await supabase.from("programs_lookup").select("abbr").eq("id", pId).single();
       if (prog) programAbbr = prog.abbr;
     }
 
-    // Get Course Name (take the first if array)
+    // 3. Resolve Course Info
     if (activity.course_id && activity.course_id.length > 0) {
-       const courseId = Array.isArray(activity.course_id) ? activity.course_id[0] : activity.course_id;
-       const { data: course } = await supabase
-         .from("courses")
-         .select("course_title")
-         .eq("id", courseId)
-         .single();
-       if (course) courseName = course.course_title;
+      courseId = Array.isArray(activity.course_id) ? activity.course_id[0] : activity.course_id;
+      const { data: course } = await supabase.from("courses").select("course_title, course_code").eq("id", courseId).single();
+      if (course) courseName = course.course_title || course.course_code;
+    }
+
+    // 4. Resolve Section/Block Info (if targeted)
+    if (essayId) {
+      const { data: essay } = await supabase.from("essays").select("section_id").eq("id", essayId).single();
+      if (essay && essay.section_id) sectionId = String(essay.section_id);
+    } else if (studentId) {
+       // Find which block this student is assigned to for this activity
+       // or just their primary block matching the activity's blocks
+       if (activity.block_id && activity.block_id.length > 0) {
+         const { data: enrollment } = await supabase
+           .from("block_students")
+           .select("block_id")
+           .eq("student_id", studentId)
+           .in("block_id", activity.block_id)
+           .maybeSingle();
+
+         if (enrollment) sectionId = String(enrollment.block_id);
+       }
+    }
+
+    // If sectionId was found, get its friendly name
+    if (sectionId) {
+      const { data: block } = await supabase.from("blocks").select("year, name").eq("id", sectionId).single();
+      if (block) courseSectionName = `${block.year}${block.name}`;
     }
 
     return {
+      activityId: activity.id,
       activityTitle: activity.title,
       programAbbr,
       courseName,
-      activityId: activity.id
+      courseId,
+      sectionId,
+      courseSection: courseSectionName
     };
   } catch (err) {
-    console.error("Error fetching breadcrumb info:", err);
+    console.error("Error fetching breadcrumb/navigation info:", err);
     return null;
   }
 };
@@ -267,7 +289,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 const ensurePlatformRubricExists = async (
   templateId: number,
 ): Promise<number | null> => {
-  try {
+    try {
     // Import template to get the name
     const { platformRubrics } = await import("../data/rubricData");
     const template = platformRubrics.find((r) => r.id === templateId);
@@ -1703,7 +1725,7 @@ export const gradeEssay = async (
     // Fetch essay record
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, file_path, title, essay_activities(min_word_count)")
+      .select("id, file_path, title, students(auth_user_id), essay_activities(id, title, min_word_count)")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -2052,20 +2074,14 @@ export const gradeEssay = async (
 
     onProgress?.(95, "Finalizing...");
 
-    // Step 4: Create notification for teacher
-    if (teacherId) {
-      // Get activity title
-      const { data: activityData } = await supabase
-        .from("essay_activities")
-        .select("title")
-        .eq("id", activityDbId)
-        .single();
-
-      const activityTitle = activityData?.title || "Essay";
-
-      // Create notification with metadata including studentId for fetching all results
+    // Step 4: Create notifications
+    const teacherUUID = await fetchTeacherUUID();
+    if (teacherUUID) {
+      const activityTitle = (essayData.essay_activities as any)?.title || "Essay";
+      
+      // 4a. Create notification for teacher (using teacher's UUID)
       await supabase.from("notifications").insert({
-        user_id: teacherId,
+        user_id: teacherUUID,
         type: "essay_graded",
         title: "Essay Graded",
         message: `${studentName}'s essay for "${activityTitle}" has been graded successfully.`,
@@ -2078,6 +2094,23 @@ export const gradeEssay = async (
         }),
         related_type: "essay",
       });
+
+      // 4b. Create notification for student (using student's UUID)
+      const studentUUID = (essayData.students as any)?.auth_user_id;
+      if (studentUUID) {
+        await supabase.from("notifications").insert({
+          user_id: studentUUID,
+          type: "essay_graded",
+          title: "Grade Available",
+          message: `Your essay for "${activityTitle}" has been graded. You can now view your results and feedback.`,
+          read: false,
+          related_id: JSON.stringify({
+            essayId: String(essayData.id),
+            activityId: String(activityDbId),
+          }),
+          related_type: "essay",
+        });
+      }
     }
 
     onProgress?.(100, "Complete!");
