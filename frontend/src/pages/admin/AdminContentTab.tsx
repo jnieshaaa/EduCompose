@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BookOpen, FileText, ClipboardCheck, Search } from "lucide-react";
 import { adminApi } from "../../api";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 
 export function AdminContentTab() {
-  const [activeTab, setActiveTab] = useState<"programs" | "activities" | "rubrics">("programs");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("view") as "programs" | "activities" | "rubrics") || "programs";
+  
+  const setActiveTab = (tab: "programs" | "activities" | "rubrics") => {
+    searchParams.set("view", tab);
+    setSearchParams(searchParams);
+  };
+
   const [programs, setPrograms] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [rubrics, setRubrics] = useState<any[]>([]);

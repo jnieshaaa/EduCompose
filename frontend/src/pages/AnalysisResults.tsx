@@ -25,7 +25,8 @@ import { analysisApi, plagiarismApi, type PlagiarismCheckResponse, type Plagiari
 import { RubricPreviewModal } from '../components/rubrics/RubricPreviewModal';
 import { platformRubrics } from '../data/rubricData';
 import type { PlatformRubric } from '../components/rubrics/types';
-import { savePlagiarismResult, loadPlagiarismResult } from '../services/activityService';
+import { savePlagiarismResult, loadPlagiarismResult, fetchDuplicateEssays, type DuplicateEssayGroup } from '../services/activityService';
+import Badge from '../components/ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { readSecureParams } from '../utils/secureUrl';
 
@@ -258,6 +259,8 @@ const AnalysisResults: React.FC = () => {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [activityId, setActivityId] = useState<string | null>(null);
   const [essayId, setEssayId] = useState<number | null>(null);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>([]);
+  const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
 
   // Stable references to prevent recalculation
   const stableAnalysisRef = useRef<Omit<AnalysisResponse, 'essay_id'> | null>(null);
@@ -583,6 +586,25 @@ const AnalysisResults: React.FC = () => {
     loadSavedPlagiarism();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [essayId, studentId, activityId]);
+
+  // Fetch duplicate essays for the activity
+  useEffect(() => {
+    if (!activityId) return;
+
+    const loadDuplicates = async () => {
+      setIsLoadingDuplicates(true);
+      try {
+        const groups = await fetchDuplicateEssays(activityId);
+        setDuplicateGroups(groups);
+      } catch (err) {
+        console.warn('Error loading duplicate essays:', err);
+      } finally {
+        setIsLoadingDuplicates(false);
+      }
+    };
+
+    loadDuplicates();
+  }, [activityId]);
 
   // Save plagiarism result when navigating away, refreshing, or switching tabs
   useEffect(() => {
@@ -1367,6 +1389,67 @@ const AnalysisResults: React.FC = () => {
                           <Shield className="w-5 h-5" />
                           <span>Check Again</span>
                         </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Duplicate Essays Section */}
+                  <div className="bg-white rounded-lg border border-neutral-200 p-6 mt-6">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertTriangle className={`w-6 h-6 flex-shrink-0 ${duplicateGroups.length > 0 ? 'text-warning-default' : 'text-neutral-400'}`} />
+                      <div>
+                        <h2 className="text-xl font-bold text-neutral-900 mb-1">Cross-Class Duplicate Detection</h2>
+                        <p className="text-sm text-neutral-600">
+                          Identifies identical content submitted by different students across all programs and blocks.
+                        </p>
+                      </div>
+                    </div>
+
+                    {isLoadingDuplicates ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <span className="ml-2 text-neutral-600">Checking for duplicate submissions...</span>
+                      </div>
+                    ) : duplicateGroups.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-warning-default/5 border border-warning-default/20 rounded-lg">
+                          <p className="text-sm text-warning-default-dark font-medium">
+                            Warning: {duplicateGroups.length} duplicate group{duplicateGroups.length !== 1 ? 's' : ''} found in this activity.
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {duplicateGroups.map((group, index) => (
+                            <div key={index} className="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+                              <div className="bg-neutral-100 px-4 py-2 border-b border-neutral-200 flex items-center justify-between">
+                                <span className="text-sm font-bold text-neutral-900">Duplicate Group #{index + 1}</span>
+                                <Badge className="bg-warning-default text-white border-none text-xs">
+                                  {group.essays.length} matching essays
+                                </Badge>
+                              </div>
+                              <div className="divide-y divide-neutral-100">
+                                {group.essays.map((essay, essayIndex) => (
+                                  <div key={essayIndex} className="p-3 bg-white">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-sm font-semibold text-neutral-900">{essay.studentName}</span>
+                                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
+                                        {essay.programName} • {essay.sectionName}
+                                      </Badge>
+                                    </div>
+                                    <div className="text-xs text-neutral-500 italic truncate">
+                                      "{essay.title}"
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-neutral-50 rounded-lg border border-dashed border-neutral-200">
+                        <CheckCircle2 className="w-8 h-8 text-success-default mx-auto mb-2 opacity-50" />
+                        <p className="text-sm text-neutral-500">No cross-class duplicate essays detected.</p>
                       </div>
                     )}
                   </div>

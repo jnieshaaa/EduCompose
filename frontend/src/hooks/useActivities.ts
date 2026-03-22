@@ -58,9 +58,11 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
         const [activitiesData, coursesData, programLoadsData, sectionsData, rubricsData] =
           await Promise.all([
             fetchTeacherActivities(
-              ay || currentAY,
-              term || currentSemester,
+              ay,
+              term,
               showArchived,
+              currentAY,
+              currentSemester
             ),
             fetchCourses().then((res) =>
               res.map((c) => ({ id: c.id, name: c.course_code })),

@@ -128,6 +128,7 @@ export function ActivitiesTab() {
         courseSections={courseSections}
         onSectionClick={handleCourseSectionClick}
         courses={courses}
+        programLoads={programLoads}
         sections={sections}
       />
     );

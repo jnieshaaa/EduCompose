@@ -414,3 +414,16 @@ export interface DashboardStats {
     student_count: number;
   }>;
 }
+
+export interface SystemStatsResponse {
+  total_users: number;
+  total_teachers: number;
+  total_students: number;
+  total_admins: number;
+  total_programs: number;
+  total_sections: number;
+  total_activities: number;
+  total_essays: number;
+  total_rubrics: number;
+  platform_rubrics: number;
+}

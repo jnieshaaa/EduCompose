@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
-import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare } from "lucide-react";
+import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare, Users, GraduationCap, School, Archive } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -41,6 +41,17 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Student/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   "/Student/Submit": { label: "Submit Essay", icon: <FileText className="w-4 h-4" /> },
   "/Student/Feedback": { label: "AI Feedback", icon: <ClipboardCheck className="w-4 h-4" /> },
+  
+  // Admin section
+  "/Admin/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
+  "/Admin/Users": { label: "User Management", icon: <Users className="w-4 h-4" /> },
+  "/Admin/Students": { label: "Students", icon: <GraduationCap className="w-4 h-4" /> },
+  "/Admin/Rubrics": { label: "System Rubrics", icon: <ClipboardCheck className="w-4 h-4" /> },
+  "/Admin/Content": { label: "Content Management", icon: <Layers className="w-4 h-4" /> },
+  "/Admin/Schools": { label: "Schools & Departments", icon: <School className="w-4 h-4" /> },
+  "/Admin/Settings": { label: "System Settings", icon: <Settings className="w-4 h-4" /> },
+  "/Admin/Archive": { label: "Archive", icon: <Archive className="w-4 h-4" /> },
+  "/Teacher/Archive": { label: "Academic Archive", icon: <Archive className="w-4 h-4" /> },
   
   // Legacy routes
   "/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
@@ -134,6 +145,22 @@ const Breadcrumb: React.FC = () => {
               path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&activityTitle=${encodeURIComponent(activityTitle)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
             });
           }
+        }
+      } else if (pathname === "/Teacher/Archive") {
+        const courseId = searchParams.get("courseId");
+        const courseCode = searchParams.get("courseCode");
+        
+        items.push({
+          label: "Archive",
+          path: "/Teacher/Archive",
+          icon: <Archive className="w-4 h-4" />,
+        });
+        
+        if (courseId && courseCode) {
+          items.push({
+            label: courseCode,
+            path: `/Teacher/Archive?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
+          });
         }
       } else {
         if (config.parent) {
@@ -245,6 +272,52 @@ const Breadcrumb: React.FC = () => {
       items.push({
         label: "Dashboard",
         path: "/Student/Dashboard",
+        icon: <Home className="w-4 h-4" />,
+      });
+    }
+  } else if (pathname.startsWith("/Admin/")) {
+    if (config) {
+      items.push({
+        label: config.label,
+        path: pathname,
+        icon: config.icon,
+      });
+
+      // Special case for Activity Logs in User Management
+      if (pathname === "/Admin/Users" && searchParams.get("logs")) {
+        items.push({
+          label: "Activity Logs",
+          path: `${pathname}?logs=${searchParams.get("logs")}`,
+        });
+      }
+
+      // Sub-views for Content Management
+      if (pathname === "/Admin/Content") {
+        const view = searchParams.get("view");
+        if (view) {
+          const labels: any = { programs: "Programs", activities: "Activities", rubrics: "Rubrics" };
+          items.push({
+            label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
+            path: `${pathname}?view=${view}`,
+          });
+        }
+      }
+
+      // Sub-views for Schools & Courses
+      if (pathname === "/Admin/Schools") {
+        const view = searchParams.get("view");
+        if (view) {
+          const labels: any = { schools: "Institutional Hierarchy", courses: "Global Course Registry" };
+          items.push({
+            label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
+            path: `${pathname}?view=${view}`,
+          });
+        }
+      }
+    } else {
+      items.push({
+        label: "Dashboard",
+        path: "/Admin/Dashboard",
         icon: <Home className="w-4 h-4" />,
       });
     }

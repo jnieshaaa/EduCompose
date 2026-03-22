@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   Edit2,
@@ -13,6 +14,7 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import EditStudentModal from "../../components/admin/EditStudentModal";
+import AdminUserLogs from "../../components/admin/AdminUserLogs";
 
 interface Student {
   id: string;
@@ -48,6 +50,17 @@ export const AdminStudentsTab: React.FC = () => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
+
+  const logStudentId = searchParams.get("logs");
+
+  useEffect(() => {
+    if (logStudentId && !selectedStudentForLogs && students.length > 0) {
+      const s = students.find(std => std.id === logStudentId);
+      if (s) setSelectedStudentForLogs(s);
+    }
+  }, [logStudentId, students, selectedStudentForLogs]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,6 +157,20 @@ export const AdminStudentsTab: React.FC = () => {
       `${s.first_name} ${s.last_name} ${s.student_code} ${s.email}`.toLowerCase();
     return fullSearch.includes(searchTerm.toLowerCase());
   });
+
+  if (selectedStudentForLogs) {
+    return (
+      <AdminUserLogs 
+        item={selectedStudentForLogs as any} 
+        type="student" 
+        onBack={() => {
+          setSelectedStudentForLogs(null);
+          searchParams.delete("logs");
+          setSearchParams(searchParams);
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -318,6 +345,19 @@ export const AdminStudentsTab: React.FC = () => {
                             >
                               <Trash2 size={14} />
                               Archive Student
+                            </button>
+                            <div className="my-1 border-t border-neutral-100" />
+                            <button
+                               onClick={() => {
+                                 setSelectedStudentForLogs(s);
+                                 setOpenDropdown(null);
+                                 searchParams.set("logs", s.id);
+                                 setSearchParams(searchParams);
+                               }}
+                               className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            >
+                               <Search size={14} className="text-primary" />
+                               View Activity Logs
                             </button>
                           </div>
                         )}

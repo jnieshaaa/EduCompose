@@ -110,7 +110,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         if (currentAY) query = query.eq("academic_year", currentAY);
         if (currentSemester) query = query.eq("term", currentSemester);
       } else {
-        // Archive view: allow specific filter OR default to "NOT CURRENT"
+        // Archive view: apply specific filters
         if (ay && ay !== "all") {
           query = query.eq("academic_year", ay);
         }
@@ -118,8 +118,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
           query = query.eq("term", term);
         }
 
-        // If no explicit filters provided for archive, show all EXCEPT current
-        if ((!ay || ay === "all") && (!term || term === "all") && currentAY && currentSemester) {
+        // ALWAYS exclude current when archiving if context is available
+        if (currentAY && currentSemester) {
           query = query.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
         }
       }
@@ -157,7 +157,11 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
 
       if (schoolError) throw schoolError;
 
-      const userLoads = (loadsData || []).map(l => l.courses) as unknown as Course[];
+      const userLoads = (loadsData || []).map(l => ({
+        ...(l.courses as any),
+        academic_year: l.academic_year,
+        term: l.term
+      })) as unknown as Course[];
       setMyCourses(userLoads.filter(c => c !== null));
       setDepartmentCourses((deptData as unknown as Course[]) || []);
       setSchoolCourses((schoolData as unknown as Course[]) || []);

@@ -81,8 +81,6 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
         }
 
         // 1. Fetch blocks through teacher_program_loads hierarchy
-        const targetAY = ay || currentAY;
-        const targetTerm = term || currentSemester;
 
         let query = supabase
           .from("blocks")
@@ -108,11 +106,22 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           `)
           .eq("teacher_program_loads.teacher_course_loads.teacher_id", context.auth_user_id);
 
-        if (targetAY) {
-          query = query.eq("teacher_program_loads.teacher_course_loads.academic_year", targetAY);
-        }
-        if (targetTerm) {
-          query = query.eq("teacher_program_loads.teacher_course_loads.term", targetTerm);
+        if (!showArchived) {
+          if (currentAY) {
+            query = query.eq("teacher_program_loads.teacher_course_loads.academic_year", currentAY);
+          }
+          if (currentSemester) {
+            query = query.eq("teacher_program_loads.teacher_course_loads.term", currentSemester);
+          }
+        } else {
+          // Archive view: apply specific filters
+          if (ay && ay !== "all") {
+            query = query.eq("teacher_program_loads.teacher_course_loads.academic_year", ay);
+          }
+          if (term && term !== "all") {
+            query = query.eq("teacher_program_loads.teacher_course_loads.term", term);
+          }
+          
         }
 
         const { data: blocksData, error: blocksError } = await query;
@@ -167,7 +176,15 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           };
         });
 
-        setSections(mappedSections);
+        let finalSections = mappedSections;
+        if (showArchived && currentAY && currentSemester) {
+          finalSections = mappedSections.filter(s => 
+            s.academic_year !== currentAY || s.term !== currentSemester
+          );
+        }
+
+        setSections(finalSections);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error loading sections:", error);
         setLoadError("Unable to load blocks.");

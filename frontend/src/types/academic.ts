@@ -36,9 +36,10 @@ export interface Course {
   course_title: string;
   units: number;
   year_level?: string;
-  semester?: string;
   department?: string;
   created_at?: string;
+  academic_year?: string; 
+  term?: string;
   // For joined data
   schools?: { name: string };
   departments?: { name: string };
@@ -58,7 +59,18 @@ export interface Student {
   program_id: string;
   teacher_id?: string;
   created_at?: string;
-  block_students?: { block_id: string }[];
+  block_students?: { 
+    block_id: string;
+    blocks?: {
+      name: string;
+      teacher_program_loads?: {
+        teacher_course_loads?: {
+          academic_year: string;
+          term: string;
+        }
+      }
+    }
+  }[];
 }
 
 export interface Section {

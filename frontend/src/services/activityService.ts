@@ -112,6 +112,8 @@ export const fetchTeacherActivities = async (
   academicYear?: string,
   term?: string,
   showArchived: boolean = false,
+  currentAY?: string,
+  currentTerm?: string,
 ): Promise<EssayActivity[]> => {
   try {
     const teacherId = await fetchTeacherUUID();
@@ -129,11 +131,16 @@ export const fetchTeacherActivities = async (
       .eq("teacher_id", teacherId);
 
     if (!showArchived) {
-      if (academicYear) query = query.eq("academic_year", academicYear);
-      if (term) query = query.eq("term", term);
+      if (academicYear && academicYear !== "all") query = query.eq("academic_year", academicYear);
+      if (term && term !== "all") query = query.eq("term", term);
     } else {
-      if (academicYear && term) {
-        query = query.or(`academic_year.neq.${academicYear},term.neq.${term}`);
+      // Archive view: apply specific filters
+      if (academicYear && academicYear !== "all") query = query.eq("academic_year", academicYear);
+      if (term && term !== "all") query = query.eq("term", term);
+      
+      // But ALWAYS exclude the current context if provided
+      if (currentAY && currentTerm) {
+        query = query.or(`academic_year.neq.${currentAY},term.neq.${currentTerm}`);
       }
     }
 

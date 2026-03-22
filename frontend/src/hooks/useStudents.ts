@@ -3,14 +3,16 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
 import { authApi } from "../api";
+import { useAcademicContext } from "./useAcademicContext";
 import { sendStudentWelcomeEmail } from "../services/emailService";
 
-export function useStudents(blockId?: string, ay?: string, term?: string) {
+export function useStudents(blockId?: string, ay?: string, term?: string, showArchived: boolean = false) {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
+  const { currentAY, currentSemester } = useAcademicContext();
 
   // Filters for StudentsTab
   const [programFilter, setProgramFilter] = useState("All Programs");
@@ -72,19 +74,41 @@ export function useStudents(blockId?: string, ay?: string, term?: string) {
       let result = data || [];
 
       // Manual filtering for AY and Term since it's deep in the join
-      if (ay && ay !== "all") {
-        result = result.filter(s => 
-          s.block_students?.some((bs: any) => 
-            bs.blocks?.teacher_program_loads?.teacher_course_loads?.academic_year === ay
-          )
-        );
-      }
-      if (term && term !== "all") {
-        result = result.filter(s => 
-          s.block_students?.some((bs: any) => 
-            bs.blocks?.teacher_program_loads?.teacher_course_loads?.term === term
-          )
-        );
+      if (!showArchived) {
+        if (currentAY && currentSemester) {
+          result = result.filter(s => 
+            s.block_students?.some((bs: any) => {
+              const bcl = bs.blocks?.teacher_program_loads?.teacher_course_loads;
+              return bcl?.academic_year === currentAY && bcl?.term === currentSemester;
+            })
+          );
+        }
+      } else {
+        // Archive view: apply specific filters
+        if (ay && ay !== "all") {
+          result = result.filter(s => 
+            s.block_students?.some((bs: any) => 
+              bs.blocks?.teacher_program_loads?.teacher_course_loads?.academic_year === ay
+            )
+          );
+        }
+        if (term && term !== "all") {
+          result = result.filter(s => 
+            s.block_students?.some((bs: any) => 
+              bs.blocks?.teacher_program_loads?.teacher_course_loads?.term === term
+            )
+          );
+        }
+
+        // ALWAYS exclude current when archiving if context available
+        if (currentAY && currentSemester) {
+          result = result.filter(s => 
+            s.block_students?.every((bs: any) => {
+              const bcl = bs.blocks?.teacher_program_loads?.teacher_course_loads;
+              return bcl?.academic_year !== currentAY || bcl?.term !== currentSemester;
+            })
+          );
+        }
       }
 
       setStudents(result);

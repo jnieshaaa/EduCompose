@@ -6,6 +6,7 @@ import type {
   AnalysisResponse,
   TextAnalysisResponse,
   DashboardStats,
+  SystemStatsResponse,
 } from "./types/Essay";
 import dummyDataJson from "./data/dummyData.json";
 import { supabase } from "./lib/supabaseClient";
@@ -559,6 +560,9 @@ export const adminApi = {
     // Apply filters
     if (params?.role) {
       query = query.eq("role", params.role);
+    } else {
+      // If role is not specified (e.g., 'all'), exclude admins
+      query = query.neq("role", "admin");
     }
 
     if (params?.search) {
@@ -655,84 +659,120 @@ export const adminApi = {
     return { message: "Password reset successfully" };
   },
 
-  getSystemStats: async () => {
-    // Get counts from various tables
-    const [
-      usersCount,
-      teachersCount,
-      studentsCount,
-      adminsCount,
-      programsCount,
-      sectionsCount,
-      activitiesCount,
-      essaysCount,
-      rubricsCount,
-    ] = await Promise.all([
-      supabase.from("users").select("id", { count: "exact", head: true }),
-      supabase
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "teacher"),
-      supabase.from("students").select("id", { count: "exact", head: true }),
-      supabase
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "admin"),
-      supabase
-        .from("programs_lookup")
-        .select("id", { count: "exact", head: true }),
-      supabase.from("blocks").select("id", { count: "exact", head: true }),
-      supabase
-        .from("essay_activities")
-        .select("id", { count: "exact", head: true }),
-      supabase.from("essays").select("id", { count: "exact", head: true }),
-      supabase.from("rubrics").select("id", { count: "exact", head: true }),
-    ]);
+  getActivityLogs: async (params?: { 
+    userId?: string; 
+    studentId?: string;
+    search?: string; 
+    limit?: number; 
+    offset?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    let query = supabase
+      .from("activity_logs")
+      .select("*, users(first_name, last_name, email, role), students(first_name, last_name, email, student_code)", { count: "exact" })
+      .order("created_at", { ascending: false });
 
-    // Get platform rubrics count
-    const { count: platformRubricsCount } = await supabase
-      .from("rubrics")
-      .select("id", { count: "exact", head: true })
-      .is("user_id", null);
+    if (params?.userId) {
+      query = query.eq("user_id", params.userId);
+    }
 
-    return {
-      total_users: usersCount.count || 0,
-      total_teachers: teachersCount.count || 0,
-      total_students: studentsCount.count || 0,
-      total_admins: adminsCount.count || 0,
-      total_programs: programsCount.count || 0,
-      total_sections: sectionsCount.count || 0,
-      total_activities: activitiesCount.count || 0,
-      total_essays: essaysCount.count || 0,
-      total_rubrics: rubricsCount.count || 0,
-      platform_rubrics: platformRubricsCount || 0,
+    if (params?.studentId) {
+      query = query.eq("student_id", params.studentId);
+    }
+
+    if (params?.search) {
+      query = query.or(`description.ilike.%${params.search}%,action_type.ilike.%${params.search}%`);
+    }
+
+    if (params?.startDate) {
+      query = query.gte("created_at", params.startDate);
+    }
+    
+    if (params?.endDate) {
+      const end = params.endDate.includes("T") ? params.endDate : `${params.endDate}T23:59:59.999Z`;
+      query = query.lte("created_at", end);
+    }
+
+    if (params?.limit) {
+      const start = params.offset || 0;
+      const endOffset = start + params.limit - 1;
+      query = query.range(start, endOffset);
+    }
+
+    const { data: logs, error, count } = await query;
+    if (error) throw new Error(error.message);
+    
+    return { 
+      logs: logs || [], 
+      total: count || 0 
     };
+  },
+
+  getSystemStats: async (): Promise<SystemStatsResponse> => {
+    // We use Supabase directly to bypass the 403 error from the backend.
+    // Note: This relies on Supabase RLS policies allowing the current user to count these records.
+    try {
+      const [
+        { count: totalUsers },
+        { count: totalTeachers },
+        { count: totalStudents },
+        { count: totalAdmins },
+        { count: totalPrograms },
+        { count: totalSections },
+        { count: totalActivities },
+        { count: totalEssays },
+        { count: totalRubrics },
+        { count: platformRubrics }
+      ] = await Promise.all([
+        supabase.from("users").select("id", { count: "exact", head: true }),
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "teacher"),
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "student"),
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "admin"),
+        supabase.from("programs_lookup").select("id", { count: "exact", head: true }),
+        supabase.from("blocks").select("id", { count: "exact", head: true }),
+        supabase.from("essay_activities").select("id", { count: "exact", head: true }),
+        supabase.from("essays").select("id", { count: "exact", head: true }),
+        supabase.from("rubrics").select("id", { count: "exact", head: true }),
+        supabase.from("rubrics").select("id", { count: "exact", head: true }).is("created_by", null)
+      ]);
+
+      return {
+        total_users: totalUsers || 0,
+        total_teachers: totalTeachers || 0,
+        total_students: totalStudents || 0,
+        total_admins: totalAdmins || 0,
+        total_programs: totalPrograms || 0,
+        total_sections: totalSections || 0,
+        total_activities: totalActivities || 0,
+        total_essays: totalEssays || 0,
+        total_rubrics: totalRubrics || 0,
+        platform_rubrics: platformRubrics || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching system stats from Supabase:", error);
+      throw error;
+    }
   },
 
   getAllPrograms: async () => {
     const { data, error } = await supabase
       .from("programs_lookup")
-      .select("*")
+      .select("*, departments(name, school_id, schools(name))")
       .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+    
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   getAllActivities: async () => {
     const { data, error } = await supabase
       .from("essay_activities")
-      .select("*")
+      .select("*, courses_lookup(name), blocks(name)")
       .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+    
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   getAllRubrics: async () => {
@@ -740,12 +780,9 @@ export const adminApi = {
       .from("rubrics")
       .select("*")
       .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+    
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   getStudents: async (params?: { search?: string; limit?: number }) => {

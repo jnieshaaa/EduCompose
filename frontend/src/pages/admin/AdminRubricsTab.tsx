@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import type { CriteriaRow } from "../../types/rubricTypes";
+import { logActivity } from "../../utils/logger";
 
 export function AdminRubricsTab() {
   const [platformRubrics, setPlatformRubrics] = useState<any[]>([]);
@@ -58,6 +59,19 @@ export function AdminRubricsTab() {
 
       if (error) {
         throw error;
+      }
+
+      // Log the action
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: dbUser } = await supabase.from("users").select("id").eq("auth_user_id", user.id).single();
+          if (dbUser) {
+            await logActivity(dbUser.id, "create_rubric", `Created platform rubric: ${rubricData.name}`);
+          }
+        }
+      } catch (logErr) {
+        console.warn("Logging failed, but action succeeded:", logErr);
       }
 
       await loadPlatformRubrics();

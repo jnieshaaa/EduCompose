@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Calendar, Plus, Loader2 } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import {
@@ -10,20 +10,25 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal";
+import { supabase } from "../../lib/supabaseClient";
 import type { EssayActivity, CourseSection } from "../../types/activityTypes";
 import { getCoursesLabel, getBlocksLabel } from "../../utils/activityUtils";
-import {
-  fetchCourseSectionCounts,
-  fetchDuplicateEssays,
-  type DuplicateEssayGroup,
-} from "../../services/activityService";
+import { fetchCourseSectionCounts } from "../../services/activityService";
 
 interface CourseSectionsViewProps {
   activity: EssayActivity;
   courseSections: CourseSection[];
   onSectionClick: (section: CourseSection) => void;
   courses: { id: string; name: string }[];
-  sections: { id: string; name: string; courseId: string }[];
+  programLoads: {
+    id: string;
+    program_id: string;
+    program_name: string;
+    course_id: string;
+  }[];
+  sections: { id: string; name: string; courseId: string; programLoadId: string }[];
 }
 
 export function CourseSectionsView({
@@ -31,20 +36,26 @@ export function CourseSectionsView({
   courseSections,
   onSectionClick,
   courses,
+  programLoads,
   sections,
 }: CourseSectionsViewProps) {
   const [sectionsWithCounts, setSectionsWithCounts] =
     useState<CourseSection[]>(courseSections);
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
-  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>(
-    [],
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Selection state for modal
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [selectedProgramLoadIds, setSelectedProgramLoadIds] = useState<string[]>([]);
+  const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
+    activity.blockIds || []
   );
 
   useEffect(() => {
     const loadCounts = async () => {
       setIsLoadingCounts(true);
       try {
-        // Fetch counts for all sections in parallel
         const countsPromises = courseSections.map((section: CourseSection) =>
           fetchCourseSectionCounts(
             section.courseId,
@@ -63,7 +74,6 @@ export function CourseSectionsView({
         setSectionsWithCounts(sectionsWithCounts);
       } catch (error) {
         console.error("Error loading counts:", error);
-        // Keep original sections if fetch fails
         setSectionsWithCounts(courseSections);
       } finally {
         setIsLoadingCounts(false);
@@ -78,20 +88,77 @@ export function CourseSectionsView({
     }
   }, [courseSections, activity.id]);
 
-  // Load duplicate essays
-  useEffect(() => {
-    const loadDuplicates = async () => {
-      try {
-        const duplicates = await fetchDuplicateEssays(activity.id);
-        setDuplicateGroups(duplicates);
-      } catch (error) {
-        console.error("Error loading duplicate essays:", error);
-        setDuplicateGroups([]);
-      }
-    };
+  const filteredPrograms = useMemo(() => {
+    if (!selectedCourseId) return [];
+    return programLoads.filter((p) => p.course_id === selectedCourseId);
+  }, [selectedCourseId, programLoads]);
 
-    loadDuplicates();
-  }, [activity.id]);
+  const filteredSections = useMemo(() => {
+    if (selectedProgramLoadIds.length === 0) return [];
+    return sections.filter((s) => selectedProgramLoadIds.includes(s.programLoadId));
+  }, [selectedProgramLoadIds, sections]);
+
+  const handleCourseChange = (id: string) => {
+    setSelectedCourseId(id);
+    setSelectedProgramLoadIds([]);
+  };
+
+  const handleProgramToggle = (id: string) => {
+    setSelectedProgramLoadIds((prev) => 
+      prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSection = (sectionId: string) => {
+    setSelectedSectionIds(prev => 
+      prev.includes(sectionId) 
+        ? prev.filter(id => id !== sectionId)
+        : [...prev, sectionId]
+    );
+  };
+
+  const handleUpdateSections = async () => {
+    try {
+      setIsUpdating(true);
+      
+      const selectedSections = sections.filter(s => selectedSectionIds.includes(s.id));
+      const uniqueCourseIds = Array.from(new Set(selectedSections.map(s => s.courseId)));
+      const uniqueProgramIds = new Set<string>();
+
+      const { data: blocksData } = await supabase
+        .from("blocks")
+        .select("teacher_program_loads(program_id)")
+        .in("id", selectedSectionIds);
+
+      if (blocksData) {
+        blocksData.forEach((b: any) => {
+          const tpl = Array.isArray(b.teacher_program_loads)
+            ? b.teacher_program_loads[0]
+            : b.teacher_program_loads;
+          if (tpl?.program_id) uniqueProgramIds.add(String(tpl.program_id));
+        });
+      }
+
+      const { error } = await supabase
+        .from("essay_activities")
+        .update({
+          course_id: uniqueCourseIds,
+          block_id: selectedSectionIds,
+          program_id: Array.from(uniqueProgramIds)
+        })
+        .eq("id", activity.id);
+
+      if (error) throw error;
+
+      setIsAddModalOpen(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating activity sections:", error);
+      alert("Failed to update sections. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -129,155 +196,205 @@ export function CourseSectionsView({
         </div>
       </Card>
 
-      {/* Course-Blocks Table and Duplicate Essays Warning - Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Course-Blocks Table - Takes 2/3 width on large screens */}
-        <Card className="lg:col-span-2">
-          <div className="p-4 border-b">
+      {/* Course-Blocks Table */}
+      <Card className="w-full">
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>
             <h2 className="text-lg font-semibold text-neutral-900">Blocks</h2>
             <p className="text-sm text-neutral-500">
               Click on a block to view students
             </p>
           </div>
-          <Table>
-            <TableHeader>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-2"
+            onClick={() => {
+              setSelectedSectionIds(activity.blockIds || []);
+              setIsAddModalOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Add Block
+          </Button>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Block</TableHead>
+              <TableHead className="text-center">Students</TableHead>
+              <TableHead className="text-center">Submissions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoadingCounts ? (
               <TableRow>
-                <TableHead>Block</TableHead>
-                <TableHead className="text-center">Students</TableHead>
-                <TableHead className="text-center">Submissions</TableHead>
+                <TableCell
+                  colSpan={3}
+                  className="text-center py-8 text-neutral-500"
+                >
+                  Loading counts...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingCounts ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="text-center py-8 text-neutral-500"
-                  >
-                    Loading counts...
+            ) : (
+              sectionsWithCounts.map((section) => (
+                <TableRow
+                  key={section.id}
+                  className="cursor-pointer hover:bg-primary/5 transition-colors"
+                  onClick={() => onSectionClick(section)}
+                >
+                  <TableCell className="font-medium">
+                    {section.name}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/20"
+                    >
+                      {section.studentCount}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={
+                        section.submissionCount > 0
+                          ? "bg-success-default/10 text-success-default border-success-default/20"
+                          : "bg-neutral-100 text-neutral-500 border-neutral-200"
+                      }
+                    >
+                      {section.submissionCount}
+                    </Badge>
                   </TableCell>
                 </TableRow>
-              ) : (
-                sectionsWithCounts.map((section) => (
-                  <TableRow
-                    key={section.id}
-                    className="cursor-pointer hover:bg-primary/5 transition-colors"
-                    onClick={() => onSectionClick(section)}
-                  >
-                    <TableCell className="font-medium">
-                      {section.name}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        {section.studentCount}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={
-                          section.submissionCount > 0
-                            ? "bg-success-default/10 text-success-default border-success-default/20"
-                            : "bg-neutral-100 text-neutral-500 border-neutral-200"
-                        }
-                      >
-                        {section.submissionCount}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
 
-        {/* Duplicate Essays Warning - Takes 1/3 width on large screens */}
-        <Card
-          className={`lg:col-span-1 ${
-            duplicateGroups.length > 0
-              ? "border-warning-default/30 bg-warning-default/5"
-              : "border-neutral-200 bg-neutral-50"
-          }`}
-        >
-          <div className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle
-                className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                  duplicateGroups.length > 0
-                    ? "text-warning-default"
-                    : "text-neutral-400"
-                }`}
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-neutral-900 mb-2 text-sm">
-                  Duplicate Essays Detected
-                </h3>
-                <p className="text-xs text-neutral-600 mb-3">
-                  {duplicateGroups.length > 0
-                    ? "Same content submitted by students from different courses."
-                    : "No duplicate essays detected. All submissions appear to be unique."}
-                </p>
-                {duplicateGroups.length > 0 ? (
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {duplicateGroups.map((group, index) => {
-                      return (
-                        <div
-                          key={index}
-                          className="bg-white rounded-lg border border-warning-default/20 p-2.5"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="text-xs font-medium text-neutral-900">
-                              Group #{index + 1}
-                            </div>
-                            <Badge className="bg-warning-default/70 text-warning-default border-warning-default/20 text-xs px-1.5 py-0.5">
-                              {group.essays.length} essays
-                            </Badge>
-                          </div>
-                          <div className="space-y-1">
-                            {group.essays.map(
-                              (
-                                essay: DuplicateEssayGroup["essays"][0],
-                                essayIndex: number,
-                              ) => (
-                                <div
-                                  key={essayIndex}
-                                  className="text-xs text-neutral-600"
-                                >
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                                    <Badge className="bg-warning-default/90 text-warning-default border-warning-default/20 text-xs px-1 py-0">
-                                      {essay.programName} - {essay.sectionName}
-                                    </Badge>
-                                  </div>
-                                  <div className="font-medium text-neutral-900 text-xs">
-                                    {essay.studentName}
-                                  </div>
-                                  <div
-                                    className="text-neutral-500 italic text-xs truncate"
-                                    title={essay.title}
-                                  >
-                                    "{essay.title}"
-                                  </div>
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+      {/* Add Sections Modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Manage Activity Blocks"
+        size="lg"
+      >
+        <div className="space-y-6">
+          <p className="text-sm text-neutral-600 mb-6">
+            Assign this activity to additional courses, programs, and blocks.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Courses Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-neutral-900 mb-3">
+                1. Select Course
+              </label>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => handleCourseChange(e.target.value)}
+                className="w-full px-3 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+              >
+                <option value="">Choose a course...</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Programs Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-neutral-900 mb-3">
+                2. Select Programs
+              </label>
+              <div className="w-full border border-neutral-200 rounded-lg bg-white overflow-y-auto h-[250px] p-2 space-y-1 shadow-inner ring-1 ring-black/5">
+                {filteredPrograms.length === 0 ? (
+                  <div className="text-xs text-neutral-400 p-4 text-center italic">
+                    {selectedCourseId ? "No programs found for this course" : "Select a course first"}
                   </div>
                 ) : (
-                  <div className="text-xs text-neutral-500 italic text-center py-4">
-                    All essays are unique. No duplicates found.
+                  filteredPrograms.map((p) => (
+                    <label key={p.id} className={`flex items-center gap-3 text-sm cursor-pointer p-2.5 hover:bg-neutral-50 rounded-md transition-colors ${selectedProgramLoadIds.includes(p.id) ? 'bg-primary/5 text-primary font-medium' : 'text-neutral-700'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedProgramLoadIds.includes(p.id)}
+                        onChange={() => handleProgramToggle(p.id)}
+                        className="w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary transition-all"
+                      />
+                      <span>{p.program_name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Sections Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-neutral-900 mb-3">
+                3. Select Blocks
+              </label>
+              <div className="w-full border border-neutral-200 rounded-lg bg-white overflow-y-auto h-[250px] p-2 space-y-1 shadow-inner ring-1 ring-black/5">
+                {filteredSections.length === 0 ? (
+                  <div className="text-xs text-neutral-400 p-4 text-center italic">
+                    {selectedProgramLoadIds.length === 0 ? "Select at least one program" : "No blocks found"}
                   </div>
+                ) : (
+                  filteredSections.map((s) => (
+                    <label key={s.id} className={`flex items-center gap-3 text-sm cursor-pointer p-2.5 hover:bg-neutral-50 rounded-md transition-colors ${selectedSectionIds.includes(s.id) ? 'bg-primary/5 text-primary font-medium' : 'text-neutral-700'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSectionIds.includes(s.id)}
+                        onChange={() => handleToggleSection(s.id)}
+                        className="w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary transition-all"
+                      />
+                      <span>{s.name}</span>
+                    </label>
+                  ))
                 )}
               </div>
             </div>
           </div>
-        </Card>
-      </div>
+
+          {/* Selection Summary */}
+          <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200 mt-4 flex items-center justify-between">
+            <span className="text-xs text-neutral-600">
+              Total assigned blocks: <span className="font-bold text-neutral-900">{selectedSectionIds.length}</span>
+            </span>
+            <span className="text-xs text-neutral-500 italic">
+              Selections are kept even when switching courses.
+            </span>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddModalOpen(false)}
+              disabled={isUpdating}
+              className="px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleUpdateSections}
+              disabled={isUpdating || selectedSectionIds.length === 0}
+              className="px-8 shadow-md"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

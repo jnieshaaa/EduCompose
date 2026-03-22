@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
+import { useSearchParams } from "react-router-dom";
 import { AdminSchoolsTab } from "./AdminSchoolsTab";
 import { AdminCoursesTab } from "./AdminCoursesTab";
 
 const SchoolManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"schools" | "courses">("schools");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("view") as "schools" | "courses") || "schools";
+
+  const setActiveTab = (tab: "schools" | "courses") => {
+    searchParams.set("view", tab);
+    setSearchParams(searchParams);
+  };
 
   return (
     <div className="space-y-6">

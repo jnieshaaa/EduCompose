@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   UserPlus,
   Search,
@@ -16,6 +17,7 @@ import Input from "../../components/ui/Input";
 import CreateUserModal from "../../components/admin/CreateUserModal";
 import EditUserModal from "../../components/admin/EditUserModal";
 import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
+import AdminUserLogs from "../../components/admin/AdminUserLogs";
 
 interface User {
   id: string;
@@ -40,7 +42,20 @@ export function AdminUsersTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [error, setError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  
+  // Initialize selectedUserForLogs from search param if present
+  const logUserId = searchParams.get("logs");
+  const [selectedUserForLogs, setSelectedUserForLogs] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (logUserId && !selectedUserForLogs && users.length > 0) {
+      const u = users.find(user => user.id === logUserId);
+      if (u) setSelectedUserForLogs(u);
+    }
+  }, [logUserId, users, selectedUserForLogs]);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,6 +133,20 @@ export function AdminUsersTab() {
         return "bg-gray-100 text-gray-700";
     }
   };
+
+  if (selectedUserForLogs) {
+    return (
+      <AdminUserLogs 
+        item={selectedUserForLogs} 
+        type="user" 
+        onBack={() => {
+          setSelectedUserForLogs(null);
+          searchParams.delete("logs");
+          setSearchParams(searchParams);
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -315,6 +344,18 @@ export function AdminUsersTab() {
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                             >
                               {user.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedUserForLogs(user);
+                                setOpenDropdown(null);
+                                searchParams.set("logs", user.id);
+                                setSearchParams(searchParams);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            >
+                              <Search className="w-4 h-4" />
+                              View Activity Logs
                             </button>
                             <div className="border-t border-neutral-200 my-1"></div>
                             <button
