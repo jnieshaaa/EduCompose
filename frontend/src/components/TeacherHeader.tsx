@@ -18,7 +18,7 @@ import {
   subscribeToNotifications,
 } from "../services/notificationService";
 import { fetchTeacherUUID } from "../services/rubricService";
-import type { Notification } from "../data/notificationsData";
+import type { Notification } from "../types/notification";
 
 // Updated interface to include the user's role
 interface TeacherHeaderProps {

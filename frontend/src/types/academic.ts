@@ -40,6 +40,7 @@ export interface Course {
   created_at?: string;
   academic_year?: string; 
   term?: string;
+  semester?: string;
   // For joined data
   schools?: { name: string };
   departments?: { name: string };
