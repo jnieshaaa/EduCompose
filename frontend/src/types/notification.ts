@@ -11,7 +11,8 @@ export type NotificationType =
   | "resubmission_open"
   | "resubmission_allowed"
   | "upcoming_deadline"
-  | "revision_requested";
+  | "revision_requested"
+  | "course_removed";
 
 export type RelatedType = "essay" | "rubric" | "essay_activities" | "classes" | "assignments";
 

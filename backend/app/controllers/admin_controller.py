@@ -2,7 +2,7 @@
 Admin Controller
 Handles admin-only endpoints for system management
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -19,7 +19,7 @@ admin_router = APIRouter()
 # Admin-only dependency
 def require_admin(current_user: User = Depends(auth_service.get_current_user)):
     """Ensure the current user is an admin"""
-    if current_user.role != "admin":
+    if (current_user.role or "").lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -347,9 +347,9 @@ async def get_system_stats(
         
         # Count users by role
         total_users = len(all_users)
-        total_teachers = sum(1 for u in all_users if u.get("user_metadata", {}).get("role") == "teacher")
-        total_students = sum(1 for u in all_users if u.get("user_metadata", {}).get("role") == "student")
-        total_admins = sum(1 for u in all_users if u.get("user_metadata", {}).get("role") == "admin")
+        total_teachers = sum(1 for u in all_users if (u.get("user_metadata", {}).get("role") or "").lower() == "teacher")
+        total_students = sum(1 for u in all_users if (u.get("user_metadata", {}).get("role") or "").lower() == "student")
+        total_admins = sum(1 for u in all_users if (u.get("user_metadata", {}).get("role") or "").lower() == "admin")
         
         # Get stats from Supabase database using REST API
         # Note: Using httpx since we need service role key
@@ -491,4 +491,70 @@ async def get_all_rubrics(
             return response.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching rubrics: {str(e)}")
+
+class DeleteCourseLoadRequest(BaseModel):
+    teacher_id: str  # Changed to str to handle both numeric IDs and UUIDs safely
+    course_title: str
+    reason: str
+
+@admin_router.delete("/teacher-course-loads/{load_id}")
+async def delete_teacher_course_load(
+    load_id: str,
+    payload: DeleteCourseLoadRequest = Body(...),
+    current_user: User = Depends(require_admin)
+):
+    """Admin endpoint to forcefully delete a teacher's course load and notify them"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    
+    if not supabase_url or not supabase_service_role_key:
+        raise HTTPException(status_code=500, detail="Supabase configuration is missing")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # 1. Delete course load
+            response = await client.delete(
+                f"{supabase_url}/rest/v1/teacher_course_loads?id=eq.{load_id}",
+                headers={
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                }
+            )
+            
+            if response.status_code not in [200, 204]:
+                detail = response.text
+                try:
+                    # Try to parse JSON error from Supabase
+                    error_data = response.json()
+                    detail = error_data.get("message", detail)
+                except:
+                    pass
+                raise HTTPException(status_code=response.status_code, detail=f"Failed to delete load: {detail}")
+                
+            # 2. Insert Notification
+            notif_payload = {
+                "user_id": payload.teacher_id,
+                "type": "course_removed",
+                "title": "Course Assignment Removed",
+                "message": f"Your assignment for course {payload.course_title} has been removed. Reason: {payload.reason}",
+                "read": False
+            }
+            
+            # Use appropriate endpoint for notifications
+            notif_resp = await client.post(
+                f"{supabase_url}/rest/v1/notifications",
+                headers={
+                    "apikey": supabase_service_role_key,
+                    "Authorization": f"Bearer {supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                json=notif_payload
+            )
+            
+            return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

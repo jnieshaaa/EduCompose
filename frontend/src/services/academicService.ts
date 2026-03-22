@@ -63,10 +63,14 @@ export const fetchAllTeacherLoads = async (academicYear?: string, term?: string)
         teacher_id,
         course_id,
         users!teacher_id (
+          id,
+          auth_user_id,
           first_name,
           last_name,
           email,
-          role
+          role,
+          title,
+          nickname
         ),
         courses!course_id (
           course_code,
@@ -88,5 +92,45 @@ export const fetchAllTeacherLoads = async (academicYear?: string, term?: string)
   } catch (err) {
     console.error("Unexpected error fetching loads:", err);
     return [];
+  }
+};
+
+export const deleteTeacherCourseLoad = async (
+  loadId: string,
+  teacherId: string,
+  courseTitle: string,
+  reason: string
+) => {
+  try {
+    // 1. Delete course load
+    const { error: deleteError } = await supabase
+      .from("teacher_course_loads")
+      .delete()
+      .eq("id", loadId);
+
+    if (deleteError) {
+      console.error("Error deleting course load:", deleteError);
+      return { success: false, error: deleteError.message };
+    }
+
+    // 2. Insert Notification
+    const { error: notifError } = await supabase
+      .from("notifications")
+      .insert({
+        user_id: teacherId,
+        type: "course_removed",
+        title: "Course Assignment Removed",
+        message: `Your assignment for course ${courseTitle} has been removed. Reason: ${reason}`,
+        read: false
+      });
+
+    if (notifError) {
+      console.warn("Failed to send notification:", notifError);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error in deleteTeacherCourseLoad:", err);
+    return { success: false, error: err.message || "Unknown error" };
   }
 };

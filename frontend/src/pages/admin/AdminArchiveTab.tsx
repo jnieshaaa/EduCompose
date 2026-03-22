@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Loader2, Calendar, User, BookOpen, Layers, Filter, Printer, Download } from "lucide-react";
+import { Search, Loader2, Calendar, User, BookOpen, Layers, Filter, Printer, Download, Trash } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
-import { fetchAllTeacherLoads, fetchAcademicSettings } from "../../services/academicService";
+import Modal from "../../components/ui/Modal";
+import { fetchAllTeacherLoads, fetchAcademicSettings, deleteTeacherCourseLoad } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 
 export function AdminArchiveTab() {
@@ -13,6 +14,11 @@ export function AdminArchiveTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [ayFilter, setAyFilter] = useState("");
   const [termFilter, setTermFilter] = useState("all");
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [loadToDelete, setLoadToDelete] = useState<any>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -74,10 +80,33 @@ export function AdminArchiveTab() {
                 courses: []
             };
         }
-        groups[teacherId].courses.push(load.courses);
+        groups[teacherId].courses.push(load); // Pushing the whole load object so we have IDs
     });
     return Object.values(groups);
   }, [filteredLoads]);
+
+  const confirmDelete = async () => {
+    if (!loadToDelete || !deleteReason.trim()) return;
+    setIsDeleting(true);
+    
+    const result = await deleteTeacherCourseLoad(
+      loadToDelete.id,
+      loadToDelete.users?.auth_user_id,
+      loadToDelete.courses?.course_title || "Unknown Course",
+      deleteReason
+    );
+    
+    if (result.success) {
+      setDeleteModalOpen(false);
+      setDeleteReason("");
+      setLoadToDelete(null);
+      handleFilterChange();
+    } else {
+      alert("Failed to delete course load: " + result.error);
+    }
+    
+    setIsDeleting(false);
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -202,6 +231,11 @@ export function AdminArchiveTab() {
                             <div>
                                 <h3 className="font-bold text-neutral-900">{group.teacher.first_name} {group.teacher.last_name}</h3>
                                 <p className="text-xs text-neutral-500">{group.teacher.email}</p>
+                                {(group.teacher.title || group.teacher.nickname) && (
+                                    <p className="text-xs text-neutral-500 mt-0.5">
+                                        {group.teacher.title ? `${group.teacher.title} ` : ''}{group.teacher.nickname || ''}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <span className="px-3 py-1 bg-white border border-neutral-200 rounded-full text-[10px] font-bold text-neutral-500 uppercase flex items-center">
@@ -217,26 +251,40 @@ export function AdminArchiveTab() {
                                     <th className="px-6 py-3">Course Title</th>
                                     <th className="px-6 py-3 text-center">Units</th>
                                     <th className="px-6 py-3 text-right">Term Info</th>
+                                    <th className="px-6 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-50">
-                                {group.courses.map((course: any, cidx: number) => (
+                                {group.courses.map((load: any, cidx: number) => (
                                     <tr key={cidx} className="hover:bg-neutral-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <span className="font-mono text-sm bg-neutral-100 px-2 py-0.5 rounded text-neutral-700">
-                                                {course.course_code}
+                                                {load.courses?.course_code}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm font-medium text-neutral-700">
-                                            {course.course_title}
+                                            {load.courses?.course_title}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-neutral-500 text-center">
-                                            {course.units}
+                                            {load.courses?.units}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className="text-[10px] font-medium text-neutral-400">
                                                 {ayFilter !== 'all' ? ayFilter : academicSettings?.ay_start + '-' + academicSettings?.ay_end} | {termFilter !== 'all' ? termFilter : academicSettings?.current_semester}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                              onClick={() => {
+                                                setLoadToDelete(load);
+                                                setDeleteReason("");
+                                                setDeleteModalOpen(true);
+                                              }}
+                                              className="p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-500 rounded-md transition-colors"
+                                              title="Remove Student Assignment"
+                                            >
+                                              <Trash size={16} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -247,6 +295,51 @@ export function AdminArchiveTab() {
             ))}
         </div>
       )}
+
+      {/* Delete Course Load Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Remove Course Assignment"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600">
+            You are about to remove <strong>{loadToDelete?.courses?.course_title}</strong> from <strong>{loadToDelete?.users?.first_name} {loadToDelete?.users?.last_name}</strong>'s load. A notification will be sent to the teacher explaining why.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Reason for Removal <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="E.g., Section dissolved, Mistaken assignment"
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary/50 text-sm h-24"
+              required
+            ></textarea>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={confirmDelete}
+              disabled={isDeleting || deleteReason.trim().length === 0}
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash className="w-4 h-4 mr-2" />}
+              {isDeleting ? "Removing..." : "Remove Assignment"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }
