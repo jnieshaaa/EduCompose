@@ -4,6 +4,7 @@ import Button from "../../components/ui/Button";
 import { Plus, Users, Edit2, Trash2, Loader2, Calendar } from "lucide-react";
 import { useSections } from "../../hooks/useSections";
 import { useAcademicContext } from "../../hooks/useAcademicContext";
+import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 
 export function SectionsTab() {
   const { currentSemester } = useAcademicContext();
@@ -64,6 +65,10 @@ export function SectionsTab() {
             <Plus className="w-4 h-4 mr-2" />
             Add Block
           </Button>
+          <UnifiedStudentBatchUploadDialog 
+            courseId={courseFilter !== "All Courses" ? courseFilter : null} 
+            onComplete={fetchProgramWideBlocks ? () => fetchProgramWideBlocks(newSection.program_id, newSection.course_id) : undefined} 
+          />
         </div>
       </div>
 

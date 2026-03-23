@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
+import { readSecureParams, buildSecureUrl } from "../../utils/secureUrl";
 import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare, Users, GraduationCap, School, Archive } from "lucide-react";
 
 interface BreadcrumbItem {
@@ -69,6 +70,12 @@ const Breadcrumb: React.FC = () => {
   const [searchParams] = useSearchParams();
   const pathname = location.pathname;
 
+  // Global secure params handling
+  const secureParams = readSecureParams(location.search);
+  
+  // Helper to get parameters safely from either raw URL or secure 'ref' token
+  const getParam = (name: string) => secureParams?.[name] || searchParams.get(name);
+
   // Don't show breadcrumb on landing page
   if (pathname === "/") {
     return null;
@@ -81,12 +88,12 @@ const Breadcrumb: React.FC = () => {
   if (pathname.startsWith("/Teacher/")) {
     if (config) {
       if (pathname === "/Teacher/Courses" || pathname === "/Teacher/Students") {
-        const courseId = searchParams.get("courseId");
-        const courseCode = searchParams.get("courseCode");
-        const programLoadId = searchParams.get("programLoad");
-        const programAbbr = searchParams.get("programAbbr");
-        const blockId = searchParams.get("block");
-        const blockName = searchParams.get("blockName");
+        const courseId = getParam("courseId");
+        const courseCode = getParam("courseCode");
+        const programLoadId = getParam("programLoad");
+        const programAbbr = getParam("programAbbr");
+        const blockId = getParam("block");
+        const blockName = getParam("blockName");
 
         items.push({
           label: "Course Management",
@@ -97,35 +104,50 @@ const Breadcrumb: React.FC = () => {
         if (courseId && courseCode) {
           items.push({
             label: courseCode,
-            path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
+            path: buildSecureUrl("/Teacher/Courses", { courseId, courseCode }),
           });
 
           if (programLoadId && programAbbr) {
             if (blockId && blockName) {
               items.push({
                 label: programAbbr,
-                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+                path: buildSecureUrl("/Teacher/Courses", { 
+                  courseId, 
+                  courseCode, 
+                  programLoad: programLoadId, 
+                  programAbbr 
+                }),
               });
               
               items.push({
                 label: blockName,
-                path: pathname === "/Teacher/Students" 
-                  ? `/Teacher/Students?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`
-                  : `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}&block=${blockId}&blockName=${encodeURIComponent(blockName)}`,
+                path: buildSecureUrl(pathname, { 
+                  courseId, 
+                  courseCode, 
+                  programLoad: programLoadId, 
+                  programAbbr, 
+                  block: blockId, 
+                  blockName 
+                }),
               });
             } else {
               items.push({
                 label: programAbbr,
-                path: `/Teacher/Courses?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}&programLoad=${programLoadId}&programAbbr=${encodeURIComponent(programAbbr)}`,
+                path: buildSecureUrl("/Teacher/Courses", { 
+                  courseId, 
+                  courseCode, 
+                  programLoad: programLoadId, 
+                  programAbbr 
+                }),
               });
             }
           }
         }
       } else if (pathname === "/Teacher/Activities") {
-        const activityId = searchParams.get("activityId");
-        const activityTitle = searchParams.get("activityTitle");
-        const programSection = searchParams.get("programSection") || searchParams.get("courseSection");
-        const programName = searchParams.get("programName") || searchParams.get("courseName");
+        const activityId = getParam("activityId");
+        const activityTitle = getParam("activityTitle");
+        const programSection = getParam("programSection") || getParam("courseSection");
+        const programName = getParam("programName") || getParam("courseName");
         
         items.push({
           label: "Activities",
@@ -136,19 +158,24 @@ const Breadcrumb: React.FC = () => {
         if (activityId && activityTitle) {
           items.push({
             label: activityTitle,
-            path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&activityTitle=${encodeURIComponent(activityTitle)}`,
+            path: buildSecureUrl("/Teacher/Activities", { activityId, activityTitle }),
           });
           
           if (programSection && programName) {
             items.push({
               label: `${programName} - ${programSection}`,
-              path: `/Teacher/Activities?activityId=${encodeURIComponent(activityId)}&activityTitle=${encodeURIComponent(activityTitle)}&programSection=${encodeURIComponent(programSection)}&programName=${encodeURIComponent(programName)}`,
+              path: buildSecureUrl("/Teacher/Activities", { 
+                activityId, 
+                activityTitle, 
+                programSection, 
+                programName 
+              }),
             });
           }
         }
       } else if (pathname === "/Teacher/Archive") {
-        const courseId = searchParams.get("courseId");
-        const courseCode = searchParams.get("courseCode");
+        const courseId = getParam("courseId");
+        const courseCode = getParam("courseCode");
         
         items.push({
           label: "Archive",
@@ -159,7 +186,7 @@ const Breadcrumb: React.FC = () => {
         if (courseId && courseCode) {
           items.push({
             label: courseCode,
-            path: `/Teacher/Archive?courseId=${courseId}&courseCode=${encodeURIComponent(courseCode)}`,
+            path: buildSecureUrl("/Teacher/Archive", { courseId, courseCode }),
           });
         }
       } else {
@@ -196,19 +223,24 @@ const Breadcrumb: React.FC = () => {
 
       if (isClassDetail) {
         const classId = pathname.split("/").pop();
-        const courseName = searchParams.get("courseName") || searchParams.get("courseCode") || "Class Detail";
+        const courseName = getParam("courseName") || getParam("courseCode") || "Class Detail";
+        const courseCode = getParam("courseCode");
         
         if (classId) {
           items.push({
             label: courseName,
-            path: `/Student/Classes/${classId}${searchParams.get("courseName") ? `?courseName=${encodeURIComponent(courseName)}` : ""}`,
+            path: buildSecureUrl(`/Student/Classes/${classId}`, { 
+              courseName,
+              courseCode
+            }),
           });
         }
       }
     } else if (isSubmit) {
-      const classId = searchParams.get("classId");
-      const courseName = searchParams.get("courseName") || searchParams.get("courseCode");
-      const activityTitle = searchParams.get("activityTitle") || "Submit Essay";
+      const classId = getParam("classId");
+      const courseName = getParam("courseName") || getParam("courseCode");
+      const courseCode = getParam("courseCode");
+      const activityTitle = getParam("activityTitle") || "Submit Essay";
 
       items.push({
         label: "My Classes",
@@ -220,8 +252,8 @@ const Breadcrumb: React.FC = () => {
         items.push({
           label: courseName,
           path: classId 
-            ? `/Student/Classes/${classId}?courseName=${encodeURIComponent(courseName)}`
-            : `/Student/Classes?courseName=${encodeURIComponent(courseName)}`,
+            ? buildSecureUrl(`/Student/Classes/${classId}`, { courseName, courseCode })
+            : buildSecureUrl("/Student/Classes", { courseName, courseCode }),
         });
       }
       
@@ -231,9 +263,11 @@ const Breadcrumb: React.FC = () => {
         icon: config?.icon,
       });
     } else if (pathname === "/Student/Feedback") {
-      const classId = searchParams.get("classId");
-      const courseName = searchParams.get("courseName") || searchParams.get("courseCode");
-      const activityTitle = searchParams.get("activityTitle");
+      const classId = getParam("classId");
+      const courseName = getParam("courseName") || getParam("courseCode");
+      const courseCode = getParam("courseCode");
+      const activityTitle = getParam("activityTitle");
+      const activityId = getParam("activityId");
 
       if (courseName) {
         items.push({
@@ -245,15 +279,20 @@ const Breadcrumb: React.FC = () => {
         items.push({
           label: courseName,
           path: classId 
-           ? `/Student/Classes/${classId}?courseName=${encodeURIComponent(courseName)}`
-           : `/Student/Classes?courseName=${encodeURIComponent(courseName)}`,
+            ? buildSecureUrl(`/Student/Classes/${classId}`, { courseName, courseCode })
+            : buildSecureUrl("/Student/Classes", { courseName, courseCode }),
         });
       }
       
       if (activityTitle) {
         items.push({
           label: activityTitle,
-          path: `/Student/Submit?activityId=${searchParams.get("activityId")}&classId=${classId}&courseName=${encodeURIComponent(courseName || "")}&activityTitle=${encodeURIComponent(activityTitle)}`,
+          path: buildSecureUrl("/Student/Submit", { 
+            activityId, 
+            classId, 
+            courseName: courseName || "", 
+            activityTitle 
+          }),
         });
       }
 
@@ -284,16 +323,16 @@ const Breadcrumb: React.FC = () => {
       });
 
       // Special case for Activity Logs in User Management
-      if (pathname === "/Admin/Users" && searchParams.get("logs")) {
+      if (pathname === "/Admin/Users" && getParam("logs")) {
         items.push({
           label: "Activity Logs",
-          path: `${pathname}?logs=${searchParams.get("logs")}`,
+          path: `${pathname}?logs=${getParam("logs")}`,
         });
       }
 
       // Sub-views for Content Management
       if (pathname === "/Admin/Content") {
-        const view = searchParams.get("view");
+        const view = getParam("view");
         if (view) {
           const labels: any = { programs: "Programs", activities: "Activities", rubrics: "Rubrics" };
           items.push({
@@ -305,7 +344,7 @@ const Breadcrumb: React.FC = () => {
 
       // Sub-views for Schools & Courses
       if (pathname === "/Admin/Schools") {
-        const view = searchParams.get("view");
+        const view = getParam("view");
         if (view) {
           const labels: any = { schools: "Institutional Hierarchy", courses: "Global Course Registry" };
           items.push({
@@ -321,14 +360,14 @@ const Breadcrumb: React.FC = () => {
         icon: <Home className="w-4 h-4" />,
       });
     }
-  } else if (pathname === "/ClassManagement" && searchParams.get("programId")) {
-    const programId = searchParams.get("programId");
-    const programName = searchParams.get("programName") || "Program";
-    const blockId = searchParams.get("blockId");
-    const blockName = searchParams.get("blockName");
-    const view = searchParams.get("view");
-    const activityTitle = searchParams.get("activityTitle") || "Essay Activity";
-    const basePath = `${pathname}?programId=${programId}&programName=${programName}`;
+  } else if (pathname === "/ClassManagement" && getParam("programId")) {
+    const programId = getParam("programId");
+    const programName = getParam("programName") || "Program";
+    const blockId = getParam("blockId");
+    const blockName = getParam("blockName");
+    const view = getParam("view");
+    const activityTitle = getParam("activityTitle") || "Essay Activity";
+    const basePath = buildSecureUrl(pathname, { programId, programName });
 
     items.push({
       label: "Class Management",
@@ -341,18 +380,40 @@ const Breadcrumb: React.FC = () => {
       path: basePath,
     });
 
-    const blockViewPath = `${basePath}&view=blocks`;
-    const blockPath = `${basePath}${blockId && blockName ? `&blockId=${blockId}&blockName=${blockName}` : ""}`;
+    const blockViewPath = buildSecureUrl(pathname, { programId, programName, view: 'blocks' });
+    const blockPath = buildSecureUrl(pathname, { 
+      programId, 
+      programName, 
+      ...(blockId && blockName ? { blockId, blockName } : {}) 
+    });
     const blockLabel = blockName ?? "Block";
     const blockBreadcrumbPath = blockId && blockName ? blockPath : blockViewPath;
 
     if (view === "activities") {
       items.push({ label: blockLabel, path: blockBreadcrumbPath });
-      items.push({ label: activityTitle, path: `${blockPath}&view=activities` });
+      items.push({ label: activityTitle, path: buildSecureUrl(pathname, { 
+        programId, 
+        programName, 
+        blockId, 
+        blockName, 
+        view: 'activities' 
+      })});
     } else if (view === "students") {
       items.push({ label: blockLabel, path: blockBreadcrumbPath });
-      items.push({ label: activityTitle, path: `${blockPath}&view=activities` });
-      items.push({ label: "Students", path: `${blockPath}&view=students` });
+      items.push({ label: activityTitle, path: buildSecureUrl(pathname, { 
+        programId, 
+        programName, 
+        blockId, 
+        blockName, 
+        view: 'activities' 
+      })});
+      items.push({ label: "Students", path: buildSecureUrl(pathname, { 
+        programId, 
+        programName, 
+        blockId, 
+        blockName, 
+        view: 'students' 
+      })});
     } else if (blockId && blockName) {
       items.push({ label: blockName, path: blockPath });
     }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { Plus, BookOpen } from "lucide-react";
-import { BatchUploadDialog } from "../../components/ui/BatchUploadDialog";
+import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 import { useAlert } from "../../hooks/useAlert";
 import { usePrograms } from "../../hooks/usePrograms";
 import { AddProgramDialog } from "../../components/programs/AddProgramDialog";
@@ -85,11 +85,7 @@ export function ProgramsTab() {
             Add Program
           </Button>
 
-          <BatchUploadDialog
-            type="programs"
-            existingPrograms={allPrograms}
-            onUploadComplete={handleBatchUploadComplete}
-          />
+          <UnifiedStudentBatchUploadDialog onComplete={handleBatchUploadComplete} />
           {/* Removed: Teachers cannot delete programs */}
         </div>
       </div>

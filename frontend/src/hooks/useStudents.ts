@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
-import { authApi } from "../api";
 import { useAcademicContext } from "./useAcademicContext";
 import { sendStudentWelcomeEmail } from "../services/emailService";
 
@@ -72,6 +71,12 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       if (error) throw error;
 
       let result = data || [];
+
+      // Supabase embedded filters only filter the nested join data, not parent rows.
+      // So we must manually exclude students whose block_students came back empty.
+      if (blockId) {
+        result = result.filter(s => s.block_students && s.block_students.length > 0);
+      }
 
       // Manual filtering for AY and Term since it's deep in the join
       if (!showArchived) {
@@ -266,29 +271,18 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         });
       }
 
-      // 4. Provision Student Account if email exists (Secure Backend Mode)
+      // 4. Send Welcome Email with temp password (frontend-only, via EmailJS)
       if (newS.email) {
         try {
-          const provisionResult = await authApi.provisionStudentAccount({
-            email: newS.email,
+          const temp_password = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+          await sendStudentWelcomeEmail({
+            to_name: `${newS.first_name} ${newS.last_name}`,
+            to_email: newS.email,
             student_code: newS.student_code,
-            first_name: newS.first_name,
-            last_name: newS.last_name,
-            middle_name: newS.middle_name || undefined,
+            temp_password,
           });
-
-          // 5. Send Welcome Email if newly created
-          if (provisionResult.created && provisionResult.temp_password) {
-            await sendStudentWelcomeEmail({
-              to_name: `${newS.first_name} ${newS.last_name}`,
-              to_email: newS.email,
-              student_code: newS.student_code,
-              temp_password: provisionResult.temp_password,
-            });
-          }
-        } catch (provisionErr) {
-          console.error("Failed to provision student auth via backend:", provisionErr);
-          showError("Student added, but failed to setup login account via server.");
+        } catch (emailErr) {
+          console.warn("Failed to send welcome email:", emailErr);
         }
       }
 

@@ -1,4 +1,4 @@
-import { Search, LayoutGrid, List } from "lucide-react";
+import { Search } from "lucide-react";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import type { Program, Section } from "../../types/academic";
@@ -18,24 +18,12 @@ interface StudentsFiltersProps {
   onClearFilters: () => void;
   onClearProgramFilter: () => void;
   onClearSectionFilter: () => void;
-  viewMode: "cards" | "table";
-  onViewModeChange: (mode: "cards" | "table") => void;
   loadError: string | null;
 }
 
 export function StudentsFilters({
   searchQuery,
   onSearchChange,
-  // programFilter,
-  // sectionFilter,
-  // onProgramFilterChange,
-  // onSectionFilterChange,
-  // availablePrograms,
-  // availableSections,
-  // urlProgramFilter,
-  // urlSectionFilter,
-  viewMode,
-  onViewModeChange,
   loadError,
 }: StudentsFiltersProps) {
   return (
@@ -52,61 +40,6 @@ export function StudentsFilters({
               className="pl-10"
             />
           </div>
-          
-          {/* {!urlProgramFilter && (
-            <select
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white"
-              value={programFilter}
-              onChange={(e) => onProgramFilterChange(e.target.value)}
-            >
-              <option value="All Programs">All Programs</option>
-              {availablePrograms.map((program) => (
-                <option key={program.id} value={program.id}>
-                  {program.abbr}
-                </option>
-              ))}
-            </select>
-          )} */}
-
-          {/* {!urlSectionFilter && (
-            <select
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white"
-              value={sectionFilter}
-              onChange={(e) => onSectionFilterChange(e.target.value)}
-            >
-              <option value="All Sections">All Sections</option>
-              {availableSections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.name} (Yr {section.year})
-                </option>
-              ))}
-            </select>
-          )} */}
-        </div>
-
-        <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
-          <button
-            onClick={() => onViewModeChange("cards")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === "cards"
-                ? "bg-white text-primary shadow-sm"
-                : "text-neutral-600 hover:text-neutral-900"
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            Cards
-          </button>
-          <button
-            onClick={() => onViewModeChange("table")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-              viewMode === "table"
-                ? "bg-white text-primary shadow-sm"
-                : "text-neutral-600 hover:text-neutral-900"
-            }`}
-          >
-            <List className="w-4 h-4" />
-            Table
-          </button>
         </div>
       </div>
       {loadError && (

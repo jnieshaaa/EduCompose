@@ -14,6 +14,12 @@ export type ParseResult = {
   error?: string;
 };
 
+export type RawParseResult = {
+  success: boolean;
+  rows: string[][];
+  error?: string;
+};
+
 export class FileParserService {
   /**
    * Parse CSV file
@@ -149,6 +155,33 @@ export class FileParserService {
         headers: [],
         error: `Unsupported file type: ${extension}. Please upload a .csv or .xlsx file.`,
       };
+    }
+  }
+
+  /**
+   * Parse file and return raw rows as string[][]
+   */
+  static async parseFileRaw(file: File): Promise<RawParseResult> {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    try {
+      if (extension === "csv") {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        return { success: true, rows: lines.map(line => this.parseCSVLine(line)) };
+      } else if (extension === "xlsx" || extension === "xls") {
+        const XLSX = await import("xlsx");
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        return { 
+          success: true, 
+          rows: jsonData.map(row => (row as any[]).map(cell => cell !== undefined ? String(cell).trim() : "")) 
+        };
+      }
+      return { success: false, rows: [], error: "Unsupported file type" };
+    } catch (e) {
+      return { success: false, rows: [], error: e instanceof Error ? e.message : "Raw parse failed" };
     }
   }
 

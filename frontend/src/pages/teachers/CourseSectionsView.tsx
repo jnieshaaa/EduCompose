@@ -10,6 +10,7 @@ import {
   Loader2,
   Layers,
 } from "lucide-react";
+import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { supabase } from "../../lib/supabaseClient";
@@ -441,21 +442,30 @@ export function CourseSectionsView({
             )}
           </div>
         </div>
-        {!selectedProgramLoad ? (
-          <Button
-            onClick={() => setIsAddProgramOpen(true)}
-            className="bg-primary text-white flex items-center gap-2"
-          >
-            <Plus size={18} /> Add Program
-          </Button>
-        ) : (
-          <Button
-            onClick={() => setIsAddBlockOpen(true)}
-            className="bg-primary text-white flex items-center gap-2"
-          >
-            <Plus size={18} /> Add Block
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!selectedProgramLoad ? (
+            <Button
+              onClick={() => setIsAddProgramOpen(true)}
+              className="bg-primary text-white flex items-center gap-2"
+            >
+              <Plus size={18} /> Add Program
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setIsAddBlockOpen(true)}
+              className="bg-primary text-white flex items-center gap-2"
+            >
+              <Plus size={18} /> Add Block
+            </Button>
+          )}
+          <UnifiedStudentBatchUploadDialog 
+            courseId={course.id} 
+            onComplete={() => {
+              fetchProgramLoads();
+              if (selectedProgramLoad) fetchBlocks();
+            }} 
+          />
+        </div>
       </div>
 
       {isLoading ? (

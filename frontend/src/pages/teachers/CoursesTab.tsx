@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { readSecureParams } from "../../utils/secureUrl";
 import { Plus, Trash2, Edit2, Loader2, BookOpen, Search, Filter } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -9,7 +10,10 @@ import { CourseSectionsView } from "./CourseSectionsView";
 
 export function CoursesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const deepCourseId = searchParams.get("courseId");
+  
+  // Parse secure parameters from the 'ref' query parameter if it exists
+  const secureParams = readSecureParams(window.location.search);
+  const deepCourseId = secureParams?.courseId || searchParams.get("courseId");
 
   const {
     teacherInfo,

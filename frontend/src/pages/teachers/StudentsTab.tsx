@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -9,15 +8,14 @@ import { AddStudentDialog } from "../../components/students/AddStudentDialog";
 import { EditStudentDialog } from "../../components/students/EditStudentDialog";
 import { StudentsStatsCards } from "../../components/students/StudentsStatsCards";
 import { StudentsFilters } from "../../components/students/StudentsFilters";
-import { StudentsCardView } from "../../components/students/StudentsCardView";
 import { StudentsTableView } from "../../components/students/StudentsTableView";
 import { buildSecureUrl, readSecureParams } from "../../utils/secureUrl";
+import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 
 export function StudentsTab() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { AlertComponent } = useAlert();
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   // Read filters from URL params (for drill-down from Sections/Blocks)
   const secureParams = readSecureParams(window.location.search);
@@ -84,6 +82,10 @@ export function StudentsTab() {
             <Plus className="w-4 h-4 mr-2" />
             Add Student
           </Button>
+          <UnifiedStudentBatchUploadDialog 
+            courseId={secureParams?.courseId || searchParams.get("courseId")} 
+            onComplete={refreshStudents} 
+          />
         </div>
       </div>
 
@@ -109,8 +111,6 @@ export function StudentsTab() {
         onClearFilters={handleClearFilters}
         onClearProgramFilter={handleClearProgramFilter}
         onClearSectionFilter={handleClearSectionFilter}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         loadError={loadError}
       />
 
@@ -155,14 +155,6 @@ export function StudentsTab() {
             </Button>
           )}
         </Card>
-      ) : viewMode === "cards" ? (
-        <StudentsCardView
-          students={students}
-          urlSectionFilter={urlBlockId}
-          onEditStudent={handleEditStudent}
-          onDeleteStudent={handleDeleteStudent}
-          onViewEssayHistory={handleViewEssayHistory}
-        />
       ) : (
         <StudentsTableView
           students={students}
@@ -170,6 +162,7 @@ export function StudentsTab() {
           onEditStudent={handleEditStudent}
           onDeleteStudent={handleDeleteStudent}
           onViewEssayHistory={handleViewEssayHistory}
+          isLoading={isLoading}
         />
       )}
 
