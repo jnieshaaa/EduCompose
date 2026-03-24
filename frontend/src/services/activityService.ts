@@ -1710,10 +1710,12 @@ export const gradeEssay = async (
 
     // Parse student ID
     let studentDbId = parseInt(studentId, 10);
+    let authUserId: string | null = null;
+    
     if (isNaN(studentDbId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
-        .select("id")
+        .select("id, auth_user_id")
         .eq("student_code", studentId)
         .single();
 
@@ -1721,6 +1723,17 @@ export const gradeEssay = async (
         return { success: false, error: "Student not found" };
       }
       studentDbId = studentData.id;
+      authUserId = studentData.auth_user_id;
+    } else {
+      const { data: stdData } = await supabase
+        .from("students")
+        .select("auth_user_id")
+        .eq("id", studentDbId)
+        .single();
+        
+      if (stdData) {
+        authUserId = stdData.auth_user_id;
+      }
     }
 
     // Parse activity ID
@@ -1729,10 +1742,9 @@ export const gradeEssay = async (
       return { success: false, error: "Invalid activity ID" };
     }
 
-    // Fetch essay record
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, file_path, title, students(auth_user_id), essay_activities(id, title, min_word_count)")
+      .select("id, file_path, title, essay_activities(id, title, min_word_count)")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -2103,7 +2115,7 @@ export const gradeEssay = async (
       });
 
       // 4b. Create notification for student (using student's UUID)
-      const studentUUID = (essayData.students as any)?.auth_user_id;
+      const studentUUID = authUserId;
       if (studentUUID) {
         await supabase.from("notifications").insert({
           user_id: studentUUID,
