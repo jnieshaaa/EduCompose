@@ -11,21 +11,12 @@ import secrets
 import string
 
 from ..schemas import (
-    LoginRequest,
     UserCreate,
-    LoginResponse,
     EmailVerificationRequest,
     EmailVerificationResponse,
     VerifyEmailToken,
     PasswordUpdate,
     DeleteAccountRequest,
-    CheckEmailRequest,
-    CheckEmailResponse,
-    ResetPasswordRequest,
-    ResetPasswordResponse,
-    TeacherRegisterRequest,
-    VerifySignupRequest,
-    ResendSignupCodeRequest,
     TeacherProvisionStudentRequest,
     TeacherProvisionStudentResponse,
 )
