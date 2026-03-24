@@ -42,9 +42,24 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      let query = supabase
-        .from("students")
-        .select(`
+      const selectQuery = blockId
+        ? `
+          *,
+          block_students!inner (
+            block_id,
+            blocks (
+              id,
+              name,
+              teacher_program_loads!fk_block_program_load (
+                teacher_course_loads (
+                  academic_year,
+                  term
+                )
+              )
+            )
+          )
+        `
+        : `
           *,
           block_students (
             block_id,
@@ -59,12 +74,16 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
               )
             )
           )
-        `)
-        .eq("teacher_id", userData.user.id);
+        `;
+
+      let query = supabase.from("students").select(selectQuery);
 
       if (blockId) {
-        // Filter by specific block
-        query = query.filter("block_students.block_id", "eq", blockId);
+        // Filter by specific block, ignoring who originally created the student
+        query = query.eq("block_students.block_id", blockId);
+      } else {
+        // For the general students tab, show students created by this teacher
+        query = query.eq("teacher_id", userData.user.id);
       }
 
       const { data, error } = await query;
