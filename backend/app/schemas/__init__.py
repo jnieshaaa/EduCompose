@@ -3,21 +3,10 @@ Schemas Package
 Pydantic models for request/response validation
 """
 from .auth_schemas import (
-    LoginRequest,
-    Token,
-    LoginResponse,
-    UserInfo,
     EmailVerificationRequest,
     EmailVerificationResponse,
     VerifyEmailToken,
     DeleteAccountRequest,
-    CheckEmailRequest,
-    CheckEmailResponse,
-    ResetPasswordRequest,
-    ResetPasswordResponse,
-    TeacherRegisterRequest,
-    VerifySignupRequest,
-    ResendSignupCodeRequest,
     TeacherProvisionStudentRequest,
     TeacherProvisionStudentResponse,
 )
@@ -45,21 +34,10 @@ from .analysis_schemas import (
 from .comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
 
 __all__ = [
-    "LoginRequest",
-    "Token",
-    "LoginResponse",
-    "UserInfo",
     "EmailVerificationRequest",
     "EmailVerificationResponse",
     "VerifyEmailToken",
     "DeleteAccountRequest",
-    "CheckEmailRequest",
-    "CheckEmailResponse",
-    "ResetPasswordRequest",
-    "ResetPasswordResponse",
-    "TeacherRegisterRequest",
-    "VerifySignupRequest",
-    "ResendSignupCodeRequest",
     "TeacherProvisionStudentRequest",
     "TeacherProvisionStudentResponse",
     "UserBase",

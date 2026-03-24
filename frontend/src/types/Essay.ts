@@ -213,6 +213,8 @@ export interface User {
   email: string;
   username: string;
   full_name: string;
+  title?: string;
+  nickname?: string;
   role: "teacher" | "admin";
   is_active: boolean;
   created_at: string;

@@ -11,6 +11,8 @@ interface EditUserModalProps {
     first_name?: string;
     middle_name?: string;
     last_name?: string;
+    title?: string;
+    nickname?: string;
     role: string;
     is_active: boolean;
   };
@@ -26,6 +28,8 @@ export default function EditUserModal({
   const [firstName, setFirstName] = useState(user.first_name || "");
   const [middleName, setMiddleName] = useState(user.middle_name || "");
   const [lastName, setLastName] = useState(user.last_name || "");
+  const [title, setTitle] = useState(user.title || "");
+  const [nickname, setNickname] = useState(user.nickname || "");
   const [email, setEmail] = useState(user.email);
   const [role, setRole] = useState<"admin" | "teacher" | "student">(
     user.role as "admin" | "teacher" | "student",
@@ -40,6 +44,8 @@ export default function EditUserModal({
       setFirstName(user.first_name || "");
       setMiddleName(user.middle_name || "");
       setLastName(user.last_name || "");
+      setTitle(user.title || "");
+      setNickname(user.nickname || "");
       setEmail(user.email);
       setRole(user.role as "admin" | "teacher" | "student");
       setIsActive(user.is_active);
@@ -75,6 +81,8 @@ export default function EditUserModal({
         first_name: firstName.trim(),
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim(),
+        title: title || undefined,
+        nickname: nickname.trim() || undefined,
         role,
         is_active: isActive,
       });
@@ -137,6 +145,37 @@ export default function EditUserModal({
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Title
+                </label>
+                <select
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                >
+                  <option value="">None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Nickname
+                </label>
+                <Input
+                  type="text"
+                  value={nickname}
+                  onChange={(val) => setNickname(val)}
+                  placeholder="e.g. Antopina"
+                />
               </div>
             </div>
 

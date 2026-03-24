@@ -31,75 +31,7 @@ security = HTTPBearer()
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z.,]{3,20}$")
 
-# In-memory store for signup verification codes: email -> { "code": str, "expires_at": int }
-_signup_codes: Dict[str, Dict[str, Any]] = {}
-SIGNUP_CODE_TTL_SECONDS = 10 * 60  # 10 minutes
 
-
-def _generate_signup_code() -> str:
-    return "".join(str(random.randint(0, 9)) for _ in range(6))
-
-
-def _store_signup_code(email: str, code: str) -> None:
-    normalized = (email or "").strip().lower()
-    if not normalized:
-        return
-    _signup_codes[normalized] = {
-        "code": code,
-        "expires_at": datetime.utcnow().timestamp() + SIGNUP_CODE_TTL_SECONDS,
-    }
-
-
-def _get_signup_code(email: str) -> Optional[str]:
-    normalized = (email or "").strip().lower()
-    if not normalized:
-        return None
-    entry = _signup_codes.get(normalized)
-    if not entry:
-        return None
-    if datetime.utcnow().timestamp() > entry["expires_at"]:
-        del _signup_codes[normalized]
-        return None
-    return entry["code"]
-
-
-def _clear_signup_code(email: str) -> None:
-    normalized = (email or "").strip().lower()
-    _signup_codes.pop(normalized, None)
-
-
-def _supabase_configured() -> bool:
-    return bool(os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
-
-
-async def _email_exists_in_supabase(email: str) -> bool:
-    """Check if email exists in Supabase Auth (case-insensitive)."""
-    supabase_url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    if not supabase_url or not key:
-        return False
-    normalized = (email or "").strip().lower()
-    if not normalized:
-        return False
-    async with httpx.AsyncClient() as client:
-        page = 1
-        while True:
-            resp = await client.get(
-                f"{supabase_url}/auth/v1/admin/users",
-                headers={"apikey": key, "Authorization": f"Bearer {key}"},
-                params={"page": page, "per_page": 100},
-                timeout=10.0,
-            )
-            if resp.status_code != 200:
-                return False
-            users = resp.json().get("users", [])
-            if not users:
-                return False
-            if any((u.get("email") or "").lower() == normalized for u in users):
-                return True
-            if len(users) < 100:
-                return False
-            page += 1
 
 
 class AuthService:
@@ -169,7 +101,7 @@ class AuthService:
         except Exception:
             return False
 
-    def _create_local_user(self, email: str, username: str, full_name: str, password: str, db: Session, role: str = None) -> User:
+    def _create_local_user(self, email: str, username: str, full_name: str, password: str, db: Session, role: str = None, title: str = None, nickname: str = None) -> User:
         username = self._validate_username_format(username)
         if self._username_exists(db, username):
             raise HTTPException(
@@ -182,6 +114,8 @@ class AuthService:
             username=username,
             full_name=full_name,
             role=role or DEFAULT_USER_ROLE,
+            title=title,
+            nickname=nickname,
             password_hash=self._hash_password(password),
             email_verified=True,
             is_active=True
@@ -227,184 +161,7 @@ class AuthService:
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-    async def authenticate_user(self, credentials, db: Session, ip_address: Optional[str] = None, user_agent: Optional[str] = None):
-        """Authenticate user and return JWT"""
-        try:
-            db.execute(text("SELECT 1"))
-        except SQLAlchemyError as e:
-            self._handle_db_error(e)
 
-        login_email = self._normalize_email(credentials.email) if credentials.email else None
-        login_username = (credentials.username or "").strip() or None
-        if not login_email and not login_username:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username or email is required.")
-
-        user = None
-        if login_email:
-            user = db.query(User).filter(func.lower(User.email) == login_email).first()
-        elif login_username:
-            user = db.query(User).filter(User.username == login_username).first()
-            if user:
-                login_email = user.email
-
-        if not user:
-            self._log_login_activity(db, login_email or login_username, ip_address, user_agent, False, "User not found in DB")
-            if LOCAL_AUTH_AUTO_CREATE and login_email:
-                # Only auto-create if email doesn't exist (case-insensitive)
-                if self._email_exists(db, login_email):
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
-                username = login_username or self._generate_username_from_email(login_email, db)
-                full_name = username.replace(".", " ").title()
-                user = self._create_local_user(
-                    email=login_email,
-                    username=username,
-                    full_name=full_name,
-                    password=credentials.password or "password",
-                    db=db
-                )
-            else:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
-
-        if user.password_hash:
-            if not self._verify_password(credentials.password, user.password_hash):
-                self._log_login_activity(db, user.email, ip_address, user_agent, False, "Incorrect password", user.id)
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
-        if not user.is_active:
-            self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account inactive.")
-
-        if not user.is_active:
-            self._log_login_activity(db, user.email, ip_address, user_agent, False, "Account inactive", user.id)
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account inactive.")
-
-        self._log_login_activity(db, user.email, ip_address, user_agent, True, "Success", user.id)
-
-        access_token = self.create_access_token(
-            data={"sub": user.email, "user_id": user.id}, 
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "username": user.username,
-                "full_name": user.full_name,
-                "role": user.role,
-                "is_active": user.is_active,
-                "email_verified": user.email_verified
-            }
-        }
-
-    async def register_supabase_first(
-        self, email: str, password: str, full_name: str, role: str, db: Session
-    ) -> tuple[dict, str]:
-        """
-        Supabase-first sign-up: create in Supabase Auth, store code in DB.
-        Returns (user_info, verification_code).
-        """
-        normalized = self._normalize_email(email)
-        if not normalized:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid email is required.")
-        if await _email_exists_in_supabase(normalized):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered.")
-        supabase_url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        if not supabase_url or not key:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Supabase is not configured.",
-            )
-        display_name = full_name or normalized.split("@")[0]
-        async with httpx.AsyncClient() as client:
-            create_resp = await client.post(
-                f"{supabase_url}/auth/v1/admin/users",
-                headers={
-                    "apikey": key,
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "email": normalized,
-                    "password": password,
-                    "email_confirm": True,
-                    "user_metadata": {
-                        "full_name": display_name,
-                        "role": role,
-                    },
-                },
-                timeout=10.0,
-            )
-        if create_resp.status_code not in [200, 201]:
-            err = create_resp.text
-            if "already been registered" in err.lower() or "already exists" in err.lower():
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered.")
-            raise HTTPException(status_code=create_resp.status_code, detail=f"Failed to create account: {err}")
-        supabase_user = create_resp.json()
-        auth_user_id = supabase_user.get("id")
-        code = _generate_signup_code()
-        expires = datetime.utcnow() + timedelta(seconds=SIGNUP_CODE_TTL_SECONDS)
-        record = SignupVerificationCode(
-            email=normalized,
-            code=code,
-            expires_at=expires,
-        )
-        db.add(record)
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to store verification code.")
-        user_info = {
-            "id": auth_user_id,
-            "email": normalized,
-            "username": normalized.split("@")[0],
-            "full_name": display_name,
-            "email_verified": True,
-        }
-        return user_info, code
-
-    async def resend_signup_code_supabase_first(self, email: str, db: Session) -> str:
-        """Resend code for Supabase-first flow; check user exists in Supabase."""
-        normalized = self._normalize_email(email)
-        if not normalized:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid email is required.")
-        if not await _email_exists_in_supabase(normalized):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No account found for this email.")
-        code = _generate_signup_code()
-        expires = datetime.utcnow() + timedelta(seconds=SIGNUP_CODE_TTL_SECONDS)
-        db.query(SignupVerificationCode).filter(
-            func.lower(SignupVerificationCode.email) == normalized
-        ).delete()
-        record = SignupVerificationCode(email=normalized, code=code, expires_at=expires)
-        db.add(record)
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to store code.")
-        return code
-
-    async def verify_signup_supabase_first(self, email: str, code: str, db: Session) -> dict:
-        """Verify code for Supabase-first flow; user already in Supabase."""
-        normalized = self._normalize_email(email)
-        if not normalized:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid email is required.")
-        row = (
-            db.query(SignupVerificationCode)
-            .filter(func.lower(SignupVerificationCode.email) == normalized)
-            .order_by(SignupVerificationCode.created_at.desc())
-            .first()
-        )
-        if not row or row.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
-        if row.code != code.strip():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
-        db.query(SignupVerificationCode).filter(SignupVerificationCode.id == row.id).delete()
-        db.commit()
-        return {"success": True, "message": "Account verified. You can now sign in."}
 
     async def create_user(self, user_data, db: Session):
         """Create a new user in local DB"""
@@ -443,76 +200,14 @@ class AuthService:
             full_name=full_name,
             password=user_data.password,
             db=db,
-            role=role
+            role=role,
+            title=getattr(user_data, 'title', None),
+            nickname=getattr(user_data, 'nickname', None)
         )
         
         return user
 
-    def generate_signup_code_for_user(self, email: str) -> str:
-        """Generate and store a 6-digit signup verification code; return it so frontend can send email."""
-        code = _generate_signup_code()
-        _store_signup_code(email, code)
-        return code
 
-    def resend_signup_code(self, email: str, db: Session) -> str:
-        """Generate and store a new signup code for an existing (registered) user; return code."""
-        normalized = self._normalize_email(email)
-        if not normalized:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid email is required.")
-        if not db.query(User).filter(func.lower(User.email) == normalized).first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No account found for this email.")
-        code = _generate_signup_code()
-        _store_signup_code(normalized, code)
-        return code
-
-    async def verify_signup_and_sync_supabase(
-        self, email: str, code: str, password: str, db: Session
-    ) -> dict:
-        """Verify the 6-digit code and create the user in Supabase (user already exists in backend)."""
-        normalized = self._normalize_email(email)
-        if not normalized:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid email is required.")
-        stored_code = _get_signup_code(normalized)
-        if not stored_code or stored_code != code.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code.",
-            )
-        user = db.query(User).filter(func.lower(User.email) == normalized).first()
-        if not user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found.")
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        if not supabase_url or not supabase_service_role_key:
-            _clear_signup_code(normalized)
-            return {"success": True, "message": "Account verified. Sign in with your email and password."}
-        async with httpx.AsyncClient() as client:
-            create_response = await client.post(
-                f"{supabase_url}/auth/v1/admin/users",
-                headers={
-                    "apikey": supabase_service_role_key,
-                    "Authorization": f"Bearer {supabase_service_role_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "email": normalized,
-                    "password": password,
-                    "email_confirm": True,
-                    "user_metadata": {
-                        "full_name": user.full_name,
-                        "role": user.role,
-                    },
-                },
-                timeout=10.0,
-            )
-        if create_response.status_code not in [200, 201]:
-            error_text = create_response.text
-            raise HTTPException(
-                status_code=create_response.status_code,
-                detail=f"Failed to sync account to Supabase: {error_text}",
-            )
-        _clear_signup_code(normalized)
-        return {"success": True, "message": "Account verified and synced to Supabase."}
 
     async def request_delete_code(self, current_user: User):
         """Send a one-time OTP to user's email"""
@@ -550,6 +245,18 @@ class AuthService:
                     )
                 current_user.email = new_email
                 email_changed = True
+
+        if update_data.title is not None:
+            current_user.title = update_data.title
+            username_changed = True # Trigger commit
+
+        if update_data.nickname is not None:
+            current_user.nickname = update_data.nickname
+            username_changed = True # Trigger commit
+            
+        if update_data.full_name is not None:
+            current_user.full_name = update_data.full_name
+            username_changed = True # Trigger commit
 
         if not (email_changed or username_changed):
             return current_user

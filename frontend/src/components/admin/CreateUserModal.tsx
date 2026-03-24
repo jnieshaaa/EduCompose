@@ -21,6 +21,8 @@ export default function CreateUserModal({
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [title, setTitle] = useState("");
+  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -70,6 +72,8 @@ export default function CreateUserModal({
         first_name: firstName.trim(),
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim(),
+        title: title || undefined,
+        nickname: nickname.trim() || undefined,
       });
 
       setSuccess(`Account created successfully for ${role}!`);
@@ -78,6 +82,8 @@ export default function CreateUserModal({
       setFirstName("");
       setMiddleName("");
       setLastName("");
+      setTitle("");
+      setNickname("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
@@ -141,6 +147,37 @@ export default function CreateUserModal({
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Title
+                </label>
+                <select
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Nickname
+                </label>
+                <Input
+                  type="text"
+                  value={nickname}
+                  onChange={(val) => setNickname(val)}
+                  placeholder="e.g. Antopina"
+                />
               </div>
             </div>
 

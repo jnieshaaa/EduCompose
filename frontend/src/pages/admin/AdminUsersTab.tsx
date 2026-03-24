@@ -9,6 +9,8 @@ import {
   Filter,
   X,
   MoreVertical,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../../components/ui/Button";
@@ -25,11 +27,12 @@ interface User {
   first_name?: string;
   middle_name?: string;
   last_name?: string;
+  title?: string;
+  nickname?: string;
   role: string;
   is_active: boolean;
   email_verified: boolean;
   created_at: string;
-  last_sign_in?: string;
 }
 
 export function AdminUsersTab() {
@@ -44,6 +47,9 @@ export function AdminUsersTab() {
   const [error, setError] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Initialize selectedUserForLogs from search param if present
   const logUserId = searchParams.get("logs");
@@ -93,6 +99,11 @@ export function AdminUsersTab() {
     loadUsers();
   }, [loadUsers]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter, searchTerm]);
+
   const handleDeleteUser = async (userId: string, email: string) => {
     if (
       !confirm(
@@ -132,6 +143,36 @@ export function AdminUsersTab() {
       default:
         return "bg-gray-100 text-gray-700";
     }
+  };
+
+  // Calculate pagination
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = users.slice(indexOfFirstItem, indexOfLastItem);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 8) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 6; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 5; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
   };
 
   if (selectedUserForLogs) {
@@ -244,20 +285,27 @@ export function AdminUsersTab() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-700 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-700 uppercase tracking-wider">
-                    Last Sign In
-                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-neutral-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-200">
-                {users.map((user) => (
+                {currentItems.map((user) => (
                   <tr key={user.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm text-neutral-500">
+                      <div className="flex flex-col">
+                        <div className="text-sm font-medium text-neutral-900">
+                          {user.title || user.nickname || user.last_name || user.first_name ? (
+                            <>
+                              {user.title && `${user.title} `}
+                              {user.nickname || user.last_name || user.first_name || "User"}
+                            </>
+                          ) : (
+                            "No name provided"
+                          )}
+                        </div>
+                        <div className="text-xs text-neutral-500">
                           {user.email}
                         </div>
                       </div>
@@ -293,11 +341,6 @@ export function AdminUsersTab() {
                       {user.created_at
                         ? new Date(user.created_at).toLocaleDateString()
                         : "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                      {user.last_sign_in
-                        ? new Date(user.last_sign_in).toLocaleDateString()
-                        : "Never"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div
@@ -377,6 +420,77 @@ export function AdminUsersTab() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && users.length > 0 && (
+            <div className="px-6 py-8 bg-neutral-50/50 border-t border-neutral-200 space-y-4">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Range Indicator */}
+                <div className="order-2 md:order-1 flex flex-col">
+                  <div className="text-sm font-medium text-neutral-400">
+                    {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, users.length)} of {users.length.toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="order-1 md:order-2 flex items-center gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft size={16} /> Back
+                  </button>
+                  
+                  <div className="flex items-center gap-1.5">
+                    {getPageNumbers().map((page, i) => (
+                      page === "..." ? (
+                        <span key={`dots-${i}`} className="px-2 text-neutral-400">...</span>
+                      ) : (
+                        <button
+                          key={`page-${page}`}
+                          onClick={() => setCurrentPage(Number(page))}
+                          className={`min-w-[36px] h-9 flex items-center justify-center text-sm font-bold rounded-lg transition-all border ${
+                            currentPage === page
+                              ? "bg-neutral-900 border-neutral-900 text-white shadow-lg"
+                              : "bg-white border-neutral-200 text-neutral-600 hover:border-neutral-400"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+
+                {/* Items Per Page */}
+                <div className="order-3 flex items-center gap-3">
+                  <span className="text-sm font-medium text-neutral-500 whitespace-nowrap">Result per page</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer min-w-[70px]"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

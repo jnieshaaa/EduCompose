@@ -8,6 +8,10 @@ import {
   UserCheck,
   MoreVertical,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  X,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
@@ -29,9 +33,11 @@ interface Student {
   is_active: boolean;
   enrollment_status: "active" | "dropped" | "graduated";
   programs_lookup?: {
+    id: string;
     name: string;
     abbr: string;
     departments?: {
+      id: string;
       name: string;
       code: string;
     };
@@ -52,6 +58,15 @@ export const AdminStudentsTab: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [allPrograms, setAllPrograms] = useState<any[]>([]);
+  const [deptFilter, setDeptFilter] = useState("");
+  const [progFilter, setProgFilter] = useState("");
+  const [blockFilter, setBlockFilter] = useState("");
 
   const logStudentId = searchParams.get("logs");
 
@@ -86,9 +101,11 @@ export const AdminStudentsTab: React.FC = () => {
           `
           *,
           programs_lookup(
+            id,
             name,
             abbr,
             departments(
+              id,
               name,
               code
             )
@@ -105,6 +122,24 @@ export const AdminStudentsTab: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  const fetchFiltersData = useCallback(async () => {
+    try {
+      const [deptsRes, progsRes] = await Promise.all([
+        supabase.from("departments").select("*").order("name"),
+        supabase.from("programs_lookup").select("*").order("name")
+      ]);
+      setDepartments(deptsRes.data || []);
+      setAllPrograms(progsRes.data || []);
+    } catch (err) {
+      console.error("Error fetching filter data:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStudents();
+    fetchFiltersData();
+  }, [loadStudents, fetchFiltersData]);
 
   const handleToggleActive = async (student: Student) => {
     try {
@@ -148,15 +183,74 @@ export const AdminStudentsTab: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
-
   const filteredStudents = students.filter((s) => {
     const fullSearch =
-      `${s.first_name} ${s.last_name} ${s.student_code} ${s.email}`.toLowerCase();
-    return fullSearch.includes(searchTerm.toLowerCase());
+      `${s.first_name || ""} ${s.last_name || ""} ${s.student_code || ""} ${s.email || ""}`.toLowerCase();
+    
+    if (searchTerm && !fullSearch.includes(searchTerm.toLowerCase())) return false;
+    
+    if (deptFilter) {
+      const deptCode = s.programs_lookup?.departments?.code;
+      const deptId = s.programs_lookup?.departments?.id;
+      if (deptCode !== deptFilter && deptId !== deptFilter) return false;
+    }
+    
+    if (progFilter && s.program_id !== progFilter) return false;
+    if (blockFilter && s.block_name !== blockFilter) return false;
+
+    return true;
   });
+
+  // Get unique blocks for the current selection
+  const availableBlocks = Array.from(new Set(
+    students
+      .filter(s => {
+        if (deptFilter) {
+          const deptCode = s.programs_lookup?.departments?.code;
+          const deptId = s.programs_lookup?.departments?.id;
+          if (deptCode !== deptFilter && deptId !== deptFilter) return false;
+        }
+        if (progFilter && s.program_id !== progFilter) return false;
+        return true;
+      })
+      .map(s => s.block_name)
+      .filter(Boolean)
+  )).sort();
+
+  // Reset pagination when searching or filtering
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, deptFilter, progFilter, blockFilter]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 8) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 6; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 5; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
 
   if (selectedStudentForLogs) {
     return (
@@ -191,17 +285,90 @@ export const AdminStudentsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Filter */}
+      {/* Filters */}
       <Card className="p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
-          <Input
-            type="text"
-            placeholder="Search by student code, name, or email..."
-            value={searchTerm}
-            onChange={setSearchTerm}
-            className="pl-10"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <Input
+              type="text"
+              placeholder="Search by ID, name, or email..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="pl-9 h-10 text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-neutral-400 shrink-0" />
+            <select
+              value={deptFilter}
+              onChange={(e) => {
+                setDeptFilter(e.target.value);
+                setProgFilter("");
+                setBlockFilter("");
+              }}
+              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">All Departments</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.code}>
+                  {d.name} ({d.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={progFilter}
+              disabled={!deptFilter}
+              onChange={(e) => {
+                setProgFilter(e.target.value);
+                setBlockFilter("");
+              }}
+              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+            >
+              <option value="">All Programs</option>
+              {allPrograms
+                .filter(p => !deptFilter || p.department_id === departments.find(d => d.code === deptFilter)?.id)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.abbr})
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={blockFilter}
+              disabled={!progFilter && !deptFilter}
+              onChange={(e) => setBlockFilter(e.target.value)}
+              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+            >
+              <option value="">All Blocks</option>
+              {availableBlocks.map((b) => (
+                <option key={b} value={b}>
+                  Block {b}
+                </option>
+              ))}
+            </select>
+            {(searchTerm || deptFilter || progFilter || blockFilter) && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setDeptFilter("");
+                  setProgFilter("");
+                  setBlockFilter("");
+                }}
+                className="p-2 text-neutral-400 hover:text-neutral-600 shrink-0"
+                title="Clear all filters"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -250,7 +417,7 @@ export const AdminStudentsTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-100">
-                {filteredStudents.map((s) => (
+                {currentItems.map((s) => (
                   <tr
                     key={s.id}
                     className="hover:bg-neutral-50/50 transition-colors group"
@@ -363,11 +530,82 @@ export const AdminStudentsTab: React.FC = () => {
                         )}
                       </div>
                     </td>
-                  </tr>
+                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && filteredStudents.length > 0 && (
+            <div className="px-6 py-8 bg-neutral-50/50 border-t border-neutral-200 space-y-4">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Range Indicator */}
+                <div className="order-2 md:order-1 flex flex-col">
+                  <div className="text-sm font-medium text-neutral-400">
+                    {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length.toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="order-1 md:order-2 flex items-center gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft size={16} /> Back
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    {getPageNumbers().map((page, i) => (
+                      page === "..." ? (
+                        <span key={`dots-${i}`} className="px-2 text-neutral-400">...</span>
+                      ) : (
+                        <button
+                          key={`page-${page}`}
+                          onClick={() => setCurrentPage(Number(page))}
+                          className={`min-w-[36px] h-9 flex items-center justify-center text-sm font-bold rounded-lg transition-all border ${
+                            currentPage === page
+                              ? "bg-neutral-900 border-neutral-900 text-white shadow-lg"
+                              : "bg-white border-neutral-200 text-neutral-600 hover:border-neutral-400"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+
+                {/* Items Per Page */}
+                <div className="order-3 flex items-center gap-3">
+                  <span className="text-sm font-medium text-neutral-500 whitespace-nowrap">Result per page</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer min-w-[70px]"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

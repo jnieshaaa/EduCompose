@@ -9,7 +9,7 @@ import type {
   SystemStatsResponse,
 } from "./types/Essay";
 import dummyDataJson from "./data/dummyData.json";
-import { supabase } from "./lib/supabaseClient";
+import { supabase, supabaseAdmin } from "./lib/supabaseClient";
 
 // Get API base URL from environment variable, fallback to localhost for development
 const API_BASE_URL =
@@ -77,64 +77,52 @@ const apiRequest = async <T>(
 
 // Auth API
 export const authApi = {
-  login: async (
-    identifier: { email?: string; username?: string },
-    password: string,
-  ) => {
-    return apiRequest<{
-      access_token: string;
-      token_type: string;
-      user?: {
-        id: number;
-        email: string;
-        username: string;
-        full_name: string;
-        role: string;
-        is_active: boolean;
+  checkEmail: async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      return {
+        exists: !!data,
+        message: data ? "Email exists." : "No account found with this email address.",
       };
-    }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        email: identifier.email,
-        username: identifier.username,
-        password,
-      }),
-    });
+    } catch (err: unknown) {
+      console.error("Check email error:", err);
+      return { exists: false, message: "Error checking email." };
+    }
   },
 
-  register: async (userData: {
-    email: string;
-    password: string;
-    confirm_password?: string;
-  }) => {
-    return apiRequest<{
-      message: string;
-      user: User;
-      verification_code: string;
-    }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-  },
+  resetPassword: async (email: string, newPassword: string) => {
+    try {
+      // First, get the user's auth ID from users table
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("auth_user_id")
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
 
-  verifySignup: async (email: string, code: string, password?: string) => {
-    return apiRequest<{ success: boolean; message: string }>(
-      "/auth/verify-signup",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, code, ...(password && { password }) }),
-      },
-    );
-  },
+      if (userError || !userData?.auth_user_id) {
+        return { success: false, message: "User not found." };
+      }
 
-  resendSignupCode: async (email: string) => {
-    return apiRequest<{ verification_code: string }>(
-      "/auth/resend-signup-code",
-      {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      },
-    );
+      // Use supabaseAdmin to update password
+      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
+        userData.auth_user_id,
+        { password: newPassword.trim() }
+      );
+
+      if (resetError) throw resetError;
+
+      return { success: true, message: "Password reset successfully!" };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to reset password.";
+      return { success: false, message };
+    }
   },
 
   updatePassword: async (currentPassword: string, newPassword: string) => {
@@ -160,25 +148,7 @@ export const authApi = {
     });
   },
 
-  checkEmail: async (email: string) => {
-    return apiRequest<{ exists: boolean; message: string }>(
-      "/auth/check-email",
-      {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      },
-    );
-  },
-
-  resetPassword: async (email: string, newPassword: string) => {
-    return apiRequest<{ message: string; success: boolean }>(
-      "/auth/reset-password",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, new_password: newPassword }),
-      },
-    );
-  },
+  // Note: Most auth functions moved to direct Supabase calls in useAuthModal
 
   createUser: async (userData: {
     email: string;
@@ -187,9 +157,53 @@ export const authApi = {
     first_name?: string;
     middle_name?: string;
     last_name?: string;
+    title?: string;
+    nickname?: string;
     username?: string;
     full_name?: string;
   }) => {
+    // 1. Create user in Supabase Auth via admin client
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: userData.email.trim(),
+      password: userData.password.trim(),
+      email_confirm: true,
+      user_metadata: {
+        role: userData.role,
+        first_name: userData.first_name,
+        middle_name: userData.middle_name,
+        last_name: userData.last_name,
+        title: userData.title,
+        nickname: userData.nickname,
+        full_name: userData.full_name || `${userData.first_name || ""} ${userData.last_name || ""}`.trim()
+      }
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(`Auth Error: ${authError?.message || "Failed to create user in Auth"}`);
+    }
+
+    // 2. Create user in public.users table via admin client
+    const { error: publicError } = await supabaseAdmin
+      .from("users")
+      .insert({
+        auth_user_id: authData.user.id,
+        email: userData.email.trim(),
+        first_name: userData.first_name,
+        middle_name: userData.middle_name,
+        last_name: userData.last_name,
+        title: userData.title,
+        nickname: userData.nickname,
+        role: userData.role,
+        is_active: true
+      });
+
+    if (publicError) {
+      // Cleanup auth user if public user creation fails
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      throw new Error(`DB Error: ${publicError.message}`);
+    }
+
+    // 3. Sync to backend database
     return apiRequest<{
       message: string;
       user: {
@@ -203,7 +217,10 @@ export const authApi = {
       };
     }>("/auth/admin/create-user", {
       method: "POST",
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        ...userData,
+        supabase_user_id: authData.user.id
+      }),
     });
   },
 
@@ -213,7 +230,43 @@ export const authApi = {
     first_name: string;
     last_name: string;
     middle_name?: string;
+    password?: string;
   }) => {
+    const tempPassword = payload.password || "Student123!"; // Simplified default
+    
+    // 1. Create auth user in Supabase
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: payload.email.trim().toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        role: "student",
+        first_name: payload.first_name,
+        middle_name: payload.middle_name,
+        last_name: payload.last_name,
+        student_code: payload.student_code.trim().toUpperCase(),
+        full_name: `${payload.first_name} ${payload.last_name}`.trim()
+      }
+    });
+
+    if (authError && !authError.message.includes("already registered")) {
+        throw new Error(`Auth Error: ${authError.message}`);
+    }
+
+    // 2. Insert into users table if successful
+    if (authData.user) {
+        await supabaseAdmin.from("users").upsert({
+            auth_user_id: authData.user.id,
+            email: payload.email.trim().toLowerCase(),
+            first_name: payload.first_name,
+            middle_name: payload.middle_name,
+            last_name: payload.last_name,
+            role: "student",
+            is_active: true
+        });
+    }
+
+    // 3. Sync to backend
     return apiRequest<{
       success: boolean;
       message: string;
@@ -223,7 +276,7 @@ export const authApi = {
       student_code: string;
     }>("/auth/teacher/provision-student-account", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, password: tempPassword }),
     });
   },
 };
@@ -553,7 +606,7 @@ export const adminApi = {
     let query = supabase
       .from("users")
       .select(
-        "id, email, first_name, middle_name, last_name, role, is_active, created_at, auth_user_id",
+        "id, email, first_name, middle_name, last_name, title, nickname, role, is_active, created_at, auth_user_id",
       )
       .order("created_at", { ascending: false });
 
@@ -596,6 +649,8 @@ export const adminApi = {
       first_name?: string;
       middle_name?: string;
       last_name?: string;
+      title?: string;
+      nickname?: string;
       role?: string;
       is_active?: boolean;
     },
@@ -625,7 +680,7 @@ export const adminApi = {
     }
 
     // Delete from auth.users (this will cascade to users table)
-    const { error } = await supabase.auth.admin.deleteUser(user.auth_user_id);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(user.auth_user_id);
 
     if (error) {
       throw new Error(error.message);
@@ -646,8 +701,8 @@ export const adminApi = {
       throw new Error("User not found");
     }
 
-    // Update password using admin API
-    const { error } = await supabase.auth.admin.updateUserById(
+    // Update password using admin client
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
       user.auth_user_id,
       { password: newPassword },
     );
