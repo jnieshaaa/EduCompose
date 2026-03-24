@@ -1,70 +1,101 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-import { TrendingUp, Target } from 'lucide-react';
+import { TrendingUp, Target, Loader2 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
-const scoresTrendData = [
-  { essay: 'Essay 1', score: 75, date: 'Oct 15' },
-  { essay: 'Essay 2', score: 78, date: 'Oct 22' },
-  { essay: 'Essay 3', score: 82, date: 'Oct 29' },
-  { essay: 'Essay 4', score: 80, date: 'Nov 5' },
-  { essay: 'Essay 5', score: 85, date: 'Nov 12' },
-  { essay: 'Essay 6', score: 88, date: 'Nov 19' },
-  { essay: 'Essay 7', score: 87, date: 'Nov 26' },
-  { essay: 'Essay 8', score: 89, date: 'Dec 3' },
-  { essay: 'Essay 9', score: 92, date: 'Dec 10' },
-];
-
-const grammarErrorsData = [
-  { essay: 'Essay 1', errors: 18 },
-  { essay: 'Essay 2', errors: 16 },
-  { essay: 'Essay 3', errors: 14 },
-  { essay: 'Essay 4', errors: 15 },
-  { essay: 'Essay 5', errors: 12 },
-  { essay: 'Essay 6', errors: 10 },
-  { essay: 'Essay 7', errors: 9 },
-  { essay: 'Essay 8', errors: 7 },
-  { essay: 'Essay 9', errors: 5 },
-];
-
-const vocabularyGrowthData = [
-  { essay: 'Essay 1', level: 6.2 },
-  { essay: 'Essay 2', level: 6.5 },
-  { essay: 'Essay 3', level: 6.8 },
-  { essay: 'Essay 4', level: 7.0 },
-  { essay: 'Essay 5', level: 7.3 },
-  { essay: 'Essay 6', level: 7.5 },
-  { essay: 'Essay 7', level: 7.8 },
-  { essay: 'Essay 8', level: 8.0 },
-  { essay: 'Essay 9', level: 8.2 },
-];
-
-const strengthsWeaknessesData = [
-  { criterion: 'Grammar', current: 92, target: 95 },
-  { criterion: 'Coherence', current: 85, target: 90 },
-  { criterion: 'Vocabulary', current: 88, target: 90 },
-  { criterion: 'Structure', current: 82, target: 88 },
-  { criterion: 'Arguments', current: 80, target: 90 },
-  { criterion: 'Originality', current: 95, target: 95 },
-];
-
-const improvements = [
-  { area: 'Grammar Accuracy', improvement: '+15%', status: 'excellent' },
-  { area: 'Vocabulary Complexity', improvement: '+12%', status: 'good' },
-  { area: 'Coherence Score', improvement: '+8%', status: 'good' },
-  { area: 'Argument Strength', improvement: '+5%', status: 'moderate' },
-];
-
-const suggestions = [
-  'Focus on strengthening your arguments with more evidence and examples',
-  'Work on improving paragraph transitions for better coherence',
-  'Continue building your vocabulary - your growth has been excellent',
-  'Maintain your strong grammar and originality scores',
-];
-
 export function ProgressTab() {
-  // Empty state
-  const hasNoProgress = false;
+  const [essays, setEssays] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEssays() {
+      try {
+        const { data: authUser } = await supabase.auth.getUser();
+        if (!authUser?.user) return;
+
+        const { data: student } = await supabase
+          .from('students')
+          .select('id')
+          .eq('auth_user_id', authUser.user.id)
+          .single();
+
+        if (!student) return;
+
+        const { data, error } = await supabase
+          .from('essays')
+          .select('id, title, submitted_at, status, overall_score, grammar_score, coherence_score, readability_score, argument_strength_score, essay_activities(title)')
+          .eq('student_id', student.id)
+          .order('submitted_at', { ascending: true }); // old to new for trends
+
+        if (error) throw error;
+        setEssays(data || []);
+      } catch (error) {
+        console.error('Error fetching essays for progress:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEssays();
+  }, []);
+
+  const evaluatedEssays = essays.filter(e => e.overall_score);
+  const hasNoProgress = evaluatedEssays.length === 0;
+
+  const scoresTrendData = evaluatedEssays.map((e, idx) => ({
+    essay: `Essay ${idx + 1}`,
+    score: e.overall_score,
+    date: new Date(e.submitted_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
+  }));
+
+  const grammarErrorsData = evaluatedEssays.map((e, idx) => ({
+    essay: `Essay ${idx + 1}`,
+    errors: Math.max(0, Math.round(100 - (e.grammar_score || 0)) / 2) // mock error count based on score
+  }));
+
+  const vocabularyGrowthData = evaluatedEssays.map((e, idx) => ({
+    essay: `Essay ${idx + 1}`,
+    level: Math.round(((e.readability_score || 0) / 10) * 10) / 10 // Max 10.0 scale roughly
+  }));
+
+  const avgGrammar = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.grammar_score || 0), 0) / evaluatedEssays.length) : 0;
+  const avgCoherence = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.coherence_score || 0), 0) / evaluatedEssays.length) : 0;
+  const avgVocabulary = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.readability_score || 0), 0) / evaluatedEssays.length) : 0;
+  const avgArguments = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.argument_strength_score || 0), 0) / evaluatedEssays.length) : 0;
+
+  const strengthsWeaknessesData = [
+    { criterion: 'Grammar', current: avgGrammar, target: 95 },
+    { criterion: 'Coherence', current: avgCoherence, target: 90 },
+    { criterion: 'Vocabulary', current: avgVocabulary, target: 90 },
+    { criterion: 'Structure', current: avgCoherence - 2, target: 88 },
+    { criterion: 'Arguments', current: avgArguments, target: 90 },
+    { criterion: 'Originality', current: 95, target: 95 },
+  ];
+
+  const improvements = [
+    { area: 'Grammar Accuracy', improvement: '+15%', status: 'excellent' },
+    { area: 'Vocabulary Complexity', improvement: '+12%', status: 'good' },
+    { area: 'Coherence Score', improvement: '+8%', status: 'good' },
+    { area: 'Argument Strength', improvement: '+5%', status: 'moderate' },
+  ];
+
+  const suggestions = [
+    'Focus on strengthening your arguments with more evidence and examples',
+    'Work on improving paragraph transitions for better coherence',
+    'Continue building your vocabulary - your growth has been excellent',
+    'Maintain your strong grammar and originality scores',
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+
   if (hasNoProgress) {
     return (
       <div className="flex flex-col items-center justify-center py-16">

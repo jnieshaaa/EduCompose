@@ -194,11 +194,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         label: "Progress & Analytics",
         path: "/Student/Progress",
       },
-      {
-        icon: <ClipboardCheck className='w-5 h-5' />,
-        label: "Rubric / Criteria",
-        path: "/Student/Rubric",
-      },
+      // {
+      //   icon: <ClipboardCheck className='w-5 h-5' />,
+      //   label: "Rubric / Criteria",
+      //   path: "/Student/Rubric",
+      // },
       {
         icon: <Settings className='w-5 h-5' />,
         label: "Settings",

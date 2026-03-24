@@ -1,11 +1,50 @@
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { Save, Download } from 'lucide-react';
+import { Save, Download, Loader2 } from 'lucide-react';
 
 export function StudentSettingsTab() {
+  const [studentData, setStudentData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData?.user) return;
+
+        const { data, error } = await supabase
+          .from("students")
+          .select(`
+            *,
+            programs_lookup (name, abbr)
+          `)
+          .eq("auth_user_id", authData.user.id)
+          .single();
+
+        if (error) throw error;
+        setStudentData(data);
+      } catch (err) {
+        console.error("Error loading student settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -19,41 +58,41 @@ export function StudentSettingsTab() {
         <h2 className="text-xl text-neutral-900 mb-4">Profile Information</h2>
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-white text-2xl">
-              E
+            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-white text-2xl uppercase font-bold">
+              {studentData?.first_name?.[0] || "?"}
             </div>
-            <Button variant="outline" size="sm">Change Avatar</Button>
+            <Button variant="outline" size="sm" disabled>Change Avatar</Button>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="first-name">First Name</Label>
-              <Input id="first-name" defaultValue="Emma" className="mt-1" />
+              <Input id="first-name" defaultValue={studentData?.first_name || ""} className="mt-1" disabled />
             </div>
             <div>
               <Label htmlFor="last-name">Last Name</Label>
-              <Input id="last-name" defaultValue="Wilson" className="mt-1" />
+              <Input id="last-name" defaultValue={studentData?.last_name || ""} className="mt-1" disabled />
             </div>
           </div>
 
           <div>
             <Label htmlFor="student-id">Student ID</Label>
-            <Input id="student-id" defaultValue="STU001" className="mt-1" disabled />
+            <Input id="student-id" defaultValue={studentData?.student_code || ""} className="mt-1" disabled />
           </div>
 
           <div>
             <Label htmlFor="email">Email Address</Label>
-            <Input id="email" type="email" defaultValue="emma.wilson@example.com" className="mt-1" />
+            <Input id="email" type="email" defaultValue={studentData?.email || ""} className="mt-1" disabled />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="program">Current Program</Label>
-              <Input id="program" defaultValue="Computer Science 101" className="mt-1" disabled />
+              <Input id="program" defaultValue={studentData?.programs_lookup?.name || studentData?.programs_lookup?.abbr || ""} className="mt-1" disabled />
             </div>
             <div>
-              <Label htmlFor="section">Section</Label>
-              <Input id="section" defaultValue="Section A" className="mt-1" disabled />
+              <Label htmlFor="section">Year & Block</Label>
+              <Input id="section" defaultValue={studentData?.year && studentData?.block_name ? `${studentData.year} - ${studentData.block_name}` : studentData?.block_name || ""} className="mt-1" disabled />
             </div>
           </div>
         </div>

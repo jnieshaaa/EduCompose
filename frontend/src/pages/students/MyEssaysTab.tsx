@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, Edit, FileText } from 'lucide-react';
+import { Search, Eye, MessageSquare, Download, Edit, FileText, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,72 +18,62 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
-
-const essaysData = [
-  { 
-    id: 1, 
-    title: 'Climate Change Impact', 
-    submitted: '2025-12-10', 
-    status: 'Under AI Evaluation',
-    aiScore: null, 
-    teacherScore: null,
-    hasAiFeedback: false,
-    hasTeacherFeedback: false
-  },
-  { 
-    id: 2, 
-    title: 'Machine Learning Ethics', 
-    submitted: '2025-12-09', 
-    status: 'Reviewed',
-    aiScore: 85, 
-    teacherScore: 88,
-    hasAiFeedback: true,
-    hasTeacherFeedback: true
-  },
-  { 
-    id: 3, 
-    title: 'Economic Theory Analysis', 
-    submitted: '2025-12-05', 
-    status: 'Reviewed',
-    aiScore: 89, 
-    teacherScore: 92,
-    hasAiFeedback: true,
-    hasTeacherFeedback: true
-  },
-  { 
-    id: 4, 
-    title: 'Social Media Effects', 
-    submitted: '2025-12-03', 
-    status: 'Reviewed',
-    aiScore: 87, 
-    teacherScore: 85,
-    hasAiFeedback: true,
-    hasTeacherFeedback: true
-  },
-  { 
-    id: 5, 
-    title: 'Historical Analysis of WWI', 
-    submitted: '2025-12-01', 
-    status: 'AI Evaluated',
-    aiScore: 82, 
-    teacherScore: null,
-    hasAiFeedback: true,
-    hasTeacherFeedback: false
-  },
-  { 
-    id: 6, 
-    title: 'Data Privacy Concerns', 
-    submitted: '2025-11-28', 
-    status: 'Reviewed',
-    aiScore: 90, 
-    teacherScore: 91,
-    hasAiFeedback: true,
-    hasTeacherFeedback: true
-  },
-];
-
+import { supabase } from '../../lib/supabaseClient';
 export function MyEssaysTab() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [essaysData, setEssaysData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEssays() {
+      try {
+        const { data: authUser } = await supabase.auth.getUser();
+        if (!authUser?.user) return;
+
+        const { data: student } = await supabase
+          .from('students')
+          .select('id')
+          .eq('auth_user_id', authUser.user.id)
+          .single();
+
+        if (!student) return;
+
+        const { data, error } = await supabase
+          .from('essays')
+          .select('id, title, submitted_at, status, overall_score, essay_activities(title)')
+          .eq('student_id', student.id)
+          .order('submitted_at', { ascending: false });
+
+        if (error) throw error;
+
+        const formatted = (data || []).map(e => ({
+          id: e.id,
+          title: (e.essay_activities as any)?.title || e.title || 'Untitled',
+          submitted: new Date(e.submitted_at).toISOString().split('T')[0],
+          status: e.status === 'analyzed' ? 'AI Evaluated' : 'Submitted',
+          aiScore: e.overall_score || null,
+          teacherScore: null,
+          hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
+          hasTeacherFeedback: e.status === 'reviewed'
+        }));
+        setEssaysData(formatted);
+      } catch (error) {
+        console.error('Error fetching essays:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEssays();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center flex-col items-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-neutral-500">Loading your essays...</p>
+      </div>
+    );
+  }
 
   const filteredEssays = essaysData.filter(essay =>
     essay.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -143,19 +133,23 @@ export function MyEssaysTab() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Total Submitted</p>
-          <p className="text-2xl text-neutral-900 mt-1">12</p>
+          <p className="text-2xl text-neutral-900 mt-1">{essaysData.length}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Fully Reviewed</p>
-          <p className="text-2xl text-success-default mt-1">10</p>
+          <p className="text-2xl text-success-default mt-1">{essaysData.filter(e => e.hasTeacherFeedback).length}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Pending</p>
-          <p className="text-2xl text-warning-default mt-1">2</p>
+          <p className="text-2xl text-warning-default mt-1">{essaysData.filter(e => !e.hasTeacherFeedback).length}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-neutral-500">Avg. Score</p>
-          <p className="text-2xl text-primary mt-1">88%</p>
+          <p className="text-2xl text-primary mt-1">
+            {essaysData.filter(e => e.aiScore).length > 0 
+              ? Math.round(essaysData.filter(e => e.aiScore).reduce((sum, e) => sum + e.aiScore, 0) / essaysData.filter(e => e.aiScore).length) + '%' 
+              : 'N/A'}
+          </p>
         </Card>
       </div>
 
