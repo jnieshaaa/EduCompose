@@ -48,8 +48,8 @@ export const fetchActivityBreadcrumbInfo = async (
 
     // 4. Resolve Section/Block Info (if targeted)
     if (essayId) {
-      const { data: essay } = await supabase.from("essays").select("section_id").eq("id", essayId).single();
-      if (essay && essay.section_id) sectionId = String(essay.section_id);
+      const { data: essay } = await supabase.from("essays").select("block_id").eq("id", essayId).single();
+      if (essay && essay.block_id) sectionId = String(essay.block_id);
     } else if (studentId) {
        // Find which block this student is assigned to for this activity
        // or just their primary block matching the activity's blocks
@@ -3063,14 +3063,14 @@ export const fetchStudentsForActivity = async (
     type EssayWithStudentData = {
       id: number;
       student_id: number;
-      section_id: number | null;
+      block_id: number | null;
       students: {
         id: number;
         first_name: string;
         middle_name: string | null;
         last_name: string;
       };
-      sections: {
+      blocks: {
         id: number;
         name: string;
         program_id: string | null;
@@ -3083,8 +3083,8 @@ export const fetchStudentsForActivity = async (
 
     return (essaysData as unknown as EssayWithStudentData[]).map((essay) => {
       const student = essay.students;
-      const section = essay.sections;
-      const program = section?.programs_lookup;
+      const block = essay.blocks;
+      const program = block?.programs_lookup;
 
       return {
         id: String(student.id),
@@ -3092,7 +3092,7 @@ export const fetchStudentsForActivity = async (
         essayId: essay.id,
         name: buildFullNameFromObject(student, "Unknown"),
         programName: program?.name || "Unknown",
-        sectionName: section?.name || "Unknown",
+        sectionName: block?.name || "Unknown",
         hasEssay: true,
       };
     });

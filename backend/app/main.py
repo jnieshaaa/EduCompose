@@ -32,12 +32,16 @@ allowed_origins = [
     "http://127.0.0.1:3000",
     "https://edu-compose.vercel.app",
     "https://edu-compose-production.vercel.app",
+    "https://educompose.vercel.app",
+    "https://educompose-production.vercel.app",
 ]
 
 # Add production frontend URL if it exists
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
+if frontend_url and frontend_url not in allowed_origins:
     allowed_origins.append(frontend_url)
+
+print(f"INFO:    Setting up CORS with origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -97,7 +101,10 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "message": "EduCompose API is running"}
+    import logging
+    logger = logging.getLogger("uvicorn")
+    logger.info("Health check endpoint called")
+    return {"status": "healthy", "message": "EduCompose API is running", "environment": os.getenv("RAILWAY_ENVIRONMENT", "development")}
 
 @app.get("/api/warmup")
 async def warmup_endpoint():

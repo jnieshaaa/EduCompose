@@ -138,11 +138,17 @@ class OCRService:
             pdf_file = BytesIO(pdf_bytes)
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             
-            logger.info(f"PDF has {len(pdf_reader.pages)} pages")
+            num_pages = len(pdf_reader.pages)
+            logger.info(f"PDF has {num_pages} pages")
+            
+            # Limit direct extraction to first 20 pages if it's huge
+            page_limit = 20
+            pages_to_extract = min(num_pages, page_limit)
             
             text_parts = []
-            for i, page in enumerate(pdf_reader.pages):
+            for i in range(pages_to_extract):
                 try:
+                    page = pdf_reader.pages[i]
                     page_text = page.extract_text()
                     if page_text and page_text.strip():
                         text_parts.append(page_text)
@@ -261,11 +267,13 @@ class OCRService:
                             break
             
             # Convert PDF to images with Poppler path if found
+            # DPI = 200 (Lower to save memory, 300 can OOM)
+            # Max 10 pages for OCR to prevent OOM
             try:
                 if poppler_path:
-                    images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=poppler_path)
+                    images = convert_from_bytes(pdf_bytes, dpi=200, poppler_path=poppler_path, last_page=10)
                 else:
-                    images = convert_from_bytes(pdf_bytes, dpi=300)  # Higher DPI for better quality
+                    images = convert_from_bytes(pdf_bytes, dpi=200, last_page=10)
             except Exception as e:
                 error_msg = str(e)
                 if "poppler" in error_msg.lower() or "path" in error_msg.lower():
@@ -275,7 +283,7 @@ class OCRService:
                     explicit_path = os.path.expanduser(rf"~\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin")
                     if os.path.exists(explicit_path):
                         logger.info(f"Using explicit Poppler path: {explicit_path}")
-                        images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=explicit_path)
+                        images = convert_from_bytes(pdf_bytes, dpi=200, poppler_path=explicit_path, last_page=10)
                     else:
                         raise Exception(f"Poppler not found. Please ensure Poppler is installed. Error: {error_msg}")
                 else:
@@ -294,6 +302,7 @@ class OCRService:
             total_confidence = 0.0
             total_detections = 0
             
+            import gc
             for page_num, image in enumerate(images, 1):
                 logger.info(f"Processing page {page_num}/{len(images)}")
                 
@@ -371,6 +380,12 @@ class OCRService:
                 except Exception as e:
                     logger.error(f"Error processing page {page_num}: {e}")
                     all_text.append("")  # Add empty string for failed page
+                
+                # Explicit cleanup
+                del image
+                del preprocessed_image
+                if 'bounds' in locals(): del bounds
+                gc.collect()
             
             # Combine all pages
             extracted_text = '\n\n'.join(all_text)
