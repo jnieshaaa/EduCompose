@@ -119,16 +119,10 @@ class ArgumentMiner:
                     else:
                         logger.info("DistilBERT available")
             except ImportError as e:
-                if self.use_fine_tuned:
-                    # Caller demanded the fine-tuned transformer; surface the failure
-                    raise
                 logger.debug(f"Transformer classifier import failed: {e}")
                 self.transformer_classifier = False  # Mark as unavailable
                 self._transformer_available = False
             except Exception as e:
-                if self.use_fine_tuned:
-                    # Do not silently downgrade when fine-tuned is required
-                    raise
                 logger.warning(f"Failed to load transformer classifier: {e}. Using pattern-based classification.")
                 self.transformer_classifier = False  # Mark as unavailable
                 self._transformer_available = False

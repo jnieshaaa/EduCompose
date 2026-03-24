@@ -5,6 +5,7 @@ Uses a fine-tuned DistilBERT model for fast and accurate argument classification
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from enum import Enum
@@ -66,20 +67,32 @@ class TransformerClaimClassifier:
         self.id2label = {v: k for k, v in self.label2id.items()}
 
         # Prefer the local fine-tuned model by default; require it if requested
+        hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        hf_repo = os.environ.get("HUGGING_FACE_MODEL_ID", "przvl/persuasive_essays_distilbert_uncased")
+        
         if use_fine_tuned and self.fine_tuned_model_path is None:
             backend_root = Path(__file__).parent.parent.parent
             default_path = backend_root / "my_finetuned_distilbert"
             self.fine_tuned_model_path = str(default_path)
 
         if use_fine_tuned and self.fine_tuned_model_path:
+            # Check if local path exists
             if not Path(self.fine_tuned_model_path).exists():
-                error_msg = (
-                    f"Fine-tuned DistilBERT expected at {self.fine_tuned_model_path} "
-                    "but was not found. Provide a valid fine_tuned_model_path or set "
-                    "use_fine_tuned=False explicitly."
-                )
-                logger.error(error_msg)
-                raise FileNotFoundError(error_msg)
+                if hf_token:
+                    logger.warning(
+                        f"Local fine-tuned model not found at {self.fine_tuned_model_path}. "
+                        f"HUGGING_FACE_HUB_TOKEN found, attempting to load from Hugging Face repo: {hf_repo}"
+                    )
+                    # Redirect to Hugging Face repo
+                    self.fine_tuned_model_path = hf_repo
+                else:
+                    logger.warning(
+                        f"Fine-tuned DistilBERT expected at {self.fine_tuned_model_path} "
+                        "but was not found and HUGGING_FACE_HUB_TOKEN is not set. "
+                        "Falling back to base model (use_fine_tuned=False)."
+                    )
+                    use_fine_tuned = False
+                    self.fine_tuned_model_path = None
 
         # Initialize model
         self._initialize(use_fine_tuned, self.fine_tuned_model_path)
@@ -91,6 +104,8 @@ class TransformerClaimClassifier:
 
         try:
             # Choose model path
+            hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+            
             if use_fine_tuned and model_path:
                 load_path = model_path
                 logger.info(f"Loading fine-tuned model from: {load_path}")
@@ -99,14 +114,20 @@ class TransformerClaimClassifier:
                 logger.info(f"Loading base model: {load_path}")
 
             # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(load_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                load_path,
+                token=hf_token if hf_token else None
+            )
 
             # Load model
             # For fine-tuned models, don't pass num_labels/id2label/label2id as they're in the model config
             # For base models, we need to specify them
             if use_fine_tuned and model_path:
                 # Fine-tuned model: let it load its own config
-                self.model = AutoModelForSequenceClassification.from_pretrained(load_path)
+                self.model = AutoModelForSequenceClassification.from_pretrained(
+                    load_path,
+                    token=hf_token if hf_token else None
+                )
                 # Update label mappings from model config if available
                 if hasattr(self.model.config, 'id2label') and self.model.config.id2label:
                     self.id2label = self.model.config.id2label
