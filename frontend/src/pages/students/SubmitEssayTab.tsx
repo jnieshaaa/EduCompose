@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/textarea';
 import Badge from '../../components/ui/Badge';
-import { Upload, FileText, X, Clock, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle, Award, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -61,6 +61,8 @@ export function SubmitEssayTab() {
   const [submissionDate, setSubmissionDate] = useState<string | null>(null);
   const [isResubmitRequested, setIsResubmitRequested] = useState(false);
   const [requestingResubmission, setRequestingResubmission] = useState(false);
+  const [essayScore, setEssayScore] = useState<number | null>(null);
+  const [essayStatus, setEssayStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -148,6 +150,8 @@ export function SubmitEssayTab() {
           setIsSubmitted(true);
           setEssayContent(essayData.content || '');
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleString());
+          setEssayScore(essayData.overall_score || null);
+          setEssayStatus(essayData.status || 'submitted');
           if (essayData.title) {
             setSelectedFileName(essayData.title);
           } else if (essayData.file_path) {
@@ -223,6 +227,10 @@ export function SubmitEssayTab() {
       setSelectedFile(file);
       setSelectedFileName(file.name);
     }
+  };
+
+  const getWordCount = (text: string) => {
+    return text.trim().split(/\s+/).filter(w => w.length > 0).length;
   };
 
   const handleSubmit = async () => {
@@ -510,13 +518,13 @@ export function SubmitEssayTab() {
                         />
                         <div className="flex justify-between items-center px-1">
                           <span className={`text-xs font-medium ${
-                            essayContent.trim().split(/\s+/).filter(w => w.length > 0).length < activity.minWordCount 
+                            getWordCount(essayContent) < activity.minWordCount 
                               ? 'text-danger-default' 
                               : 'text-success-default'
                           }`}>
-                            Word Count: {essayContent.trim().split(/\s+/).filter(w => w.length > 0).length} / {activity.minWordCount}
+                            Word Count: {getWordCount(essayContent)} / {activity.minWordCount}
                           </span>
-                          {essayContent.trim().split(/\s+/).filter(w => w.length > 0).length < activity.minWordCount && (
+                          {getWordCount(essayContent) < activity.minWordCount && (
                              <span className="text-[10px] text-danger-default italic">
                                * Below minimum requirement
                              </span>
@@ -528,13 +536,17 @@ export function SubmitEssayTab() {
 
                   <div className="mt-6 flex justify-end gap-3">
                      <Button variant="outline">Save Draft</Button>
-                     <Button 
-                       className="bg-primary hover:bg-primary-300" 
-                       disabled={loading || (uploadMode === 'file' && !selectedFile) || (uploadMode === 'text' && !essayContent.trim())}
-                       onClick={handleSubmit}
-                     >
-                       {loading ? "Submitting..." : "Submit Assignment"}
-                     </Button>
+                      <Button 
+                        className="bg-primary hover:bg-primary-300" 
+                        disabled={
+                          loading || 
+                          (uploadMode === 'file' && !selectedFile) || 
+                          (uploadMode === 'text' && (!essayContent.trim() || getWordCount(essayContent) < activity.minWordCount))
+                        }
+                        onClick={handleSubmit}
+                      >
+                        {loading ? "Submitting..." : "Submit Assignment"}
+                      </Button>
                   </div>
                 </Card>
               ) : (
@@ -551,27 +563,58 @@ export function SubmitEssayTab() {
                         </div>
                      </div>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handleRequestResubmission}
-                          disabled={isResubmitRequested || requestingResubmission}
-                        >
-                          {requestingResubmission ? "Sending..." : isResubmitRequested ? "Request Sent" : "Request Resubmission"}
-                        </Button>
-                        <Badge className="bg-success-default text-white">Submitted</Badge>
+                        {essayStatus === 'submitted' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleRequestResubmission}
+                            disabled={isResubmitRequested || requestingResubmission}
+                          >
+                            {requestingResubmission ? "Sending..." : isResubmitRequested ? "Request Sent" : "Request Resubmission"}
+                          </Button>
+                        )}
+                        <Badge className="bg-success-default text-white">
+                          {essayStatus === 'reviewed' ? 'Reviewed' : (essayStatus === 'analyzed' ? 'AI Evaluated' : 'Submitted')}
+                        </Badge>
                       </div>
                   </Card>
 
-                  {/* 2. UPDATED: Grade Placeholder - Only appears when submitted */}
-                  <div className="text-center py-10 text-neutral-400 text-sm">
-                    <div className="flex justify-center mb-3">
-                      <div className="w-8 h-8 rounded-full border-2 border-neutral-300 flex items-center justify-center">
-                         <span className="font-serif font-bold text-lg">!</span>
+                  {/* 2. UPDATED: Grade Display - Shows actual grade if available */}
+                  {essayScore !== null ? (
+                    <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 text-center">
+                      <div className="flex flex-col items-center">
+                        <Award className="w-12 h-12 text-primary mb-3" />
+                        <h3 className="text-xl font-bold text-neutral-900 mb-1">
+                          {essayStatus === 'reviewed' ? 'Final Grade' : 'AI Evaluation Score'}
+                        </h3>
+                        <div className="text-4xl font-black text-primary mb-3">
+                          {essayScore}%
+                        </div>
+                        <p className="text-sm text-neutral-600 max-w-md mx-auto">
+                          {essayStatus === 'reviewed' 
+                            ? "Your teacher has reviewed your work and assigned this final grade. Great job!" 
+                            : "This score was generated by our AI based on your essay's grammar, coherence, and argument strength."}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          className="mt-6 border-primary/30 text-primary hover:bg-primary/5"
+                          onClick={() => navigate(buildSecureUrl('/AnalysisResults', { s: String(studentId), a: activityIdParam }))}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          View Detailed Feedback
+                        </Button>
                       </div>
+                    </Card>
+                  ) : (
+                    <div className="text-center py-10 text-neutral-400 text-sm">
+                      <div className="flex justify-center mb-3">
+                        <div className="w-8 h-8 rounded-full border-2 border-neutral-300 flex items-center justify-center">
+                           <span className="font-serif font-bold text-lg">!</span>
+                        </div>
+                      </div>
+                      Your grade for this work will appear here.
                     </div>
-                    Your grade for this work will appear here.
-                  </div>
+                  )}
                 </div>
               )}
             </TabsContent>

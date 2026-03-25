@@ -1744,7 +1744,7 @@ export const gradeEssay = async (
 
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, file_path, title, essay_activities(id, title, min_word_count)")
+      .select("id, file_path, content, title, essay_activities(id, title, min_word_count)")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -1759,87 +1759,93 @@ export const gradeEssay = async (
       };
     }
 
-    // Get signed URL to download file
-    const { data: urlData, error: urlError } = await supabase.storage
-      .from("essays")
-      .createSignedUrl(essayData.file_path, 3600);
+    let extractedText: string = "";
+    let wordCount: number = 0;
 
-    if (urlError || !urlData?.signedUrl) {
-      return { success: false, error: "Failed to get file URL" };
-    }
-
-    onProgress?.(10, "Downloading PDF...");
-
-    // Download file
-    const response = await fetch(urlData.signedUrl);
-    if (!response.ok) {
-      return { success: false, error: "Failed to download file" };
-    }
-    const blob = await response.blob();
-    const file = new File(
-      [blob],
-      essayData.file_path.split("/").pop() || "essay.pdf",
-      {
-        type: blob.type,
-      },
-    );
-
-    onProgress?.(20, "Extracting text from PDF (OCR)...");
-
-    // Step 1: OCR - Extract text from PDF (automatic, no confirmation needed)
-    // Since all students submit PDFs, we always use OCR to extract text
-    const { ocrApi } = await import("../api");
-    let extractedText: string;
-    try {
-      const ocrResult = await ocrApi.extractTextFromFile(file);
-      extractedText = ocrResult.text;
-
-      const wordCount = extractedText
+    if (essayData.content && essayData.content.trim()) {
+      onProgress?.(20, "Using text content from editor...");
+      extractedText = essayData.content;
+      wordCount = extractedText
         .trim()
         .split(/\s+/)
         .filter((w) => w.length > 0).length;
-
-      const essay_activities = essayData.essay_activities;
-      const minWordCount = (Array.isArray(essay_activities) 
-        ? essay_activities[0]?.min_word_count 
-        : (essay_activities as any)?.min_word_count) || 150;
-
-      // Update essay with word count immediately
-      await supabase
+    } else if (essayData.file_path) {
+      // Get signed URL to download file
+      const { data: urlData, error: urlError } = await supabase.storage
         .from("essays")
-        .update({
-          word_count: wordCount,
-          grading_error:
-            wordCount < minWordCount
-              ? `Essay will not be graded because it did not reach the minimum word count of ${minWordCount} words.`
-              : null,
-        })
-        .eq("id", essayData.id);
+        .createSignedUrl(essayData.file_path, 3600);
 
-      if (!extractedText || extractedText.trim().length < 10) {
-        return {
-          success: false,
-          error:
-            "Failed to extract text from PDF. The file may be corrupted or unreadable.",
-        };
+      if (urlError || !urlData?.signedUrl) {
+        return { success: false, error: "Failed to get file URL" };
       }
 
-      if (wordCount < minWordCount) {
+      onProgress?.(10, "Downloading PDF...");
+
+      // Download file
+      const response = await fetch(urlData.signedUrl);
+      if (!response.ok) {
+        return { success: false, error: "Failed to download file" };
+      }
+      const blob = await response.blob();
+      const file = new File(
+        [blob],
+        essayData.file_path.split("/").pop() || "essay.pdf",
+        {
+          type: blob.type,
+        },
+      );
+
+      onProgress?.(20, "Extracting text from PDF (OCR)...");
+
+      // Step 1: OCR - Extract text from PDF
+      const { ocrApi } = await import("../api");
+      try {
+        const ocrResult = await ocrApi.extractTextFromFile(file);
+        extractedText = ocrResult.text;
+        wordCount = extractedText
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0).length;
+      } catch (ocrErr) {
+        console.error("OCR error:", ocrErr);
         return {
           success: false,
-          error: `Essay is too short (${wordCount} words). Minimum required is ${minWordCount} words.`,
+          error: "Failed to extract text from PDF (OCR failed)",
         };
       }
+    } else {
+      return { success: false, error: "No essay content or file found" };
+    }
 
-      onProgress?.(40, `Text extracted (${wordCount} words). Analyzing...`);
-    } catch (ocrErr) {
-      console.error("OCR error:", ocrErr);
+    const essay_activities = essayData.essay_activities;
+    const minWordCount = (Array.isArray(essay_activities) 
+      ? essay_activities[0]?.min_word_count 
+      : (essay_activities as any)?.min_word_count) || 150;
+
+    // Update essay with word count immediately
+    await supabase
+      .from("essays")
+      .update({
+        word_count: wordCount,
+        grading_error:
+          wordCount < minWordCount
+            ? `Essay will not be graded because it did not reach the minimum word count of ${minWordCount} words.`
+            : null,
+      })
+      .eq("id", essayData.id);
+
+    if (!extractedText || extractedText.trim().length < 10) {
       return {
         success: false,
         error:
-          ocrErr instanceof Error
-            ? ocrErr.message
-            : "Failed to extract text from PDF",
+          "Failed to extract text from PDF. The file may be corrupted or unreadable.",
+      };
+    }
+
+    if (wordCount < minWordCount) {
+      return {
+        success: false,
+        error: `Essay is too short (${wordCount} words). Minimum required is ${minWordCount} words.`,
       };
     }
 

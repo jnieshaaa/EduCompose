@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, Edit, FileText, Loader2 } from 'lucide-react';
+import { Search, Eye, MessageSquare, Download, FileText, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -46,17 +46,17 @@ export function MyEssaysTab() {
 
         if (error) throw error;
 
-        const formatted = (data || []).map(e => ({
+        const formattedData = (data || []).map(e => ({
           id: e.id,
-          title: (e.essay_activities as any)?.title || e.title || 'Untitled',
-          submitted: new Date(e.submitted_at).toISOString().split('T')[0],
-          status: e.status === 'analyzed' ? 'AI Evaluated' : 'Submitted',
-          aiScore: e.overall_score || null,
-          teacherScore: null,
+          title: e.title || (e.essay_activities as any)?.title || 'Untitled Essay',
+          submitted: new Date(e.submitted_at).toLocaleDateString(),
+          status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'AI Evaluated' : 'Submitted'),
+          aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
+          teacherScore: e.status === 'reviewed' ? e.overall_score : null,
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
-          hasTeacherFeedback: e.status === 'reviewed'
+          hasTeacherFeedback: e.status === 'reviewed',
         }));
-        setEssaysData(formatted);
+        setEssaysData(formattedData);
       } catch (error) {
         console.error('Error fetching essays:', error);
       } finally {
@@ -233,12 +233,7 @@ export function MyEssaysTab() {
                             Download Feedback (PDF)
                           </DropdownMenuItem>
                         )}
-                        {essay.status === 'Reviewed' && (
-                          <DropdownMenuItem>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Revise & Resubmit
-                          </DropdownMenuItem>
-                        )}
+
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
