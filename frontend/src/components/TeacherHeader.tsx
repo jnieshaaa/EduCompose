@@ -4,7 +4,6 @@ import {
   X,
   Settings,
   LogOut,
-  Search, // New: for the search bar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -32,7 +31,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   isBurgerActive,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { loading } = useLoader();
@@ -41,9 +39,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // New state for search input
-  const [searchTerm, setSearchTerm] = useState("");
 
   // Load and Subscribe to Notifications
   useEffect(() => {
@@ -79,18 +74,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Sync search term with URL params
-  useEffect(() => {
-    const urlSearch = new URLSearchParams(location.search).get("search");
-    if (urlSearch !== null) {
-      setSearchTerm(urlSearch);
-    } else if (searchTerm && !urlSearch) {
-      // Clear search term if URL doesn't have search param
-      setSearchTerm("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkAsRead = async (id: string) => {
@@ -122,8 +105,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   };
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";
-
-  useEffect(() => setShineMount(true), [location.pathname]);
 
   // Animate progress bar
   useEffect(() => {
@@ -159,52 +140,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     setShowLogoutConfirm(false);
   };
 
-  // Search functionality - updates URL params for pages that support it
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedSearch = searchTerm.trim();
-    const currentSearchParams = new URLSearchParams(location.search);
-
-    // Pages that support search
-    const searchablePages = [
-      "/Teacher/Students",
-      "/Teacher/Sections",
-      "/Teacher/Programs",
-      "/Teacher/Activities",
-      "/Teacher/Rubrics",
-      "/Teacher/EssayManagement",
-    ];
-
-    if (trimmedSearch) {
-      // If on a searchable page, update URL with search param
-      if (searchablePages.some((path) => location.pathname.startsWith(path))) {
-        currentSearchParams.set("search", trimmedSearch);
-        navigate(`${location.pathname}?${currentSearchParams.toString()}`, {
-          replace: true,
-        });
-      } else {
-        // If not on a searchable page, navigate to Students page with search
-        navigate(
-          `/Teacher/Students?search=${encodeURIComponent(trimmedSearch)}`,
-        );
-      }
-    } else {
-      // Clear search param if empty
-      currentSearchParams.delete("search");
-      const newUrl = currentSearchParams.toString()
-        ? `${location.pathname}?${currentSearchParams.toString()}`
-        : location.pathname;
-      navigate(newUrl, { replace: true });
-    }
-  };
-
-  // Handle search input change
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    // Debounce: update URL after user stops typing (optional - can be removed for instant search)
-    // For now, we'll update on submit only
-  };
-
   // Format display name: Title. Nickname (e.g., "Sir. Pogi")
   const displayName = React.useMemo(() => {
     if (!user) return "User";
@@ -228,60 +163,23 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     .toUpperCase();
 
   return (
-    <header className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 px-3 sm:px-4 py-3 border-b bg-white shadow-sm">
-      {/* 1. Left Section: Menu Toggle and Current Label */}
-      <div className="flex items-center space-x-2 flex-1 sm:flex-initial sm:w-auto min-w-0">
+    <header className="relative bg-white border-b border-neutral-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-40">
+      {/* Left Section: Burger Menu and Current Page Label */}
+      <div className="flex items-center">
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-rs hover:bg-neutral-300/30 transition-colors flex-shrink-0"
+          className="text-neutral-500 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden mr-4"
+          aria-label="Toggle menu"
         >
-          {isBurgerActive ? (
-            <X className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-900" />
-          ) : (
-            <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-900" />
-          )}
+          {isBurgerActive ? <X size={24} /> : <Menu size={24} />}
         </button>
-
-        <AnimatePresence mode="wait">
-          {!isBurgerActive && (
-            <motion.div
-              key={currentLabel}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center space-x-2 min-w-0"
-            >
-              <span className="relative text-base sm:text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group truncate">
-                {currentLabel}
-                <span
-                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 ${
-                    shineMount ? "animate-shine" : ""
-                  } group-hover:animate-shine`}
-                  onAnimationEnd={() => setShineMount(false)}
-                />
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <h1 className="text-lg sm:text-xl font-semibold text-neutral-900">
+          {currentLabel}
+        </h1>
       </div>
 
-      {/* 2. Center Section: Search Bar */}
-      <div className="flex justify-center w-full sm:w-auto sm:flex-1 sm:max-w-md order-3 sm:order-2">
-        <form onSubmit={handleSearch} className="relative w-full max-w-md">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full h-9 px-8 pr-3 text-sm border border-neutral-300 rounded-md bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          />
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
-        </form>
-      </div>
-
-      {/* 3. Right Section: Notifications and User Profile (Updated Design) */}
-      <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 order-2 sm:order-3 relative">
+      {/* Right Section: Notifications and User Profile */}
+      <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 relative">
         {/* Notification Dropdown */}
         <NotificationDropdown
           notifications={notifications}
@@ -290,19 +188,24 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
           onMarkAsRead={handleMarkAsRead}
         />
 
-        {/* User Profile Container (Updated Design) */}
+        {/* User Profile Container */}
         <div
-          className="flex items-center cursor-pointer relative"
+          className="flex items-center cursor-pointer relative group"
           onMouseEnter={() => !isMobile && setIsDropdownOpen(true)}
           onMouseLeave={() => !isMobile && setIsDropdownOpen(false)}
           onClick={() => isMobile && setIsDropdownOpen(!isDropdownOpen)}
         >
           {/* User Avatar */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-xl font-bold flex-shrink-0"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold flex-shrink-0 shadow-sm"
             title={displayName}
           >
             {userInitial}
+          </div>
+
+          <div className='hidden md:flex ml-3 flex-col text-left'>
+            <p className='font-semibold text-sm text-neutral-900 whitespace-nowrap truncate max-w-[150px]'>{displayName}</p>
+            <p className='text-[10px] uppercase tracking-wider font-bold text-neutral-400'>Teacher</p>
           </div>
 
           <AnimatePresence>
@@ -312,32 +215,32 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute right-0 top-full pt-2 w-48 sm:w-56 z-50"
+                className="absolute right-0 top-full pt-2 w-56 z-50"
               >
-                <div className="bg-white shadow-lg rounded-rd overflow-hidden border border-neutral-200">
-                  <div className="px-4 py-3 border-b border-neutral-300/30">
-                    <p className="font-semibold text-neutral-900">
+                <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-neutral-100 p-1">
+                  <div className="px-4 py-3 border-b border-neutral-50 mb-1">
+                    <p className="font-bold text-neutral-900 truncate">
                       {displayName}
                     </p>
-                    <p className="text-sm text-neutral-400">
+                    <p className="text-xs text-neutral-500 truncate">
                       {user?.email || ""}
                     </p>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="space-y-1">
                     <button
-                      className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-100 text-neutral-900 w-full text-left transition-colors"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-neutral-700 rounded-lg w-full text-left transition-colors text-sm font-medium"
                       onClick={() => {
                         navigate("/Teacher/Settings");
                         setIsDropdownOpen(false);
                       }}
                     >
-                      <Settings size={18} /> Settings
+                      <Settings size={16} className="text-neutral-400" /> Settings
                     </button>
                     <button
-                      className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-100 text-neutral-900 w-full text-left transition-colors"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-red-600 rounded-lg w-full text-left transition-colors text-sm font-medium"
                       onClick={handleLogout}
                     >
-                      <LogOut size={18} /> Logout
+                      <LogOut size={16} /> Logout
                     </button>
                   </div>
                 </div>

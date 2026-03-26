@@ -5,7 +5,6 @@ import {
   X,
   Settings,
   LogOut,
-  Search, // New: for the search bar
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -17,6 +16,7 @@ import {
   subscribeToNotifications,
   markNotificationAsRead,
 } from "../services/notificationService";
+import type { Notification } from "../types/notification";
 
 // Updated interface to include the user's role
 interface StudentHeaderProps {
@@ -32,18 +32,14 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   role, // Destructured role prop
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [shineMount, setShineMount] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  // New state for search input
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -109,8 +105,6 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";
 
-  useEffect(() => setShineMount(true), [location.pathname]);
-
   // Animate progress bar (Same logic)
   useEffect(() => {
     let timer: number;
@@ -145,75 +139,43 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     setShowLogoutConfirm(false);
   };
 
-  // Placeholder for search functionality
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      console.log("Searching for:", searchTerm);
-      // Implement actual search logic here (e.g., navigate to a search results page)
-    }
-  };
-
   const userName = user?.full_name || user?.username || "Student";
   const userInitial = userName.split(/\s+/).map((part) => part.charAt(0).toUpperCase()).join("");
 
   return (
-    <header className='relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 px-3 sm:px-4 py-3 border-b bg-white shadow-sm'>
+    <header className='relative flex flex-row justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>
       
       {/* 1. Left Section: Menu Toggle and Current Label */}
-      <div className='flex items-center space-x-2 flex-1 sm:flex-initial sm:w-auto min-w-0'>
+      <div className='flex items-center space-x-3 min-w-0'>
         <button
           onClick={onMenuClick}
-          className='p-2 rounded-rs hover:bg-neutral-300/30 transition-colors flex-shrink-0'
+          className='p-2 rounded-lg hover:bg-neutral-100 transition-colors flex-shrink-0 lg:hidden'
         >
           {isBurgerActive ? (
-            <X className='w-5 h-5 sm:w-6 sm:h-6 text-neutral-900' />
+            <X className='w-6 h-6 text-neutral-900' />
           ) : (
-            <Menu className='w-5 h-5 sm:w-6 sm:h-6 text-neutral-900' />
+            <Menu className='w-6 h-6 text-neutral-900' />
           )}
         </button>
 
         <AnimatePresence mode='wait'>
-          {!isBurgerActive && (
-            <motion.div
-              key={currentLabel}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ duration: 0.2 }}
-              className='flex items-center space-x-2 min-w-0'
-            >
-              <span className='relative text-base sm:text-lg bg-black bg-clip-text text-transparent font-semibold overflow-hidden group truncate'>
-                {currentLabel}
-                <span
-                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20 ${
-                    shineMount ? "animate-shine" : ""
-                  } group-hover:animate-shine`}
-                  onAnimationEnd={() => setShineMount(false)}
-                />
-              </span>
-            </motion.div>
-          )}
+          <motion.div
+            key={currentLabel}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
+            className='flex items-center min-w-0'
+          >
+            <h2 className='text-lg sm:text-xl font-bold text-neutral-900 truncate'>
+              {currentLabel}
+            </h2>
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* 2. Center Section: Search Bar */}
-      <div className='flex justify-center w-full sm:w-auto sm:flex-1 sm:max-w-lg order-3 sm:order-2'>
-        <form onSubmit={handleSearch} className='relative w-full max-w-lg'>
-          <input
-            type='text'
-            // Updated placeholder for students
-            placeholder='Search...'
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className='w-full py-2 pl-8 sm:pl-10 pr-3 sm:pr-4 border border-neutral-300 rounded-lg text-sm focus:border-primary focus:ring-primary transition-all'
-          />
-          <Search className='absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-500' />
-        </form>
-      </div>
-
-      {/* 3. Right Section: Notifications and User Profile (Updated Design) */}
-      <div className='flex items-center space-x-2 sm:space-x-4 flex-shrink-0 order-2 sm:order-3 relative'>
+      {/* 2. Right Section: Notifications and User Profile */}
+      <div className='flex items-center space-x-2 sm:space-x-4 flex-shrink-0 relative'>
         {/* Notification Dropdown */}
         <NotificationDropdown
           notifications={notifications}
@@ -222,26 +184,25 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
           onMarkAsRead={handleMarkAsRead}
         />
 
-        {/* User Profile Container (Updated Design) */}
+        {/* User Profile Container */}
         <div
-          className='flex items-center cursor-pointer relative'
+          className='flex items-center cursor-pointer relative group'
           onMouseEnter={() => !isMobile && setIsDropdownOpen(true)}
           onMouseLeave={() => !isMobile && setIsDropdownOpen(false)}
           onClick={() => isMobile && setIsDropdownOpen(!isDropdownOpen)}
         >
           {/* User Avatar */}
           <div
-            className='w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-xl font-bold flex-shrink-0'
+            className='w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold flex-shrink-0 shadow-sm'
             title={userName}
           >
             {userInitial}
           </div>
 
-          {/* User Name and Role (New design) - Hidden on mobile, shown on tablet+ */}
+          {/* User Name and Role - Hidden on mobile, shown on tablet+ */}
           <div className='hidden md:flex ml-3 flex-col text-left'>
-            <p className='font-semibold text-base lg:text-lg text-neutral-900 whitespace-nowrap truncate max-w-[120px] lg:max-w-none'>{userName}</p>
-            {/* Display role from props */}
-            <p className='text-xs lg:text-sm text-neutral-500 whitespace-nowrap'>{role}</p>
+            <p className='font-semibold text-sm text-neutral-900 whitespace-nowrap truncate max-w-[150px]'>{userName}</p>
+            <p className='text-[10px] uppercase tracking-wider font-bold text-neutral-400'>{role}</p>
           </div>
 
           <AnimatePresence>
@@ -251,32 +212,32 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className='absolute right-0 top-full pt-2 w-48 sm:w-56 z-50'
+                className='absolute right-0 top-full pt-2 w-56 z-50'
               >
-                <div className='bg-white shadow-lg rounded-rd overflow-hidden border border-neutral-200'>
-                  <div className='px-4 py-3 border-b border-neutral-300/30'>
-                    <p className='font-semibold text-neutral-900'>
+                <div className='bg-white shadow-xl rounded-xl overflow-hidden border border-neutral-100 p-1'>
+                  <div className='px-4 py-3 border-b border-neutral-50 mb-1'>
+                    <p className='font-bold text-neutral-900 truncate'>
                       {userName}
                     </p>
-                    <p className='text-sm text-neutral-400'>
+                    <p className='text-xs text-neutral-500 truncate'>
                       {user?.email || ""}
                     </p>
                   </div>
-                  <div className='flex flex-col'>
+                  <div className='space-y-1'>
                     <button
-                      className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-100 text-neutral-900 w-full text-left transition-colors'
+                      className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-neutral-700 rounded-lg w-full text-left transition-colors text-sm font-medium'
                       onClick={() => {
-                        navigate("/Student/Settings"); // Adjusted path for student
+                        navigate("/Student/Settings");
                         setIsDropdownOpen(false);
                       }}
                     >
-                      <Settings size={18} /> Settings
+                      <Settings size={16} className="text-neutral-400" /> Settings
                     </button>
                     <button
-                      className='flex items-center gap-2 px-4 py-3 hover:bg-neutral-100 text-neutral-900 w-full text-left transition-colors'
+                      className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-red-600 rounded-lg w-full text-left transition-colors text-sm font-medium'
                       onClick={handleLogout}
                     >
-                      <LogOut size={18} /> Logout
+                      <LogOut size={16} /> Logout
                     </button>
                   </div>
                 </div>
@@ -286,42 +247,54 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
         </div>
       </div>
 
-      {/* Top progress bar (Same logic) */}
-      <div className='absolute bottom-0 left-0 w-full h-[2px] rounded-full overflow-hidden'>
+      {/* Top progress bar */}
+      <div className='absolute bottom-0 left-0 w-full h-[2px] overflow-hidden'>
         <motion.div
-          className='h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-50'
+          className='h-full bg-gradient-to-r from-primary to-primary/20'
           style={{ width: `${progress}%` }}
           transition={{ ease: "linear", duration: 0.1 }}
         />
       </div>
 
-      {/* Logout Confirmation Modal (Same logic) */}
-      {showLogoutConfirm && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-rd shadow-xl p-4 sm:p-6 w-full max-w-sm space-y-4'>
-            <h3 className='text-lg font-semibold text-neutral-900'>
-              Confirm Logout
-            </h3>
-            <p className='text-sm text-neutral-600'>
-              Are you sure you want to log out?
-            </p>
-            <div className='flex justify-end gap-3 pt-2'>
-              <button
-                className='px-4 py-2 rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-100 transition-colors'
-                onClick={cancelLogout}
-              >
-                Cancel
-              </button>
-              <button
-                className='px-4 py-2 rounded-md bg-error-default text-white hover:bg-error-dark transition-colors'
-                onClick={confirmLogout}
-              >
-                Yes, log out
-              </button>
-            </div>
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4'>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className='bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-5 border border-neutral-100'
+            >
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-600">
+                <LogOut size={24} />
+              </div>
+              <div>
+                <h3 className='text-lg font-bold text-neutral-900'>
+                  Sign Out
+                </h3>
+                <p className='text-sm text-neutral-500 mt-1'>
+                  Are you sure you want to log out of your student account?
+                </p>
+              </div>
+              <div className='flex gap-3 pt-2'>
+                <button
+                  className='flex-1 px-4 py-2 rounded-xl border border-neutral-200 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors'
+                  onClick={cancelLogout}
+                >
+                  Cancel
+                </button>
+                <button
+                  className='flex-1 px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-200'
+                  onClick={confirmLogout}
+                >
+                  Logout
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </header>
   );
 };

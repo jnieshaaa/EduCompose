@@ -134,32 +134,32 @@ export function MyEssaysTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-1 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900">My Essays</h1>
-          <p className="text-sm text-neutral-500 mt-1">View and manage all your submissions</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">My Essays</h1>
+          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 sm:mt-1">View and manage all your submissions</p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Total Submitted</p>
-          <p className="text-2xl text-neutral-900 mt-1">{essaysData.length}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white">
+          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Total</p>
+          <p className="text-xl sm:text-2xl font-bold text-neutral-900 mt-0.5 sm:mt-1">{essaysData.length}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Fully Reviewed</p>
-          <p className="text-2xl text-success-default mt-1">{essaysData.filter(e => e.hasTeacherFeedback).length}</p>
+        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-success-default">
+          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Reviewed</p>
+          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">{essaysData.filter(e => e.hasTeacherFeedback).length}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Pending</p>
-          <p className="text-2xl text-warning-default mt-1">{essaysData.filter(e => !e.hasTeacherFeedback).length}</p>
+        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-warning-default">
+          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Pending</p>
+          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">{essaysData.filter(e => !e.hasTeacherFeedback).length}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Avg. Score</p>
-          <p className="text-2xl text-primary mt-1">
+        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-primary">
+          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Avg. Score</p>
+          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">
             {essaysData.filter(e => e.aiScore).length > 0 
               ? Math.round(essaysData.filter(e => e.aiScore).reduce((sum, e) => sum + e.aiScore, 0) / essaysData.filter(e => e.aiScore).length) + '%' 
               : 'N/A'}
@@ -167,20 +167,20 @@ export function MyEssaysTab() {
         </Card>
       </div>
 
-      {/* Search */}
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
+      {/* Search & Filter */}
+      <Card className="p-3 sm:p-4 border-none shadow-sm bg-white">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <Input
               type="search"
               placeholder="Search essays..."
               value={searchQuery}
               onChange={(value) => setSearchQuery(value)}
-              className="pl-10"
+              className="pl-10 h-10"
             />
           </div>
-          <select className="px-3 py-2 border border-neutral-300 rounded-rd">
+          <select className="h-10 px-3 border border-neutral-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
             <option>All Status</option>
             <option>Reviewed</option>
             <option>AI Evaluated</option>
@@ -190,72 +190,73 @@ export function MyEssaysTab() {
       </Card>
 
       {/* Essays Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Essay Title</TableHead>
-              <TableHead className="text-center">Submission Date</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">AI Score</TableHead>
-              <TableHead className="text-center">Teacher Score</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredEssays.map((essay) => (
-              <TableRow key={essay.id}>
-                <TableCell>
-                  <div className="text-neutral-900">{essay.title}</div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="text-sm text-neutral-600">{essay.submitted}</div>
-                </TableCell>
-                <TableCell className="text-center">
-                  {getStatusBadge(essay.status)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {getScoreBadge(essay.aiScore)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {getScoreBadge(essay.teacherScore)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-3 h-3 mr-2" />
-                      View
-                    </Button>
-                    {essay.hasAiFeedback && (
-                      <Button variant="outline" size="sm" className="text-primary hover:text-primary">
-                        <MessageSquare className="w-3 h-3 mr-2" />
-                        Feedback
-                      </Button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">⋮</Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Essay
-                        </DropdownMenuItem>
-                        {essay.hasAiFeedback && (
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Feedback (PDF)
-                          </DropdownMenuItem>
-                        )}
-
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
+      <Card className="border-none shadow-sm bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-neutral-50/50">
+              <TableRow>
+                <TableHead className="min-w-[220px]">Essay Title</TableHead>
+                <TableHead className="text-center min-w-[120px]">Submitted At</TableHead>
+                <TableHead className="text-center min-w-[120px]">Status</TableHead>
+                <TableHead className="text-center min-w-[100px]">AI Score</TableHead>
+                <TableHead className="text-center min-w-[120px]">Final Score</TableHead>
+                <TableHead className="text-right min-w-[150px]">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredEssays.map((essay) => (
+                <TableRow key={essay.id} className="hover:bg-neutral-50/50 transition-colors">
+                  <TableCell>
+                    <div className="font-semibold text-neutral-900">{essay.title}</div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="text-sm text-neutral-600">{essay.submitted}</div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getStatusBadge(essay.status)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getScoreBadge(essay.aiScore)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getScoreBadge(essay.teacherScore)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="sm" className="h-8">
+                        <Eye className="w-3.5 h-3.5 mr-1.5" />
+                        View
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">⋮</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          {essay.hasAiFeedback && (
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => {}}>
+                              <MessageSquare className="w-4 h-4 mr-2 text-primary" />
+                              View AI Feedback
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="cursor-pointer">
+                            <Download className="w-4 h-4 mr-2 text-neutral-500" />
+                            Download Essay
+                          </DropdownMenuItem>
+                          {essay.hasAiFeedback && (
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Download className="w-4 h-4 mr-2 text-neutral-500" />
+                              Download Feedback (PDF)
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   );

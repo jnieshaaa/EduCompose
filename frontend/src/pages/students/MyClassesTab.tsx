@@ -134,10 +134,10 @@ export function MyClassesTab() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full">
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-0">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-neutral-900 mb-2">My Classes</h1>
-        <p className="text-neutral-600">Select a class to view activities and assignments</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">My Classes</h1>
+        <p className="text-sm sm:text-base text-neutral-600">Select a class to view activities and assignments</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
