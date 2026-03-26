@@ -427,10 +427,10 @@ const Breadcrumb: React.FC = () => {
 
   return (
     <nav
-      className='flex items-center px-4 md:px-6 py-3 bg-white border-b border-neutral-200 text-sm overflow-x-auto custom-scrollbar'
+      className='flex items-center px-3 sm:px-6 py-2.5 bg-white border-b border-neutral-100 text-xs sm:text-sm overflow-x-auto whitespace-nowrap scrollbar-hide'
       aria-label='Breadcrumb'
     >
-      <ol className='flex items-center space-x-2 min-w-max'>
+      <ol className='flex items-center space-x-1 sm:space-x-2'>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           const isFirst = index === 0;
@@ -438,22 +438,22 @@ const Breadcrumb: React.FC = () => {
           return (
             <li key={`${item.path}-${index}`} className='flex items-center'>
               {index > 0 && (
-                <ChevronRight className='w-4 h-4 text-neutral-300 mx-2' />
+                <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4 text-neutral-300 mx-1 sm:mx-2 flex-shrink-0' />
               )}
               {isLast ? (
-                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${isFirst ? "bg-primary/10 text-primary" : "text-neutral-900 font-bold"}`}>
-                  {item.icon && <span className={isFirst ? "text-primary" : "text-neutral-500"}>{item.icon}</span>}
-                  <span>{item.label}</span>
+                <div className={`flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 rounded-lg ${isFirst ? "bg-primary/10 text-primary font-semibold" : "text-neutral-900 font-bold"}`}>
+                  {item.icon && <span className={`${isFirst ? "text-primary" : "text-neutral-500"} flex-shrink-0`}>{item.icon}</span>}
+                  <span className="truncate max-w-[120px] sm:max-w-none">{item.label}</span>
                 </div>
               ) : (
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all hover:bg-neutral-50 group ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 rounded-lg transition-all hover:bg-neutral-50 group ${
                     isFirst ? "text-primary font-bold bg-primary/5 hover:bg-primary/10" : "text-neutral-500 hover:text-primary"
                   }`}
                 >
-                  {item.icon && <span className={`${isFirst ? "text-primary" : "text-neutral-400 group-hover:text-primary"} transition-colors`}>{item.icon}</span>}
-                  <span>{item.label}</span>
+                  {item.icon && <span className={`${isFirst ? "text-primary" : "text-neutral-400 group-hover:text-primary"} transition-colors flex-shrink-0`}>{item.icon}</span>}
+                  <span className="truncate max-w-[80px] sm:max-w-none">{item.label}</span>
                 </Link>
               )}
             </li>

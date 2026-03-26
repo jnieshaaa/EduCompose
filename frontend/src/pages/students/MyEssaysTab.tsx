@@ -3,7 +3,9 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, FileText, AlertCircle } from 'lucide-react';
+import { Search, Eye, MessageSquare, Download, FileText, AlertCircle, MoreVertical } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { buildSecureUrl } from '../../utils/secureUrl';
 import {
   Table,
   TableBody,
@@ -22,6 +24,7 @@ import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { PremiumLoader } from '../../components/ui/PremiumLoader';
 export function MyEssaysTab() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [essaysData, setEssaysData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ export function MyEssaysTab() {
 
         const { data, error } = await supabase
           .from('essays')
-          .select('id, title, submitted_at, status, overall_score, essay_activities(title)')
+          .select('id, title, submitted_at, status, overall_score, essay_activities(id, title)')
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: false });
 
@@ -55,9 +58,9 @@ export function MyEssaysTab() {
           submitted: new Date(e.submitted_at).toLocaleDateString(),
           status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'AI Evaluated' : 'Submitted'),
           aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
-          teacherScore: e.status === 'reviewed' ? e.overall_score : null,
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
           hasTeacherFeedback: e.status === 'reviewed',
+          activityId: (e.essay_activities as any)?.id,
         }));
         setEssaysData(formattedData);
       } catch (error) {
@@ -198,9 +201,8 @@ export function MyEssaysTab() {
                 <TableHead className="min-w-[220px]">Essay Title</TableHead>
                 <TableHead className="text-center min-w-[120px]">Submitted At</TableHead>
                 <TableHead className="text-center min-w-[120px]">Status</TableHead>
-                <TableHead className="text-center min-w-[100px]">AI Score</TableHead>
-                <TableHead className="text-center min-w-[120px]">Final Score</TableHead>
-                <TableHead className="text-right min-w-[150px]">Actions</TableHead>
+                <TableHead className="text-center min-w-[100px]">System Score</TableHead>
+                <TableHead className="text-right min-w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -218,39 +220,41 @@ export function MyEssaysTab() {
                   <TableCell className="text-center">
                     {getScoreBadge(essay.aiScore)}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {getScoreBadge(essay.teacherScore)}
-                  </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="outline" size="sm" className="h-8">
-                        <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        View
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">⋮</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          {essay.hasAiFeedback && (
-                            <DropdownMenuItem className="cursor-pointer" onClick={() => {}}>
-                              <MessageSquare className="w-4 h-4 mr-2 text-primary" />
-                              View AI Feedback
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Download className="w-4 h-4 mr-2 text-neutral-500" />
-                            Download Essay
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="w-4 h-4 text-neutral-500" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem 
+                          className="cursor-pointer font-medium" 
+                          onClick={() => {
+                            const url = buildSecureUrl("/Student/Feedback", {
+                              essayId: essay.id,
+                              activityId: essay.activityId,
+                              activityTitle: essay.title
+                            });
+                            navigate(url);
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2 text-primary" />
+                          View Results
+                        </DropdownMenuItem>
+                        
+                        {essay.hasAiFeedback && (
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => {}}>
+                            <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
+                            AI Feedback
                           </DropdownMenuItem>
-                          {essay.hasAiFeedback && (
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Download className="w-4 h-4 mr-2 text-neutral-500" />
-                              Download Feedback (PDF)
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                        )}
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Download className="w-4 h-4 mr-2 text-neutral-500" />
+                          Download Essay
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

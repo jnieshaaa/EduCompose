@@ -29,9 +29,19 @@ export function useAuthModal(onClose: () => void) {
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginRememberMe, setLoginRememberMe] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedLoginEmail");
+    if (savedEmail) {
+      setLoginEmail(savedEmail);
+      setLoginRememberMe(true);
+    }
+  }, []);
 
   // Signup form state
   const [signupEmail, setSignupEmail] = useState("");
@@ -104,6 +114,13 @@ export function useAuthModal(onClose: () => void) {
       }
 
       if (data.session && data.user) {
+        // Handle Remember Me
+        if (loginRememberMe) {
+          localStorage.setItem("rememberedLoginEmail", loginEmail.trim());
+        } else {
+          localStorage.removeItem("rememberedLoginEmail");
+        }
+
         const userMeta = (data.user.user_metadata || {}) as UserMetadata;
         const fullName =
           (userMeta.full_name as string | undefined) ||
@@ -538,6 +555,8 @@ export function useAuthModal(onClose: () => void) {
     setLoginError,
     isLoggingIn,
     handleLogin,
+    loginRememberMe,
+    setLoginRememberMe,
     // Signup state
     signupEmail,
     setSignupEmail,

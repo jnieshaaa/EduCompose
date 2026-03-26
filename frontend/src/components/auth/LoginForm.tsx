@@ -13,6 +13,8 @@ interface LoginFormProps {
   isLoading: boolean;
   onSubmit: (e?: React.FormEvent) => void;
   onViewChange: (view: "login" | "signup" | "forgot-password") => void;
+  rememberMe: boolean;
+  setRememberMe: (value: boolean) => void;
 }
 
 export function LoginForm({
@@ -27,6 +29,8 @@ export function LoginForm({
   isLoading,
   onSubmit,
   onViewChange,
+  rememberMe,
+  setRememberMe,
 }: LoginFormProps) {
   return (
     <>
@@ -77,7 +81,9 @@ export function LoginForm({
           <label className="flex items-center cursor-pointer">
             <input
               type="checkbox"
-              className="w-3.5 h-3.5 text-primary-500 focus:ring-primary-500 rounded"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-3.5 h-3.5 text-primary-500 focus:ring-primary-500 rounded cursor-pointer"
             />
             <span className="ml-1.5 text-neutral-600">Remember me</span>
           </label>

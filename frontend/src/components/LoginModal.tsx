@@ -25,6 +25,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoginError,
     isLoggingIn,
     handleLogin,
+    loginRememberMe,
+    setLoginRememberMe,
     // Signup
     signupEmail,
     setSignupEmail,
@@ -215,6 +217,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             isLoading={isLoggingIn}
             onSubmit={handleLogin}
             onViewChange={setView}
+            rememberMe={loginRememberMe}
+            setRememberMe={setLoginRememberMe}
           />
         );
     }

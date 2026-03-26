@@ -36,15 +36,24 @@ interface StudentLoginLookup {
   last_name: string;
   is_active: boolean;
 }
-
 const Login: React.FC = () => {
   const [studentCode, setStudentCode] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  // Load remembered student code on mount
+  React.useEffect(() => {
+    const savedCode = localStorage.getItem("rememberedStudentCode");
+    if (savedCode) {
+      setStudentCode(savedCode);
+      setRememberMe(true);
+    }
+  }, []);
 
   const buildStudentName = (
     student: Pick<
@@ -162,6 +171,13 @@ const Login: React.FC = () => {
       }
 
       if (data.session && data.user) {
+        // Handle Remember Me
+        if (rememberMe) {
+          localStorage.setItem("rememberedStudentCode", normalizedStudentCode);
+        } else {
+          localStorage.removeItem("rememberedStudentCode");
+        }
+
         login(data.session.access_token, {
           id: studentIdentity.student_id,
           auth_id: data.user.id,
@@ -263,44 +279,49 @@ const Login: React.FC = () => {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md rounded-lg bg-neutral1 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
+        <div className="w-full max-w-md animate-fade-in">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
+          <div className="lg:hidden text-center mb-10">
             <h1 className="text-4xl font-bold mb-2 text-white">
               Edu<span className="text-primary-50">Compose</span>
             </h1>
-            <p className="text-white font-semibold">
-              Teacher's Companion for Essay Evaluation
+            <p className="text-white/90 font-medium text-sm">
+              Student Portal for Essay Evaluation
             </p>
           </div>
 
-          <div className="rounded-2xl shadow-xl bg-white p-8 md:p-10">
+          <div className="rounded-2xl shadow-2xl bg-white p-8 md:p-10 border border-white/20">
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-neutral-900 mb-2">
+              <h2 className="text-2xl font-bold text-neutral-900 mb-2">
                 Welcome Back
               </h2>
-              <p className="text-neutral-900">Login to access your dashboard</p>
+              <p className="text-neutral-600 text-sm">
+                Login with your student code to access your essays
+              </p>
             </div>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-5">
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
               {/* Error Message */}
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                  {error}
+                <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{error}</span>
                 </div>
               )}
 
               {/* Student Code Input */}
-              <div>
+              <div className="space-y-1.5">
                 <label
                   htmlFor="studentCode"
-                  className="block text-sm font-medium text-neutral-600 mb-2"
+                  className="block text-sm font-medium text-neutral-600"
                 >
                   Student Code
                 </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                <div className="relative group">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
                   <input
                     id="studentCode"
                     type="text"
@@ -309,22 +330,22 @@ const Login: React.FC = () => {
                       setStudentCode(e.target.value);
                       setError("");
                     }}
-                    className="w-full pl-11 pr-4 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
                     placeholder="Enter your student code"
                   />
                 </div>
               </div>
 
               {/* Password Input */}
-              <div>
+              <div className="space-y-1.5">
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-neutral-600 mb-2"
+                  className="block text-sm font-medium text-neutral-600"
                 >
                   Password
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -333,33 +354,38 @@ const Login: React.FC = () => {
                       setPassword(e.target.value);
                       setError("");
                     }}
-                    className="w-full pl-11 pr-12 py-3 border border-neutral3 rounded-lg bg-white text-neutral-900 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                    placeholder="Enter your password"
+                    className="w-full pl-10 pr-12 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                    placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-900 hover:text-neutral-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <Eye className="w-5 h-5" />
+                      <Eye className="w-4 h-4" />
                     )}
                   </button>
                 </div>
               </div>
 
               {/* Remember + Forgot */}
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4" />
-                  <span className="ml-2 text-neutral-900">Remember me</span>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-neutral-300 text-primary focus:ring-primary transition-colors" 
+                  />
+                  <span className="ml-2 text-neutral-600 group-hover:text-neutral-800 transition-colors">Remember me</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="font-semibold text-primary-500 hover:text-primary-50 transition-colors"
+                  className="font-bold text-primary hover:text-primary-600 transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -369,14 +395,24 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full text-white py-3 rounded-lg font-semibold bg-primary shadow-lg hover:bg-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-2 text-white py-2.5 text-sm rounded-lg font-bold bg-primary shadow-lg shadow-primary/20 hover:bg-primary-600 hover:translate-y-[-1px] active:translate-y-[0px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  "Login to Portal"
+                )}
               </button>
             </form>
-            <p className="text-center text-neutral-900 text-sm mt-6">
-              Student accounts are managed by your teacher/admin.
-            </p>
+
+            <div className="mt-8 pt-6 border-t border-neutral-100 text-center">
+              <p className="text-xs text-neutral-500 leading-relaxed italic">
+                Manage your student account through your teacher or administrator.
+              </p>
+            </div>
           </div>
         </div>
       </div>
