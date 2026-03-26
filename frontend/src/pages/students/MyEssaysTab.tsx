@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Eye, MessageSquare, Download, FileText, AlertCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -20,6 +20,7 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
+import { PremiumLoader } from '../../components/ui/PremiumLoader';
 export function MyEssaysTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [essaysData, setEssaysData] = useState<any[]>([]);
@@ -69,13 +70,8 @@ export function MyEssaysTab() {
     fetchEssays();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center flex-col items-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-neutral-500">Loading your essays...</p>
-      </div>
-    );
+  if (loading && essaysData.length === 0) {
+    return <PremiumLoader loading={loading} message="Gathering your essays..." />;
   }
 
   if (error) {

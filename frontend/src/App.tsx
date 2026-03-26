@@ -69,10 +69,11 @@ import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import OnboardingCheck from "./components/OnboardingCheck";
+import { PremiumLoader } from "./components/ui/PremiumLoader";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const { setLoading } = useLoader();
+  const { loading, setLoading } = useLoader();
 
   // useEffect(() => {
   //   const modalShown = sessionStorage.getItem("introModalShown");
@@ -236,6 +237,12 @@ const AppContent: React.FC = () => {
           <Route index element={<AdminDashboardTab />} />
         </Route>
       </Routes>
+
+      {/* Global Premium Loader */}
+      <PremiumLoader 
+        loading={loading} 
+        message="EduCompose is preparing your workspace..." 
+      />
     </>
   );
 };
