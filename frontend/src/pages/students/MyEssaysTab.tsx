@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, FileText, Loader2 } from 'lucide-react';
+import { Search, Eye, MessageSquare, Download, FileText, Loader2, AlertCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,11 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
+import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
 export function MyEssaysTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [essaysData, setEssaysData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEssays() {
@@ -58,7 +60,8 @@ export function MyEssaysTab() {
         }));
         setEssaysData(formattedData);
       } catch (error) {
-        console.error('Error fetching essays:', error);
+        console.error('Error fetching essays for student:', error);
+        setError(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -71,6 +74,21 @@ export function MyEssaysTab() {
       <div className="flex justify-center flex-col items-center py-16">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <p className="text-neutral-500">Loading your essays...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <AlertCircle className="w-8 h-8 text-red-600" />
+        </div>
+        <h2 className="text-xl font-semibold text-neutral-900 mb-2">Failed to Load Essays</h2>
+        <p className="text-neutral-500 max-w-sm mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()} className="bg-primary">
+          Try Again
+        </Button>
       </div>
     );
   }

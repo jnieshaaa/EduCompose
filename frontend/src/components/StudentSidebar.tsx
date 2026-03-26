@@ -256,60 +256,70 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   };
 
   return (
-    <div className='flex h-screen overflow-hidden'>
-      <aside
-        className='fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary'
-        style={{
-          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : isDesktop ? "80px" : "0px",
-          transition: "width 0.2s",
-          overflow: isSidebarOpen ? "hidden" : "visible",
+    <>
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {!isDesktop && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className='fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden'
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside
+        initial={false}
+        animate={{
+          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : (isDesktop ? "80px" : "0px"),
+          x: (!isDesktop && !isSidebarOpen) ? -280 : 0,
         }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={`fixed lg:relative h-full z-50 flex flex-col border-r border-white/10 bg-primary shadow-2xl lg:shadow-none overflow-hidden`}
       >
         {/* Header */}
-        <div className='flex items-center h-16 border-b border-white p-2.5 relative'>
-            {/* 👇 CHANGE 1: Logo container size reduced from w-14 h-14 (56px) to w-10 h-10 (40px) */}
-            <div className='relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group'>
-              <img
-                src={eduComposeLogo}
-                alt='EduCompose Logo'
-                className='w-full h-full object-cover cursor-none'
-              />
-              <div className='absolute inset-0 pointer-events-none overflow-hidden'>
-                <div
-                  className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
-                    ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
-                  onAnimationEnd={() => setLogoShine(false)}
-                ></div>
-              </div>
+        <div className='flex items-center h-16 border-b border-white/10 p-2.5 relative flex-shrink-0'>
+          <div className='relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group ml-1.5'>
+            <img
+              src={eduComposeLogo}
+              alt='EduCompose Logo'
+              className='w-full h-full object-cover'
+            />
+            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
+              <div
+                className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
+                  ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
+                onAnimationEnd={() => setLogoShine(false)}
+              ></div>
             </div>
-
-            {isSidebarOpen && (
-              <div className='ml-2 sm:ml-3 flex flex-col overflow-hidden flex-1 min-w-0'>
-                <AnimatePresence>
-                  <motion.div
-                    initial='hidden'
-                    animate='visible'
-                    exit='hidden'
-                    variants={textVariants}
-                    className='flex flex-col min-w-0'
-                  >
-                    <h1 className='font-bold text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap truncate'>
-                      EduCompose
-                    </h1>
-                    <p className='text-[10px] sm:text-xxs font-md mt-0.5 text-white whitespace-nowrap truncate'>
-                      Student Portal for Essay Evaluation
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            )}
           </div>
 
+          <AnimatePresence>
+            {isSidebarOpen && (
+              <motion.div
+                initial='hidden'
+                animate='visible'
+                exit='hidden'
+                variants={textVariants}
+                className='ml-3 flex flex-col overflow-hidden flex-1 min-w-0'
+              >
+                <h1 className='font-bold text-lg text-white whitespace-nowrap truncate'>
+                  EduCompose
+                </h1>
+                <p className='text-[10px] font-md text-white/70 whitespace-nowrap truncate uppercase tracking-wider'>
+                  Student Portal
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Navigation */}
-        <nav className='flex-1 p-4 overflow-y-auto'>
+        <nav className='flex-1 p-4 overflow-y-auto scrollbar-hide'>
           <ul
             className='space-y-2'
-            style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
             {/* Dashboard (always first) */}
             {menuItems.slice(0, 1).map((item) => {
@@ -325,29 +335,21 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-rd ${
+                      className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
                         isActive
-                          ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:text-support-superlight"
+                          ? "bg-white text-primary shadow-md"
+                          : "text-white/70 hover:text-white hover:bg-white/10"
                       }`}
                     >
                       <div className='flex items-center w-full flex-1'>
                         <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
                           {item.icon}
                         </span>
-                        <AnimatePresence>
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial='hidden'
-                              animate='visible'
-                              exit='hidden'
-                              variants={textVariants}
-                              className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
+                        {isSidebarOpen && (
+                          <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
+                            {item.label}
+                          </span>
+                        )}
                       </div>
                     </button>
                   </Tooltip>
@@ -355,7 +357,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               );
             })}
 
-            {/* My Classes - always below Dashboard, acts as dropdown */}
+            {/* My Classes Dropdown */}
             <li className='w-full'>
               <Tooltip
                 content="My Classes"
@@ -365,52 +367,39 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               >
                 <button
                   onClick={() => {
-                    // Ensure sidebar is open and dropdown toggles
                     if (!isSidebarOpen) {
                       setIsSidebarOpen(true);
-                    }
-                    setIsClassesOpen((prev) => !prev);
-                    navigate("/Student/Classes");
-                    if (!isDesktop) {
-                      // keep sidebar open on mobile while viewing classes
-                      setIsSidebarOpen(true);
+                      setIsClassesOpen(true);
+                    } else {
+                      setIsClassesOpen((prev) => !prev);
                     }
                   }}
-                  className={`btn-fade group w-full flex items-center rounded-rd ${
+                  className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
                     activePath.toLowerCase().startsWith("/student/classes")
-                      ? "bg-neutral-50 text-primary"
-                      : "bg-primary text-white hover:text-support-superlight"
+                      ? "bg-white/10 text-white"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   <div className='flex items-center w-full flex-1'>
                     <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
                       <BookOpen className='w-5 h-5' />
                     </span>
-                    <AnimatePresence>
-                      {isSidebarOpen && (
-                        <motion.div
-                          initial='hidden'
-                          animate='visible'
-                          exit='hidden'
-                          variants={textVariants}
-                          className='font-medium whitespace-nowrap flex-1 pr-4 text-left flex items-center justify-between'
-                        >
-                          <span>My Classes</span>
-                          <span className='ml-auto'>
-                            {isClassesOpen ? (
-                              <ChevronDown className='w-4 h-4' />
-                            ) : (
-                              <ChevronRight className='w-4 h-4' />
-                            )}
-                          </span>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {isSidebarOpen && (
+                      <div className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm flex items-center justify-between'>
+                        <span>My Classes</span>
+                        <span className='ml-auto'>
+                          {isClassesOpen ? (
+                            <ChevronDown className='w-4 h-4' />
+                          ) : (
+                            <ChevronRight className='w-4 h-4' />
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </button>
               </Tooltip>
 
-              {/* Classes Dropdown */}
               <AnimatePresence>
                 {isSidebarOpen && isClassesOpen && (
                   <motion.ul
@@ -425,30 +414,28 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                         const isClassActive = activePath === classPath;
                         return (
                           <li key={classItem.id}>
-                            <Tooltip content={classItem.instructor} position="right" delay={100}>
-                              <button
-                                onClick={() => {
-                                  navigate(classPath);
-                                  if (!isDesktop) setIsSidebarOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                                  isClassActive
-                                    ? "bg-neutral-100 text-primary font-medium"
-                                    : "text-white/80 hover:text-white hover:bg-white/10"
-                                }`}
-                              >
-                                <div className='flex flex-col'>
-                                  <span className='font-medium'>{classItem.code}</span>
-                                  <span className='text-[10px] opacity-75 truncate'>{classItem.name}</span>
-                                </div>
-                              </button>
-                            </Tooltip>
+                            <button
+                              onClick={() => {
+                                navigate(classPath);
+                                if (!isDesktop) setIsSidebarOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                isClassActive
+                                  ? "bg-white text-primary font-semibold"
+                                  : "text-white/60 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              <div className='flex flex-col'>
+                                <span className='text-xs font-bold'>{classItem.code}</span>
+                                <span className='text-[10px] opacity-80 truncate'>{classItem.name}</span>
+                              </div>
+                            </button>
                           </li>
                         );
                       })
                     ) : (
-                      <li className="px-3 py-2 text-white/50 text-xs italic">
-                        {isLoadingClasses ? "Loading classes..." : "No classes joined yet"}
+                      <li className="px-3 py-2 text-white/40 text-xs italic">
+                        {isLoadingClasses ? "Loading..." : "No classes"}
                       </li>
                     )}
                   </motion.ul>
@@ -456,10 +443,10 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               </AnimatePresence>
             </li>
 
-            {/* Remaining menu items (start after Dashboard) */}
+            {/* Remaining menu items */}
             {menuItems.slice(1).map((item) => {
               const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
-                              activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
+                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
               return (
                 <li key={item.label} className='w-full'>
                   <Tooltip
@@ -470,29 +457,21 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-rd ${
+                      className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
                         isActive
-                          ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:text-support-superlight"
+                          ? "bg-white text-primary shadow-md"
+                          : "text-white/70 hover:text-white hover:bg-white/10"
                       }`}
                     >
                       <div className='flex items-center w-full flex-1'>
                         <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
                           {item.icon}
                         </span>
-                        <AnimatePresence>
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial='hidden'
-                              animate='visible'
-                              exit='hidden'
-                              variants={textVariants}
-                              className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
+                        {isSidebarOpen && (
+                          <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
+                            {item.label}
+                          </span>
+                        )}
                       </div>
                     </button>
                   </Tooltip>
@@ -502,8 +481,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           </ul>
         </nav>
 
-        {/* Info Tab at Bottom */}
-        <div className='p-4 border-t border-white'>
+        {/* About EduCompose at Bottom */}
+        <div className='p-4 border-t border-white/10'>
           <Tooltip
             content='About EduCompose'
             position='right'
@@ -512,40 +491,24 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           >
             <button
               onClick={() => setIsInfoModalOpen(true)}
-              className='btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight'
+              className='group w-full flex items-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200'
             >
               <div className='flex items-center w-full flex-1'>
                 <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
                   <Info className='w-5 h-5' />
                 </span>
-                <AnimatePresence>
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial='hidden'
-                      animate='visible'
-                      exit='hidden'
-                      variants={textVariants}
-                      className='font-medium whitespace-nowrap flex-1 pr-4 text-left'
-                    >
-                      About EduCompose
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {isSidebarOpen && (
+                  <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
+                    About EduCompose
+                  </span>
+                )}
               </div>
             </button>
           </Tooltip>
         </div>
-      </aside>
+      </motion.aside>
 
-      {/* Mobile Sidebar */}
-      {!isDesktop && isSidebarOpen && (
-        <div
-          className='lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30'
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Info Modal - Reused from ClientSidebar */}
+      {/* Info Modal */}
       <Modal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
@@ -554,9 +517,9 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
       >
         <div className='space-y-6'>
           {/* Header Card */}
-          <div className='bg-gradient-to-r from-primary to-primary-500 rounded-rd p-6 text-white'>
+          <div className='bg-gradient-to-r from-primary to-primary-600 rounded-2xl p-6 text-white'>
             <div className='flex items-center space-x-4'>
-              <div className='w-16 h-16 bg-white bg-opacity-20 rounded-rd flex items-center justify-center'>
+              <div className='w-16 h-16 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center'>
                 <img
                   src={eduComposeLogo}
                   alt='EduCompose Logo'
@@ -565,8 +528,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               </div>
               <div>
                 <h3 className='text-2xl font-bold'>EduCompose</h3>
-                <p className='text-white text-opacity-90'>
-                  Teacher's Companion for Essay Evaluation
+                <p className='text-white/80'>
+                  AI-Powered Essay Evaluation Platform
                 </p>
               </div>
             </div>
@@ -574,9 +537,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
           {/* Features Grid */}
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
+            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
               <div className='flex items-center space-x-3 mb-2'>
-                <Upload className='w-6 h-6 text-primary' />
+                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
+                  <Upload className='w-5 h-5 text-primary' />
+                </div>
                 <h4 className='font-semibold text-neutral-900'>
                   Essay Submission
                 </h4>
@@ -586,9 +551,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               </p>
             </div>
 
-            <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
+            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
               <div className='flex items-center space-x-3 mb-2'>
-                <MessageSquare className='w-6 h-6 text-primary' />
+                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
+                  <MessageSquare className='w-5 h-5 text-primary' />
+                </div>
                 <h4 className='font-semibold text-neutral-900'>
                   AI-Powered Feedback
                 </h4>
@@ -598,9 +565,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               </p>
             </div>
 
-            <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
+            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
               <div className='flex items-center space-x-3 mb-2'>
-                <TrendingUp className='w-6 h-6 text-primary' />
+                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
+                  <TrendingUp className='w-5 h-5 text-primary' />
+                </div>
                 <h4 className='font-semibold text-neutral-900'>
                   Track Progress
                 </h4>
@@ -610,9 +579,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
               </p>
             </div>
 
-            <div className='bg-neutral-100 rounded-rd p-4 border border-neutral-300'>
+            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
               <div className='flex items-center space-x-3 mb-2'>
-                <ClipboardCheck className='w-6 h-6 text-primary' />
+                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
+                  <ClipboardCheck className='w-5 h-5 text-primary' />
+                </div>
                 <h4 className='font-semibold text-neutral-900'>
                   View Rubrics
                 </h4>
@@ -624,26 +595,26 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           </div>
 
           {/* Version Info */}
-          <div className='bg-neutral-200 rounded-rd p-4 border border-neutral-300'>
+          <div className='bg-neutral-100 rounded-xl p-4 border border-neutral-200'>
             <div className='flex justify-between items-center'>
               <div>
-                <p className='text-sm font-medium text-neutral-900'>
-                  Version 1.0.0
+                <p className='text-sm font-bold text-neutral-900'>
+                  Version 1.2.0
                 </p>
-                <p className='text-xs text-neutral-600'>
-                  Last updated: December 2024
+                <p className='text-xs text-neutral-500'>
+                  Latest Platform Update: March 2024
                 </p>
               </div>
               <div className='text-right'>
-                <p className='text-xs text-neutral-600'>
-                  Made with for educators and students
+                <p className='text-xs text-neutral-500'>
+                  Made for educators & students
                 </p>
               </div>
             </div>
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 };
 

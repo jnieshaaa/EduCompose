@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // Types
 interface ActivityDetails {
@@ -205,9 +206,9 @@ export function SubmitEssayTab() {
           }
         }
 
-      } catch (err: any) {
-        console.error("Error loading submit page:", err);
-        setError(err.message || "Failed to load content.");
+      } catch (error) {
+        console.error("Error loading submit page:", error);
+        setError(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -325,10 +326,9 @@ export function SubmitEssayTab() {
       } else {
         console.warn("[handleSubmit] No teacherId found, skipping notification");
       }
-    } catch (err: any) {
-      console.error("Error submitting essay:", err);
-      alert("Failed to submit: " + err.message);
-    } finally {
+    } catch (err) {
+      console.error("Submission error:", err);
+      alert(getErrorMessage(err));
       setLoading(false);
     }
   };

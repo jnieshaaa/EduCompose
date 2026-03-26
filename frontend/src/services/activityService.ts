@@ -1,6 +1,7 @@
 // Activity service for data operations
 
 import { supabase } from "../lib/supabaseClient";
+import { getErrorMessage } from "../utils/errorUtils";
 import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
 import { fetchTeacherId, fetchTeacherUUID } from "./rubricService";
 import { buildFullNameFromObject } from "../utils/nameUtils";
@@ -2145,7 +2146,7 @@ export const gradeEssay = async (
     console.error("Error grading essay:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Unknown error occurred",
+      error: getErrorMessage(err),
     };
   }
 };
