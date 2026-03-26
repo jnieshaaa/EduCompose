@@ -88,7 +88,7 @@ export const fetchTeacherId = async (): Promise<number | null> => {
       .from("users")
       .select("id")
       .eq("auth_user_id", uuid)
-      .single();
+      .maybeSingle();
 
     if (userTableError || !userData) {
       console.error("Error getting user from users table:", userTableError);
@@ -204,7 +204,7 @@ export const savePlatformRubric = async (
       user_id: null, // Platform rubric
     })
     .select()
-    .single();
+    .maybeSingle();
 
 
   if (error) {
@@ -259,7 +259,7 @@ export const saveRubric = async (
       user_id: teacherId,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error saving rubric:", error);
@@ -313,7 +313,7 @@ export const saveTemplateRubric = async (
       user_id: teacherId,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error saving template rubric:", error);
@@ -382,7 +382,7 @@ export const updateRubric = async (
     .eq("id", rubricId)
     .eq("user_id", teacherId) // Ensure only the owner can update
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error updating rubric:", error);
@@ -403,7 +403,7 @@ export const fetchRubricById = async (
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
       .eq("id", rubricId)
-      .single();
+      .maybeSingle();
 
     if (rubricError || !rubricData) {
       console.error("Error loading rubric:", rubricError);

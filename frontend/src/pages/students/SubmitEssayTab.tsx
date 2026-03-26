@@ -101,7 +101,7 @@ export function SubmitEssayTab() {
             )
           `)
           .eq('id', parseInt(activityIdParam))
-          .single();
+          .maybeSingle();
 
         if (actError) throw actError;
 
@@ -301,7 +301,7 @@ export function SubmitEssayTab() {
           .eq('activity_id', activityIdParam)
           .order('submitted_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         const { error: notifyError } = await supabase
           .from('notifications')

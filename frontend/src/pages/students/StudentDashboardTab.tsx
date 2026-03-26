@@ -19,7 +19,7 @@ export function StudentDashboardTab() {
           .from('students')
           .select('id')
           .eq('auth_user_id', authUser.user.id)
-          .single();
+          .maybeSingle();
 
         if (!student) return;
 

@@ -268,8 +268,15 @@ const Breadcrumb: React.FC = () => {
       const courseCode = getParam("courseCode");
       const activityTitle = getParam("activityTitle");
       const activityId = getParam("activityId");
+      const fromEssays = getParam("fromEssays") === "true";
 
-      if (courseName) {
+      if (fromEssays) {
+        items.push({
+          label: "My Essays",
+          path: "/Student/Essays",
+          icon: <FileText className="w-4 h-4" />,
+        });
+      } else if (courseName) {
         items.push({
           label: "My Classes",
           path: "/Student/Classes",

@@ -446,7 +446,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
             {/* Remaining menu items */}
             {menuItems.slice(1).map((item) => {
               const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
-                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/');
+                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/') ||
+                               (item.path.toLowerCase() === "/student/essays" && activePath.toLowerCase() === "/student/feedback");
               return (
                 <li key={item.label} className='w-full'>
                   <Tooltip

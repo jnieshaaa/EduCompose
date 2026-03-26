@@ -2168,7 +2168,7 @@ export const fetchEssayAnalysis = async (
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
       if (studentError || !studentData) {
         return null;
@@ -2188,7 +2188,7 @@ export const fetchEssayAnalysis = async (
       .select("id, title")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
-      .single();
+      .maybeSingle();
 
     if (essayError || !essayData) {
       return null;
@@ -2204,7 +2204,7 @@ export const fetchEssayAnalysis = async (
         .from("essay_analysis_results")
         .select("*")
         .eq("essay_id", essayData.id)
-        .single();
+        .maybeSingle();
 
       analysisData = result.data;
       analysisError = result.error;
@@ -2222,7 +2222,7 @@ export const fetchEssayAnalysis = async (
         .from("essays")
         .select("id, title, file_path, analysis_payload")
         .eq("id", essayData.id)
-        .single();
+        .maybeSingle();
 
       if (fallbackError || !fallbackEssay || !fallbackEssay.analysis_payload) {
         return null;

@@ -502,7 +502,7 @@ const AnalysisResults: React.FC = () => {
               .from('students')
               .select('id')
               .eq('student_code', state.studentId)
-              .single();
+              .maybeSingle();
             if (studentData) studentDbId = studentData.id;
           }
           
@@ -514,7 +514,7 @@ const AnalysisResults: React.FC = () => {
               .select('id')
               .eq('student_id', studentDbId)
               .eq('activity_id', activityDbId)
-              .single();
+              .maybeSingle();
             
             if (essayData?.id) {
               setEssayId(essayData.id);
@@ -644,7 +644,7 @@ const AnalysisResults: React.FC = () => {
               .from('students')
               .select('id')
               .eq('student_code', currentStudentId)
-              .single();
+              .maybeSingle();
             if (studentData) studentDbId = studentData.id;
           }
           
@@ -655,7 +655,7 @@ const AnalysisResults: React.FC = () => {
               .select('id')
               .eq('student_id', studentDbId)
               .eq('activity_id', activityDbId)
-              .single();
+              .maybeSingle();
             
             if (essayData?.id) {
               currentEssayId = essayData.id;
@@ -785,7 +785,7 @@ const AnalysisResults: React.FC = () => {
             .from('essay_analysis_results')
             .select('original_text')
             .eq('essay_id', currentEssayId)
-            .single();
+            .maybeSingle();
           
           if (!error && analysisData?.original_text) {
             textToCheck = analysisData.original_text;
@@ -807,7 +807,7 @@ const AnalysisResults: React.FC = () => {
               .from('students')
               .select('id')
               .eq('student_code', currentStudentId)
-              .single();
+              .maybeSingle();
             if (studentData) studentDbId = studentData.id;
           }
           
@@ -819,7 +819,7 @@ const AnalysisResults: React.FC = () => {
               .select('id')
               .eq('student_id', studentDbId)
               .eq('activity_id', activityDbId)
-              .single();
+              .maybeSingle();
             
             if (essayData?.id) {
               derivedEssayId = essayData.id;
@@ -831,7 +831,7 @@ const AnalysisResults: React.FC = () => {
                 .from('essay_analysis_results')
                 .select('original_text')
                 .eq('essay_id', essayData.id)
-                .single();
+                .maybeSingle();
               
               if (!error && analysisData?.original_text) {
                 textToCheck = analysisData.original_text;

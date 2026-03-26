@@ -30,7 +30,7 @@ const getTeacherId = async (): Promise<number | null> => {
       .from("users")
       .select("id")
       .eq("auth_user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (userTableError || !userData) {
       console.error("Error getting user record:", userTableError);
@@ -56,7 +56,7 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
         "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
       )
       .eq("id", teacherId)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       console.error("Error fetching teacher profile:", error);
@@ -101,7 +101,7 @@ export const fetchTeacherSettings =
           "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
         )
         .eq("id", teacherId)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         console.error("Error fetching teacher settings:", error);
@@ -160,11 +160,11 @@ export const updateTeacherProfile = async (
         "first_name, last_name, middle_name, title, nickname, suffix, school_id, department_id",
       )
       .eq("id", teacherId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError) {
-      console.error("Error fetching current data:", fetchError);
-      return { success: false, error: fetchError.message };
+    if (fetchError || !currentData) {
+      console.error("Error fetching current data:", fetchError || "User not found");
+      return { success: false, error: fetchError?.message || "User profiling record not found" };
     }
 
     const firstName =

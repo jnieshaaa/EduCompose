@@ -1,31 +1,126 @@
+import { useState, useEffect } from 'react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { Award, Download, MessageSquare, FileText } from 'lucide-react';
+import { Award, Download, FileText, AlertCircle, RefreshCw } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
+import { readSecureParams } from '../../utils/secureUrl';
+import { fetchEssayAnalysis } from '../../services/activityService';
+import { PremiumLoader } from '../../components/ui/PremiumLoader';
+import { useNavigate } from 'react-router-dom';
 
-const essayFeedback = {
-  essayTitle: 'Machine Learning Ethics',
-  submittedDate: '2025-12-09',
-  overallScore: 85,
-  aiConfidence: 92,
-  criteria: [
-    { name: 'Grammar & Mechanics', score: 92, weight: 20, feedback: 'Excellent grammar with minimal errors. Minor issues with comma usage in complex sentences.', improvements: ['Consider using semicolons to separate closely related independent clauses', 'Watch for comma splices in longer sentences'] },
-    { name: 'Coherence & Flow', score: 85, weight: 20, feedback: 'Good logical flow between paragraphs. Some transitions could be smoother.', improvements: ['Add more transitional phrases between paragraphs 3 and 4', 'Strengthen the connection between your introduction and thesis'] },
-    { name: 'Vocabulary Usage', score: 88, weight: 15, feedback: 'Strong vocabulary with appropriate academic language. Good variety in word choice.', improvements: ['Consider using more discipline-specific terminology', 'Avoid repeating "important" - use synonyms like "crucial," "significant"'] },
-    { name: 'Structure & Organization', score: 82, weight: 15, feedback: 'Clear structure with well-defined paragraphs. Introduction and conclusion are strong.', improvements: ['Body paragraph 2 could be split into two separate arguments', 'Consider reorganizing points in ascending order of importance'] },
-    { name: 'Argument Strength', score: 80, weight: 25, feedback: 'Arguments are generally well-supported. Some claims need additional evidence.', improvements: ['Provide more concrete examples in paragraph 4', 'Strengthen your counter-argument discussion with citations'] },
-    { name: 'Originality', score: 95, weight: 5, feedback: 'Highly original content with proper citations. No plagiarism detected.', improvements: ['Excellent work on originality!'] },
-  ],
-  highlightedSuggestions: [
-    { type: 'grammar', text: 'In paragraph 2, line 3: "Its important to note" should be "It\'s important to note"', severity: 'medium' },
-    { type: 'coherence', text: 'Consider adding a transition sentence between paragraphs 3 and 4', severity: 'low' },
-    { type: 'vocabulary', text: 'The word "good" appears 7 times. Consider using alternatives like "beneficial," "advantageous," or "favorable"', severity: 'low' },
-    { type: 'structure', text: 'Paragraph 5 is significantly longer than others. Consider breaking it into two paragraphs', severity: 'medium' },
-  ]
-};
+interface FeedbackData {
+  essayTitle: string;
+  submittedDate: string;
+  overallScore: number;
+  aiConfidence: number;
+  criteria: Array<{
+    name: string;
+    score: number;
+    weight: number;
+    feedback: string;
+    improvements: string[];
+  }>;
+  highlightedSuggestions: Array<{
+    type: string;
+    text: string;
+    severity: string;
+  }>;
+  summary: string;
+}
 
 export function AIFeedbackTab() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [essayFeedback, setEssayFeedback] = useState<FeedbackData | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      const params = readSecureParams(window.location.search);
+      if (!params || !params.studentId || !params.activityId) {
+        // Fallback for demo if no ref provided
+        if (!window.location.search.includes('ref=')) {
+          setError("No essay identifiers provided. Please select an essay from your dashboard.");
+          setLoading(false);
+          return;
+        }
+        setError("Invalid request parameters.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await fetchEssayAnalysis(params.studentId, params.activityId);
+        if (!result) {
+          setError("Could not find evaluation results for this essay.");
+          return;
+        }
+
+        // Map backend AnalysisResponse to UI format
+        const analysis = result.analysis as any;
+        const mapped: FeedbackData = {
+          essayTitle: params.activityTitle || result.title || "Essay Evaluation",
+          submittedDate: analysis.generated_at ? new Date(analysis.generated_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          overallScore: Math.round(analysis.scores?.overall || 0),
+          aiConfidence: Math.round(analysis.scores?.knowledge_graph || 95),
+          summary: analysis.diagnostic_summary?.overall_summary || "Evaluation completed successfully.",
+          criteria: [
+            { 
+              name: 'Grammar & Mechanics', 
+              score: Math.round(analysis.scores?.grammar || 0), 
+              weight: 20, 
+              feedback: analysis.detailed_analysis?.grammar?.summary || "Analyzed grammar and syntax patterns.",
+              improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'grammar').flatMap((r: any) => r.action_items) || []
+            },
+            { 
+              name: 'Coherence & Flow', 
+              score: Math.round(analysis.scores?.coherence || 0), 
+              weight: 25, 
+              feedback: analysis.detailed_analysis?.coherence?.summary || "Evaluated logical flow and paragraph transitions.",
+              improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'coherence').flatMap((r: any) => r.action_items) || []
+            },
+            { 
+              name: 'Vocabulary & Style', 
+              score: Math.round(analysis.scores?.readability || 0), 
+              weight: 15, 
+              feedback: analysis.detailed_analysis?.readability?.summary || "Assessed academic vocabulary and reading ease.",
+              improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'readability').flatMap((r: any) => r.action_items) || []
+            },
+            { 
+              name: 'Argument Strength', 
+              score: Math.round(analysis.scores?.argument_strength || 0), 
+              weight: 30, 
+              feedback: analysis.detailed_analysis?.argumentation?.summary || "Evaluated claims, evidence, and logical reasoning.",
+              improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'argumentation').flatMap((r: any) => r.action_items) || []
+            },
+            { 
+              name: 'Knowledge Integration', 
+              score: Math.round(analysis.scores?.knowledge_graph || 0), 
+              weight: 10, 
+              feedback: "Assessed conceptual depth and knowledge graph connectivity.",
+              improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'knowledge_graph').flatMap((r: any) => r.action_items) || []
+            }
+          ],
+          highlightedSuggestions: (analysis.recommendations || []).map((rec: any) => ({
+            type: rec.dimension,
+            text: `${rec.message}: ${rec.suggestion}`,
+            severity: rec.priority
+          }))
+        };
+
+        setEssayFeedback(mapped);
+      } catch (err) {
+        console.error("Error loading feedback:", err);
+        setError("Failed to connect to the evaluation service.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
   const getCriteriaColor = (score: number) => {
     if (score >= 90) return 'text-success-default';
     if (score >= 80) return 'text-info-default';
@@ -48,27 +143,41 @@ export function AIFeedbackTab() {
     }
   };
 
-  // Empty state
-  const hasNoFeedback = false;
-  if (hasNoFeedback) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-          <MessageSquare className="w-12 h-12 text-neutral-400" />
-        </div>
-        <h2 className="text-2xl text-neutral-900 mb-2">No AI feedback yet</h2>
-        <p className="text-neutral-500 text-center max-w-md mb-6">
-          Your essay is currently under evaluation. AI feedback will appear here once the evaluation is complete. This usually takes 2-5 minutes.
-        </p>
-        <Button variant="outline">
-          View My Essays
-        </Button>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <PremiumLoader loading={true} message="Fetching AI Evaluation Results..." />
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-20 h-20 bg-error-light/10 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-10 h-10 text-error-default" />
+        </div>
+        <h2 className="text-2xl text-neutral-900 mb-2 font-semibold">Unable to Load Feedback</h2>
+        <p className="text-neutral-500 text-center max-w-md mb-8">
+          {error}
+        </p>
+        <div className="flex gap-4">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+          <Button onClick={() => navigate('/Student/MyEssays')}>
+            Go to My Essays
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!essayFeedback) return null;
+
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -194,8 +303,7 @@ export function AIFeedbackTab() {
         <h2 className="text-xl text-neutral-900 mb-3">Summary & Next Steps</h2>
         <div className="space-y-3">
           <p className="text-neutral-700">
-            <strong>Overall:</strong> Your essay shows strong writing skills with an overall score of {essayFeedback.overallScore}%. 
-            Focus on strengthening your arguments with more evidence and improving transitions between paragraphs.
+            {essayFeedback.summary}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <Button variant="outline" className="flex-1">

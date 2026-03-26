@@ -38,7 +38,7 @@ export function MyEssaysTab() {
 
         const { data: student } = await supabase
           .from('students')
-          .select('id')
+          .select('id, student_code')
           .eq('auth_user_id', authUser.user.id)
           .single();
 
@@ -61,6 +61,7 @@ export function MyEssaysTab() {
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
           hasTeacherFeedback: e.status === 'reviewed',
           activityId: (e.essay_activities as any)?.id,
+          studentCode: student.student_code,
         }));
         setEssaysData(formattedData);
       } catch (error) {
@@ -234,7 +235,9 @@ export function MyEssaysTab() {
                             const url = buildSecureUrl("/Student/Feedback", {
                               essayId: essay.id,
                               activityId: essay.activityId,
-                              activityTitle: essay.title
+                              activityTitle: essay.title,
+                              studentId: essay.studentCode,
+                              fromEssays: "true"
                             });
                             navigate(url);
                           }}

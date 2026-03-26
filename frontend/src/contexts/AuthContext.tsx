@@ -207,11 +207,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Always verify with Supabase to ensure session is valid
       const {
         data: { session },
-        error,
+        error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (error || !session || !session.user) {
-        // Clear all auth data if session is invalid
+      if (sessionError || !session || !session.user) {
+        // Clear all auth data if session is invalid or refresh failed
+        if (sessionError) {
+          console.warn("Session refresh or retrieval failed, signing out:", sessionError.message);
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // Ignore signout errors
+          }
+        }
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         setUser(null);
@@ -246,7 +254,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (userError || !currentUser) {
         // Session expired or invalid, clear everything
         if (userError?.message !== "Timeout") {
-          await supabase.auth.signOut();
+          console.warn("User verification failed, signing out:", userError?.message);
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // Ignore signout errors
+          }
         }
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");

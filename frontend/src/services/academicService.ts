@@ -20,7 +20,7 @@ export const fetchAcademicSettings = async (): Promise<AcademicSettings | null> 
       .select("*")
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error fetching academic settings:", error);
@@ -40,7 +40,7 @@ export const updateAcademicSettings = async (id: string, settings: Partial<Acade
       .update(settings)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error updating academic settings:", error);

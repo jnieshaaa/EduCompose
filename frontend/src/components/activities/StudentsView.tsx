@@ -385,18 +385,18 @@ export function StudentsView({
                       student.argumentative !== undefined ||
                       student.grammar !== undefined ||
                       student.score !== undefined ? (
-                        <Badge className="bg-primary/90 text-primary border-primary/20">
+                        <Badge className="bg-emerald-800 text-white border-emerald-900/20 shadow-sm">
                           <CheckCircle2 className="w-3 h-3 mr-1 inline" />
                           Graded
                         </Badge>
                       ) : (
-                        <Badge className="bg-success-default/90 text-success-default border-success-default/20">
+                        <Badge variant="info" className="shadow-sm">
                           <CheckCircle2 className="w-3 h-3 mr-1 inline" />
                           Submitted
                         </Badge>
                       )
                     ) : (
-                      <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200">
+                      <Badge variant="error" className="shadow-sm">
                         <XCircle className="w-3 h-3 mr-1 inline" />
                         Not Submitted
                       </Badge>
