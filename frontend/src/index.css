@@ -53,6 +53,8 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* Prevent portal dropdowns from causing a horizontal scrollbar */
+  overflow-x: hidden;
 }
 
 ::selection {
@@ -94,6 +96,7 @@ input[type="password"],
 textarea {
   cursor: auto !important;
 }
+
 /* =================== Scrollbars =================== */
 *::-webkit-scrollbar {
   width: 8px;
@@ -132,6 +135,7 @@ textarea {
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
 }
+
 @keyframes blob {
   0% { transform: translate(0px, 0px) scale(1); }
   33% { transform: translate(30px, -50px) scale(1.1); }

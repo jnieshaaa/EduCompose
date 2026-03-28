@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { FileParserService } from "./FileParserService";
+import { authApi } from "../api";
 
 export type UnifiedUploadResult = {
   success: boolean;
@@ -336,17 +337,42 @@ export class UnifiedStudentUploadService {
                   studentId = newS.id;
                   importedCount++;
 
-                  // Send Welcome Email
+                  // Provision authentication account first so emailed credentials are valid.
+                  // If provisioning fails, we keep the student row but skip email to avoid sending unusable login details.
+                  let isProvisioned = false;
                   try {
-                    await sendStudentWelcomeEmail({
-                      to_name: `${studentRow.first_name} ${studentRow.last_name}`,
-                      to_email: studentRow.email,
+                    await authApi.provisionStudentAccount({
+                      email: studentRow.email,
                       student_code: studentRow.student_code,
-                      temp_password: temp_password
+                      first_name: studentRow.first_name,
+                      middle_name: studentRow.middle_name || "",
+                      last_name: studentRow.last_name,
+                      password: temp_password,
                     });
-                  } catch (eEmail) {
-                    console.warn(`Failed to send email to ${studentRow.email}`);
-                    // Don't fail the whole upload for one email failure
+                    isProvisioned = true;
+                  } catch (provisionErr) {
+                    const provisionMessage =
+                      provisionErr instanceof Error
+                        ? provisionErr.message
+                        : "Unknown provisioning error";
+                    errors.push(
+                      `Student ${studentRow.student_code}: Account created in roster, but auth provisioning failed (${provisionMessage}).`,
+                    );
+                  }
+
+                  if (isProvisioned) {
+                    // Send welcome email only after successful auth provisioning.
+                    try {
+                      await sendStudentWelcomeEmail({
+                        to_name: `${studentRow.first_name} ${studentRow.last_name}`,
+                        to_email: studentRow.email,
+                        student_code: studentRow.student_code,
+                        temp_password: temp_password
+                      });
+                    } catch (eEmail) {
+                      console.warn(`Failed to send email to ${studentRow.email}`);
+                      // Don't fail the whole upload for one email failure
+                    }
                   }
                 }
 

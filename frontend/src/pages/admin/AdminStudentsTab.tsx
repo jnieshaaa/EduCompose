@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -12,16 +13,20 @@ import {
   ChevronRight,
   Filter,
   X,
+  Mail,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import { authApi } from "../../api";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import EditStudentModal from "../../components/admin/EditStudentModal";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
+import { sendStudentWelcomeEmail } from "../../services/emailService";
 
 interface Student {
   id: string;
+  auth_user_id?: string | null;
   student_code: string;
   first_name: string;
   middle_name?: string;
@@ -54,6 +59,7 @@ export const AdminStudentsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,8 +93,59 @@ export const AdminStudentsTab: React.FC = () => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
+
+  const calculateDropdownPosition = useCallback(
+    (triggerEl: HTMLElement, menuHeight: number = 280) => {
+      const rect = triggerEl.getBoundingClientRect();
+      const viewportPadding = 8;
+      const menuWidth = Math.min(208, window.innerWidth - viewportPadding * 2); // w-52 but capped to viewport
+
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const shouldOpenAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+      const unclampedTop = shouldOpenAbove
+        ? rect.top - menuHeight - 4
+        : rect.bottom + 4;
+      const maxTop = Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding);
+      const top = Math.max(viewportPadding, Math.min(unclampedTop, maxTop));
+
+      const rawLeft = rect.right - menuWidth;
+      const left = Math.max(
+        viewportPadding,
+        Math.min(rawLeft, window.innerWidth - menuWidth - viewportPadding),
+      );
+
+      setDropdownPos({ top, left });
+    },
+    [],
+  );
+
+  // Keep portal dropdown aligned with its trigger while scrolling/resizing.
+  useEffect(() => {
+    if (!openDropdown) return;
+
+    const updatePosition = () => {
+      const triggerEl = document.querySelector<HTMLElement>(
+        `[data-student-action-trigger="${openDropdown}"]`,
+      );
+      if (!triggerEl) return;
+      const measuredHeight = dropdownRef.current?.offsetHeight || 280;
+      calculateDropdownPosition(triggerEl, measuredHeight);
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [openDropdown, calculateDropdownPosition]);
 
   const loadStudents = useCallback(async () => {
     try {
@@ -158,6 +215,115 @@ export const AdminStudentsTab: React.FC = () => {
       setOpenDropdown(null);
     } catch (err: any) {
       alert(err.message || "Failed to update student status");
+    }
+  };
+
+  const handleResendPassword = async (student: Student) => {
+    if (
+      !student.email ||
+      !confirm(
+        `Generate a new password and email it to ${student.first_name} ${student.last_name}?`
+      )
+    )
+      return;
+
+    try {
+      setLoading(true);
+      const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // Prefer the auth-linked email (from users table) when available.
+      // This avoids failures when students.email was changed and became desynced from auth.
+      let emailForAuthReset = student.email;
+      if (student.auth_user_id) {
+        const { data: linkedUser, error: linkedUserError } = await supabase
+          .from("users")
+          .select("email")
+          .eq("auth_user_id", student.auth_user_id)
+          .maybeSingle();
+
+        if (!linkedUserError && linkedUser?.email) {
+          emailForAuthReset = linkedUser.email;
+        }
+      }
+
+      // Call Supabase RPC (SECURITY DEFINER — no backend/service-role key needed)
+      const { data: ok, error: rpcError } = await supabase.rpc(
+        "admin_reset_student_password",
+        { p_email: emailForAuthReset, p_new_password: newPassword }
+      );
+
+      if (rpcError) throw new Error(rpcError.message);
+      if (!ok) throw new Error("Student email not found in auth system. Has their account been provisioned?");
+
+      // Send the new password to the student via EmailJS
+      await sendStudentWelcomeEmail({
+        to_name: `${student.first_name} ${student.last_name}`.trim(),
+        to_email: student.email,
+        student_code: student.student_code,
+        temp_password: newPassword,
+      });
+
+      if (emailForAuthReset !== student.email) {
+        alert(
+          `Password was reset using linked auth email (${emailForAuthReset}). The welcome email was sent to ${student.email}. Please align student email with auth email to avoid future login issues.`,
+        );
+      } else {
+        alert("New password generated and sent to the student's email successfully.");
+      }
+      setOpenDropdown(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to resend password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProvisionAuthAccount = async (student: Student) => {
+    if (!student.email) {
+      alert("Student email is required before provisioning an auth account.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Provision auth account for ${student.first_name} ${student.last_name} (${student.student_code}) and send a temporary password to ${student.email}?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const fallbackPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const result = await authApi.provisionStudentAccount({
+        email: student.email.trim().toLowerCase(),
+        student_code: student.student_code,
+        first_name: student.first_name,
+        middle_name: student.middle_name || "",
+        last_name: student.last_name,
+        password: fallbackPassword,
+      });
+
+      const tempPassword = result.temp_password || fallbackPassword;
+      await sendStudentWelcomeEmail({
+        to_name: `${student.first_name} ${student.last_name}`.trim(),
+        to_email: student.email,
+        student_code: student.student_code,
+        temp_password: tempPassword,
+      });
+
+      await loadStudents();
+      setOpenDropdown(null);
+      alert(
+        result.created
+          ? "Auth account provisioned and credentials sent successfully."
+          : "Auth account already existed. Password/metadata were refreshed and credentials were sent.",
+      );
+    } catch (err: any) {
+      alert(err?.message || "Failed to provision student auth account.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -461,74 +627,25 @@ export const AdminStudentsTab: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <div
-                        className="relative inline-block text-left"
-                        ref={openDropdown === s.id ? dropdownRef : null}
-                      >
-                        <button
-                          onClick={() =>
-                            setOpenDropdown(openDropdown === s.id ? null : s.id)
-                          }
-                          className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-
-                        {openDropdown === s.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-neutral-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
-                            <button
-                              onClick={() => {
-                                setEditingStudent(s);
-                                setOpenDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                            >
-                              <Edit2 size={14} className="text-blue-500" />
-                              Edit Profile
-                            </button>
-                            <button
-                              onClick={() => handleToggleActive(s)}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                            >
-                              {s.enrollment_status === "active" ? (
-                                <>
-                                  <UserX size={14} className="text-amber-500" />
-                                  Deactivate (Drop)
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck
-                                    size={14}
-                                    className="text-green-500"
-                                  />
-                                  Re-activate
-                                </>
-                              )}
-                            </button>
-                            <div className="my-1 border-t border-neutral-100" />
-                            <button
-                              onClick={() => handleDeleteStudent(s)}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
-                            >
-                              <Trash2 size={14} />
-                              Archive Student
-                            </button>
-                            <div className="my-1 border-t border-neutral-100" />
-                            <button
-                               onClick={() => {
-                                 setSelectedStudentForLogs(s);
-                                 setOpenDropdown(null);
-                                 searchParams.set("logs", s.id);
-                                 setSearchParams(searchParams);
-                               }}
-                               className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                            >
-                               <Search size={14} className="text-primary" />
-                               View Activity Logs
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <div className="relative inline-block text-left">
+                         <button
+                           data-student-action-trigger={s.id}
+                           onClick={(e) => {
+                             if (openDropdown === s.id) {
+                               setOpenDropdown(null);
+                             } else {
+                               calculateDropdownPosition(
+                                 e.currentTarget,
+                                 dropdownRef.current?.offsetHeight || 280,
+                               );
+                               setOpenDropdown(s.id);
+                             }
+                           }}
+                           className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
+                         >
+                           <MoreVertical size={16} />
+                         </button>
+                       </div>
                     </td>
                    </tr>
                 ))}
@@ -617,6 +734,97 @@ export const AdminStudentsTab: React.FC = () => {
           onSuccess={loadStudents}
         />
       )}
+
+      {/* Portal dropdown — renders above the overflow-x-auto table */}
+      {openDropdown && dropdownPos &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "fixed",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 9999,
+              width: "min(208px, calc(100vw - 16px))",
+              maxWidth: "calc(100vw - 16px)",
+              maxHeight: "calc(100vh - 16px)",
+              overflowY: "auto",
+              overflowX: "hidden",
+            }}
+            className="bg-white rounded-xl shadow-2xl border border-neutral-100 py-2 animate-in fade-in zoom-in duration-150"
+          >
+            {(() => {
+              const s = currentItems.find((x) => x.id === openDropdown);
+              if (!s) return null;
+              return (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingStudent(s);
+                      setOpenDropdown(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    <Edit2 size={14} className="text-blue-500" />
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(s)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    {s.enrollment_status === "active" ? (
+                      <>
+                        <UserX size={14} className="text-amber-500" />
+                        Deactivate (Drop)
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck size={14} className="text-green-500" />
+                        Re-activate
+                      </>
+                    )}
+                  </button>
+                  <div className="my-1 border-t border-neutral-100" />
+                  <button
+                    onClick={() => handleDeleteStudent(s)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                  >
+                    <Trash2 size={14} />
+                    Archive Student
+                  </button>
+                  <div className="my-1 border-t border-neutral-100" />
+                  <button
+                    onClick={() => handleResendPassword(s)}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    <Mail size={14} className="text-blue-500" />
+                    Resend Password
+                  </button>
+                  <button
+                    onClick={() => handleProvisionAuthAccount(s)}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    <UserCheck size={14} className="text-emerald-600" />
+                    {s.auth_user_id ? "Re-provision Auth Account" : "Provision Auth Account"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedStudentForLogs(s);
+                      setOpenDropdown(null);
+                      searchParams.set("logs", s.id);
+                      setSearchParams(searchParams);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    <Search size={14} className="text-primary" />
+                    View Activity Logs
+                  </button>
+                </>
+              );
+            })()}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

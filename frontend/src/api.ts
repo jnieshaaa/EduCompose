@@ -162,48 +162,7 @@ export const authApi = {
     username?: string;
     full_name?: string;
   }) => {
-    // 1. Create user in Supabase Auth via admin client
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: userData.email.trim(),
-      password: userData.password.trim(),
-      email_confirm: true,
-      user_metadata: {
-        role: userData.role,
-        first_name: userData.first_name,
-        middle_name: userData.middle_name,
-        last_name: userData.last_name,
-        title: userData.title,
-        nickname: userData.nickname,
-        full_name: userData.full_name || `${userData.first_name || ""} ${userData.last_name || ""}`.trim()
-      }
-    });
-
-    if (authError || !authData.user) {
-      throw new Error(`Auth Error: ${authError?.message || "Failed to create user in Auth"}`);
-    }
-
-    // 2. Create user in public.users table via admin client
-    const { error: publicError } = await supabaseAdmin
-      .from("users")
-      .insert({
-        auth_user_id: authData.user.id,
-        email: userData.email.trim(),
-        first_name: userData.first_name,
-        middle_name: userData.middle_name,
-        last_name: userData.last_name,
-        title: userData.title,
-        nickname: userData.nickname,
-        role: userData.role,
-        is_active: true
-      });
-
-    if (publicError) {
-      // Cleanup auth user if public user creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      throw new Error(`DB Error: ${publicError.message}`);
-    }
-
-    // 3. Sync to backend database
+    // Synced securely via backend
     return apiRequest<{
       message: string;
       user: {
@@ -217,10 +176,7 @@ export const authApi = {
       };
     }>("/auth/admin/create-user", {
       method: "POST",
-      body: JSON.stringify({
-        ...userData,
-        supabase_user_id: authData.user.id
-      }),
+      body: JSON.stringify(userData),
     });
   },
 
@@ -232,41 +188,7 @@ export const authApi = {
     middle_name?: string;
     password?: string;
   }) => {
-    const tempPassword = payload.password || "Student123!"; // Simplified default
-    
-    // 1. Create auth user in Supabase
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: payload.email.trim().toLowerCase(),
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        role: "student",
-        first_name: payload.first_name,
-        middle_name: payload.middle_name,
-        last_name: payload.last_name,
-        student_code: payload.student_code.trim().toUpperCase(),
-        full_name: `${payload.first_name} ${payload.last_name}`.trim()
-      }
-    });
-
-    if (authError && !authError.message.includes("already registered")) {
-        throw new Error(`Auth Error: ${authError.message}`);
-    }
-
-    // 2. Insert into users table if successful
-    if (authData.user) {
-        await supabaseAdmin.from("users").upsert({
-            auth_user_id: authData.user.id,
-            email: payload.email.trim().toLowerCase(),
-            first_name: payload.first_name,
-            middle_name: payload.middle_name,
-            last_name: payload.last_name,
-            role: "student",
-            is_active: true
-        });
-    }
-
-    // 3. Sync to backend
+    // Backend will handle Supabase creation and syncing securely
     return apiRequest<{
       success: boolean;
       message: string;
@@ -276,7 +198,7 @@ export const authApi = {
       student_code: string;
     }>("/auth/teacher/provision-student-account", {
       method: "POST",
-      body: JSON.stringify({ ...payload, password: tempPassword }),
+      body: JSON.stringify(payload),
     });
   },
 };
@@ -592,6 +514,39 @@ export const plagiarismApi = {
     }
 
     return response.json() as Promise<PlagiarismCheckResponse>;
+  },
+};
+
+export interface AIDetectionResponse {
+  checked: boolean;
+  is_ai_generated: boolean;
+  ai_score: number;
+  confidence?: number;
+  verdict?: string;
+  provider: string;
+  details?: Record<string, unknown>;
+  error?: string;
+  message?: string;
+}
+
+export const aiDetectionApi = {
+  checkAIDetection: async (text: string): Promise<AIDetectionResponse> => {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-ai-detection`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json() as Promise<AIDetectionResponse>;
   },
 };
 

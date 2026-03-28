@@ -10,7 +10,7 @@ import {
   useInView,
   useAnimation,
 } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Chart from "chart.js/auto";
 import HeaderPublic from "../components/HeaderPublic";
 import AuthModal from "../components/LoginModal";
@@ -20,7 +20,6 @@ import { KnowledgeGraphSimulation } from "../components/landing/KnowledgeGraphSi
 
 const LandingPage: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(false);
 
   // Show login modal if redirected from a protected route
@@ -172,7 +171,7 @@ const LandingPage: React.FC = () => {
   ]);
 
   const handleGetStarted = () => {
-    navigate("/AnalyzeEssay");
+    setShowLogin(true);
   };
 
   // Tech Details Interaction
@@ -384,9 +383,9 @@ const LandingPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Empowering Educators with
+              A writing-analytics workspace
               <br />
-              <span className="text-cyan-600">AI-Driven Essay Analysis</span>
+              <span className="text-cyan-600">built for schools &amp; teachers</span>
             </motion.h1>
 
             {/* Subheading */}
@@ -396,9 +395,10 @@ const LandingPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Knowledge Graph–Enhanced NLP for Teacher-Assisted Essay
-              Evaluation. Provide deeper, more effective feedback on student
-              writing without replacing the human touch.
+              EduCompose is a secure, account-based platform: teachers assign
+              activities, students submit work, and AI-assisted analysis supports
+              your rubrics and review workflow—always under your direction, not
+              as a public “drop-in” essay checker.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -412,17 +412,18 @@ const LandingPage: React.FC = () => {
                 onClick={handleGetStarted}
                 className="bg-primary text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 flex items-center gap-2 text-lg hover:bg-primary-100 hover:shadow-xl hover:scale-105 transform"
               >
-                Analyze Essay Now
+                Sign in to your workspace
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
+                type="button"
                 onClick={() => {
                   const challengeSection = document.getElementById("challenge");
                   challengeSection?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="bg-white text-gray-700 font-semibold px-8 py-4 rounded-full transition-all duration-300 border-2 border-gray-300 hover:border-primary hover:text-primary hover:shadow-lg"
               >
-                Learn More
+                How the platform works
               </button>
             </motion.div>
 
@@ -437,10 +438,11 @@ const LandingPage: React.FC = () => {
                 <div className="bg-cyan-100 w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto">
                   <Zap className="w-6 h-6 text-cyan-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Fast Analysis</h3>
+                <h3 className="text-xl font-semibold mb-2">Structured workflow</h3>
                 <p className="text-gray-600">
-                  Get comprehensive essay analysis in seconds, saving hours of
-                  grading time.
+                  Courses, sections, activities, and rubrics live in one place so
+                  submissions and feedback stay tied to real classes—not anonymous
+                  uploads.
                 </p>
               </div>
 
@@ -449,11 +451,12 @@ const LandingPage: React.FC = () => {
                   <BookOpen className="w-6 h-6 text-purple-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
-                  Deep Insights
+                  Rich writing signals
                 </h3>
                 <p className="text-gray-600">
-                  Analyze argument strength, coherence, and clarity beyond
-                  surface-level grammar.
+                  Beyond grammar: coherence, argument structure, and other
+                  dimensions you configure—presented to support your review, not
+                  to bypass it.
                 </p>
               </div>
 
@@ -462,11 +465,12 @@ const LandingPage: React.FC = () => {
                   <Users className="w-6 h-6 text-indigo-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
-                  Teacher-Centered
+                  Roles that match school life
                 </h3>
                 <p className="text-gray-600">
-                  Designed to augment your expertise, not replace your
-                  professional judgment.
+                  Separate experiences for teachers and students: assign work,
+                  track submissions, and open the teacher dashboard only after
+                  sign-in.
                 </p>
               </div>
             </motion.div>
@@ -1060,8 +1064,8 @@ const LandingPage: React.FC = () => {
             viewport={{ once: false }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
-            <p className="text-white animate-pulse">
-              &copy; 2025 EduCompose | Team Nonchalant.
+            <p className="text-white text-sm sm:text-base">
+              &copy; {new Date().getFullYear()} EduCompose · Teacher- and school-focused writing analytics.
             </p>
           </motion.div>
         </footer>

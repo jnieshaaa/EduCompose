@@ -12,7 +12,7 @@ from ..models import User, Essay
 from ..schemas import (
     AnalysisRequest, AnalysisResponse, BatchAnalysisRequest,
     TextAnalysisRequest, TextAnalysisResponse, PlagiarismCheckRequest, 
-    PlagiarismCheckResponse, PlagiarismMatch
+    PlagiarismCheckResponse, PlagiarismMatch, AIDetectionRequest, AIDetectionResponse
 )
 from ..schemas.comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
 from ..database import get_db
@@ -388,6 +388,7 @@ async def check_plagiarism_status():
     if not copyscape_service.is_configured():
         return {
             "configured": False,
+            "base_url": copyscape_service.base_url,
             "message": "Copyscape API credentials not configured. Please set COPYSCAPE_USERNAME and COPYSCAPE_API_KEY environment variables."
         }
     
@@ -396,6 +397,7 @@ async def check_plagiarism_status():
     
     return {
         "configured": True,
+        "base_url": copyscape_service.base_url,
         "credentials_valid": validation_result.get("valid", False),
         "message": validation_result.get("message", "Unknown status")
     }
@@ -462,5 +464,45 @@ async def check_plagiarism(
         checked=True,
         error=result.get("error"),
         message=result.get("message")
+    )
+
+
+@analysis_router.post("/check-ai-detection", response_model=AIDetectionResponse)
+async def check_ai_detection(
+    request: AIDetectionRequest
+):
+    """
+    Check essay text for AI-generated likelihood using Copyscape AI detection.
+    """
+    if not request.text or len(request.text.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Text must be at least 10 characters long"
+        )
+
+    if not copyscape_service.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="AI detection service is not configured. Please set COPYSCAPE_USERNAME and COPYSCAPE_API_KEY environment variables."
+        )
+
+    result = await copyscape_service.check_ai_detection(request.text)
+
+    if "error" in result:
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("message", "AI detection failed")
+        )
+
+    return AIDetectionResponse(
+        checked=result.get("checked", False),
+        is_ai_generated=result.get("is_ai_generated", False),
+        ai_score=float(result.get("ai_score", 0.0) or 0.0),
+        confidence=result.get("confidence"),
+        verdict=result.get("verdict"),
+        provider=result.get("provider", "copyscape"),
+        details=result.get("details"),
+        error=result.get("error"),
+        message=result.get("message"),
     )
 

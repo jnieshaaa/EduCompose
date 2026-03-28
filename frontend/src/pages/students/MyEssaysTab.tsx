@@ -22,7 +22,7 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { PremiumLoader } from '../../components/ui/PremiumLoader';
+
 export function MyEssaysTab() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,7 +56,7 @@ export function MyEssaysTab() {
           id: e.id,
           title: e.title || (e.essay_activities as any)?.title || 'Untitled Essay',
           submitted: new Date(e.submitted_at).toLocaleDateString(),
-          status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'AI Evaluated' : 'Submitted'),
+          status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'Graded' : 'Submitted'),
           aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
           hasTeacherFeedback: e.status === 'reviewed',
@@ -75,7 +75,7 @@ export function MyEssaysTab() {
   }, []);
 
   if (loading && essaysData.length === 0) {
-    return <PremiumLoader loading={loading} message="Gathering your essays..." />;
+    return null;
   }
 
   if (error) {
@@ -100,23 +100,21 @@ export function MyEssaysTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Reviewed':
-        return <Badge className="bg-green-600 text-white">Reviewed</Badge>;
-      case 'AI Evaluated':
-        return <Badge className="bg-blue-600 text-white">AI Evaluated</Badge>;
+      case 'Graded':
+        return <Badge className="bg-emerald-600 text-white">Graded</Badge>;
+      case 'Not Submitted':
+      case 'Not yet submitted':
+        return <Badge className="bg-red-600 text-white">Not Submitted</Badge>;
       case 'Under AI Evaluation':
         return <Badge className="bg-amber-600 text-white">Evaluating</Badge>;
       default:
-        return <Badge className="bg-neutral-600 text-white">{status}</Badge>;
+        return <Badge variant="neutral" className="bg-neutral-100 text-neutral-600 border-neutral-200">{status}</Badge>;
     }
   };
 
   const getScoreBadge = (score: number | null) => {
     if (score === null) return <span className="text-sm text-neutral-400">-</span>;
-    
-    if (score >= 90) return <Badge className="bg-green-600 text-white">{score}%</Badge>;
-    if (score >= 80) return <Badge className="bg-blue-600 text-white">{score}%</Badge>;
-    if (score >= 70) return <Badge className="bg-amber-600 text-white">{score}%</Badge>;
-    return <Badge className="bg-red-600 text-white">{score}%</Badge>;
+    return <span className="text-sm font-semibold text-neutral-900">{score}%</span>;
   };
 
   // Empty state
@@ -187,8 +185,9 @@ export function MyEssaysTab() {
           <select className="h-10 px-3 border border-neutral-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
             <option>All Status</option>
             <option>Reviewed</option>
-            <option>AI Evaluated</option>
+            <option>Graded</option>
             <option>Evaluating</option>
+            <option>Not Submitted</option>
           </select>
         </div>
       </Card>

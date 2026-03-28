@@ -6,16 +6,86 @@ import type { EssayActivity, NewActivityForm } from "../types/activityTypes";
 import { fetchTeacherId, fetchTeacherUUID } from "./rubricService";
 import { buildFullNameFromObject } from "../utils/nameUtils";
 
+/** Essay / student / activity IDs may be UUID strings or legacy integers in some deployments. */
+export function isUuidString(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function coerceEssayIdParam(id: string | number): string | number | null {
+  if (typeof id === "number") {
+    return Number.isNaN(id) ? null : id;
+  }
+  const t = id.trim();
+  if (!t) return null;
+  if (isUuidString(t)) return t;
+  const n = parseInt(t, 10);
+  if (!Number.isNaN(n) && String(n) === t) return n;
+  return null;
+}
+
+/** Resolve `students.id` for `essays.student_id` filters: UUID pass-through, else `student_code`, else numeric legacy id. */
+export async function resolveStudentIdForEssayFilter(
+  rawStudentId: string,
+): Promise<string | number | null> {
+  const t = rawStudentId.trim();
+  if (!t) return null;
+  if (isUuidString(t)) return t;
+
+  const { data: byCode } = await supabase
+    .from("students")
+    .select("id")
+    .eq("student_code", t)
+    .maybeSingle();
+  if (byCode?.id != null) return byCode.id as string | number;
+
+  const asNum = parseInt(t, 10);
+  if (!Number.isNaN(asNum) && String(asNum) === t) return asNum;
+
+  return null;
+}
+
+/** Resolve activity id for `essays.activity_id` filters. */
+export function resolveActivityIdForEssayFilter(
+  rawActivityId: string,
+): string | number | null {
+  const t = rawActivityId.trim();
+  if (!t) return null;
+  if (isUuidString(t)) return t;
+  const asNum = parseInt(t, 10);
+  if (!Number.isNaN(asNum)) return asNum;
+  return null;
+}
+
+/** Look up `essays.id` from route/ref `studentId` + `activityId` strings. */
+export async function resolveEssayIdFromStudentActivity(
+  studentId: string,
+  activityId: string,
+): Promise<string | number | null> {
+  const sid = await resolveStudentIdForEssayFilter(studentId);
+  const aid = resolveActivityIdForEssayFilter(activityId);
+  if (sid == null || aid == null) return null;
+  const { data } = await supabase
+    .from("essays")
+    .select("id")
+    .eq("student_id", sid)
+    .eq("activity_id", aid)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 /**
  * Fetches necessary information to build a full breadcrumb and navigation context.
  */
 export const fetchActivityBreadcrumbInfo = async (
-  activityId: string | number, 
+  activityId: string | number,
   studentId?: string | number,
-  essayId?: string | number
+  essayId?: string | number,
 ) => {
   try {
-    const actId = typeof activityId === 'string' ? parseInt(activityId) : activityId;
+    const actId =
+      typeof activityId === "string" ? parseInt(activityId) : activityId;
     if (isNaN(actId)) return null;
 
     // 1. Fetch Activity Basic Info
@@ -35,40 +105,60 @@ export const fetchActivityBreadcrumbInfo = async (
 
     // 2. Resolve Program Abbr
     if (activity.program_id && activity.program_id.length > 0) {
-      const pId = Array.isArray(activity.program_id) ? activity.program_id[0] : activity.program_id;
-      const { data: prog } = await supabase.from("programs_lookup").select("abbr").eq("id", pId).single();
+      const pId = Array.isArray(activity.program_id)
+        ? activity.program_id[0]
+        : activity.program_id;
+      const { data: prog } = await supabase
+        .from("programs_lookup")
+        .select("abbr")
+        .eq("id", pId)
+        .single();
       if (prog) programAbbr = prog.abbr;
     }
 
     // 3. Resolve Course Info
     if (activity.course_id && activity.course_id.length > 0) {
-      courseId = Array.isArray(activity.course_id) ? activity.course_id[0] : activity.course_id;
-      const { data: course } = await supabase.from("courses").select("course_title, course_code").eq("id", courseId).single();
+      courseId = Array.isArray(activity.course_id)
+        ? activity.course_id[0]
+        : activity.course_id;
+      const { data: course } = await supabase
+        .from("courses")
+        .select("course_title, course_code")
+        .eq("id", courseId)
+        .single();
       if (course) courseName = course.course_title || course.course_code;
     }
 
     // 4. Resolve Section/Block Info (if targeted)
     if (essayId) {
-      const { data: essay } = await supabase.from("essays").select("block_id").eq("id", essayId).single();
+      const { data: essay } = await supabase
+        .from("essays")
+        .select("block_id")
+        .eq("id", essayId)
+        .single();
       if (essay && essay.block_id) sectionId = String(essay.block_id);
     } else if (studentId) {
-       // Find which block this student is assigned to for this activity
-       // or just their primary block matching the activity's blocks
-       if (activity.block_id && activity.block_id.length > 0) {
-         const { data: enrollment } = await supabase
-           .from("block_students")
-           .select("block_id")
-           .eq("student_id", studentId)
-           .in("block_id", activity.block_id)
-           .maybeSingle();
+      // Find which block this student is assigned to for this activity
+      // or just their primary block matching the activity's blocks
+      if (activity.block_id && activity.block_id.length > 0) {
+        const { data: enrollment } = await supabase
+          .from("block_students")
+          .select("block_id")
+          .eq("student_id", studentId)
+          .in("block_id", activity.block_id)
+          .maybeSingle();
 
-         if (enrollment) sectionId = String(enrollment.block_id);
-       }
+        if (enrollment) sectionId = String(enrollment.block_id);
+      }
     }
 
     // If sectionId was found, get its friendly name
     if (sectionId) {
-      const { data: block } = await supabase.from("blocks").select("year, name").eq("id", sectionId).single();
+      const { data: block } = await supabase
+        .from("blocks")
+        .select("year, name")
+        .eq("id", sectionId)
+        .single();
       if (block) courseSectionName = `${block.year}${block.name}`;
     }
 
@@ -79,7 +169,7 @@ export const fetchActivityBreadcrumbInfo = async (
       courseName,
       courseId,
       sectionId,
-      courseSection: courseSectionName
+      courseSection: courseSectionName,
     };
   } catch (err) {
     console.error("Error fetching breadcrumb/navigation info:", err);
@@ -132,16 +222,20 @@ export const fetchTeacherActivities = async (
       .eq("teacher_id", teacherId);
 
     if (!showArchived) {
-      if (academicYear && academicYear !== "all") query = query.eq("academic_year", academicYear);
+      if (academicYear && academicYear !== "all")
+        query = query.eq("academic_year", academicYear);
       if (term && term !== "all") query = query.eq("term", term);
     } else {
       // Archive view: apply specific filters
-      if (academicYear && academicYear !== "all") query = query.eq("academic_year", academicYear);
+      if (academicYear && academicYear !== "all")
+        query = query.eq("academic_year", academicYear);
       if (term && term !== "all") query = query.eq("term", term);
-      
+
       // But ALWAYS exclude the current context if provided
       if (currentAY && currentTerm) {
-        query = query.or(`academic_year.neq.${currentAY},term.neq.${currentTerm}`);
+        query = query.or(
+          `academic_year.neq.${currentAY},term.neq.${currentTerm}`,
+        );
       }
     }
 
@@ -297,7 +391,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 const ensurePlatformRubricExists = async (
   templateId: number,
 ): Promise<number | null> => {
-    try {
+  try {
     // Import template to get the name
     const { platformRubrics } = await import("../data/rubricData");
     const template = platformRubrics.find((r) => r.id === templateId);
@@ -396,7 +490,13 @@ export const createActivity = async (
         .in("id", activity.sectionIds);
 
       if (blocksData) {
-        blocksData.forEach((b: any) => {
+        blocksData.forEach((b: {
+          id: string | number;
+          teacher_program_loads:
+            | { program_id?: string | null }
+            | Array<{ program_id?: string | null }>
+            | null;
+        }) => {
           const tpl = Array.isArray(b.teacher_program_loads)
             ? b.teacher_program_loads[0]
             : b.teacher_program_loads;
@@ -426,8 +526,16 @@ export const createActivity = async (
       }
 
       if (studentsData && studentsData.length > 0) {
-        studentsData.forEach((row: any) => {
-          const authId = row.students?.auth_user_id;
+        studentsData.forEach((row: {
+          block_id: string | number | null;
+          students?:
+            | { auth_user_id?: string | null }
+            | Array<{ auth_user_id?: string | null }>
+            | null;
+        }) => {
+          const authId = Array.isArray(row.students)
+            ? row.students[0]?.auth_user_id
+            : row.students?.auth_user_id;
           if (authId && row.block_id) {
             if (!studentIdsByBlock.has(String(row.block_id))) {
               studentIdsByBlock.set(String(row.block_id), []);
@@ -468,7 +576,14 @@ export const createActivity = async (
     // 4. Send notifications to students for each block assigned
     if (data && data.length > 0) {
       const newActivity = data[0];
-      const notificationsToInsert: any[] = [];
+      const notificationsToInsert: Array<{
+        user_id: string;
+        type: "new_activity";
+        title: string;
+        message: string;
+        related_id: string;
+        related_type: "essay_activities";
+      }> = [];
 
       activity.sectionIds.forEach((blockId) => {
         const targetStudentIds = studentIdsByBlock.get(String(blockId)) || [];
@@ -591,7 +706,12 @@ export const updateActivity = async (
 
       if (blocksData) {
         const programIds = new Set<string>();
-        blocksData.forEach((b: any) => {
+        blocksData.forEach((b: {
+          teacher_program_loads:
+            | { program_id?: string | null }
+            | Array<{ program_id?: string | null }>
+            | null;
+        }) => {
           const tpl = Array.isArray(b.teacher_program_loads)
             ? b.teacher_program_loads[0]
             : b.teacher_program_loads;
@@ -693,17 +813,30 @@ export const fetchCourses = async (): Promise<
     }
 
     const courses = (data || [])
-      .map((l: { courses: any }) => l.courses)
-      .filter((c) => c !== null);
+      .flatMap((l: {
+        courses:
+          | Array<{
+              id: string | number;
+              course_code: string;
+              course_title: string;
+            }>
+          | null;
+      }) => l.courses || []);
 
     // Remove duplicates
     const uniqueCourses = Array.from(
       new Map(courses.map((c) => [c.id, c])).values(),
     );
 
-    return uniqueCourses.sort((a, b) =>
+    return uniqueCourses
+      .map((c) => ({
+        id: String(c.id),
+        course_code: c.course_code,
+        course_title: c.course_title,
+      }))
+      .sort((a, b) =>
       a.course_code.localeCompare(b.course_code),
-    );
+      );
   } catch (err) {
     console.error("Unexpected error loading courses:", err);
     return [];
@@ -745,18 +878,33 @@ export const fetchTeacherProgramLoads = async (
 
     return (data || []).map(
       (row: {
-        id: any;
-        program_id: any;
-        programs_lookup: any;
-        teacher_course_loads: any;
+        id: string | number;
+        program_id: string | number;
+        programs_lookup?:
+          | Array<{ name?: string | null; abbr?: string | null }>
+          | { name?: string | null; abbr?: string | null }
+          | null;
+        teacher_course_loads?:
+          | Array<{ course_id?: string | number | null }>
+          | { course_id?: string | number | null }
+          | null;
       }) => ({
-        id: String(row.id),
-        program_id: String(row.program_id),
-        program_name:
-          row.programs_lookup?.abbr ||
-          row.programs_lookup?.name ||
-          "Unknown Program",
-        course_id: String(row.teacher_course_loads?.course_id || ""),
+        // Supabase nested joins can be array/object depending on relation metadata.
+        // Normalize both shapes before reading fields.
+        ...(() => {
+          const program = Array.isArray(row.programs_lookup)
+            ? row.programs_lookup[0]
+            : row.programs_lookup;
+          const courseLoad = Array.isArray(row.teacher_course_loads)
+            ? row.teacher_course_loads[0]
+            : row.teacher_course_loads;
+          return {
+            id: String(row.id),
+            program_id: String(row.program_id),
+            program_name: program?.abbr || program?.name || "Unknown Program",
+            course_id: String(courseLoad?.course_id || ""),
+          };
+        })(),
       }),
     );
   } catch (err) {
@@ -838,10 +986,46 @@ export const fetchSections = async (
       return [];
     }
 
-    return (data || []).map((block: any) => {
+    return (data || []).map((block: {
+      id: string | number;
+      year?: number | null;
+      name: string;
+      program_load_id: string | number | null;
+      teacher_program_loads?:
+        | Array<{
+            programs_lookup?:
+              | Array<{ abbr?: string | null; name?: string | null }>
+              | { abbr?: string | null; name?: string | null }
+              | null;
+            teacher_course_loads?:
+              | Array<{ course_id?: string | number | null }>
+              | { course_id?: string | number | null }
+              | null;
+          }>
+        | {
+            programs_lookup?:
+              | Array<{ abbr?: string | null; name?: string | null }>
+              | { abbr?: string | null; name?: string | null }
+              | null;
+            teacher_course_loads?:
+              | Array<{ course_id?: string | number | null }>
+              | { course_id?: string | number | null }
+              | null;
+          }
+        | null;
+    }) => {
+      const programLoad = Array.isArray(block.teacher_program_loads)
+        ? block.teacher_program_loads[0]
+        : block.teacher_program_loads;
+      const program = Array.isArray(programLoad?.programs_lookup)
+        ? programLoad?.programs_lookup[0]
+        : programLoad?.programs_lookup;
+      const teacherCourseLoad = Array.isArray(programLoad?.teacher_course_loads)
+        ? programLoad?.teacher_course_loads[0]
+        : programLoad?.teacher_course_loads;
       const progAbbr =
-        block.teacher_program_loads?.programs_lookup?.abbr ||
-        block.teacher_program_loads?.programs_lookup?.name ||
+        program?.abbr ||
+        program?.name ||
         "";
       const yearStr = block.year ? `${block.year}` : "";
       const fullName = [progAbbr, yearStr + block.name]
@@ -852,9 +1036,7 @@ export const fetchSections = async (
         id: String(block.id),
         name: fullName,
         programLoadId: String(block.program_load_id),
-        courseId: String(
-          block.teacher_program_loads?.teacher_course_loads?.course_id || "",
-        ),
+        courseId: String(teacherCourseLoad?.course_id || ""),
       };
     });
   } catch (err) {
@@ -1457,7 +1639,12 @@ export const fetchCourseSectionCounts = async (
 export const fetchEssayByStudentAndActivity = async (
   studentId: string,
   activityId: string,
-): Promise<{ fileUrl: string; title: string; fileType: string } | null> => {
+): Promise<{
+  fileUrl: string;
+  title: string;
+  fileType: string;
+  content?: string;
+} | null> => {
   try {
     // Parse student ID
     let studentDbId = parseInt(studentId, 10);
@@ -1485,7 +1672,7 @@ export const fetchEssayByStudentAndActivity = async (
     // Fetch essay record
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("file_path, title")
+      .select("file_path, title, content")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -1495,8 +1682,19 @@ export const fetchEssayByStudentAndActivity = async (
       return null;
     }
 
-    // Get signed URL from Supabase Storage (bucket is private)
-    // Signed URLs are valid for 1 hour (3600 seconds)
+    // If the essay was submitted as text only, store it in `content` and show it.
+    if (!essayData.file_path) {
+      const content = essayData.content || "";
+      if (!content.trim()) return null;
+      return {
+        fileUrl: "",
+        title: essayData.title || "Essay Submission",
+        fileType: "text",
+        content,
+      };
+    }
+
+    // Otherwise, treat it as a file upload and create a signed URL from Supabase Storage.
     const { data: urlData, error: urlError } = await supabase.storage
       .from("essays")
       .createSignedUrl(essayData.file_path, 3600);
@@ -1506,7 +1704,6 @@ export const fetchEssayByStudentAndActivity = async (
       return null;
     }
 
-    // Determine file type from file path
     const fileExt = essayData.file_path.split(".").pop()?.toLowerCase() || "";
     const isPdf = fileExt === "pdf";
     const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt);
@@ -1712,7 +1909,7 @@ export const gradeEssay = async (
     // Parse student ID
     let studentDbId = parseInt(studentId, 10);
     let authUserId: string | null = null;
-    
+
     if (isNaN(studentDbId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
@@ -1731,7 +1928,7 @@ export const gradeEssay = async (
         .select("auth_user_id")
         .eq("id", studentDbId)
         .single();
-        
+
       if (stdData) {
         authUserId = stdData.auth_user_id;
       }
@@ -1745,7 +1942,9 @@ export const gradeEssay = async (
 
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, file_path, content, title, essay_activities(id, title, min_word_count)")
+      .select(
+        "id, file_path, content, title, essay_activities(id, title, min_word_count)",
+      )
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .single();
@@ -1818,10 +2017,16 @@ export const gradeEssay = async (
       return { success: false, error: "No essay content or file found" };
     }
 
-    const essay_activities = essayData.essay_activities;
-    const minWordCount = (Array.isArray(essay_activities) 
-      ? essay_activities[0]?.min_word_count 
-      : (essay_activities as any)?.min_word_count) || 150;
+    const essayActivities =
+      essayData.essay_activities as
+        | { min_word_count?: number | null; title?: string | null }
+        | Array<{ min_word_count?: number | null; title?: string | null }>
+        | null
+        | undefined;
+    const minWordCount =
+      (Array.isArray(essayActivities)
+        ? essayActivities[0]?.min_word_count
+        : essayActivities?.min_word_count) || 150;
 
     // Update essay with word count immediately
     await supabase
@@ -2103,8 +2308,10 @@ export const gradeEssay = async (
     // Step 4: Create notifications
     const teacherUUID = await fetchTeacherUUID();
     if (teacherUUID) {
-      const activityTitle = (essayData.essay_activities as any)?.title || "Essay";
-      
+      const activityTitle = Array.isArray(essayActivities)
+        ? essayActivities[0]?.title || "Essay"
+        : essayActivities?.title || "Essay";
+
       // 4a. Create notification for teacher (using teacher's UUID)
       await supabase.from("notifications").insert({
         user_id: teacherUUID,
@@ -2161,28 +2368,12 @@ export const fetchEssayAnalysis = async (
   title: string;
 } | null> => {
   try {
-    // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
-      const { data: studentData, error: studentError } = await supabase
-        .from("students")
-        .select("id")
-        .eq("student_code", studentId)
-        .maybeSingle();
-
-      if (studentError || !studentData) {
-        return null;
-      }
-      studentDbId = studentData.id;
-    }
-
-    // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const studentDbId = await resolveStudentIdForEssayFilter(studentId);
+    const activityDbId = resolveActivityIdForEssayFilter(activityId);
+    if (studentDbId == null || activityDbId == null) {
       return null;
     }
 
-    // First, get the essay ID
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
       .select("id, title")
@@ -2677,12 +2868,11 @@ export const fetchDuplicateEssays = async (
   activityId: string,
 ): Promise<DuplicateEssayGroup[]> => {
   try {
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = resolveActivityIdForEssayFilter(activityId);
+    if (activityDbId == null) {
       return [];
     }
 
-    // Fetch all essays for this activity with their analysis results
     const { data: analysisResults, error } = await supabase
       .from("essay_analysis_results")
       .select(
@@ -3050,10 +3240,12 @@ export const fetchStudentsForActivity = async (
         blocks!essays_block_id_fkey(
           id,
           name,
-          program_id,
-          programs_lookup!inner(
-            id,
-            name
+          teacher_program_loads!fk_block_program_load(
+            programs_lookup(
+              id,
+              name,
+              abbr
+            )
           )
         )
       `,
@@ -3080,25 +3272,27 @@ export const fetchStudentsForActivity = async (
       blocks: {
         id: number;
         name: string;
-        program_id: string | null;
-        programs_lookup: {
-          id: string;
-          name: string;
-        };
+        teacher_program_loads?: {
+          programs_lookup?: {
+            id: string;
+            name: string;
+            abbr: string | null;
+          };
+        } | null;
       };
     };
 
     return (essaysData as unknown as EssayWithStudentData[]).map((essay) => {
       const student = essay.students;
       const block = essay.blocks;
-      const program = block?.programs_lookup;
+      const program = block?.teacher_program_loads?.programs_lookup;
 
       return {
         id: String(student.id),
         studentId: student.id,
         essayId: essay.id,
         name: buildFullNameFromObject(student, "Unknown"),
-        programName: program?.name || "Unknown",
+        programName: program?.abbr || program?.name || "Unknown",
         sectionName: block?.name || "Unknown",
         hasEssay: true,
       };
@@ -3487,10 +3681,12 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
           blocks!essays_block_id_fkey(
             id,
             name,
-            program_id,
-            programs_lookup!inner(
-              id,
-              name
+            teacher_program_loads!fk_block_program_load(
+              programs_lookup(
+                id,
+                name,
+                abbr
+              )
             )
           )
         )
@@ -3775,71 +3971,67 @@ export const savePlagiarismResult = async (
   plagiarismResult?: import("../api").PlagiarismCheckResponse,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    let essayId: number;
+    let essayId: string | number;
     let result: import("../api").PlagiarismCheckResponse;
 
     // Determine which overload is being used
     if (typeof activityIdOrResult === "object" && activityIdOrResult !== null) {
-      // Called with (essayId, plagiarismResult)
-      essayId =
-        typeof studentIdOrEssayId === "number"
-          ? studentIdOrEssayId
-          : parseInt(studentIdOrEssayId, 10);
+      if (typeof studentIdOrEssayId === "number") {
+        if (Number.isNaN(studentIdOrEssayId)) {
+          return { success: false, error: "Invalid essay ID" };
+        }
+        essayId = studentIdOrEssayId;
+      } else {
+        const coerced = coerceEssayIdParam(studentIdOrEssayId);
+        if (coerced == null) {
+          return { success: false, error: "Invalid essay ID" };
+        }
+        essayId = coerced;
+      }
       result = activityIdOrResult;
     } else if (plagiarismResult) {
       // Called with (studentId, activityId, plagiarismResult)
       const studentId = studentIdOrEssayId as string;
       const activityId = activityIdOrResult as string;
 
-      // Parse student ID
-      let studentDbId = parseInt(studentId, 10);
-      if (isNaN(studentDbId)) {
-        const { data: studentData, error: studentError } = await supabase
-          .from("students")
-          .select("id")
-          .eq("student_code", studentId)
-          .single();
-
-        if (studentError || !studentData) {
-          return { success: false, error: "Student not found" };
-        }
-        studentDbId = studentData.id;
+      const studentDbId = await resolveStudentIdForEssayFilter(studentId);
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
+      if (studentDbId == null) {
+        return { success: false, error: "Student not found" };
       }
-
-      // Parse activity ID
-      const activityDbId = parseInt(activityId, 10);
-      if (isNaN(activityDbId)) {
+      if (activityDbId == null) {
         return { success: false, error: "Invalid activity ID" };
       }
 
-      // Get essay ID
       const { data: essayData, error: essayError } = await supabase
         .from("essays")
         .select("id")
         .eq("student_id", studentDbId)
         .eq("activity_id", activityDbId)
-        .single();
+        .maybeSingle();
 
       if (essayError || !essayData) {
         return { success: false, error: "Essay not found" };
       }
 
-      essayId = essayData.id;
+      essayId = essayData.id as string | number;
       result = plagiarismResult;
     } else {
       return { success: false, error: "Invalid parameters" };
     }
 
-    if (isNaN(essayId)) {
+    if (
+      essayId == null ||
+      (typeof essayId === "number" && Number.isNaN(essayId))
+    ) {
       return { success: false, error: "Invalid essay ID" };
     }
 
-    // Check if the row exists first
     const { data: existingRow, error: checkError } = await supabase
       .from("essay_analysis_results")
       .select("id")
       .eq("essay_id", essayId)
-      .single();
+      .maybeSingle();
 
     if (checkError || !existingRow) {
       console.error(
@@ -3900,64 +4092,46 @@ export const loadPlagiarismResult = async (
   activityId?: string,
 ): Promise<import("../api").PlagiarismCheckResponse | null> => {
   try {
-    let essayId: number;
+    let essayId: string | number | null;
 
     if (activityId !== undefined) {
-      // Called with (studentId, activityId)
       const studentId = studentIdOrEssayId as string;
-
-      // Parse student ID
-      let studentDbId = parseInt(studentId, 10);
-      if (isNaN(studentDbId)) {
-        const { data: studentData, error: studentError } = await supabase
-          .from("students")
-          .select("id")
-          .eq("student_code", studentId)
-          .single();
-
-        if (studentError || !studentData) {
-          return null;
-        }
-        studentDbId = studentData.id;
-      }
-
-      // Parse activity ID
-      const activityDbId = parseInt(activityId, 10);
-      if (isNaN(activityDbId)) {
+      const studentDbId = await resolveStudentIdForEssayFilter(studentId);
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
+      if (studentDbId == null || activityDbId == null) {
         return null;
       }
 
-      // Get essay ID
       const { data: essayData, error: essayError } = await supabase
         .from("essays")
         .select("id")
         .eq("student_id", studentDbId)
         .eq("activity_id", activityDbId)
-        .single();
+        .maybeSingle();
 
       if (essayError || !essayData) {
         return null;
       }
 
-      essayId = essayData.id;
+      essayId = essayData.id as string | number;
     } else {
-      // Called with (essayId)
-      essayId =
-        typeof studentIdOrEssayId === "number"
-          ? studentIdOrEssayId
-          : parseInt(studentIdOrEssayId, 10);
-
-      if (isNaN(essayId)) {
+      if (typeof studentIdOrEssayId === "number") {
+        essayId = Number.isNaN(studentIdOrEssayId)
+          ? null
+          : studentIdOrEssayId;
+      } else {
+        essayId = coerceEssayIdParam(studentIdOrEssayId);
+      }
+      if (essayId == null) {
         return null;
       }
     }
 
-    // Fetch plagiarism results from essay_analysis_results
     const { data: analysisData, error: analysisError } = await supabase
       .from("essay_analysis_results")
       .select("plagiarism_results")
       .eq("essay_id", essayId)
-      .single();
+      .maybeSingle();
 
     if (analysisError || !analysisData?.plagiarism_results) {
       return null;
@@ -3966,6 +4140,171 @@ export const loadPlagiarismResult = async (
     return analysisData.plagiarism_results as import("../api").PlagiarismCheckResponse;
   } catch (err) {
     console.error("Error loading plagiarism result:", err);
+    return null;
+  }
+};
+
+// Save AI detection results to essay_analysis_results table
+// Can be called with either (studentId, activityId) or essayId
+export const saveAIDetectionResult = async (
+  studentIdOrEssayId: string | number,
+  activityIdOrResult:
+    | string
+    | import("../api").AIDetectionResponse
+    | undefined,
+  aiDetectionResult?: import("../api").AIDetectionResponse,
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    let essayId: string | number;
+    let result: import("../api").AIDetectionResponse;
+
+    if (typeof activityIdOrResult === "object" && activityIdOrResult !== null) {
+      if (typeof studentIdOrEssayId === "number") {
+        if (Number.isNaN(studentIdOrEssayId)) {
+          return { success: false, error: "Invalid essay ID" };
+        }
+        essayId = studentIdOrEssayId;
+      } else {
+        const coerced = coerceEssayIdParam(studentIdOrEssayId);
+        if (coerced == null) {
+          return { success: false, error: "Invalid essay ID" };
+        }
+        essayId = coerced;
+      }
+      result = activityIdOrResult;
+    } else if (aiDetectionResult) {
+      const studentId = studentIdOrEssayId as string;
+      const activityId = activityIdOrResult as string;
+
+      const studentDbId = await resolveStudentIdForEssayFilter(studentId);
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
+      if (studentDbId == null) {
+        return { success: false, error: "Student not found" };
+      }
+      if (activityDbId == null) {
+        return { success: false, error: "Invalid activity ID" };
+      }
+
+      const { data: essayData, error: essayError } = await supabase
+        .from("essays")
+        .select("id")
+        .eq("student_id", studentDbId)
+        .eq("activity_id", activityDbId)
+        .maybeSingle();
+      if (essayError || !essayData) {
+        return { success: false, error: "Essay not found" };
+      }
+
+      essayId = essayData.id as string | number;
+      result = aiDetectionResult;
+    } else {
+      return { success: false, error: "Invalid parameters" };
+    }
+
+    if (
+      essayId == null ||
+      (typeof essayId === "number" && Number.isNaN(essayId))
+    ) {
+      return { success: false, error: "Invalid essay ID" };
+    }
+
+    const { data: existingRow, error: checkError } = await supabase
+      .from("essay_analysis_results")
+      .select("id")
+      .eq("essay_id", essayId)
+      .maybeSingle();
+    if (checkError || !existingRow) {
+      return {
+        success: false,
+        error: "Analysis results not found. Please run analysis first.",
+      };
+    }
+
+    const { data: updateData, error: updateError } = await supabase
+      .from("essay_analysis_results")
+      .update({
+        ai_detection_results: result,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("essay_id", essayId)
+      .select();
+
+    if (updateError) {
+      return {
+        success: false,
+        error: updateError.message || "Failed to save AI detection results",
+      };
+    }
+    if (!updateData || updateData.length === 0) {
+      return {
+        success: false,
+        error: "Update completed but no rows were affected",
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error saving AI detection result:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+};
+
+// Load saved AI detection results from essay_analysis_results table
+// Can be called with either (studentId, activityId) or essayId
+export const loadAIDetectionResult = async (
+  studentIdOrEssayId: string | number,
+  activityId?: string,
+): Promise<import("../api").AIDetectionResponse | null> => {
+  try {
+    let essayId: string | number | null;
+
+    if (activityId !== undefined) {
+      const studentId = studentIdOrEssayId as string;
+      const studentDbId = await resolveStudentIdForEssayFilter(studentId);
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
+      if (studentDbId == null || activityDbId == null) {
+        return null;
+      }
+
+      const { data: essayData, error: essayError } = await supabase
+        .from("essays")
+        .select("id")
+        .eq("student_id", studentDbId)
+        .eq("activity_id", activityDbId)
+        .maybeSingle();
+      if (essayError || !essayData) {
+        return null;
+      }
+      essayId = essayData.id as string | number;
+    } else {
+      if (typeof studentIdOrEssayId === "number") {
+        essayId = Number.isNaN(studentIdOrEssayId)
+          ? null
+          : studentIdOrEssayId;
+      } else {
+        essayId = coerceEssayIdParam(studentIdOrEssayId);
+      }
+      if (essayId == null) {
+        return null;
+      }
+    }
+
+    const { data: analysisData, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select("ai_detection_results")
+      .eq("essay_id", essayId)
+      .maybeSingle();
+
+    if (analysisError || !analysisData?.ai_detection_results) {
+      return null;
+    }
+
+    return analysisData.ai_detection_results as import("../api").AIDetectionResponse;
+  } catch (err) {
+    console.error("Error loading AI detection result:", err);
     return null;
   }
 };

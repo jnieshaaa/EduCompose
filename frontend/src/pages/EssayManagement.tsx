@@ -100,7 +100,7 @@ const EssayManagement: React.FC = () => {
           essay.id,
           "comprehensive",
         );
-        navigate("/AnalysisResults", {
+        navigate("/Teacher/AnalysisResults", {
           state: {
             analysis: result,
             text: essay.content,
@@ -109,7 +109,7 @@ const EssayManagement: React.FC = () => {
         });
       } else {
         // Navigate with essay content - results page will analyze
-        navigate("/AnalysisResults", {
+        navigate("/Teacher/AnalysisResults", {
           state: {
             text: essay.content,
             title: essay.title,
@@ -119,7 +119,7 @@ const EssayManagement: React.FC = () => {
       }
     } catch (_error) {
       // If analysis fails, still navigate with text to analyze
-      navigate("/AnalysisResults", {
+      navigate("/Teacher/AnalysisResults", {
         state: {
           text: essay.content,
           title: essay.title,

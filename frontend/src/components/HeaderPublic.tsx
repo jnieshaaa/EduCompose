@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
@@ -6,16 +6,37 @@ import eduComposeLogo from "../assets/EduCompose.png";
 import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderPublicProps {
-  onLoginClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onLoginClick?: () => void;
 }
+
+/** Sections we scroll to from the public header (must match ids on LandingPage). */
+const LANDING_SCROLL_IDS = ["hero", "challenge", "solution", "tech"] as const;
+type LandingScrollId = (typeof LANDING_SCROLL_IDS)[number];
+
+const NAV_ITEMS: { id: LandingScrollId; label: string }[] = [
+  { id: "hero", label: "Home" },
+  { id: "challenge", label: "Mission" },
+  { id: "solution", label: "Platform" },
+  { id: "tech", label: "Technology" },
+];
+
+const SCROLL_DELTA = 10;
 
 const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<"hero" | "about">("hero");
+  const [activeSection, setActiveSection] = useState<LandingScrollId>("hero");
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const [spacerHeight, setSpacerHeight] = useState(72);
   const [logoShine, setLogoShine] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const lastScrollY = useRef(0);
+  const headerShellRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    lastScrollY.current = window.scrollY;
+  }, []);
 
   // Trigger shine animation on page load
   useEffect(() => {
@@ -25,7 +46,7 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Track scroll progress
+  // Scroll progress + hide on scroll down / show on scroll up (fixed header)
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -33,51 +54,69 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
         document.documentElement.scrollHeight - window.innerHeight;
       const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
       setScrollProgress(progress);
+
+      if (isMenuOpen) {
+        setHeaderVisible(true);
+        lastScrollY.current = scrollTop;
+        return;
+      }
+
+      const delta = scrollTop - lastScrollY.current;
+      if (scrollTop < 56) {
+        setHeaderVisible(true);
+      } else if (delta > SCROLL_DELTA) {
+        setHeaderVisible(false);
+      } else if (delta < -SCROLL_DELTA) {
+        setHeaderVisible(true);
+      }
+      lastScrollY.current = scrollTop;
     };
 
-    window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Initial call
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isMenuOpen]);
 
+  // Scroll spy: highlight the section whose top we've passed (all nav links always visible).
   useEffect(() => {
-    const heroElement = document.getElementById("hero");
-    const challengeElement = document.getElementById("challenge");
+    const HEADER_OFFSET = 96;
 
-    if (!heroElement || !challengeElement) return;
-
-    const observerOptions = {
-      root: null,
-      rootMargin: "-20% 0px -50% 0px",
-      threshold: 0,
+    const updateActiveFromScroll = () => {
+      const y = window.scrollY + HEADER_OFFSET;
+      let current: LandingScrollId = "hero";
+      for (const id of LANDING_SCROLL_IDS) {
+        const el = document.getElementById(id);
+        if (el && y >= el.offsetTop - 24) {
+          current = id;
+        }
+      }
+      setActiveSection(current);
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          if (entry.target.id === "hero") {
-            setActiveSection("hero");
-          } else if (entry.target.id === "challenge") {
-            setActiveSection("about");
-          }
-        }
-      });
-    }, observerOptions);
-
-    observer.observe(heroElement);
-    observer.observe(challengeElement);
-
+    updateActiveFromScroll();
+    window.addEventListener("scroll", updateActiveFromScroll, { passive: true });
+    window.addEventListener("resize", updateActiveFromScroll);
     return () => {
-      observer.disconnect();
+      window.removeEventListener("scroll", updateActiveFromScroll);
+      window.removeEventListener("resize", updateActiveFromScroll);
     };
   }, []);
 
-  const scrollToSection = (sectionId: string) => {
-    // Trigger shine animation
-    setLogoShine(true);
+  // Spacer matches fixed header height (toolbar + open mobile menu) so content doesn’t jump
+  useEffect(() => {
+    const el = headerShellRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setSpacerHeight(el.offsetHeight);
+    });
+    ro.observe(el);
+    setSpacerHeight(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [isMenuOpen]);
 
+  const scrollToSection = (sectionId: LandingScrollId) => {
+    setLogoShine(true);
     if (sectionId === "hero") {
-      // Scroll to the very top of the page
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       const element = document.getElementById(sectionId);
@@ -88,8 +127,29 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
     setIsMenuOpen(false);
   };
 
+  const goToWorkspace = () => {
+    if (!isAuthenticated) {
+      if (onLoginClick) onLoginClick();
+      else navigate("/");
+      return;
+    }
+    const role = user?.role?.toLowerCase();
+    if (role === "student") navigate("/Student/Dashboard");
+    else if (role === "admin") navigate("/Admin/Dashboard");
+    else navigate("/Teacher/Dashboard");
+  };
+
+  const showHeader = headerVisible || isMenuOpen;
+
   return (
-    <header className='bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b border-gray-100 pr-[calc(100vw-100%)]'>
+    <>
+      <div
+        ref={headerShellRef}
+        className={`fixed top-0 left-0 right-0 z-50 pr-[calc(100vw-100%)] border-b border-gray-100 bg-white/95 backdrop-blur-sm shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none ${
+          showHeader ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <header className="relative">
       <div className='max-w-7xl mx-auto px-4 py-4 flex items-center justify-between'>
         {/* Logo and Site Title */}
         <Link
@@ -124,38 +184,31 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className='hidden md:flex items-center space-x-8'>
-          {activeSection === "about" && (
-            <button
-              onClick={() => scrollToSection("hero")}
-              className='text-neutral-500 hover:text-primary-100 transition-colors font-medium'
-            >
-              Home
-            </button>
-          )}
-          {activeSection === "hero" && (
-            <button
-              onClick={() => scrollToSection("challenge")}
-              className='text-neutral-500 hover:text-primary-100 transition-colors font-medium'
-            >
-              About
-            </button>
-          )}
-
-          {/* Get Started button comment muna sabi ni Junie Pogi */}
+        {/* Desktop Navigation — every link always visible; active state follows scroll */}
+        <nav className='hidden md:flex items-center gap-1 lg:gap-2'>
+          {NAV_ITEMS.map(({ id, label }) => {
+            const isActive = activeSection === id;
+            return (
+              <button
+                key={id}
+                type='button'
+                onClick={() => scrollToSection(id)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-primary-200 bg-primary-200/10"
+                    : "text-neutral-600 hover:text-primary-200 hover:bg-neutral-50"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
           <button
             type='button'
-            onClick={(e) => {
-              if (isAuthenticated) {
-                navigate("/Teacher/Dashboard");
-              } else {
-                onLoginClick?.(e);
-              }
-            }}
-            className='bg-primary-200 text-white font-semibold px-6 py-2 rounded-rd transition-all duration-300 transform hover:bg-primary-100 hover:shadow-lg'
+            onClick={goToWorkspace}
+            className='ml-2 lg:ml-4 bg-primary-200 text-white font-semibold px-5 py-2 rounded-rd text-sm transition-all duration-300 hover:bg-primary-100 hover:shadow-lg'
           >
-            {isAuthenticated ? "Dashboard" : "Get Started"}
+            {isAuthenticated ? "Open workspace" : "Sign in"}
           </button>
         </nav>
 
@@ -178,59 +231,55 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
           isMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className='px-4 py-4 space-y-4'>
-          {activeSection === "about" && (
-            <button
-              onClick={() => scrollToSection("hero")}
-              className={`block w-full text-center text-gray-600 hover:text-primary transition-opacity duration-300 font-medium py-2 ${
-                isMenuOpen ? "opacity-100" : "opacity-0"
-              }`}
-              style={{ transitionDelay: isMenuOpen ? "100ms" : "0ms" }}
-            >
-              Home
-            </button>
-          )}
-          {activeSection === "hero" && (
-            <button
-              onClick={() => scrollToSection("challenge")}
-              className={`block w-full text-center text-gray-600 hover:text-primary transition-opacity duration-300 font-medium py-2 ${
-                isMenuOpen ? "opacity-100" : "opacity-0"
-              }`}
-              style={{ transitionDelay: isMenuOpen ? "100ms" : "0ms" }}
-            >
-              About
-            </button>
-          )}
-
+        <div className='px-4 py-4 space-y-1'>
+          {NAV_ITEMS.map(({ id, label }, i) => {
+            const isActive = activeSection === id;
+            return (
+              <button
+                key={id}
+                type='button'
+                onClick={() => scrollToSection(id)}
+                className={`block w-full text-left font-medium py-3 px-2 rounded-lg transition-opacity duration-300 ${
+                  isActive ? "text-primary-200 bg-primary-200/10" : "text-gray-700 hover:bg-neutral-50"
+                } ${isMenuOpen ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: isMenuOpen ? `${80 + i * 40}ms` : "0ms" }}
+              >
+                {label}
+              </button>
+            );
+          })}
           <button
             type='button'
-            onClick={(e) => {
-              if (isAuthenticated) {
-                navigate("/Teacher/Dashboard");
-              } else {
-                onLoginClick?.(e);
-              }
+            onClick={() => {
+              goToWorkspace();
               setIsMenuOpen(false);
             }}
-            className={`w-full bg-primary-200 text-white font-semibold px-6 py-3 rounded-rd transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
+            className={`w-full mt-2 bg-primary-200 text-white font-semibold px-6 py-3 rounded-rd transition-opacity duration-300 hover:bg-primary-100 hover:shadow-lg ${
               isMenuOpen ? "opacity-100" : "opacity-0"
             }`}
-            style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}
+            style={{ transitionDelay: isMenuOpen ? "280ms" : "0ms" }}
           >
-            {isAuthenticated ? "Dashboard" : "Get Started"}
+            {isAuthenticated ? "Open workspace" : "Sign in"}
           </button>
         </div>
       </div>
 
       {/* Scroll progress bar */}
-      <div className='absolute top-0 left-0 w-full h-[2px] bg-gray-100'>
+      <div className='absolute top-0 left-0 w-full h-[2px] bg-gray-100 pointer-events-none'>
         <motion.div
           className='h-full bg-gradient-to-r from-primary-200 to-primary-100'
           style={{ width: `${scrollProgress}%` }}
           transition={{ ease: "linear", duration: 0.1 }}
         />
       </div>
-    </header>
+        </header>
+      </div>
+      <div
+        aria-hidden
+        className="shrink-0"
+        style={{ height: spacerHeight }}
+      />
+    </>
   );
 };
 

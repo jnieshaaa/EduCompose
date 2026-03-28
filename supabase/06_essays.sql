@@ -117,6 +117,13 @@ CREATE POLICY "Teachers can manage analysis results"
 CREATE INDEX IF NOT EXISTS ear_essay_id_idx ON essay_analysis_results(essay_id);
 CREATE INDEX IF NOT EXISTS ear_student_id_idx ON essay_analysis_results(student_id);
 
+-- Optional cached detector results (to avoid repeated paid API checks)
+ALTER TABLE essay_analysis_results
+  ADD COLUMN IF NOT EXISTS plagiarism_results jsonb;
+
+ALTER TABLE essay_analysis_results
+  ADD COLUMN IF NOT EXISTS ai_detection_results jsonb;
+
 -- Essay Comparisons
 CREATE TABLE IF NOT EXISTS essay_comparisons (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),

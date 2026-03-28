@@ -152,7 +152,7 @@ const AnalyzeEssay: React.FC = () => {
 
     // Navigate to AnalysisResults page with text in state
     // The loading will happen on the AnalysisResults page
-    navigate("/AnalysisResults", {
+    navigate("/Teacher/AnalysisResults", {
       state: {
         text: text,
         title: "Essay Analysis",

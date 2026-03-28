@@ -78,7 +78,15 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'role', 'teacher'),
     true
   )
-  ON CONFLICT (auth_user_id) DO NOTHING;
+  ON CONFLICT (email) DO UPDATE
+  SET
+    auth_user_id = EXCLUDED.auth_user_id,
+    first_name = COALESCE(EXCLUDED.first_name, users.first_name),
+    middle_name = COALESCE(EXCLUDED.middle_name, users.middle_name),
+    last_name = COALESCE(EXCLUDED.last_name, users.last_name),
+    role = COALESCE(EXCLUDED.role, users.role),
+    is_active = true
+  WHERE users.auth_user_id IS NULL;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

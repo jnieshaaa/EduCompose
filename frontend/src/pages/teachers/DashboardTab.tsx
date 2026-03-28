@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Card from "../../components/ui/Card";
 import {
   BookOpen,
@@ -11,11 +11,23 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  ZAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 import Badge from "../../components/ui/Badge";
+import Input from "../../components/ui/Input";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherUUID } from "../../services/rubricService";
 import { fetchCourses, fetchSections } from "../../services/activityService";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -60,6 +72,40 @@ const formatNumber = (num: number): string => {
   return num.toLocaleString();
 };
 
+/** essay_activities.course_id / block_id are string[] in the live schema — normalize for lookups. */
+const normalizeIdList = (value: unknown): string[] => {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value
+      .filter((v) => v != null && v !== "")
+      .map((v) => String(v));
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    const s = String(value);
+    return s ? [s] : [];
+  }
+  return [];
+};
+
+/** Prefer title + nickname (e.g. "Mr. Sunsun") for dashboard greeting */
+const formatTeacherSalutation = (u: {
+  title?: string;
+  nickname?: string;
+  full_name?: string;
+} | null): string | null => {
+  if (!u) return null;
+  const title = (u.title ?? "").trim();
+  const nick = (u.nickname ?? "").trim();
+  if (title && nick) return `${title} ${nick}`;
+  if (nick) return nick;
+  if (title && (u.full_name ?? "").trim()) {
+    const first = u.full_name!.trim().split(/\s+/)[0];
+    return `${title} ${first}`;
+  }
+  const full = (u.full_name ?? "").trim();
+  return full || null;
+};
+
 interface DashboardData {
   totalPrograms: number;
   totalSections: number;
@@ -90,12 +136,32 @@ interface DashboardData {
     };
   };
   recentActivity: Array<{
+    essayId: string | number;
     student: string;
     action: string;
     essay: string;
     time: string;
     status: "new" | "evaluated" | "review";
     score?: number;
+    courseId?: string;
+    blockId?: string;
+    courseIds: string[];
+    blockIds: string[];
+    courseLabel?: string;
+    blockLabel?: string;
+  }>;
+  activityFilterCourses: { id: string; label: string }[];
+  activityFilterBlocks: { id: string; name: string; courseId: string }[];
+  /** Evaluated essays for performance trend chart (filtered in UI) */
+  performanceEssays: Array<{
+    submitted_at: string;
+    overall_score: number | null;
+    grammar_score: number | null;
+    coherence_score: number | null;
+    student_id: string;
+    studentName: string;
+    courseIds: string[];
+    blockIds: string[];
   }>;
   alerts: Array<{
     type: "warning" | "error" | "info";
@@ -104,15 +170,96 @@ interface DashboardData {
   }>;
 }
 
+type PerfScatterPoint = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  firstScore: number;
+  latestScore: number;
+  improvement: number;
+  essayCount: number;
+  studentNamesLine?: string;
+};
+
+/** One circle per block or per student; x = score change, y = latest score, bubble size = essays. */
+const buildPerformanceScatterPoints = (
+  rows: DashboardData["performanceEssays"],
+  mode: "blocks" | "students",
+  blockNameById: Map<string, string>,
+): PerfScatterPoint[] => {
+  const groups = new Map<
+    string,
+    DashboardData["performanceEssays"][number][]
+  >();
+  for (const r of rows) {
+    const key =
+      mode === "students"
+        ? r.student_id
+        : (r.blockIds[0] ?? "__unassigned");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(r);
+  }
+
+  const points: PerfScatterPoint[] = [];
+
+  for (const [key, list] of groups) {
+    const sorted = [...list].sort(
+      (a, b) =>
+        new Date(a.submitted_at).getTime() -
+        new Date(b.submitted_at).getTime(),
+    );
+    const scores = sorted
+      .map((e) => Number(e.overall_score))
+      .filter((v) => !Number.isNaN(v));
+    if (scores.length === 0) continue;
+
+    const firstScore = scores[0];
+    const latestScore = scores[scores.length - 1];
+    const improvement = latestScore - firstScore;
+
+    let name: string;
+    let studentNamesLine: string | undefined;
+    if (mode === "students") {
+      name = sorted[0]?.studentName ?? `Student ${key}`;
+    } else {
+      name =
+        key === "__unassigned"
+          ? "Unassigned block"
+          : (blockNameById.get(key) ?? `Block ${key.slice(0, 8)}…`);
+      const uniqueNames = [
+        ...new Set(sorted.map((e) => e.studentName)),
+      ].sort((a, b) => a.localeCompare(b));
+      studentNamesLine = uniqueNames.join(", ");
+    }
+
+    points.push({
+      id: key,
+      name,
+      x: Math.round(improvement * 10) / 10,
+      y: Math.round(latestScore * 10) / 10,
+      z: scores.length,
+      firstScore: Math.round(firstScore * 10) / 10,
+      latestScore: Math.round(latestScore * 10) / 10,
+      improvement: Math.round(improvement * 10) / 10,
+      essayCount: scores.length,
+      studentNamesLine,
+    });
+  }
+
+  return points.sort((a, b) => a.name.localeCompare(b.name));
+};
+
 // No longer using these legacy interfaces
 
 interface EssayRow {
-  id: number;
+  id: string | number;
   title: string;
   submitted_at: string;
   status: string;
-  student_id: number;
-  activity_id: number | null;
+  student_id: string | number;
+  activity_id: string | number | null;
   overall_score: number | null;
   grammar_score: number | null;
   coherence_score: number | null;
@@ -120,7 +267,7 @@ interface EssayRow {
 }
 
 interface AnalysisResultRow {
-  essay_id: number;
+  essay_id: string | number;
   grammar_score: number | null;
   coherence_score: number | null;
   detailed_analysis: Record<string, unknown> | null;
@@ -129,16 +276,239 @@ interface AnalysisResultRow {
 // No longer using these legacy interfaces
 
 interface StudentNameRow {
-  id: number;
+  id: string | number;
   first_name: string;
   middle_name: string | null;
   last_name: string;
 }
 
 export function DashboardTab() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activityCourseFilter, setActivityCourseFilter] =
+    useState<string>("all");
+  const [activityBlockFilter, setActivityBlockFilter] =
+    useState<string>("all");
+  const [activitySearchQuery, setActivitySearchQuery] = useState("");
+  const [perfCourseFilter, setPerfCourseFilter] = useState<string>("all");
+  const [perfBlockFilter, setPerfBlockFilter] = useState<string>("all");
+  const [perfStudentFilter, setPerfStudentFilter] = useState<string>("all");
+  const [perfChartMode, setPerfChartMode] = useState<"blocks" | "students">(
+    "blocks",
+  );
+
+  const activityBlockSelectOptions = useMemo(() => {
+    if (!data) return [];
+    if (activityCourseFilter === "all") return data.activityFilterBlocks;
+    return data.activityFilterBlocks.filter(
+      (b) => b.courseId === activityCourseFilter,
+    );
+  }, [data, activityCourseFilter]);
+
+  const filteredRecentActivity = useMemo(() => {
+    if (!data) return [];
+    let rows = data.recentActivity;
+    if (activityCourseFilter !== "all") {
+      rows = rows.filter(
+        (r) =>
+          r.courseIds.includes(activityCourseFilter) ||
+          r.courseId === activityCourseFilter,
+      );
+    }
+    if (activityBlockFilter !== "all") {
+      rows = rows.filter(
+        (r) =>
+          r.blockIds.includes(activityBlockFilter) ||
+          r.blockId === activityBlockFilter,
+      );
+    }
+    const q = activitySearchQuery.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter(
+        (r) =>
+          r.student.toLowerCase().includes(q) ||
+          r.essay.toLowerCase().includes(q),
+      );
+    }
+    return rows;
+  }, [
+    data,
+    activityCourseFilter,
+    activityBlockFilter,
+    activitySearchQuery,
+  ]);
+
+  const perfBlockOptions = useMemo(() => {
+    if (!data) return [];
+    if (perfCourseFilter === "all") return data.activityFilterBlocks;
+    return data.activityFilterBlocks.filter(
+      (b) => b.courseId === perfCourseFilter,
+    );
+  }, [data, perfCourseFilter]);
+
+  const perfStudentOptions = useMemo(() => {
+    if (!data) return [];
+    const m = new Map<string, string>();
+    for (const p of data.performanceEssays) {
+      m.set(p.student_id, p.studentName);
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [data]);
+
+  const filteredPerformanceEssays = useMemo(() => {
+    if (!data) return [];
+    let rows = data.performanceEssays;
+    if (perfCourseFilter !== "all") {
+      rows = rows.filter(
+        (r) =>
+          r.courseIds.length === 0 ||
+          r.courseIds.includes(perfCourseFilter),
+      );
+    }
+    if (perfBlockFilter !== "all") {
+      rows = rows.filter(
+        (r) =>
+          r.blockIds.length === 0 || r.blockIds.includes(perfBlockFilter),
+      );
+    }
+    if (perfStudentFilter !== "all") {
+      rows = rows.filter((r) => r.student_id === perfStudentFilter);
+    }
+    return rows;
+  }, [data, perfCourseFilter, perfBlockFilter, perfStudentFilter]);
+
+  const perfScatterBlockNameMap = useMemo(() => {
+    if (!data) return new Map<string, string>();
+    return new Map(data.activityFilterBlocks.map((b) => [b.id, b.name]));
+  }, [data]);
+
+  const perfScatterPoints = useMemo(
+    () =>
+      buildPerformanceScatterPoints(
+        filteredPerformanceEssays,
+        perfChartMode,
+        perfScatterBlockNameMap,
+      ),
+    [
+      filteredPerformanceEssays,
+      perfChartMode,
+      perfScatterBlockNameMap,
+    ],
+  );
+
+  const perfScatterXDomain = useMemo((): [number, number] => {
+    if (perfScatterPoints.length === 0) return [-8, 8];
+    const xs = perfScatterPoints.map((p) => p.x);
+    const min = Math.min(...xs);
+    const max = Math.max(...xs);
+    const span = max - min;
+    const pad = span < 0.5 ? 6 : Math.max(3, span * 0.2);
+    return [min - pad, max + pad];
+  }, [perfScatterPoints]);
+
+  const filtersNarrowPerformance =
+    perfCourseFilter !== "all" ||
+    perfBlockFilter !== "all" ||
+    perfStudentFilter !== "all";
+
+  const displayPerformanceMetrics = useMemo(() => {
+    if (!data) return [];
+    const base = [
+      {
+        label: "Average Essay Score",
+        value: data.performanceMetrics.avgScore.value,
+        trend: data.performanceMetrics.avgScore.trend,
+        status: data.performanceMetrics.avgScore.status,
+      },
+      {
+        label: "Grammar Accuracy",
+        value: data.performanceMetrics.grammarAccuracy.value,
+        trend: data.performanceMetrics.grammarAccuracy.trend,
+        status: data.performanceMetrics.grammarAccuracy.status,
+      },
+      {
+        label: "Coherence Score",
+        value: data.performanceMetrics.coherenceScore.value,
+        trend: data.performanceMetrics.coherenceScore.trend,
+        status: data.performanceMetrics.coherenceScore.status,
+      },
+      {
+        label: "Vocabulary Complexity",
+        value: data.performanceMetrics.vocabularyComplexity.value,
+        trend: data.performanceMetrics.vocabularyComplexity.trend,
+        status: data.performanceMetrics.vocabularyComplexity.status,
+      },
+    ];
+    if (
+      !filtersNarrowPerformance ||
+      filteredPerformanceEssays.length === 0
+    ) {
+      return base;
+    }
+    const rows = filteredPerformanceEssays;
+    const avg =
+      rows.reduce((s, r) => s + (Number(r.overall_score) || 0), 0) /
+      rows.length;
+    const grammarVals = rows
+      .map((r) => r.grammar_score)
+      .filter((v): v is number => v != null && !Number.isNaN(Number(v)))
+      .map(Number);
+    const grammarAvg =
+      grammarVals.length > 0
+        ? grammarVals.reduce((a, b) => a + b, 0) / grammarVals.length
+        : 0;
+    const cohVals = rows
+      .map((r) => r.coherence_score)
+      .filter((v): v is number => v != null && !Number.isNaN(Number(v)))
+      .map(Number);
+    const cohAvg =
+      cohVals.length > 0
+        ? cohVals.reduce((a, b) => a + b, 0) / cohVals.length
+        : 0;
+    return [
+      {
+        label: "Average Essay Score",
+        value: `${avg.toFixed(1)}%`,
+        trend: "",
+        status: "neutral" as const,
+      },
+      {
+        label: "Grammar Accuracy",
+        value: grammarVals.length ? `${grammarAvg.toFixed(1)}%` : "—",
+        trend: "",
+        status: "neutral" as const,
+      },
+      {
+        label: "Coherence Score",
+        value: cohVals.length ? `${cohAvg.toFixed(1)}%` : "—",
+        trend: "",
+        status: "neutral" as const,
+      },
+      base[3],
+    ];
+  }, [
+    data,
+    filteredPerformanceEssays,
+    filtersNarrowPerformance,
+  ]);
+
+  useEffect(() => {
+    setActivityBlockFilter("all");
+  }, [activityCourseFilter]);
+
+  useEffect(() => {
+    setPerfBlockFilter("all");
+  }, [perfCourseFilter]);
+
+  useEffect(() => {
+    if (perfChartMode === "blocks") {
+      setPerfStudentFilter("all");
+    } else {
+      setPerfBlockFilter("all");
+    }
+  }, [perfChartMode]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -151,7 +521,7 @@ export function DashboardTab() {
           throw new Error("Teacher ID not available");
         }
 
-        // Get teacher's activities to find which courses/sections they work with
+        // Activities define essay scope; course_id / block_id are array fields in DB
         const { data: teacherActivities, error: activitiesError } =
           await supabase
             .from("essay_activities")
@@ -160,65 +530,45 @@ export function DashboardTab() {
 
         if (activitiesError) throw activitiesError;
 
+        type ActivityScopeRow = {
+          id: string | number;
+          course_id: unknown;
+          block_id: unknown;
+        };
+
         const typedTeacherActivities =
-          (teacherActivities as
-            | {
-                id: number;
-                course_id: string | null;
-                block_id: string | null;
-              }[]
-            | null) || [];
+          (teacherActivities as ActivityScopeRow[] | null) || [];
 
-        const courseIds = [
-          ...new Set(
-            typedTeacherActivities
-              .map((activity) => activity.course_id)
-              .filter((id): id is string => id !== null),
-          ),
-        ];
-        const sectionIds = [
-          ...new Set(
-            typedTeacherActivities
-              .map((activity) => activity.block_id)
-              .filter((id): id is string => id !== null),
-          ),
-        ];
+        const activityMetaById = new Map<
+          string,
+          { courseIds: string[]; blockIds: string[] }
+        >();
+        for (const a of typedTeacherActivities) {
+          activityMetaById.set(String(a.id), {
+            courseIds: normalizeIdList(a.course_id),
+            blockIds: normalizeIdList(a.block_id),
+          });
+        }
 
-        // Fetch all data in parallel
+        const activityIdSet = new Set(
+          typedTeacherActivities.map((a) => String(a.id)),
+        );
+
         const [
           allCourses,
           allSections,
-          studentsData,
           essaysData,
           analysisResults,
         ] = await Promise.all([
           fetchCourses(),
           fetchSections(),
-          // Get students in teacher's sections through block_students junction table
-          supabase
-            .from("block_students")
-            .select("student_id, block_id")
-            .then(({ data, error }) => {
-              if (error) throw error;
-              const enrollments =
-                (data as { student_id: number; block_id: string }[] | null) ||
-                [];
-              if (sectionIds.length > 0) {
-                // Filter enrollments to only include teacher's sections
-                return enrollments.filter((enrollment) =>
-                  sectionIds.includes(enrollment.block_id),
-                );
-              }
-              return [];
-            }),
-          // Get essays from teacher's activities
           supabase
             .from("essays")
             .select(
               "id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score",
             )
-            .then(({ data, error }) => {
-              if (error) throw error;
+            .then(({ data, error: essaysError }) => {
+              if (essaysError) throw essaysError;
               return (data as EssayRow[] | null) || [];
             }),
           (async (): Promise<AnalysisResultRow[]> => {
@@ -243,20 +593,47 @@ export function DashboardTab() {
           })(),
         ]);
 
-        // Get activity IDs for the teacher
-        const { data: activityIdsData } = await supabase
-          .from("essay_activities")
-          .select("id")
-          .eq("teacher_id", teacherId);
-        const activityIds = (
-          (activityIdsData as Array<{ id: number }> | null) || []
-        ).map((activity) => activity.id);
+        let courseIds = [
+          ...new Set(
+            typedTeacherActivities.flatMap((a) =>
+              normalizeIdList(a.course_id),
+            ),
+          ),
+        ];
+        let sectionIds = [
+          ...new Set(
+            typedTeacherActivities.flatMap((a) =>
+              normalizeIdList(a.block_id),
+            ),
+          ),
+        ];
+        // Activities missing course/block arrays still need counts from the teacher's load
+        if (courseIds.length === 0) {
+          courseIds = allCourses.map((c) => c.id);
+        }
+        if (sectionIds.length === 0) {
+          sectionIds = allSections.map((s) => s.id);
+        }
 
-        // Filter essays by teacher's activities
+        const { data: blockStudentsRows, error: blockStudentsError } =
+          await supabase.from("block_students").select("student_id, block_id");
+        if (blockStudentsError) throw blockStudentsError;
+        const enrollments =
+          (blockStudentsRows as
+            | { student_id: string | number; block_id: string | number }[]
+            | null) || [];
+        const studentsData =
+          sectionIds.length > 0
+            ? enrollments.filter((e) =>
+                sectionIds.includes(String(e.block_id)),
+              )
+            : [];
+
+        // Filter essays linked to this teacher's activities (string-safe IDs)
         const teacherEssays = (essaysData as EssayRow[]).filter(
           (essay) =>
-            essay.activity_id !== null &&
-            activityIds.includes(essay.activity_id),
+            essay.activity_id != null &&
+            activityIdSet.has(String(essay.activity_id)),
         );
 
         const teacherCourses = allCourses.filter((c) =>
@@ -268,7 +645,8 @@ export function DashboardTab() {
 
         // Count unique students from enrollments
         const uniqueStudentIds = new Set(
-          studentsData?.map((enrollment) => enrollment.student_id) || [],
+          studentsData?.map((enrollment) => String(enrollment.student_id)) ||
+            [],
         );
         const totalStudents = uniqueStudentIds.size;
 
@@ -347,37 +725,63 @@ export function DashboardTab() {
             ? vocabScores.reduce((sum, s) => sum + s, 0) / vocabScores.length
             : 0;
 
-        // Get recent activity (last 5 essays)
+        // Recent activity pool (newest first); filters narrow this list in the UI
         const recentEssays = teacherEssays
           .sort(
             (a, b) =>
               new Date(b.submitted_at).getTime() -
               new Date(a.submitted_at).getTime(),
           )
-          .slice(0, 5);
+          .slice(0, 80);
 
-        // Fetch student names for recent activity
-        const studentIds = [
-          ...new Set(recentEssays.map((essay) => essay.student_id)),
+        const allEssayStudentIds = [
+          ...new Set(teacherEssays.map((e) => String(e.student_id))),
         ];
-        const { data: students, error: studentsErr } = await supabase
-          .from("students")
-          .select("id, first_name, middle_name, last_name")
-          .in("id", studentIds);
-
-        if (studentsErr) throw studentsErr;
-
-        const typedStudents = (students as StudentNameRow[] | null) || [];
+        let typedStudents: StudentNameRow[] = [];
+        if (allEssayStudentIds.length > 0) {
+          const { data: students, error: studentsErr } = await supabase
+            .from("students")
+            .select("id, first_name, middle_name, last_name")
+            .in("id", allEssayStudentIds);
+          if (studentsErr) throw studentsErr;
+          typedStudents = (students as StudentNameRow[] | null) || [];
+        }
         const studentMap = new Map(
           typedStudents.map((student) => [
-            student.id,
+            String(student.id),
             buildFullNameFromObject(student, `Student ${student.id}`),
           ]),
         );
 
+        const performanceEssays = teacherEssays
+          .filter(
+            (e) =>
+              (e.status === "analyzed" || e.status === "reviewed") &&
+              e.overall_score != null,
+          )
+          .map((essay) => {
+            const meta =
+              essay.activity_id != null
+                ? activityMetaById.get(String(essay.activity_id))
+                : undefined;
+            return {
+              submitted_at: essay.submitted_at,
+              overall_score: essay.overall_score,
+              grammar_score: essay.grammar_score,
+              coherence_score: essay.coherence_score,
+              student_id: String(essay.student_id),
+              studentName:
+                studentMap.get(String(essay.student_id)) ||
+                `Student ${essay.student_id}`,
+              courseIds: meta?.courseIds ?? [],
+              blockIds: meta?.blockIds ?? [],
+            };
+          });
+
         const recentActivity = recentEssays.map((essay) => {
           const studentName =
-            studentMap.get(essay.student_id) || `Student ${essay.student_id}`;
+            studentMap.get(String(essay.student_id)) ||
+            `Student ${essay.student_id}`;
           const status =
             essay.status === "submitted"
               ? ("new" as const)
@@ -385,7 +789,23 @@ export function DashboardTab() {
                 ? ("evaluated" as const)
                 : ("review" as const);
 
+          const meta =
+            essay.activity_id != null
+              ? activityMetaById.get(String(essay.activity_id))
+              : undefined;
+          const courseIdsForRow = meta?.courseIds ?? [];
+          const blockIdsForRow = meta?.blockIds ?? [];
+          const cid = courseIdsForRow[0];
+          const bid = blockIdsForRow[0];
+          const courseRow = courseIdsForRow.length
+            ? teacherCourses.find((c) => courseIdsForRow.includes(c.id))
+            : undefined;
+          const blockRow = blockIdsForRow.length
+            ? teacherSections.find((s) => blockIdsForRow.includes(s.id))
+            : undefined;
+
           return {
+            essayId: essay.id,
             student: studentName,
             action:
               essay.status === "submitted"
@@ -399,6 +819,14 @@ export function DashboardTab() {
             score: essay.overall_score
               ? Math.round(essay.overall_score)
               : undefined,
+            courseId: cid,
+            blockId: bid,
+            courseIds: courseIdsForRow,
+            blockIds: blockIdsForRow,
+            courseLabel: courseRow
+              ? `${courseRow.course_code} — ${courseRow.course_title}`
+              : undefined,
+            blockLabel: blockRow?.name,
           };
         });
 
@@ -474,6 +902,16 @@ export function DashboardTab() {
             },
           },
           recentActivity,
+          activityFilterCourses: teacherCourses.map((c) => ({
+            id: c.id,
+            label: `${c.course_code} — ${c.course_title}`,
+          })),
+          activityFilterBlocks: teacherSections.map((s) => ({
+            id: s.id,
+            name: s.name,
+            courseId: s.courseId,
+          })),
+          performanceEssays,
           alerts,
         });
       } catch (err) {
@@ -560,35 +998,41 @@ export function DashboardTab() {
     },
   ];
 
-  const performanceMetrics = [
-    {
-      label: "Average Essay Score",
-      value: data.performanceMetrics.avgScore.value,
-      trend: data.performanceMetrics.avgScore.trend,
-      status: data.performanceMetrics.avgScore.status,
-    },
-    {
-      label: "Grammar Accuracy",
-      value: data.performanceMetrics.grammarAccuracy.value,
-      trend: data.performanceMetrics.grammarAccuracy.trend,
-      status: data.performanceMetrics.grammarAccuracy.status,
-    },
-    {
-      label: "Coherence Score",
-      value: data.performanceMetrics.coherenceScore.value,
-      trend: data.performanceMetrics.coherenceScore.trend,
-      status: data.performanceMetrics.coherenceScore.status,
-    },
-    {
-      label: "Vocabulary Complexity",
-      value: data.performanceMetrics.vocabularyComplexity.value,
-      trend: data.performanceMetrics.vocabularyComplexity.trend,
-      status: data.performanceMetrics.vocabularyComplexity.status,
-    },
-  ];
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const teacherSalutation = formatTeacherSalutation(user);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          Dashboard · {todayLabel}
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 tracking-tight leading-tight">
+          {teacherSalutation ? (
+            <>
+              Welcome back, {teacherSalutation}
+              <span className="text-primary">.</span>
+            </>
+          ) : (
+            <>Welcome back.</>
+          )}
+        </h1>
+      </header>
+
+      <section className="space-y-4" aria-labelledby="at-a-glance-heading">
+        <h2
+          id="at-a-glance-heading"
+          className="text-lg font-semibold text-neutral-900"
+        >
+          At a glance
+        </h2>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {statsCards.map((stat, idx) => {
@@ -611,12 +1055,274 @@ export function DashboardTab() {
 
       {/* Performance Overview */}
       <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl text-neutral-900">Performance Overview</h2>
-          <Badge className="bg-primary/10 text-primary">AI-Powered</Badge>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div>
+            <h2 className="text-xl text-neutral-900">Performance Overview</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">
+              <strong className="font-medium text-neutral-700">By block</strong>{" "}
+              / <strong className="font-medium text-neutral-700">By student</strong>{" "}
+              chooses what each dot represents.{" "}
+              <strong className="font-medium text-neutral-700">Program</strong>{" "}
+              limits which course the essays come from; use{" "}
+              {perfChartMode === "blocks" ? (
+                <strong className="font-medium text-neutral-700">Block</strong>
+              ) : (
+                <strong className="font-medium text-neutral-700">Student</strong>
+              )}{" "}
+              below to focus on one section or one learner. Horizontal = score
+              change (first → latest essay); vertical = latest score.
+            </p>
+          </div>
+          <Badge className="bg-primary/10 text-primary w-fit">AI-Powered</Badge>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {performanceMetrics.map((metric, idx) => (
+
+        <div
+          className="flex flex-wrap gap-2 mb-4"
+          role="group"
+          aria-label="Chart point type"
+        >
+          <button
+            type="button"
+            onClick={() => setPerfChartMode("blocks")}
+            className={`rounded-rd border px-3 py-2 text-sm font-medium transition-colors ${
+              perfChartMode === "blocks"
+                ? "border-red-600 bg-red-50 text-red-800"
+                : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+            }`}
+          >
+            By block
+          </button>
+          <button
+            type="button"
+            onClick={() => setPerfChartMode("students")}
+            className={`rounded-rd border px-3 py-2 text-sm font-medium transition-colors ${
+              perfChartMode === "students"
+                ? "border-blue-600 bg-blue-50 text-blue-900"
+                : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+            }`}
+          >
+            By student
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Program
+            </label>
+            <p className="text-xs text-neutral-500 mb-1.5">
+              Scope essays to a course (always applies).
+            </p>
+            <select
+              className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
+              value={perfCourseFilter}
+              onChange={(e) => setPerfCourseFilter(e.target.value)}
+            >
+              <option value="all">All programs</option>
+              {data.activityFilterCourses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {perfChartMode === "blocks" ? (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Block
+              </label>
+              <p className="text-xs text-neutral-500 mb-1.5">
+                Optional: one section only, or all blocks in the program above.
+              </p>
+              <select
+                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
+                value={perfBlockFilter}
+                onChange={(e) => setPerfBlockFilter(e.target.value)}
+              >
+                <option value="all">All blocks</option>
+                {perfBlockOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Student
+              </label>
+              <p className="text-xs text-neutral-500 mb-1.5">
+                Optional: one learner only, or everyone in the program above.
+              </p>
+              <select
+                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
+                value={perfStudentFilter}
+                onChange={(e) => setPerfStudentFilter(e.target.value)}
+              >
+                <option value="all">All students</option>
+                {perfStudentOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-rd border border-neutral-200 bg-white p-2 sm:p-4 mb-6 min-h-[300px]">
+          {filteredPerformanceEssays.length === 0 ? (
+            <div className="flex h-[280px] items-center justify-center text-sm text-neutral-500 px-4 text-center">
+              No scored essays match these filters yet. Try widening program
+              {perfChartMode === "blocks" ? " or block" : " or student"}
+              —or complete more evaluations.
+            </div>
+          ) : perfScatterPoints.length === 0 ? (
+            <div className="flex h-[280px] items-center justify-center text-sm text-neutral-500 px-4 text-center">
+              No chart points could be built from this data.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <ScatterChart
+                margin={{ top: 12, right: 20, bottom: 8, left: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  domain={perfScatterXDomain}
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  tickLine={false}
+                  label={{
+                    value: "Score change (latest − first, pts)",
+                    position: "bottom",
+                    offset: 0,
+                    style: { fill: "#6b7280", fontSize: 11 },
+                  }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  tickLine={false}
+                  width={44}
+                  label={{
+                    value: "Latest score %",
+                    angle: -90,
+                    position: "insideLeft",
+                    style: { fill: "#6b7280", fontSize: 11 },
+                  }}
+                />
+                <ZAxis
+                  type="number"
+                  dataKey="z"
+                  domain={(() => {
+                    const zs = perfScatterPoints.map((p) => p.z);
+                    const lo = Math.min(...zs);
+                    const hi = Math.max(...zs);
+                    return lo === hi ? [Math.max(1, lo - 1), hi + 1] : [lo, hi];
+                  })()}
+                  range={[120, 700]}
+                />
+                <Tooltip
+                  cursor={{ strokeDasharray: "4 4" }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const row = payload[0].payload as PerfScatterPoint;
+                    const sign =
+                      row.improvement > 0
+                        ? "+"
+                        : row.improvement < 0
+                          ? ""
+                          : "";
+                    return (
+                      <div className="max-w-xs rounded-rd border border-neutral-200 bg-white px-3 py-2 text-sm shadow-md">
+                        <p className="font-semibold text-neutral-900">
+                          {row.name}
+                        </p>
+                        <p className="text-neutral-600 mt-1">
+                          Latest score:{" "}
+                          <span className="font-medium text-neutral-900">
+                            {row.latestScore}%
+                          </span>
+                        </p>
+                        <p className="text-neutral-600">
+                          Change (first → latest):{" "}
+                          <span className="font-medium text-neutral-900">
+                            {sign}
+                            {row.improvement} pts
+                          </span>{" "}
+                          <span className="text-neutral-500">
+                            (started {row.firstScore}%)
+                          </span>
+                        </p>
+                        <p className="text-xs text-neutral-500 mt-1">
+                          {row.essayCount} evaluated essay
+                          {row.essayCount !== 1 ? "s" : ""}
+                        </p>
+                        {perfChartMode === "blocks" &&
+                          row.studentNamesLine && (
+                            <p className="text-xs text-neutral-600 mt-2 border-t border-neutral-100 pt-2 leading-snug">
+                              <span className="font-medium text-neutral-800">
+                                Students:{" "}
+                              </span>
+                              {row.studentNamesLine}
+                            </p>
+                          )}
+                        {perfChartMode === "students" && (
+                          <p className="text-xs text-neutral-600 mt-2">
+                            Performance / improvement for this student within
+                            your current filters.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+                <Scatter
+                  name={
+                    perfChartMode === "blocks" ? "Blocks" : "Students"
+                  }
+                  data={perfScatterPoints}
+                  fill={
+                    perfChartMode === "blocks" ? "#dc2626" : "#2563eb"
+                  }
+                  stroke={
+                    perfChartMode === "blocks" ? "#b91c1c" : "#1d4ed8"
+                  }
+                  fillOpacity={0.78}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          )}
+          {perfScatterPoints.length > 0 && (
+            <p className="text-center text-xs text-neutral-500 mt-2">
+              <span
+                className={
+                  perfChartMode === "blocks"
+                    ? "font-medium text-red-600"
+                    : "font-medium text-blue-600"
+                }
+              >
+                ●
+              </span>{" "}
+              {perfChartMode === "blocks"
+                ? "Red — one dot per block"
+                : "Blue — one dot per student"}
+            </p>
+          )}
+        </div>
+
+        {filtersNarrowPerformance && filteredPerformanceEssays.length > 0 && (
+          <p className="text-xs text-neutral-500 mb-2">
+            Score averages below match your filters. Vocabulary stays
+            account-wide.
+          </p>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2 border-t border-neutral-100">
+          {displayPerformanceMetrics.map((metric, idx) => (
             <div key={idx} className="space-y-2">
               <p className="text-sm text-neutral-500">{metric.label}</p>
               <div className="flex items-end gap-2">
@@ -650,22 +1356,90 @@ export function DashboardTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <Card className="p-6 lg:col-span-2">
-          <h2 className="text-xl text-neutral-900 mb-4">Recent Activity</h2>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-start sm:justify-between">
+            <h2 className="text-xl text-neutral-900">Recent Activity</h2>
+            <p className="text-xs text-neutral-500 sm:max-w-[220px] sm:text-right">
+              Showing up to 80 recent submissions. Narrow by course, block, or
+              name.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Course
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
+                value={activityCourseFilter}
+                onChange={(e) => setActivityCourseFilter(e.target.value)}
+              >
+                <option value="all">All courses</option>
+                {data.activityFilterCourses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Block
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
+                value={activityBlockFilter}
+                onChange={(e) => setActivityBlockFilter(e.target.value)}
+              >
+                <option value="all">All blocks</option>
+                {activityBlockSelectOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Find student or essay
+              </label>
+              <Input
+                type="search"
+                placeholder="Search by name or title…"
+                value={activitySearchQuery}
+                onChange={(value) => setActivitySearchQuery(value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div
+            className="max-h-[min(28rem,55vh)] overflow-y-auto overscroll-y-contain space-y-3 p-2 pr-1 rounded-rd border border-neutral-100 bg-neutral-50/50"
+            role="region"
+            aria-label="Recent activity list"
+          >
             {data.recentActivity.length === 0 ? (
               <div className="text-center py-8 text-neutral-500">
                 <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>No recent activity</p>
               </div>
+            ) : filteredRecentActivity.length === 0 ? (
+              <div className="text-center py-8 text-neutral-500">
+                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No activity matches these filters</p>
+                <p className="text-xs mt-2 text-neutral-400">
+                  Try another course, block, or clear the search.
+                </p>
+              </div>
             ) : (
-              data.recentActivity.map((activity, idx) => (
+              filteredRecentActivity.map((activity) => (
                 <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 bg-neutral-100 rounded-rd hover:bg-neutral-200 transition-colors"
+                  key={activity.essayId}
+                  className="flex items-center justify-between p-3 bg-neutral-100 rounded-rd hover:bg-neutral-200 transition-colors gap-3"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-neutral-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-neutral-900 font-medium">
                         {activity.student}
                       </span>
                       <span className="text-sm text-neutral-500">•</span>
@@ -673,9 +1447,18 @@ export function DashboardTab() {
                         {activity.action}
                       </span>
                     </div>
-                    <p className="text-sm text-neutral-600">{activity.essay}</p>
+                    <p className="text-sm text-neutral-600 truncate">
+                      {activity.essay}
+                    </p>
+                    {(activity.courseLabel || activity.blockLabel) && (
+                      <p className="text-xs text-neutral-500 mt-1.5 truncate">
+                        {[activity.courseLabel, activity.blockLabel]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     {activity.status === "new" && (
                       <Badge className="bg-blue-600 text-white">New</Badge>
                     )}
@@ -752,6 +1535,7 @@ export function DashboardTab() {
           </div>
         </Card>
       </div>
+      </section>
     </div>
   );
 }

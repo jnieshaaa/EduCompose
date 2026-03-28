@@ -111,7 +111,7 @@ const TextAnalysisModal: React.FC<TextAnalysisModalProps> = ({
         undefined // No rubric for modal analysis
       );
       // Navigate to AnalysisResults page with the analysis data
-      navigate("/AnalysisResults", {
+      navigate("/Teacher/AnalysisResults", {
         state: {
           analysis: result as Omit<AnalysisResponse, "essay_id">,
           text: text,

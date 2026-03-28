@@ -9,6 +9,7 @@ import os
 import httpx
 import secrets
 import string
+from urllib.parse import quote
 
 from ..schemas import (
     UserCreate,
@@ -30,6 +31,44 @@ def _generate_temp_password(length: int = 12) -> str:
     alphabet = string.ascii_letters + string.digits
     core = "".join(secrets.choice(alphabet) for _ in range(length))
     return f"{core}Aa1!"
+
+
+def _safe_json(response: httpx.Response) -> dict:
+    try:
+        data = response.json()
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+async def _resolve_auth_user_id_by_email(
+    client: httpx.AsyncClient,
+    supabase_url: str,
+    headers: dict,
+    normalized_email: str,
+) -> Optional[str]:
+    # GoTrue email filter behavior can vary. Use paginated scan for reliability.
+    for page in range(1, 11):
+        resp = await client.get(
+            f"{supabase_url}/auth/v1/admin/users?page={page}&per_page=200",
+            headers=headers,
+        )
+        if resp.status_code not in [200, 206]:
+            continue
+        data = _safe_json(resp)
+        users = data.get("users") if isinstance(data.get("users"), list) else []
+        match = next(
+            (
+                u for u in users
+                if isinstance(u, dict) and (u.get("email") or "").strip().lower() == normalized_email
+            ),
+            None,
+        )
+        if isinstance(match, dict) and match.get("id"):
+            return str(match["id"])
+        if len(users) < 200:
+            break
+    return None
 
 @auth_router.post("/send-verification-email", response_model=EmailVerificationResponse)
 async def send_verification_email(
@@ -88,70 +127,121 @@ async def admin_create_user(
     db: Session = Depends(get_db)
 ):
     """
-    Admin-only endpoint to create user accounts (teacher or student)
-    
-    Only users with role="admin" can create accounts.
+    Admin-only endpoint to create user accounts.
     Creates user in Supabase Auth and syncs to local database.
     """
-    # Check if current user is admin
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can create user accounts."
         )
     
-    # Validate role
     if user_data.role not in ["admin", "teacher", "student"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid role. Must be 'admin', 'teacher', or 'student'."
+            detail="Invalid role."
         )
     
-    # Combine names into full_name
-    name_parts = [
-        user_data.first_name,
-        user_data.middle_name,
-        user_data.last_name
-    ]
+    name_parts = [user_data.first_name, user_data.middle_name, user_data.last_name]
     full_name = user_data.full_name or " ".join([p for p in name_parts if p]).strip()
-    
     if not full_name:
-        # Fallback to email username
         full_name = user_data.email.split("@")[0]
 
-    # Create local user record in database
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not supabase_service_role_key:
+        raise HTTPException(status_code=500, detail="Missing Supabase configuration.")
+
+    headers = {
+        "apikey": supabase_service_role_key,
+        "Authorization": f"Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json",
+    }
+
     try:
-        username = user_data.username or user_data.email.split("@")[0]
-        local_user = await auth_service.create_user(
-            UserCreate(
-                email=user_data.email,
-                password=user_data.password,
-                role=user_data.role,
-                username=username,
-                full_name=full_name,
-                first_name=user_data.first_name,
-                middle_name=user_data.middle_name,
-                last_name=user_data.last_name,
-                title=user_data.title,
-                nickname=user_data.nickname,
-                supabase_user_id=user_data.supabase_user_id
-            ),
-            db
-        )
-        
-        return {
-            "message": f"User account created and synced successfully for {user_data.role}.",
-            "user": {
-                "id": local_user.id,
-                "email": local_user.email,
-                "username": local_user.username,
-                "full_name": local_user.full_name,
-                "role": local_user.role,
-                "email_verified": local_user.email_verified,
-                "supabase_user_id": user_data.supabase_user_id,
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{supabase_url}/auth/v1/admin/users",
+                headers=headers,
+                json={
+                    "email": user_data.email.strip().lower(),
+                    "password": user_data.password.strip(),
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "role": user_data.role,
+                        "first_name": user_data.first_name,
+                        "middle_name": user_data.middle_name,
+                        "last_name": user_data.last_name,
+                        "title": user_data.title,
+                        "nickname": user_data.nickname,
+                        "full_name": full_name,
+                    }
+                },
+                timeout=10.0
+            )
+
+            if resp.status_code not in [200, 201]:
+                resp_json = _safe_json(resp)
+                already_registered = "already registered" in (resp_json.get("message") or "").lower()
+                if not already_registered:
+                    raise HTTPException(
+                        status_code=resp.status_code,
+                        detail=f"Failed to create auth user: {(resp_json.get('message') or resp.text or 'Unknown Supabase error')}"
+                    )
+
+            auth_user_data = _safe_json(resp) if resp.status_code in [200, 201] else {}
+            auth_id = auth_user_data.get("id") or user_data.supabase_user_id
+
+            username = user_data.username or user_data.email.split("@")[0]
+            local_user = await auth_service.create_user(
+                UserCreate(
+                    email=user_data.email.strip().lower(),
+                    password=user_data.password.strip(),
+                    role=user_data.role,
+                    username=username,
+                    full_name=full_name,
+                    first_name=user_data.first_name,
+                    middle_name=user_data.middle_name,
+                    last_name=user_data.last_name,
+                    title=user_data.title,
+                    nickname=user_data.nickname,
+                    supabase_user_id=auth_id
+                ),
+                db
+            )
+
+            if auth_id:
+                # Upsert into public.users
+                await client.post(
+                    f"{supabase_url}/rest/v1/users",
+                    headers={**headers, "Prefer": "resolution=merge-duplicates"},
+                    json={
+                        "auth_user_id": auth_id,
+                        "email": user_data.email.strip().lower(),
+                        "first_name": user_data.first_name,
+                        "middle_name": user_data.middle_name,
+                        "last_name": user_data.last_name,
+                        "title": user_data.title,
+                        "nickname": user_data.nickname,
+                        "role": user_data.role,
+                        "is_active": True
+                    }
+                )
+
+            return {
+                "message": f"User account created and synced successfully for {user_data.role}.",
+                "user": {
+                    "id": local_user.id,
+                    "email": local_user.email,
+                    "username": local_user.username,
+                    "full_name": local_user.full_name,
+                    "role": local_user.role,
+                    "email_verified": local_user.email_verified,
+                    "supabase_user_id": auth_id,
+                }
             }
-        }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -167,11 +257,8 @@ async def teacher_provision_student_account(
     current_user = Depends(auth_service.get_current_user),
 ):
     """
-    Create a Supabase Auth account for a student when teacher/admin enrolls them.
-
-    - Allowed roles: teacher, admin
-    - Creates auth user with role=student and student_code metadata
-    - Returns generated temporary password if account is newly created
+    Sync endpoint kept for backwards compatibility.
+    Auth user creation/password reset is now handled via Supabase RPC in the frontend.
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -179,14 +266,150 @@ async def teacher_provision_student_account(
             detail="Only teachers or administrators can provision student accounts.",
         )
 
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not supabase_service_role_key:
+        raise HTTPException(status_code=500, detail="Missing Supabase configuration.")
+
     normalized_email = payload.email.strip().lower()
     student_code = payload.student_code.strip().upper()
+    temp_password = (payload.password or "").strip() or _generate_temp_password(8)
+
+    headers = {
+        "apikey": supabase_service_role_key,
+        "Authorization": f"Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json",
+    }
+
+    auth_user_id: Optional[str] = None
+    created = False
+    metadata = {
+        "role": "student",
+        "student_code": student_code,
+        "first_name": payload.first_name,
+        "middle_name": payload.middle_name or "",
+        "last_name": payload.last_name,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # 0) Pre-check cross-role email conflicts in public.users to avoid opaque auth DB failures.
+            email_lookup = await client.get(
+                f"{supabase_url}/rest/v1/users?select=auth_user_id,email,role&email=eq.{quote(normalized_email)}",
+                headers=headers,
+            )
+            existing_student_user_without_auth = False
+            if email_lookup.status_code in [200, 206]:
+                email_rows = email_lookup.json() if isinstance(email_lookup.json(), list) else []
+                if email_rows:
+                    existing_role = str((email_rows[0] or {}).get("role") or "").lower()
+                    existing_auth_user_id = (email_rows[0] or {}).get("auth_user_id")
+                    if existing_role and existing_role != "student":
+                        raise HTTPException(
+                            status_code=409,
+                            detail=f"Email is already used by a {existing_role} account. Use a different student email.",
+                        )
+                    if existing_role == "student" and not existing_auth_user_id:
+                        existing_student_user_without_auth = True
+
+            # If there is a student users-row by email but no auth_user_id, the auth trigger insert
+            # can fail on users.email unique constraint. Remove stale row first, then recreate via auth flow.
+            if existing_student_user_without_auth:
+                delete_resp = await client.delete(
+                    f"{supabase_url}/rest/v1/users?email=eq.{quote(normalized_email)}&role=eq.student&auth_user_id=is.null",
+                    headers=headers,
+                )
+                if delete_resp.status_code not in [200, 204]:
+                    delete_json = _safe_json(delete_resp)
+                    raise HTTPException(
+                        status_code=delete_resp.status_code,
+                        detail=f"Failed to prepare student user sync before auth provisioning: {delete_json.get('message') or delete_resp.text or 'Unknown error'}",
+                    )
+
+            # 1) Try creating auth user first.
+            create_resp = await client.post(
+                f"{supabase_url}/auth/v1/admin/users",
+                headers=headers,
+                json={
+                    "email": normalized_email,
+                    "password": temp_password,
+                    "email_confirm": True,
+                    "user_metadata": metadata,
+                },
+            )
+            create_json = _safe_json(create_resp)
+            if create_resp.status_code in [200, 201]:
+                created = True
+                auth_user_id = create_json.get("id")
+            else:
+                # 2) Always try resolving existing auth user by email.
+                # Supabase may return "unexpected_failure" even when an auth row already exists.
+                auth_user_id = await _resolve_auth_user_id_by_email(
+                    client=client,
+                    supabase_url=supabase_url,
+                    headers=headers,
+                    normalized_email=normalized_email,
+                )
+                if not auth_user_id:
+                    msg = create_json.get("msg") or create_json.get("message") or create_resp.text or "Unknown Supabase error"
+                    raise HTTPException(
+                        status_code=create_resp.status_code if create_resp.status_code >= 400 else 500,
+                        detail=f"Failed to create auth user: {msg}",
+                    )
+
+            if not auth_user_id:
+                raise HTTPException(status_code=400, detail="Provisioning failed: missing auth user id.")
+
+            # 3) Ensure password and metadata are updated for both newly created and existing users.
+            update_resp = await client.put(
+                f"{supabase_url}/auth/v1/admin/users/{auth_user_id}",
+                headers=headers,
+                json={
+                    "email": normalized_email,
+                    "password": temp_password,
+                    "user_metadata": metadata,
+                    "email_confirm": True,
+                },
+            )
+            if update_resp.status_code not in [200, 201]:
+                update_json = _safe_json(update_resp)
+                raise HTTPException(
+                    status_code=update_resp.status_code,
+                    detail=f"Failed to update auth user: {update_json.get('message') or update_resp.text or 'Unknown Supabase error'}",
+                )
+
+            # 4) Sync public.users by auth_user_id.
+            await client.post(
+                f"{supabase_url}/rest/v1/users?on_conflict=auth_user_id",
+                headers={**headers, "Prefer": "resolution=merge-duplicates,return=minimal"},
+                json={
+                    "auth_user_id": auth_user_id,
+                    "email": normalized_email,
+                    "first_name": payload.first_name,
+                    "middle_name": payload.middle_name or "",
+                    "last_name": payload.last_name,
+                    "role": "student",
+                    "is_active": True,
+                },
+            )
+
+            # 5) Sync student linkage by student code.
+            await client.patch(
+                f"{supabase_url}/rest/v1/students?student_code=eq.{quote(student_code)}",
+                headers={"apikey": supabase_service_role_key, "Authorization": f"Bearer {supabase_service_role_key}", "Content-Type": "application/json"},
+                json={"auth_user_id": auth_user_id, "email": normalized_email},
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to provision student account: {str(e)}")
 
     return TeacherProvisionStudentResponse(
         success=True,
-        message="Student account provisioned and synced successfully.",
-        created=True,
-        temp_password=payload.password,
+        message="Student account provisioned successfully.",
+        created=created,
+        temp_password=temp_password,
         email=normalized_email,
         student_code=student_code,
     )

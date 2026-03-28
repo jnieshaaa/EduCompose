@@ -9,6 +9,8 @@ import {
   LogOut,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   GraduationCap,
   Archive,
 } from "lucide-react";
@@ -18,7 +20,15 @@ import { supabase } from "../lib/supabaseClient";
 import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 
-const AdminSidebar: React.FC = () => {
+interface AdminSidebarProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  isSidebarOpen,
+  setIsSidebarOpen,
+}) => {
   const { user, logout } = useAuth();
   const [logoShine, setLogoShine] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -38,7 +48,7 @@ const AdminSidebar: React.FC = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const SIDEBAR_WIDTH = "240px";
+  const SIDEBAR_WIDTH = isSidebarOpen ? "240px" : "80px";
 
   const handleSignOut = async () => {
     try {
@@ -102,11 +112,15 @@ const AdminSidebar: React.FC = () => {
   return (
     <>
       <aside
-        className="fixed left-0 top-0 h-screen flex flex-col bg-primary border-r border-white/10 text-white z-40"
+        className="relative h-screen flex flex-col bg-primary border-r border-white/10 text-white z-40 transition-[width] duration-300 ease-in-out"
         style={{ width: SIDEBAR_WIDTH }}
       >
         {/* Header */}
-        <div className="flex items-center h-20 px-6 border-b border-white/10">
+        <div
+          className={`flex items-center h-20 border-b border-white/10 ${
+            isSidebarOpen ? "px-6" : "px-3 justify-center"
+          }`}
+        >
           <div
             className="relative w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1 cursor-pointer"
             onMouseEnter={() => setLogoShine(true)}
@@ -121,9 +135,14 @@ const AdminSidebar: React.FC = () => {
               onAnimationEnd={() => setLogoShine(false)}
             />
           </div>
-          <div className="ml-3">
-            <h1 className="font-bold text-xl">EduCompose</h1>
-          </div>
+          {isSidebarOpen && (
+            <div className="ml-3 min-w-0">
+              <h1 className="font-bold text-xl truncate">EduCompose</h1>
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">
+                Admin Portal
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Nav */}
@@ -133,10 +152,17 @@ const AdminSidebar: React.FC = () => {
               <li key={item.path}>
                 <button
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isItemActive(item.path) ? "bg-white text-primary" : "text-white/70 hover:bg-white/10"}`}
+                  className={`w-full flex items-center ${
+                    isSidebarOpen ? "gap-3 px-4" : "justify-center px-2"
+                  } py-3 rounded-xl transition-all ${isItemActive(item.path) ? "bg-white text-primary" : "text-white/70 hover:bg-white/10"}`}
+                  title={!isSidebarOpen ? item.label : undefined}
                 >
                   {item.icon}
-                  <span className="font-medium text-sm">{item.label}</span>
+                  {isSidebarOpen && (
+                    <span className="font-medium text-sm truncate">
+                      {item.label}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -167,32 +193,47 @@ const AdminSidebar: React.FC = () => {
 
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-colors"
+            className={`w-full flex items-center ${
+              isSidebarOpen ? "gap-3 px-3" : "justify-center px-2"
+            } py-3 rounded-xl hover:bg-white/5 transition-colors`}
           >
             <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold">
               {user?.full_name.charAt(0) || "U"}
             </div>
-            <div className="flex-1 text-left overflow-hidden">
-              <p className="text-sm font-semibold truncate">
-                {user?.full_name || "User"}
-              </p>
-              <p className="text-[10px] text-white/50 truncate">
-                {user?.role === "admin" ? "Administrator" : "User"}
-              </p>
-            </div>
-            {isUserMenuOpen ? (
-              <ChevronUp size={16} className="text-white/50" />
-            ) : (
-              <ChevronDown size={16} className="text-white/50" />
+            {isSidebarOpen && (
+              <>
+                <div className="flex-1 text-left overflow-hidden">
+                  <p className="text-sm font-semibold truncate">
+                    {user?.full_name || "User"}
+                  </p>
+                  <p className="text-[10px] text-white/50 truncate">
+                    {user?.role === "admin" ? "Administrator" : "User"}
+                  </p>
+                </div>
+                {isUserMenuOpen ? (
+                  <ChevronUp size={16} className="text-white/50" />
+                ) : (
+                  <ChevronDown size={16} className="text-white/50" />
+                )}
+              </>
             )}
           </button>
         </div>
-      </aside>
 
-      <div
-        style={{ marginLeft: SIDEBAR_WIDTH }}
-        className="min-h-screen bg-neutral-50"
-      />
+        {/* Expand/Collapse side toggle button */}
+        <button
+          onClick={() => setIsSidebarOpen((prev) => !prev)}
+          className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 transition-colors rounded-full"
+          aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {isSidebarOpen ? (
+            <ChevronLeft className="w-5 h-5" />
+          ) : (
+            <ChevronRight className="w-5 h-5" />
+          )}
+        </button>
+      </aside>
 
       <Modal
         isOpen={isInfoModalOpen}

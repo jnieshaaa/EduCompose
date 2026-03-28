@@ -316,10 +316,19 @@ class EssayAnalysisService:
 
     def _validate_content_quality(self, metrics: Dict[str, Any]) -> Optional[str]:
         """Return error text when we detect gibberish content instead of an essay."""
+        # OCR (and some textarea submissions) can be long enough to analyze even when
+        # punctuation-based sentence detection finds fewer than 2 sentences.
+        # We still keep the sentence_count check for short inputs to avoid analyzing gibberish.
         if metrics["sentence_count"] < 2:
-            return (
-                "Essay content should contain at least two complete sentences with standard punctuation before it can be analyzed."
-            )
+            token_count = int(metrics.get("token_count", 0) or 0)
+            alpha_token_ratio = float(metrics.get("alpha_token_ratio", 0.0) or 0.0)
+
+            # If the text is long enough and contains mostly alphabetic tokens,
+            # allow analysis even if punctuation-based sentence detection is low.
+            if not (token_count >= 80 and alpha_token_ratio >= 0.2):
+                return (
+                    "Essay content should contain at least two complete sentences with standard punctuation before it can be analyzed."
+                )
         if metrics["lexical_diversity"] < 0.15:
             return (
                 "Essay content appears to repeat the same word(s). Please provide a complete paragraph with varied vocabulary."

@@ -14,7 +14,7 @@ import type { HighlightError } from './EssayTextDisplay';
 
 interface AnalysisMetricsProps {
   analysis: Omit<AnalysisResponse, 'essay_id'>;
-  onErrorClick?: (error: HighlightError, index: number) => void;
+  onErrorClick?: (error: HighlightError) => void;
   prominentGraph?: boolean;
 }
 
@@ -84,25 +84,9 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
     return grouped;
   }, [analysis]);
 
-  // Create a flat list of errors with their original indices for clicking
-  const errorsList = useMemo(() => {
-    const errors = analysis?.detailed_analysis?.grammar?.errors || [];
-    return errors.map((error, index) => ({
-      ...error,
-      originalIndex: index,
-    }));
-  }, [analysis]);
-
   const handleErrorGroupClick = (errors: GrammarError[]) => {
     if (onErrorClick && errors.length > 0) {
-      // Find the original index of the first error
-      const firstError = errors[0];
-      const originalIndex = errorsList.findIndex(
-        (e) => e.offset === firstError.offset && e.message === firstError.message
-      );
-      if (originalIndex >= 0) {
-        onErrorClick(firstError as HighlightError, originalIndex);
-      }
+      onErrorClick(errors[0] as HighlightError);
     }
   };
 

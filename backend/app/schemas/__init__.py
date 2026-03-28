@@ -29,7 +29,9 @@ from .analysis_schemas import (
     TextAnalysisResponse,
     PlagiarismCheckRequest,
     PlagiarismCheckResponse,
-    PlagiarismMatch
+    PlagiarismMatch,
+    AIDetectionRequest,
+    AIDetectionResponse,
 )
 from .comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
 
@@ -63,6 +65,8 @@ __all__ = [
     "PlagiarismCheckRequest",
     "PlagiarismCheckResponse",
     "PlagiarismMatch",
+    "AIDetectionRequest",
+    "AIDetectionResponse",
     "ComparisonAnalysisRequest",
     "ComparisonAnalysisResponse",
 ]

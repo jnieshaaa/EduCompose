@@ -84,3 +84,19 @@ class PlagiarismCheckResponse(BaseModel):
     error: Optional[str] = None
     message: Optional[str] = None
 
+
+class AIDetectionRequest(BaseModel):
+    text: str
+
+
+class AIDetectionResponse(BaseModel):
+    checked: bool
+    is_ai_generated: bool
+    ai_score: float
+    confidence: Optional[float] = None
+    verdict: Optional[str] = None
+    provider: str = "copyscape"
+    details: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    message: Optional[str] = None
+

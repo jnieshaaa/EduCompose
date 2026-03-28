@@ -19,18 +19,24 @@ import jsPDF from 'jspdf';
 
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
-import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, type HighlightError } from '../components/grading';
+import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, getGrammarErrorSelectionKey, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
-import { analysisApi, plagiarismApi, type PlagiarismCheckResponse, type PlagiarismMatch } from '../api';
+import { analysisApi, plagiarismApi, aiDetectionApi, type PlagiarismCheckResponse, type PlagiarismMatch, type AIDetectionResponse } from '../api';
 import { RubricPreviewModal } from '../components/rubrics/RubricPreviewModal';
 import { platformRubrics } from '../data/rubricData';
 import type { PlatformRubric } from '../components/rubrics/types';
-import { savePlagiarismResult, loadPlagiarismResult, fetchDuplicateEssays, type DuplicateEssayGroup } from '../services/activityService';
+import { savePlagiarismResult, loadPlagiarismResult, saveAIDetectionResult, loadAIDetectionResult, fetchDuplicateEssays, resolveEssayIdFromStudentActivity, type DuplicateEssayGroup } from '../services/activityService';
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { readSecureParams } from '../utils/secureUrl';
 
 const STORAGE_KEY = 'essay_analysis_results';
+const AI_DETECTION_STORAGE_KEY_PREFIX = 'essay_ai_detection_result';
+
+/** Analysis payload stored in this page (may include rubric_scores from text analysis API). */
+type StoredAnalysisResult = Omit<AnalysisResponse, 'essay_id'> & {
+  rubric_scores?: TextAnalysisResponse['rubric_scores'];
+};
 
 // Mock data for UI preview - using type assertion for demo purposes
 const MOCK_ANALYSIS = {
@@ -225,7 +231,7 @@ const MOCK_ANALYSIS = {
       ],
     },
   ],
-} as unknown as Omit<AnalysisResponse, 'essay_id'>;
+} as unknown as StoredAnalysisResult;
 
 const MOCK_ESSAY_TEXT = `Climate change represents one of the most pressing challenges of our time, requiring immediate and coordinated global action to mitigate its devastating effects. The scientific consensus is clear: human activities, particularly the burning of fossil fuels, have led to unprecedented increases in atmospheric greenhouse gas concentrations.
 
@@ -243,27 +249,30 @@ const AnalysisResults: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const [analysis, setAnalysis] = useState<Omit<AnalysisResponse, 'essay_id'> | null>(null);
+  const [analysis, setAnalysis] = useState<StoredAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'insights' | 'feedback' | 'rubric' | 'plagiarism'>('insights');
   const [originalText, setOriginalText] = useState<string>('');
-  const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
+  const [selectedErrorKey, setSelectedErrorKey] = useState<string | null>(null);
   const [analysisKey, setAnalysisKey] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [plagiarismResult, setPlagiarismResult] = useState<PlagiarismCheckResponse | null>(null);
   const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
   const [plagiarismError, setPlagiarismError] = useState<string | null>(null);
+  const [aiDetectionResult, setAiDetectionResult] = useState<AIDetectionResponse | null>(null);
+  const [isCheckingAIDetection, setIsCheckingAIDetection] = useState(false);
+  const [aiDetectionError, setAiDetectionError] = useState<string | null>(null);
   const [showRubricPreview, setShowRubricPreview] = useState(false);
   const [previewRubric, setPreviewRubric] = useState<PlatformRubric | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [activityId, setActivityId] = useState<string | null>(null);
-  const [essayId, setEssayId] = useState<number | null>(null);
+  const [essayId, setEssayId] = useState<string | number | null>(null);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>([]);
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
 
   // Stable references to prevent recalculation
-  const stableAnalysisRef = useRef<Omit<AnalysisResponse, 'essay_id'> | null>(null);
+  const stableAnalysisRef = useRef<StoredAnalysisResult | null>(null);
   const stableTextRef = useRef<string>('');
   
   // Track if plagiarism result has been saved to avoid duplicate saves
@@ -296,10 +305,11 @@ const AnalysisResults: React.FC = () => {
       }
       // Convert both response types to the format expected by the component
       // TextAnalysisResponse is already without essay_id, AnalysisResponse needs it removed
-      const analysisResult: Omit<AnalysisResponse, 'essay_id'> = 
+      const analysisResult: StoredAnalysisResult = 
         'essay_id' in result 
           ? (() => {
-              const { essay_id, ...rest } = result;
+              const rest = { ...result };
+              delete (rest as Partial<AnalysisResponse>).essay_id;
               return rest;
             })()
           : {
@@ -311,7 +321,8 @@ const AnalysisResults: React.FC = () => {
                 critical_issues: [],
                 dimension_scores: {}
               },
-              word_count: result.word_count || 0
+              word_count: result.word_count || 0,
+              rubric_scores: result.rubric_scores,
             };
 
       const stableAnalysis = JSON.parse(JSON.stringify(analysisResult));
@@ -344,16 +355,30 @@ const AnalysisResults: React.FC = () => {
     }
   };
 
+  const aiDetectionStorageKey = useMemo(() => {
+    if (essayId) {
+      return `${AI_DETECTION_STORAGE_KEY_PREFIX}:essay:${essayId}`;
+    }
+    if (studentId && activityId) {
+      return `${AI_DETECTION_STORAGE_KEY_PREFIX}:student:${studentId}:activity:${activityId}`;
+    }
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref) {
+      return `${AI_DETECTION_STORAGE_KEY_PREFIX}:ref:${ref}`;
+    }
+    return null;
+  }, [essayId, studentId, activityId, location.search]);
+
   // Get analysis data from location state, localStorage, or use mock data for preview
   useEffect(() => {
     if (analysis && originalText) return;
 
     const state = location.state as {
       rubricId?: string;
-      analysis?: Omit<AnalysisResponse, 'essay_id'>;
+      analysis?: StoredAnalysisResult;
       text?: string;
       title?: string;
-      essayId?: number;
+      essayId?: string | number;
       error?: string;
       preview?: boolean;
       studentId?: string;
@@ -493,33 +518,13 @@ const AnalysisResults: React.FC = () => {
     if (state?.studentId && state?.activityId && !state?.essayId) {
       const deriveEssayId = async () => {
         try {
-          const { supabase } = await import('../lib/supabaseClient');
-          
-          // Parse student ID
-          let studentDbId = parseInt(state.studentId!, 10);
-          if (isNaN(studentDbId)) {
-            const { data: studentData } = await supabase
-              .from('students')
-              .select('id')
-              .eq('student_code', state.studentId)
-              .maybeSingle();
-            if (studentData) studentDbId = studentData.id;
-          }
-          
-          const activityDbId = parseInt(state.activityId!, 10);
-          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
-            // Get essay_id
-            const { data: essayData } = await supabase
-              .from('essays')
-              .select('id')
-              .eq('student_id', studentDbId)
-              .eq('activity_id', activityDbId)
-              .maybeSingle();
-            
-            if (essayData?.id) {
-              setEssayId(essayData.id);
-              console.log(`Derived essayId: ${essayData.id} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
-            }
+          const resolvedEssayId = await resolveEssayIdFromStudentActivity(
+            state.studentId!,
+            state.activityId!,
+          );
+          if (resolvedEssayId) {
+            setEssayId(resolvedEssayId);
+            console.log(`Derived essayId: ${resolvedEssayId} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
           }
         } catch (err) {
           console.warn('Could not derive essayId from studentId and activityId:', err);
@@ -555,7 +560,11 @@ const AnalysisResults: React.FC = () => {
     } else if (state?.text) {
       const textToAnalyze = state.text;
       setOriginalText(textToAnalyze);
-      handleAnalyze(textToAnalyze, state.title || 'Essay Analysis', state.essayId);
+      handleAnalyze(
+        textToAnalyze,
+        state.title || 'Essay Analysis',
+        typeof state.essayId === 'number' ? state.essayId : undefined,
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
@@ -586,6 +595,51 @@ const AnalysisResults: React.FC = () => {
     loadSavedPlagiarism();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [essayId, studentId, activityId]);
+
+  // Load saved AI detection results when component mounts (if essayId or studentId/activityId are available)
+  useEffect(() => {
+    if (aiDetectionResult) return; // Don't load if already have a result
+
+    const loadSavedAIDetection = async () => {
+      try {
+        if (aiDetectionStorageKey) {
+          const cached = localStorage.getItem(aiDetectionStorageKey);
+          if (cached) {
+            const parsed = JSON.parse(cached) as {
+              result?: AIDetectionResponse;
+            };
+            if (parsed?.result) {
+              setAiDetectionResult(parsed.result);
+              return;
+            }
+          }
+        }
+
+        let savedResult: AIDetectionResponse | null = null;
+
+        if (essayId) {
+          savedResult = await loadAIDetectionResult(essayId);
+        } else if (studentId && activityId) {
+          savedResult = await loadAIDetectionResult(studentId, activityId);
+        }
+
+        if (savedResult) {
+          setAiDetectionResult(savedResult);
+          if (aiDetectionStorageKey) {
+            localStorage.setItem(
+              aiDetectionStorageKey,
+              JSON.stringify({ result: savedResult, timestamp: Date.now() }),
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading saved AI detection result:', err);
+      }
+    };
+
+    loadSavedAIDetection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [essayId, studentId, activityId, aiDetectionResult, aiDetectionStorageKey]);
 
   // Fetch duplicate essays for the activity
   useEffect(() => {
@@ -622,7 +676,7 @@ const AnalysisResults: React.FC = () => {
       // Fallback: check location.state if IDs aren't set
       if (!currentEssayId && !currentStudentId && !currentActivityId) {
         const state = location.state as {
-          essayId?: number;
+          essayId?: string | number;
           studentId?: string;
           activityId?: string;
         } | null;
@@ -726,18 +780,13 @@ const AnalysisResults: React.FC = () => {
         });
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [essayId, studentId, activityId, isPreviewMode, isAuthenticated, location.state]);
 
-  // Handle error click - toggle selection (inline details are handled in EssayTextDisplay)
-  const handleErrorClick = useCallback((_error: HighlightError, index: number) => {
-    // Toggle: if same error is clicked, deselect it; otherwise select the new one
-    if (selectedErrorIndex === index) {
-      setSelectedErrorIndex(null);
-    } else {
-      setSelectedErrorIndex(index);
-    }
-  }, [selectedErrorIndex]);
+  // Match highlights by offset+length (not raw API index — display order is sorted/filtered).
+  const handleErrorClick = useCallback((error: HighlightError) => {
+    const key = getGrammarErrorSelectionKey(error);
+    setSelectedErrorKey((prev) => (prev === key ? null : key));
+  }, []);
 
   // Check for plagiarism
   const handleCheckPlagiarism = async () => {
@@ -762,7 +811,7 @@ const AnalysisResults: React.FC = () => {
       // Fallback: check location.state if IDs aren't set yet
       if (!currentEssayId && !currentStudentId && !currentActivityId) {
         const state = location.state as {
-          essayId?: number;
+          essayId?: string | number;
           studentId?: string;
           activityId?: string;
         } | null;
@@ -901,6 +950,55 @@ const AnalysisResults: React.FC = () => {
       console.error('Error checking plagiarism:', err);
     } finally {
       setIsCheckingPlagiarism(false);
+    }
+  };
+
+  const handleCheckAIDetection = async () => {
+    setIsCheckingAIDetection(true);
+    setAiDetectionError(null);
+    setAiDetectionResult(null);
+
+    try {
+      const textToCheck = (originalText || '').trim();
+      if (textToCheck.length < 10) {
+        setAiDetectionError('Text must be at least 10 characters long for AI detection.');
+        return;
+      }
+
+      const result = await aiDetectionApi.checkAIDetection(textToCheck);
+      setAiDetectionResult(result);
+      if (aiDetectionStorageKey) {
+        localStorage.setItem(
+          aiDetectionStorageKey,
+          JSON.stringify({ result, timestamp: Date.now() }),
+        );
+      }
+
+      if (!isAuthenticated) {
+        console.log('AI detection completed. Results not saved (user not authenticated).');
+        return;
+      }
+
+      // Save AI detection result to Supabase if essayId is available, or studentId and activityId
+      if (essayId) {
+        const saveResult = await saveAIDetectionResult(essayId, result);
+        if (!saveResult.success) {
+          setAiDetectionError(`AI detection completed, but failed to save results: ${saveResult.error}`);
+        }
+      } else if (studentId && activityId) {
+        const saveResult = await saveAIDetectionResult(studentId, activityId, result);
+        if (!saveResult.success) {
+          setAiDetectionError(`AI detection completed, but failed to save results: ${saveResult.error}`);
+        }
+      } else {
+        console.log('AI detection completed. Results not saved (no identifiers available).');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check AI detection';
+      setAiDetectionError(errorMessage);
+      console.error('Error checking AI detection:', err);
+    } finally {
+      setIsCheckingAIDetection(false);
     }
   };
 
@@ -1082,7 +1180,12 @@ const AnalysisResults: React.FC = () => {
   }
 
   const recommendations: DiagnosticRecommendation[] = analysis.recommendations || [];
-  const rubricData = (analysis as any).rubric_scores as { rubric_id?: string | number; rubric_name?: string } | undefined;
+  const rubricData = analysis.rubric_scores
+    ? {
+        rubric_id: analysis.rubric_scores.rubric_id,
+        rubric_name: analysis.rubric_scores.rubric_name,
+      }
+    : undefined;
 
   // Find the rubric for preview
   const handlePreviewRubric = () => {
@@ -1182,7 +1285,7 @@ const AnalysisResults: React.FC = () => {
                 <EssayTextDisplay
                   originalText={originalText}
                   grammarErrors={grammarErrors}
-                  selectedErrorIndex={selectedErrorIndex}
+                  selectedErrorKey={selectedErrorKey}
                   onErrorClick={handleErrorClick}
                   analysisKey={analysisKey}
                 />
@@ -1388,6 +1491,104 @@ const AnalysisResults: React.FC = () => {
                         >
                           <Shield className="w-5 h-5" />
                           <span>Check Again</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-neutral-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold text-neutral-900 mb-1">AI Detection</h2>
+                        <p className="text-sm text-neutral-600">
+                          Check whether the essay appears AI-generated using Copyscape AI detection
+                        </p>
+                      </div>
+                    </div>
+
+                    {!aiDetectionResult && !isCheckingAIDetection && (
+                      <div className="space-y-4">
+                        <p className="text-sm text-neutral-600">
+                          Click the button below to run AI detection on this essay text.
+                        </p>
+                        <button
+                          onClick={handleCheckAIDetection}
+                          className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                        >
+                          <Shield className="w-5 h-5" />
+                          <span>Run AI Detection</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {isCheckingAIDetection && (
+                      <div className="flex flex-col items-center justify-center py-10 space-y-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                        <p className="text-neutral-600">Checking AI likelihood...</p>
+                      </div>
+                    )}
+
+                    {aiDetectionError && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h3 className="font-semibold text-red-900 mb-1">Error</h3>
+                            <p className="text-sm text-red-700">{aiDetectionError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {aiDetectionResult && !isCheckingAIDetection && (
+                      <div className="space-y-4 mt-4">
+                        <div className={`p-4 rounded-lg border-2 ${
+                          aiDetectionResult.is_ai_generated
+                            ? 'bg-amber-50 border-amber-200'
+                            : 'bg-green-50 border-green-200'
+                        }`}>
+                          <div className="flex items-center space-x-3">
+                            {aiDetectionResult.is_ai_generated ? (
+                              <AlertTriangle className="w-6 h-6 text-amber-600" />
+                            ) : (
+                              <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            )}
+                            <div>
+                              <h3 className={`font-bold text-lg ${
+                                aiDetectionResult.is_ai_generated ? 'text-amber-900' : 'text-green-900'
+                              }`}>
+                                {aiDetectionResult.is_ai_generated ? 'Potential AI-Generated Content' : 'Likely Human-Written'}
+                              </h3>
+                              <p className={`text-sm ${
+                                aiDetectionResult.is_ai_generated ? 'text-amber-700' : 'text-green-700'
+                              }`}>
+                                {aiDetectionResult.verdict || 'AI detection completed'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-neutral-50 rounded-lg p-4">
+                            <div className="text-2xl font-bold text-neutral-900">
+                              {Number(aiDetectionResult.ai_score || 0).toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-neutral-600 mt-1">AI Score</div>
+                          </div>
+                          <div className="bg-neutral-50 rounded-lg p-4">
+                            <div className="text-2xl font-bold text-neutral-900">
+                              {Number(aiDetectionResult.confidence || 0).toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-neutral-600 mt-1">Confidence</div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleCheckAIDetection}
+                          className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors font-medium mt-2"
+                        >
+                          <Shield className="w-5 h-5" />
+                          <span>Run Again</span>
                         </button>
                       </div>
                     )}

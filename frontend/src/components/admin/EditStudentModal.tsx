@@ -27,6 +27,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
   const [loading, setLoading] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+  const [formError, setFormError] = useState<string>("");
   
   const [formData, setFormData] = useState({
     student_code: "",
@@ -92,16 +93,62 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
     e.preventDefault();
     try {
       setLoading(true);
+      setFormError("");
+
+      const normalizedEmail = formData.email.trim().toLowerCase();
+      const currentEmail = (student?.email || "").trim().toLowerCase();
+      const hasProvisionedAuthAccount = !!student?.auth_user_id;
+
+      // Provisioned students are linked to a Supabase Auth account.
+      // Changing email only in students table can desync login/reset flows.
+      if (hasProvisionedAuthAccount && normalizedEmail !== currentEmail) {
+        setFormError(
+          "Email cannot be changed here for provisioned student accounts. Please use account provisioning/reset flow to change login email safely.",
+        );
+        return;
+      }
+
+      // Prevent cross-role conflicts: a student email must not match teacher/admin accounts.
+      // Only check when email is changed.
+      if (normalizedEmail && normalizedEmail !== currentEmail) {
+        const { data: existingUser, error: lookupError } = await supabase
+          .from("users")
+          .select("id, role, email")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+
+        if (lookupError) {
+          throw lookupError;
+        }
+
+        if (existingUser) {
+          const existingRole = (existingUser.role || "").toLowerCase();
+          if (existingRole !== "student") {
+            setFormError(
+              `This email is already used by a ${existingRole || "user"} account. Please use a different student email.`,
+            );
+            return;
+          }
+          setFormError(
+            "This email is already used by another student account. Please use a different email.",
+          );
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from("students")
-        .update(formData)
+        .update({
+          ...formData,
+          email: normalizedEmail,
+        })
         .eq("id", student.id);
 
       if (error) throw error;
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.message || "Failed to update student");
+      setFormError(err.message || "Failed to update student");
     } finally {
       setLoading(false);
     }
@@ -119,7 +166,12 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form id="edit-student-form" onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-1">
               <label className="block text-xs font-bold text-neutral-400 uppercase mb-1">Student ID</label>
@@ -138,7 +190,13 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                 onChange={(val) => setFormData({ ...formData, email: val })}
                 required
                 placeholder="student@example.com"
+                disabled={!!student?.auth_user_id}
               />
+              {!!student?.auth_user_id && (
+                <p className="mt-1 text-[10px] text-neutral-500">
+                  This student is linked to an auth account. Email is locked here to prevent login/reset conflicts.
+                </p>
+              )}
             </div>
           </div>
 
@@ -264,7 +322,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" form="edit-student-form" disabled={loading}>
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         </div>

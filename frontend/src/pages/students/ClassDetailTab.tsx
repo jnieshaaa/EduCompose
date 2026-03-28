@@ -53,7 +53,7 @@ export function ClassDetailTab() {
           .maybeSingle();
 
         if (!student) return;
-
+          
         // 2. Get Class Info
         const { data: tcl, error: tclError } = await supabase
           .from("teacher_course_loads")

@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { X, Download, Loader2, FileText, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import {
+  X,
+  Download,
+  Loader2,
+  FileText,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+} from "lucide-react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { fetchEssayByStudentAndActivity } from "../../services/activityService";
@@ -23,6 +31,7 @@ export function ViewEssayModal({
     fileUrl: string;
     title: string;
     fileType: string;
+    content?: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +142,7 @@ export function ViewEssayModal({
                 </Button>
               </div>
             )}
-            {essayData && (
+            {essayData && essayData.fileType !== "text" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -161,11 +170,7 @@ export function ViewEssayModal({
             <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
               <FileText className="w-16 h-16 text-neutral-300 mb-4" />
               <p className="text-neutral-600 font-medium">{error}</p>
-              <Button
-                variant="outline"
-                onClick={loadEssay}
-                className="mt-4"
-              >
+              <Button variant="outline" onClick={loadEssay} className="mt-4">
                 Retry
               </Button>
             </div>
@@ -198,12 +203,16 @@ export function ViewEssayModal({
                     />
                   </div>
                 </div>
+              ) : essayData.fileType === "text" ? (
+                <div className="p-4">
+                  <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-800">
+                    {essayData.content}
+                  </pre>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center p-12">
                   <FileText className="w-16 h-16 text-neutral-300 mb-4" />
-                  <p className="text-neutral-600 mb-4">
-                    Unsupported file type
-                  </p>
+                  <p className="text-neutral-600 mb-4">Unsupported file type</p>
                   <Button variant="outline" onClick={handleDownload}>
                     <Download className="w-4 h-4 mr-2" />
                     Download to view
@@ -217,4 +226,3 @@ export function ViewEssayModal({
     </Modal>
   );
 }
-

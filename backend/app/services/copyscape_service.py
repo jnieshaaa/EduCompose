@@ -21,8 +21,12 @@ class CopyscapeService:
         # Load credentials from environment and strip whitespace
         self.api_username = os.getenv("COPYSCAPE_USERNAME", "").strip()
         self.api_key = os.getenv("COPYSCAPE_API_KEY", "").strip()
-        # Copyscape API base URL (with trailing slash to prevent 301 redirects)
-        self.base_url = "https://www.copyscape.com/api/"
+        # Copyscape API base URL (allow override via env, with safe default)
+        # Keep trailing slash to prevent redirects that can drop request body.
+        configured_url = os.getenv("COPYSCAPE_API_URL", "https://www.copyscape.com/api/").strip()
+        if configured_url and not configured_url.endswith("/"):
+            configured_url = f"{configured_url}/"
+        self.base_url = configured_url or "https://www.copyscape.com/api/"
         
     def is_configured(self) -> bool:
         """Check if Copyscape API credentials are configured"""
@@ -425,6 +429,108 @@ class CopyscapeService:
                 
         except Exception as e:
             logger.error(f"Copyscape URL check error: {e}", exc_info=True)
+            return {
+                "error": "API error",
+                "message": str(e)
+            }
+
+    async def check_ai_detection(self, text: str) -> Dict[str, Any]:
+        """
+        Check if text is AI-generated using Copyscape AI detection endpoint.
+        """
+        if not self.is_configured():
+            return {
+                "error": "Copyscape API not configured",
+                "message": "Please configure COPYSCAPE_USERNAME and COPYSCAPE_API_KEY in environment variables"
+            }
+
+        if not text or len(text.strip()) < 10:
+            return {
+                "error": "Invalid text",
+                "message": "Text must be at least 10 characters long"
+            }
+
+        try:
+            text_to_check = text.strip()[:5000]
+            params = {
+                "u": self.api_username,
+                "k": self.api_key,
+                "o": "aicheck",
+                "f": "xml",
+            }
+            data = {
+                "t": text_to_check,
+            }
+
+            timeout = httpx.Timeout(60.0, connect=10.0)
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                response = await client.post(
+                    self.base_url,
+                    params=params,
+                    data=data,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                response.raise_for_status()
+
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(response.text)
+
+                error = root.find("error")
+                if error is not None:
+                    return {
+                        "error": "Copyscape AI API error",
+                        "message": error.text or "Unknown error from Copyscape AI detection"
+                    }
+
+                # Flatten first-level XML tags so we can handle schema changes gracefully.
+                details: Dict[str, Any] = {}
+                for child in list(root):
+                    if child.tag and child.text is not None:
+                        details[child.tag.lower()] = child.text.strip()
+
+                def _to_float(value: Any) -> Optional[float]:
+                    try:
+                        if value is None:
+                            return None
+                        return float(str(value).strip())
+                    except (ValueError, TypeError):
+                        return None
+
+                ai_score = (
+                    _to_float(details.get("ai_score"))
+                    or _to_float(details.get("score"))
+                    or _to_float(details.get("probability"))
+                    or _to_float(details.get("ai_probability"))
+                    or 0.0
+                )
+
+                confidence = (
+                    _to_float(details.get("confidence"))
+                    or _to_float(details.get("confidence_score"))
+                )
+
+                verdict = details.get("verdict") or details.get("classification") or ""
+                verdict_lower = verdict.lower()
+                is_ai_generated = ("ai" in verdict_lower and "human" not in verdict_lower) or ai_score >= 50.0
+
+                return {
+                    "checked": True,
+                    "is_ai_generated": is_ai_generated,
+                    "ai_score": ai_score,
+                    "confidence": confidence,
+                    "verdict": verdict or ("AI-generated" if is_ai_generated else "Human-written"),
+                    "provider": "copyscape",
+                    "details": details,
+                }
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Copyscape AI API HTTP error: {e.response.status_code} - {e.response.text}")
+            return {
+                "error": "HTTP error",
+                "message": f"Copyscape AI API returned status {e.response.status_code}"
+            }
+        except Exception as e:
+            logger.error(f"Copyscape AI detection error: {e}", exc_info=True)
             return {
                 "error": "API error",
                 "message": str(e)

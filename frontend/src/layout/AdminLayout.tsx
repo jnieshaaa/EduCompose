@@ -4,9 +4,14 @@ import AdminSidebar from "../components/AdminSidebar";
 import Breadcrumb from "../components/ui/Breadcrumb";
 
 const AdminLayout: React.FC = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
   return (
     <div className="flex h-screen">
-      <AdminSidebar />
+      <AdminSidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
 
       <div className="flex-1 flex flex-col">
         <Breadcrumb />

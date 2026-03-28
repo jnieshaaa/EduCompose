@@ -138,13 +138,26 @@ const Login: React.FC = () => {
       }
 
       const normalizedStudentCode = studentCode.trim();
+      const compactStudentCode = normalizedStudentCode.replace(/\s+/g, "");
+      const uppercaseStudentCode = compactStudentCode.toUpperCase();
 
-      const { data: studentIdentity, error: lookupError } = await supabase
-        .rpc("get_student_login_email", {
-          p_student_code: normalizedStudentCode,
-        })
-        .maybeSingle<StudentLoginLookup>();
+      // Try multiple safe student-code formats to avoid case/spacing mismatches.
+      const tryLookup = async (code: string) =>
+        supabase
+          .rpc("get_student_login_email", {
+            p_student_code: code,
+          })
+          .maybeSingle<StudentLoginLookup>();
 
+      let lookup = await tryLookup(normalizedStudentCode);
+      if ((!lookup.data || !lookup.data.email) && compactStudentCode !== normalizedStudentCode) {
+        lookup = await tryLookup(compactStudentCode);
+      }
+      if ((!lookup.data || !lookup.data.email) && uppercaseStudentCode !== compactStudentCode) {
+        lookup = await tryLookup(uppercaseStudentCode);
+      }
+
+      const { data: studentIdentity, error: lookupError } = lookup;
       if (lookupError) {
         throw lookupError;
       }
@@ -162,14 +175,22 @@ const Login: React.FC = () => {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: studentIdentity.email,
+        email: studentIdentity.email.trim().toLowerCase(),
         password: password.trim(),
       });
 
       if (error) {
+        const normalizedMessage = error.message.toLowerCase();
+        if (
+          normalizedMessage.includes("invalid login credentials") ||
+          normalizedMessage.includes("email not confirmed") ||
+          normalizedMessage.includes("invalid email or password")
+        ) {
+          setError("Invalid student code or password.");
+          return;
+        }
         throw error;
       }
-
       if (data.session && data.user) {
         // Handle Remember Me
         if (rememberMe) {
@@ -181,7 +202,7 @@ const Login: React.FC = () => {
         login(data.session.access_token, {
           id: studentIdentity.student_id,
           auth_id: data.user.id,
-          email: studentIdentity.email ?? data.user.email ?? "",
+          email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
           username: studentIdentity.student_code,
           full_name:
             ((data.user.user_metadata as UserMetadata)?.full_name as

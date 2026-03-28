@@ -1093,10 +1093,53 @@ Do not include any text before or after the JSON object."""
                 "offset": start_pos,
                 "errorLength": whitespace_length
             })
-        
-        # Removed aggressive word checking - LLM handles word choice with context
-        # The previous implementation was flagging correct uses of "to", "then", "your", etc.
-        # LLM can distinguish between correct and incorrect usage based on context
+
+        # Conservative gibberish/spelling fallback:
+        # When LLM is unavailable or misses malformed tokens, we still flag obvious noise
+        # (e.g., "ssdsd", "prodassdssducts", "crsdseates") without being too aggressive.
+        consonants = "bcdfghjklmnpqrstvwxyz"
+        hard_consonant_cluster = re.compile(rf"[{consonants}]{{4,}}", re.IGNORECASE)
+        no_vowel_token = re.compile(rf"^[{consonants}]{{4,}}$", re.IGNORECASE)
+        suspicious_keyboard_pattern = re.compile(r"(sd|ds|as|sa){2,}", re.IGNORECASE)
+        likely_valid_edge_cases = {"strengths", "rhythms", "schtschurowskia"}
+
+        for match in re.finditer(r"\b[a-zA-Z]{4,}\b", text):
+            token = match.group(0)
+            token_lower = token.lower()
+            if token_lower in likely_valid_edge_cases:
+                continue
+
+            vowel_count = len(re.findall(r"[aeiou]", token_lower))
+            vowel_ratio = vowel_count / max(1, len(token_lower))
+
+            # "ngly" etc. matches 4-consonant regex because final y is treated as a consonant,
+            # which wrongly flags normal words like "increasingly". Only use that rule when
+            # the word has very few real vowels (actual gibberish like "xqxqfrm").
+            has_hard_consonant_run = hard_consonant_cluster.search(token) is not None
+            consonant_cluster_suspicious = has_hard_consonant_run and vowel_count <= 2
+
+            is_obvious_gibberish = (
+                no_vowel_token.match(token) is not None
+                or (
+                    consonant_cluster_suspicious
+                    and vowel_ratio < 0.45
+                )
+                or (
+                    suspicious_keyboard_pattern.search(token) is not None
+                    and vowel_ratio < 0.5
+                )
+            )
+
+            if not is_obvious_gibberish:
+                continue
+
+            errors.append({
+                "type": "spelling",
+                "message": f"Possible misspelled or gibberish word: '{token}'",
+                "suggestion": "",
+                "offset": match.start(),
+                "errorLength": len(token),
+            })
         
         return errors
 

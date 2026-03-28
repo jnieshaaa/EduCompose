@@ -257,6 +257,32 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         throw new Error(`${field} already exists in ${dept} > ${prog} ${blockName}`);
       }
 
+      // 2. Cross-role email conflict check (users table)
+      // Prevent creating student records that reuse teacher/admin emails.
+      if (dataToUse.email && dataToUse.email.trim()) {
+        const normalizedEmail = dataToUse.email.trim().toLowerCase();
+        const { data: existingUser, error: userLookupError } = await supabase
+          .from("users")
+          .select("id, role, first_name, last_name, email")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+
+        if (userLookupError) {
+          console.error("Users email conflict check error:", userLookupError);
+          throw new Error("Failed to validate email uniqueness. Please try again.");
+        }
+
+        if (existingUser) {
+          const existingRole = (existingUser.role || "").toLowerCase();
+          if (existingRole !== "student") {
+            throw new Error(
+              `Email is already used by a ${existingRole || "user"} account. Please use a different student email.`,
+            );
+          }
+          throw new Error("Email is already used by another student account.");
+        }
+      }
+
       let finalStudentData = { ...dataToUse, teacher_id: userData.user.id };
 
       if (blockId) {

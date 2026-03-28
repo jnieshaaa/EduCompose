@@ -44,14 +44,6 @@ interface AuthContextType {
   checkAuth: () => Promise<void>;
 }
 
-// PostgrestError type for Supabase errors
-interface PostgrestError {
-  message: string;
-  code?: string;
-  details?: string;
-  hint?: string;
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -70,6 +62,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+
+  const isNetworkDisconnectError = (maybeMessage?: unknown) => {
+    const message = typeof maybeMessage === "string" ? maybeMessage : undefined;
+    // Typical Supabase/browser messages when offline
+    if (!message) return false;
+    const normalized = message.toLowerCase();
+    return (
+      normalized.includes("failed to fetch") ||
+      normalized.includes("fetch failed") ||
+      normalized.includes("network request failed") ||
+      normalized.includes("err_internet_disconnected") ||
+      normalized.includes("internet disconnected") ||
+      normalized.includes("networkerror") ||
+      normalized.includes("timeout") // sometimes happens during network loss
+    );
+  };
 
   // Fetch user data from the users table with timeout
   const fetchUserFromTable = async (
@@ -99,18 +107,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // If timeout occurred or error
       if (result.error || !result.data) {
-        // Don't log as error if it's just that the record doesn't exist yet or timeout
-        const isPostgrestError =
-          result.error && "code" in (result.error as PostgrestError);
-        if (
-          result.error?.message !== "Timeout" &&
-          (!isPostgrestError ||
-            (result.error as PostgrestError).code !== "PGRST116")
-        ) {
-          console.warn(
-            "User not found in users table, using metadata fallback",
-          );
-        }
         return null;
       }
 
@@ -211,9 +207,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } = await supabase.auth.getSession();
 
       if (sessionError || !session || !session.user) {
+        // If this is just a temporary network disconnect, keep the current auth state.
+        if (sessionError && isNetworkDisconnectError(sessionError.message)) {
+          console.warn(
+            "Network error verifying session, skipping sign-out:",
+            sessionError.message,
+          );
+          setIsLoading(false);
+          return;
+        }
+
         // Clear all auth data if session is invalid or refresh failed
         if (sessionError) {
-          console.warn("Session refresh or retrieval failed, signing out:", sessionError.message);
+          console.warn(
+            "Session refresh or retrieval failed, signing out:",
+            sessionError.message,
+          );
           try {
             await supabase.auth.signOut();
           } catch {
@@ -252,9 +261,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (userError || !currentUser) {
+        // If this is just a temporary network disconnect, do not sign the user out.
+        if (userError?.message && isNetworkDisconnectError(userError.message)) {
+          console.warn(
+            "Network error verifying user, skipping sign-out:",
+            userError.message,
+          );
+          setIsLoading(false);
+          return;
+        }
+
         // Session expired or invalid, clear everything
         if (userError?.message !== "Timeout") {
-          console.warn("User verification failed, signing out:", userError?.message);
+          console.warn(
+            "User verification failed, signing out:",
+            userError?.message,
+          );
           try {
             await supabase.auth.signOut();
           } catch {
@@ -275,7 +297,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);
-      // On any error, clear auth and sign out
+
+      // On network errors, don't sign out.
+      const maybeMessage =
+        typeof (error as { message?: string }).message === "string"
+          ? (error as { message?: string }).message
+          : undefined;
+      if (isNetworkDisconnectError(maybeMessage)) {
+        console.warn(
+          "Network/auth fetch failure detected, keeping current auth state",
+        );
+        return;
+      }
+
+      // On any other error, clear auth and sign out
       try {
         await supabase.auth.signOut();
       } catch {

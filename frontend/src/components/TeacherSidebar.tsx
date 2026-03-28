@@ -3,7 +3,6 @@ import {
   Home,
   // FileText,
   Layers,
-  Info,
   BookOpen,
   Target,
   Zap,
@@ -13,6 +12,8 @@ import {
   Settings,
   GitCompare,
   Archive,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -168,13 +169,13 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen relative">
       <aside
         className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
         style={{
           width: isSidebarOpen ? (isTablet ? "240px" : "280px") : isDesktop ? "80px" : "0px",
           transition: "width 0.2s",
-          overflow: isSidebarOpen ? "hidden" : "visible",
+          overflow: "visible",
         }}
       >
         {/* Header */}
@@ -219,10 +220,9 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-4 overflow-y-auto scrollbar-hide">
           <ul
             className="space-y-2"
-            style={{ overflow: isSidebarOpen ? "hidden" : "visible" }}
           >
             {menuItems.map((item) => {
               const isActive = isItemActive(item.path);
@@ -268,39 +268,20 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
           </ul>
         </nav>
 
-        {/* Info Tab at Bottom */}
-        <div className="p-4 border-t border-white">
-          <Tooltip
-            content="About EduCompose"
-            position="right"
-            delay={200}
-            disabled={isSidebarOpen}
+        {/* Expand/Collapse Toggle Overlay Button (Desktop/Tablet) */}
+        {(isDesktop || isTablet) && (
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 hover:text-primary-600 transition-colors focus:outline-none rounded-full cursor-pointer"
+            aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
-            <button
-              onClick={() => setIsInfoModalOpen(true)}
-              className="btn-fade group w-full flex items-center rounded-lg bg-primary text-white hover:text-support-superlight"
-            >
-              <div className="flex items-center w-full flex-1">
-                <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                  <Info className="w-5 h-5" />
-                </span>
-                <AnimatePresence>
-                  {isSidebarOpen && (
-                    <motion.span
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={textVariants}
-                      className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                    >
-                      About EduCompose
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-            </button>
-          </Tooltip>
-        </div>
+            {isSidebarOpen ? (
+              <ChevronLeft className="w-5 h-5" />
+            ) : (
+              <ChevronRight className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </aside>
 
       {/* Mobile Sidebar */}

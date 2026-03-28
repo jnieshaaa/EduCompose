@@ -16,6 +16,7 @@ import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
+import AlertModal, { type AlertType } from "../ui/AlertModal";
 import {
   Table,
   TableBody,
@@ -78,7 +79,26 @@ export function StudentsView({
     string | null
   >(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    type: AlertType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    title: undefined,
+    message: "",
+  });
   const navigate = useNavigate();
+
+  const showAlert = (
+    type: AlertType,
+    message: string,
+    title?: string,
+  ) => {
+    setAlertState({ isOpen: true, type, title, message });
+  };
 
   // Check which students have been graded
   useEffect(() => {
@@ -125,16 +145,20 @@ export function StudentsView({
       );
 
       if (result.success) {
-        alert("Essay deleted successfully!");
+        showAlert("success", "Essay deleted successfully.");
         setIsDeleteModalOpen(false);
         setSelectedStudentForDelete(null);
         if (onRefresh) await onRefresh();
       } else {
-        alert(`Failed to delete essay: ${result.error || "Unknown error"}`);
+        showAlert(
+          "error",
+          `Failed to delete essay: ${result.error || "Unknown error"}`,
+          "Delete Failed",
+        );
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete essay. Please try again.");
+      showAlert("error", "Failed to delete essay. Please try again.", "Delete Failed");
     } finally {
       setIsDeleting(false);
     }
@@ -149,18 +173,27 @@ export function StudentsView({
         activity.title,
       );
       if (result.success) {
-        alert(
+        showAlert(
+          "success",
           "Notification sent to student allowing resubmission or reupload.",
         );
         if (onRefresh) {
           await onRefresh();
         }
       } else {
-        alert(`Failed to send notification: ${result.error}`);
+        showAlert(
+          "error",
+          `Failed to send notification: ${result.error}`,
+          "Notification Failed",
+        );
       }
     } catch (error) {
       console.error("Allow resubmission error:", error);
-      alert("An error occurred while sending the notification.");
+      showAlert(
+        "error",
+        "An error occurred while sending the notification.",
+        "Notification Failed",
+      );
     } finally {
       setIsAllowingResubmission(null);
     }
@@ -181,11 +214,12 @@ export function StudentsView({
         (s) => s.status === "submitted" && !gradedStudents.has(s.id),
       );
       if (allSubmitted.length > 0) {
-        alert(
+        showAlert(
+          "warning",
           `No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`,
         );
       } else {
-        alert("No pending essays to grade.");
+        showAlert("info", "No pending essays to grade.");
       }
       return;
     }
@@ -242,7 +276,7 @@ export function StudentsView({
 
     if (onRefresh) await onRefresh();
     setIsGradingAll(false);
-    alert("Batch grading process completed.");
+    showAlert("success", "Batch grading process completed.");
   };
 
   return (
@@ -485,7 +519,8 @@ export function StudentsView({
                               });
                               setIsViewEssayModalOpen(true);
                             } else {
-                              alert(
+                              showAlert(
+                                "info",
                                 "This student has not submitted an essay yet.",
                               );
                             }
@@ -513,7 +548,7 @@ export function StudentsView({
                                   activity.id,
                                 );
                                 if (analysisData) {
-                                  navigate(buildSecureUrl('/AnalysisResults', {
+                                  navigate(buildSecureUrl('/Teacher/AnalysisResults', {
                                     s: student.id,
                                     a: activity.id,
                                   }), {
@@ -527,7 +562,11 @@ export function StudentsView({
                                     },
                                   });
                                 } else {
-                                  alert("Failed to load analysis results");
+                                  showAlert(
+                                    "error",
+                                    "Failed to load analysis results.",
+                                    "Analysis Error",
+                                  );
                                 }
                               } else {
                                 setGradingStudents((prev) => {
@@ -569,14 +608,17 @@ export function StudentsView({
                                   });
                                   if (onRefresh) await onRefresh();
                                 } else {
-                                  alert(
+                                  showAlert(
+                                    "error",
                                     `Failed to grade essay: ${result.error}`,
+                                    "Grading Failed",
                                   );
                                   if (onRefresh) await onRefresh();
                                 }
                               }
                             } else {
-                              alert(
+                              showAlert(
+                                "info",
                                 "This student has not submitted an essay yet.",
                               );
                             }
@@ -613,7 +655,8 @@ export function StudentsView({
                               });
                               setIsDeleteModalOpen(true);
                             } else {
-                              alert(
+                              showAlert(
+                                "info",
                                 "This student has not submitted an essay yet.",
                               );
                             }
@@ -696,6 +739,16 @@ export function StudentsView({
           </div>
         </div>
       </Modal>
+
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={() =>
+          setAlertState((prev) => ({ ...prev, isOpen: false }))
+        }
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+      />
     </div>
   );
 }

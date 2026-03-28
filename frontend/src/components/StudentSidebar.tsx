@@ -22,9 +22,12 @@ import {
   BookOpen, // Icon for My Classes
   Upload, // Icon for Essay Submission in Info Modal
   MessageSquare, // New icon for AI Feedback
-  TrendingUp, // New icon for Progress & Analytics
+  TrendingUp,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +35,7 @@ import { supabase } from "../lib/supabaseClient";
 import Tooltip from "./ui/Tooltip";
 import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
+import { readSecureParams } from "../utils/secureUrl";
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -51,6 +55,32 @@ interface EnrolledClass {
   instructor: string;
 }
 
+interface TeacherUserJoin {
+  first_name?: string | null;
+  last_name?: string | null;
+  title?: string | null;
+  nickname?: string | null;
+}
+
+interface CourseJoin {
+  course_code?: string | null;
+  course_title?: string | null;
+}
+
+interface TeacherCourseLoadJoin {
+  id?: string | null;
+  courses?: CourseJoin | null;
+  users?: TeacherUserJoin | null;
+}
+
+interface TeacherProgramLoadJoin {
+  teacher_course_loads?: TeacherCourseLoadJoin | TeacherCourseLoadJoin[] | null;
+}
+
+interface BlockJoin {
+  teacher_program_loads?: TeacherProgramLoadJoin | TeacherProgramLoadJoin[] | null;
+}
+
 // Renamed component from ClientSidebar to StudentSidebar
 const StudentSidebar: React.FC<StudentSidebarProps> = ({
   isSidebarOpen,
@@ -64,6 +94,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
   const navigate = useNavigate();
   const location = useLocation();
+  const secureParams = readSecureParams(location.search);
 
   const [enrolledClasses, setEnrolledClasses] = useState<EnrolledClass[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
@@ -132,27 +163,27 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         // Flatten the data with array support for joins
         const flattenedClasses: EnrolledClass[] = [];
         enrollments?.forEach(enrollment => {
-          const block = enrollment.blocks as any;
+          const block = enrollment.blocks as BlockJoin | null;
           if (!block) return;
 
           // Supabase might return single object or array depending on relationship
           const tplData = block.teacher_program_loads;
           const tpls = Array.isArray(tplData) ? tplData : (tplData ? [tplData] : []);
 
-          tpls.forEach((tpl: any) => {
+          tpls.forEach((tpl: TeacherProgramLoadJoin) => {
             const tclData = tpl.teacher_course_loads;
             const tcls = Array.isArray(tclData) ? tclData : (tclData ? [tclData] : []);
 
-            tcls.forEach((tcl: any) => {
+            tcls.forEach((tcl: TeacherCourseLoadJoin) => {
               if (tcl && tcl.courses) {
                 flattenedClasses.push({
-                  id: tcl.id,
-                  code: tcl.courses.course_code,
-                  name: tcl.courses.course_title,
+                  id: tcl.id || "",
+                  code: tcl.courses.course_code || "N/A",
+                  name: tcl.courses.course_title || "Untitled Course",
                   instructor: tcl.users 
                     ? (tcl.users.title && tcl.users.nickname 
                       ? `${tcl.users.title} ${tcl.users.nickname}` 
-                      : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name}` : tcl.users.last_name))
+                      : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name || ""}` : (tcl.users.last_name || "TBA")))
                     : "TBA"
                 });
               }
@@ -214,8 +245,22 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
     // Auto-expand classes dropdown if on a class detail page
     if (location.pathname.startsWith('/Student/Classes/')) {
       setIsClassesOpen(true);
+    } else {
+      // On /Student/Submit the class id is stored in the secure ref token.
+      // Auto-expand so the highlighted class is visible.
+      if (secureParams?.classId) setIsClassesOpen(true);
     }
-  }, [location.pathname]);
+  }, [location.pathname, secureParams?.classId]);
+
+  const activeClassId = (() => {
+    // Prefer class id in the URL path: /Student/Classes/<id>
+    if (location.pathname.startsWith("/Student/Classes/")) {
+      const parts = location.pathname.split("/").filter(Boolean);
+      return parts[parts.length - 1] || null;
+    }
+    // Otherwise, fall back to the secure ref token (e.g., /Student/Submit?ref=...)
+    return secureParams?.classId ?? null;
+  })();
 
   const handleItemClick = (path: string) => {
     navigate(path);
@@ -277,7 +322,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           x: (!isDesktop && !isSidebarOpen) ? -280 : 0,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`fixed lg:relative h-full z-50 flex flex-col border-r border-white/10 bg-primary shadow-2xl lg:shadow-none overflow-hidden`}
+        className={`fixed lg:relative h-full z-50 flex flex-col border-r border-white/10 bg-primary shadow-2xl lg:shadow-none`}
       >
         {/* Header */}
         <div className='flex items-center h-16 border-b border-white/10 p-2.5 relative flex-shrink-0'>
@@ -411,7 +456,9 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                     {enrolledClasses.length > 0 ? (
                       enrolledClasses.map((classItem) => {
                         const classPath = `/Student/Classes/${classItem.id}`;
-                        const isClassActive = activePath === classPath;
+                        const isClassActive =
+                          (activeClassId && classItem.id === activeClassId) ||
+                          activePath === classPath;
                         return (
                           <li key={classItem.id}>
                             <button
@@ -507,6 +554,21 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
             </button>
           </Tooltip>
         </div>
+
+        {/* Expand/Collapse Toggle Overlay Button (Desktop/Tablet) */}
+        {(isDesktop || isTablet) && (
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 hover:text-primary-600 transition-colors focus:outline-none rounded-full cursor-pointer"
+            aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            {isSidebarOpen ? (
+              <ChevronLeft className="w-5 h-5" />
+            ) : (
+              <ChevronRight className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </motion.aside>
 
       {/* Info Modal */}

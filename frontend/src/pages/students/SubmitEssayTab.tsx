@@ -234,10 +234,57 @@ export function SubmitEssayTab() {
     return text.trim().split(/\s+/).filter(w => w.length > 0).length;
   };
 
+  // Lightweight client-side quality filter to block obvious gibberish submissions.
+  // Backend still performs final validation, this just gives immediate feedback to students.
+  const validateTextEssayQuality = (text: string): string | null => {
+    const cleaned = text.trim();
+    const tokens = cleaned.split(/\s+/).filter(Boolean);
+    const alphaTokens = tokens.filter((t) => /[a-zA-Z]/.test(t));
+    const uniqueAlpha = new Set(alphaTokens.map((t) => t.toLowerCase()));
+    const alphaChars = alphaTokens.join("").replace(/[^a-zA-Z]/g, "");
+    const sentenceParts = cleaned
+      .split(/[.!?]+|\n+/)
+      .map((s) => s.trim())
+      .filter((s) => s.replace(/[^a-zA-Z]/g, "").length >= 3);
+
+    const tokenCount = tokens.length;
+    const alphaRatio = tokenCount > 0 ? alphaTokens.length / tokenCount : 0;
+    const lexicalDiversity =
+      alphaTokens.length > 0 ? uniqueAlpha.size / alphaTokens.length : 0;
+    const avgWordLength =
+      alphaTokens.length > 0 ? alphaChars.length / alphaTokens.length : 0;
+
+    if (tokenCount < (activity?.minWordCount || 150)) {
+      return `Your essay is too short. Minimum is ${activity?.minWordCount || 150} words.`;
+    }
+    if (sentenceParts.length < 2) {
+      return "Please write at least 2 complete sentences with proper punctuation.";
+    }
+    if (alphaRatio < 0.6) {
+      return "Your submission appears to contain too many invalid fragments. Please use meaningful words and sentences.";
+    }
+    if (lexicalDiversity < 0.12) {
+      return "Your submission repeats words too much. Please provide a complete, meaningful essay.";
+    }
+    if (avgWordLength < 2.5) {
+      return "Your submission appears to contain very short fragments. Please write complete words and sentences.";
+    }
+
+    return null;
+  };
+
   const handleSubmit = async () => {
     if (!studentId || !activityIdParam) return;
     if (uploadMode === 'text' && !essayContent.trim()) return;
     if (uploadMode === 'file' && !selectedFile) return;
+
+    if (uploadMode === 'text') {
+      const qualityError = validateTextEssayQuality(essayContent);
+      if (qualityError) {
+        alert(qualityError);
+        return;
+      }
+    }
 
     try {
       setLoading(true);
@@ -255,13 +302,7 @@ export function SubmitEssayTab() {
         if (uploadError) throw uploadError;
       }
 
-      console.log("[handleSubmit] Submitting essay:", {
-        studentId,
-        activityId: activityIdParam,
-        blockId: classId,
-        teacherId: activity?.teacherId,
-        uploadMode
-      });
+
 
       const { error: submitError } = await supabase
         .from('essays')
@@ -281,7 +322,7 @@ export function SubmitEssayTab() {
         throw submitError;
       }
 
-      console.log("[handleSubmit] Insert successful");
+
 
       setIsSubmitted(true);
       setSubmissionDate(new Date().toLocaleString());
@@ -292,7 +333,7 @@ export function SubmitEssayTab() {
 
       // Notify the teacher
       if (activity?.teacherId) {
-        console.log("[handleSubmit] Notifying teacher:", activity.teacherId);
+
         const studentName = user?.nickname || user?.full_name || "A student";
         const { data: latestEssay } = await supabase
           .from('essays')
@@ -320,8 +361,6 @@ export function SubmitEssayTab() {
 
         if (notifyError) {
           console.error("[handleSubmit] Notification error:", notifyError);
-        } else {
-          console.log("[handleSubmit] Notification successful");
         }
       } else {
         console.warn("[handleSubmit] No teacherId found, skipping notification");
@@ -329,6 +368,9 @@ export function SubmitEssayTab() {
     } catch (err) {
       console.error("Submission error:", err);
       alert(getErrorMessage(err));
+    } finally {
+      // Always clear loading state so the page does not get stuck
+      // after a successful submission.
       setLoading(false);
     }
   };
@@ -355,9 +397,10 @@ export function SubmitEssayTab() {
 
       setIsResubmitRequested(true);
       alert("Resubmission request sent to your teacher.");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error requesting resubmission:", err);
-      alert("Failed to send request: " + err.message);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      alert("Failed to send request: " + message);
     } finally {
       setRequestingResubmission(false);
     }
@@ -598,10 +641,10 @@ export function SubmitEssayTab() {
                         <Button 
                           variant="outline" 
                           className="mt-6 border-primary/30 text-primary hover:bg-primary/5"
-                          onClick={() => navigate(buildSecureUrl('/AnalysisResults', { s: String(studentId), a: activityIdParam }))}
+                          onClick={() => navigate('/Student/Feedback')}
                         >
                           <MessageSquare className="w-4 h-4 mr-2" />
-                          View Detailed Feedback
+                          View AI feedback
                         </Button>
                       </div>
                     </Card>

@@ -17,7 +17,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl ?? "http://localhost:54321",
-  supabaseAnonKey ?? "public-anon-key-not-configured"
+  supabaseAnonKey ?? "public-anon-key-not-configured",
+  {
+    auth: {
+      storageKey: "educompose-auth-storage"
+    }
+  }
 );
 
 // Admin client for user management in the frontend as requested

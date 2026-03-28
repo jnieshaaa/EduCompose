@@ -1,7 +1,7 @@
 // App.tsx
 
-import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 // Import Teacher Layout and Tabs
 import TeacherLayout from "./layout/TeacherLayout.tsx";
 import { DashboardTab } from "./pages/teachers/DashboardTab.tsx";
@@ -47,7 +47,7 @@ import AssignmentManagement from "./pages/AssignmentManagement"; // Kept, but mo
 import Gradebook from "./pages/Gradebook"; // Kept, but moved under /Teacher
 import EssayActivity from "./pages/EssayActivity.tsx"; // Kept, but moved under /Teacher
 import SectionsList from "./pages/SectionsList"; // Kept, but moved under /Teacher
-import AnalysisResults from "./pages/AnalysisResults"; // General route (no layout)
+import AnalysisResults from "./pages/AnalysisResults";
 // import Students from "./pages/Students"; // Legacy, kept for reference
 // import Settings from "./pages/Settings"; // Legacy, kept for reference
 import { EssayManagementTab } from "./pages/teachers/EssayManagementTab.tsx";
@@ -60,7 +60,6 @@ import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 // import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
-import AnalyzeEssay from "./pages/AnalyzeEssay";
 import About from "./pages/About.tsx";
 import Login from "./pages/students/StudentLogin.tsx";
 import EmailConfirmation from "./pages/EmailConfirmation.tsx";
@@ -71,9 +70,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OnboardingCheck from "./components/OnboardingCheck";
 import { PremiumLoader } from "./components/ui/PremiumLoader";
 
+/** Preserves ?ref=… when moving analysis links behind teacher auth */
+const LegacyAnalysisResultsRedirect: React.FC = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/Teacher/AnalysisResults${search}`} replace />;
+};
+
 const AppContent: React.FC = () => {
-  const location = useLocation();
-  const { loading, setLoading } = useLoader();
+  const { loading } = useLoader();
 
   // useEffect(() => {
   //   const modalShown = sessionStorage.getItem("introModalShown");
@@ -83,12 +87,7 @@ const AppContent: React.FC = () => {
   //   }
   // }, [location.pathname]);
 
-  // Trigger loader on route change
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => setLoading(false), 800); // simulate page load
-    return () => clearTimeout(timer);
-  }, [location.pathname, setLoading]);
+
 
   // const handleClose = () => setShowIntro(false);
 
@@ -102,12 +101,14 @@ const AppContent: React.FC = () => {
         {/* 1. General Routes (No Layout / Public Access) */}
         {/* ======================================================= */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/AnalyzeEssay" element={<AnalyzeEssay />} />
+        {/* Legacy public analyzer removed; free tier no longer exposed */}
+        <Route path="/AnalyzeEssay" element={<Navigate to="/" replace />} />
         <Route path="/About" element={<About />} />
         <Route path="/Login" element={<Login />} />
         <Route path="/Student/Login" element={<Login />} />
         <Route path="/auth/confirm" element={<EmailConfirmation />} />
-        <Route path="/AnalysisResults" element={<AnalysisResults />} />
+        {/* Old share links → teacher-only analysis page (requires teacher login) */}
+        <Route path="/AnalysisResults" element={<LegacyAnalysisResultsRedirect />} />
 
         {/* Onboarding Routes */}
         <Route
@@ -134,8 +135,6 @@ const AppContent: React.FC = () => {
             </ProtectedRoute>
           }
         />
-
-        <Route path="*" element={<ErrorPage code={404} />} />
 
         {/* ======================================================= */}
         {/* 2. Teacher Routes (Protected, uses TeacherLayout) */}
@@ -165,6 +164,7 @@ const AppContent: React.FC = () => {
           <Route path="Sections" element={<SectionsTab />} />
           <Route path="Archive" element={<ArchivePage />} />
           <Route path="Notifications" element={<TeacherNotificationsTab />} />
+          <Route path="AnalysisResults" element={<AnalysisResults />} />
 
           {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
           <Route path="Dashboard_v2" element={<Dashboard_v2 />} />
@@ -236,6 +236,8 @@ const AppContent: React.FC = () => {
           {/* Redirect to Dashboard if hitting /Admin without a sub-path */}
           <Route index element={<AdminDashboardTab />} />
         </Route>
+
+        <Route path="*" element={<ErrorPage code={404} />} />
       </Routes>
 
       {/* Global Premium Loader */}
