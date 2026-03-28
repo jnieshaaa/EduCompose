@@ -18,6 +18,8 @@ interface ButtonProps {
   loading?: boolean;
   className?: string;
   type?: "button" | "submit" | "reset";
+  /** Associates a submit button with a form by id (button outside the form element). */
+  form?: string;
   asChild?: boolean;
 }
 
