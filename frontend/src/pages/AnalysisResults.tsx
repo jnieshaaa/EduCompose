@@ -638,7 +638,6 @@ const AnalysisResults: React.FC = () => {
     };
 
     loadSavedAIDetection();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [essayId, studentId, activityId, aiDetectionResult, aiDetectionStorageKey]);
 
   // Fetch duplicate essays for the activity

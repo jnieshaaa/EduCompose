@@ -13,11 +13,10 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  ScatterChart,
-  Scatter,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
-  ZAxis,
   CartesianGrid,
   Tooltip,
 } from "recharts";
@@ -25,7 +24,11 @@ import Badge from "../../components/ui/Badge";
 import Input from "../../components/ui/Input";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherUUID } from "../../services/rubricService";
-import { fetchCourses, fetchSections } from "../../services/activityService";
+import {
+  fetchCourses,
+  fetchSections,
+  fetchTeacherProgramLoads,
+} from "../../services/activityService";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -152,7 +155,11 @@ interface DashboardData {
   }>;
   activityFilterCourses: { id: string; label: string }[];
   activityFilterBlocks: { id: string; name: string; courseId: string }[];
-  /** Evaluated essays for performance trend chart (filtered in UI) */
+  /** Degree programs (abbr / name) the teacher teaches — for performance filters */
+  performanceFilterPrograms: { id: string; label: string }[];
+  /** Blocks with program_id for performance filters (e.g. 1A, 1B) */
+  performanceFilterBlocks: { id: string; name: string; programId: string }[];
+  /** Evaluated essays for performance chart (filtered in UI) */
   performanceEssays: Array<{
     submitted_at: string;
     overall_score: number | null;
@@ -162,6 +169,9 @@ interface DashboardData {
     studentName: string;
     courseIds: string[];
     blockIds: string[];
+    activity_id: string;
+    activity_title: string;
+    program_id: string;
   }>;
   alerts: Array<{
     type: "warning" | "error" | "info";
@@ -170,85 +180,112 @@ interface DashboardData {
   }>;
 }
 
-type PerfScatterPoint = {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  z: number;
-  firstScore: number;
-  latestScore: number;
-  improvement: number;
-  essayCount: number;
-  studentNamesLine?: string;
-};
+const PERF_LINE_COLORS = [
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#ca8a04",
+  "#9333ea",
+  "#0891b2",
+  "#ea580c",
+  "#db2777",
+  "#4f46e5",
+  "#0d9488",
+  "#b45309",
+  "#be123c",
+];
 
-/** One circle per block or per student; x = score change, y = latest score, bubble size = essays. */
-const buildPerformanceScatterPoints = (
-  rows: DashboardData["performanceEssays"],
+type PerfLineSeries = { dataKey: string; label: string; color: string };
+
+/** X = activities (titles), Y = score; one colored line per student or per block. */
+const buildPerformanceActivityLines = (
+  essays: DashboardData["performanceEssays"],
   mode: "blocks" | "students",
   blockNameById: Map<string, string>,
-): PerfScatterPoint[] => {
-  const groups = new Map<
-    string,
-    DashboardData["performanceEssays"][number][]
-  >();
-  for (const r of rows) {
-    const key =
-      mode === "students"
-        ? r.student_id
-        : (r.blockIds[0] ?? "__unassigned");
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(r);
+): { rows: Record<string, unknown>[]; series: PerfLineSeries[] } => {
+  if (essays.length === 0) return { rows: [], series: [] };
+
+  const actOrder = new Map<string, string>();
+  for (const e of essays) {
+    if (!actOrder.has(e.activity_id)) {
+      actOrder.set(e.activity_id, e.activity_title || "Activity");
+    }
   }
+  const activityEntries = [...actOrder.entries()].sort((a, b) =>
+    a[1].localeCompare(b[1]),
+  );
 
-  const points: PerfScatterPoint[] = [];
-
-  for (const [key, list] of groups) {
-    const sorted = [...list].sort(
+  if (mode === "students") {
+    const studentIds = [...new Set(essays.map((e) => e.student_id))].sort();
+    const idToName = new Map<string, string>();
+    for (const e of essays) {
+      idToName.set(e.student_id, e.studentName);
+    }
+    const latestByCell = new Map<string, number>();
+    const chronological = [...essays].sort(
       (a, b) =>
         new Date(a.submitted_at).getTime() -
         new Date(b.submitted_at).getTime(),
     );
-    const scores = sorted
-      .map((e) => Number(e.overall_score))
-      .filter((v) => !Number.isNaN(v));
-    if (scores.length === 0) continue;
-
-    const firstScore = scores[0];
-    const latestScore = scores[scores.length - 1];
-    const improvement = latestScore - firstScore;
-
-    let name: string;
-    let studentNamesLine: string | undefined;
-    if (mode === "students") {
-      name = sorted[0]?.studentName ?? `Student ${key}`;
-    } else {
-      name =
-        key === "__unassigned"
-          ? "Unassigned block"
-          : (blockNameById.get(key) ?? `Block ${key.slice(0, 8)}…`);
-      const uniqueNames = [
-        ...new Set(sorted.map((e) => e.studentName)),
-      ].sort((a, b) => a.localeCompare(b));
-      studentNamesLine = uniqueNames.join(", ");
+    for (const e of chronological) {
+      const sc = Number(e.overall_score);
+      if (Number.isNaN(sc)) continue;
+      latestByCell.set(`${e.activity_id}|${e.student_id}`, sc);
     }
-
-    points.push({
-      id: key,
-      name,
-      x: Math.round(improvement * 10) / 10,
-      y: Math.round(latestScore * 10) / 10,
-      z: scores.length,
-      firstScore: Math.round(firstScore * 10) / 10,
-      latestScore: Math.round(latestScore * 10) / 10,
-      improvement: Math.round(improvement * 10) / 10,
-      essayCount: scores.length,
-      studentNamesLine,
+    const rows = activityEntries.map(([actId, actTitle]) => {
+      const row: Record<string, unknown> = {
+        activityTitle: actTitle,
+        activityId: actId,
+      };
+      for (const sid of studentIds) {
+        const v = latestByCell.get(`${actId}|${sid}`);
+        row[`s_${sid}`] = v === undefined ? null : v;
+      }
+      return row;
     });
+    const series = studentIds.map((sid, i) => ({
+      dataKey: `s_${sid}`,
+      label: idToName.get(sid) ?? sid,
+      color: PERF_LINE_COLORS[i % PERF_LINE_COLORS.length],
+    }));
+    return { rows, series };
   }
 
-  return points.sort((a, b) => a.name.localeCompare(b.name));
+  const blockKeys = [
+    ...new Set(essays.map((e) => e.blockIds[0] ?? "__na")),
+  ].sort();
+  const cell = new Map<string, { sum: number; n: number }>();
+  for (const e of essays) {
+    const bk = e.blockIds[0] ?? "__na";
+    const sc = Number(e.overall_score);
+    if (Number.isNaN(sc)) continue;
+    const k = `${e.activity_id}|${bk}`;
+    const cur = cell.get(k) ?? { sum: 0, n: 0 };
+    cur.sum += sc;
+    cur.n += 1;
+    cell.set(k, cur);
+  }
+  const rows = activityEntries.map(([actId, actTitle]) => {
+    const row: Record<string, unknown> = {
+      activityTitle: actTitle,
+      activityId: actId,
+    };
+    for (const bk of blockKeys) {
+      const agg = cell.get(`${actId}|${bk}`);
+      row[`b_${bk}`] =
+        agg && agg.n > 0 ? Math.round((agg.sum / agg.n) * 10) / 10 : null;
+    }
+    return row;
+  });
+  const series = blockKeys.map((bk, i) => ({
+    dataKey: `b_${bk}`,
+    label:
+      bk === "__na"
+        ? "Unassigned"
+        : blockNameById.get(bk) ?? `Block ${bk.slice(0, 6)}…`,
+    color: PERF_LINE_COLORS[i % PERF_LINE_COLORS.length],
+  }));
+  return { rows, series };
 };
 
 // No longer using these legacy interfaces
@@ -292,7 +329,7 @@ export function DashboardTab() {
   const [activityBlockFilter, setActivityBlockFilter] =
     useState<string>("all");
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
-  const [perfCourseFilter, setPerfCourseFilter] = useState<string>("all");
+  const [perfProgramFilter, setPerfProgramFilter] = useState<string>("all");
   const [perfBlockFilter, setPerfBlockFilter] = useState<string>("all");
   const [perfStudentFilter, setPerfStudentFilter] = useState<string>("all");
   const [perfChartMode, setPerfChartMode] = useState<"blocks" | "students">(
@@ -342,11 +379,11 @@ export function DashboardTab() {
 
   const perfBlockOptions = useMemo(() => {
     if (!data) return [];
-    if (perfCourseFilter === "all") return data.activityFilterBlocks;
-    return data.activityFilterBlocks.filter(
-      (b) => b.courseId === perfCourseFilter,
+    if (perfProgramFilter === "all") return data.performanceFilterBlocks;
+    return data.performanceFilterBlocks.filter(
+      (b) => b.programId === perfProgramFilter,
     );
-  }, [data, perfCourseFilter]);
+  }, [data, perfProgramFilter]);
 
   const perfStudentOptions = useMemo(() => {
     if (!data) return [];
@@ -360,12 +397,8 @@ export function DashboardTab() {
   const filteredPerformanceEssays = useMemo(() => {
     if (!data) return [];
     let rows = data.performanceEssays;
-    if (perfCourseFilter !== "all") {
-      rows = rows.filter(
-        (r) =>
-          r.courseIds.length === 0 ||
-          r.courseIds.includes(perfCourseFilter),
-      );
+    if (perfProgramFilter !== "all") {
+      rows = rows.filter((r) => r.program_id === perfProgramFilter);
     }
     if (perfBlockFilter !== "all") {
       rows = rows.filter(
@@ -377,39 +410,27 @@ export function DashboardTab() {
       rows = rows.filter((r) => r.student_id === perfStudentFilter);
     }
     return rows;
-  }, [data, perfCourseFilter, perfBlockFilter, perfStudentFilter]);
+  }, [data, perfProgramFilter, perfBlockFilter, perfStudentFilter]);
 
-  const perfScatterBlockNameMap = useMemo(() => {
+  const perfBlockNameById = useMemo(() => {
     if (!data) return new Map<string, string>();
-    return new Map(data.activityFilterBlocks.map((b) => [b.id, b.name]));
+    return new Map(
+      data.performanceFilterBlocks.map((b) => [b.id, b.name]),
+    );
   }, [data]);
 
-  const perfScatterPoints = useMemo(
+  const perfActivityChart = useMemo(
     () =>
-      buildPerformanceScatterPoints(
+      buildPerformanceActivityLines(
         filteredPerformanceEssays,
         perfChartMode,
-        perfScatterBlockNameMap,
+        perfBlockNameById,
       ),
-    [
-      filteredPerformanceEssays,
-      perfChartMode,
-      perfScatterBlockNameMap,
-    ],
+    [filteredPerformanceEssays, perfChartMode, perfBlockNameById],
   );
 
-  const perfScatterXDomain = useMemo((): [number, number] => {
-    if (perfScatterPoints.length === 0) return [-8, 8];
-    const xs = perfScatterPoints.map((p) => p.x);
-    const min = Math.min(...xs);
-    const max = Math.max(...xs);
-    const span = max - min;
-    const pad = span < 0.5 ? 6 : Math.max(3, span * 0.2);
-    return [min - pad, max + pad];
-  }, [perfScatterPoints]);
-
   const filtersNarrowPerformance =
-    perfCourseFilter !== "all" ||
+    perfProgramFilter !== "all" ||
     perfBlockFilter !== "all" ||
     perfStudentFilter !== "all";
 
@@ -500,7 +521,7 @@ export function DashboardTab() {
 
   useEffect(() => {
     setPerfBlockFilter("all");
-  }, [perfCourseFilter]);
+  }, [perfProgramFilter]);
 
   useEffect(() => {
     if (perfChartMode === "blocks") {
@@ -525,7 +546,7 @@ export function DashboardTab() {
         const { data: teacherActivities, error: activitiesError } =
           await supabase
             .from("essay_activities")
-            .select("id, course_id, block_id")
+            .select("id, course_id, block_id, title")
             .eq("teacher_id", teacherId);
 
         if (activitiesError) throw activitiesError;
@@ -534,6 +555,7 @@ export function DashboardTab() {
           id: string | number;
           course_id: unknown;
           block_id: unknown;
+          title?: string | null;
         };
 
         const typedTeacherActivities =
@@ -541,12 +563,14 @@ export function DashboardTab() {
 
         const activityMetaById = new Map<
           string,
-          { courseIds: string[]; blockIds: string[] }
+          { courseIds: string[]; blockIds: string[]; title: string }
         >();
         for (const a of typedTeacherActivities) {
+          const t = (a.title ?? "").trim();
           activityMetaById.set(String(a.id), {
             courseIds: normalizeIdList(a.course_id),
             blockIds: normalizeIdList(a.block_id),
+            title: t || "Activity",
           });
         }
 
@@ -559,6 +583,7 @@ export function DashboardTab() {
           allSections,
           essaysData,
           analysisResults,
+          teacherProgramLoads,
         ] = await Promise.all([
           fetchCourses(),
           fetchSections(),
@@ -591,7 +616,20 @@ export function DashboardTab() {
 
             return (data as AnalysisResultRow[] | null) || [];
           })(),
+          fetchTeacherProgramLoads(),
         ]);
+
+        const loadIdToProgramId = new Map(
+          teacherProgramLoads.map((l) => [l.id, l.program_id]),
+        );
+        const performanceFilterPrograms = [
+          ...new Map(
+            teacherProgramLoads.map((l) => [
+              l.program_id,
+              { id: l.program_id, label: l.program_name },
+            ]),
+          ).values(),
+        ].sort((a, b) => a.label.localeCompare(b.label));
 
         let courseIds = [
           ...new Set(
@@ -642,6 +680,11 @@ export function DashboardTab() {
         const teacherSections = allSections.filter((s) =>
           sectionIds.includes(s.id),
         );
+        const performanceFilterBlocks = teacherSections.map((s) => ({
+          id: s.id,
+          name: s.name,
+          programId: loadIdToProgramId.get(s.programLoadId) ?? "",
+        }));
 
         // Count unique students from enrollments
         const uniqueStudentIds = new Set(
@@ -764,6 +807,13 @@ export function DashboardTab() {
               essay.activity_id != null
                 ? activityMetaById.get(String(essay.activity_id))
                 : undefined;
+            const bid = meta?.blockIds[0];
+            const sec = bid
+              ? teacherSections.find((x) => x.id === bid)
+              : undefined;
+            const program_id = sec
+              ? loadIdToProgramId.get(sec.programLoadId) ?? ""
+              : "";
             return {
               submitted_at: essay.submitted_at,
               overall_score: essay.overall_score,
@@ -775,6 +825,9 @@ export function DashboardTab() {
                 `Student ${essay.student_id}`,
               courseIds: meta?.courseIds ?? [],
               blockIds: meta?.blockIds ?? [],
+              activity_id: String(essay.activity_id ?? ""),
+              activity_title: meta?.title ?? "Activity",
+              program_id,
             };
           });
 
@@ -911,6 +964,8 @@ export function DashboardTab() {
             name: s.name,
             courseId: s.courseId,
           })),
+          performanceFilterPrograms,
+          performanceFilterBlocks,
           performanceEssays,
           alerts,
         });
@@ -1061,16 +1116,17 @@ export function DashboardTab() {
             <p className="text-sm text-neutral-500 mt-0.5">
               <strong className="font-medium text-neutral-700">By block</strong>{" "}
               / <strong className="font-medium text-neutral-700">By student</strong>{" "}
-              chooses what each dot represents.{" "}
+              draws one colored line per block or per student. The horizontal
+              axis lists your activities; the vertical axis is score (%). Hover
+              a point to see who it is.{" "}
               <strong className="font-medium text-neutral-700">Program</strong>{" "}
-              limits which course the essays come from; use{" "}
+              (e.g. BSCS-DS, BSIT) scopes data;{" "}
               {perfChartMode === "blocks" ? (
                 <strong className="font-medium text-neutral-700">Block</strong>
               ) : (
                 <strong className="font-medium text-neutral-700">Student</strong>
               )}{" "}
-              below to focus on one section or one learner. Horizontal = score
-              change (first → latest essay); vertical = latest score.
+              narrows further.
             </p>
           </div>
           <Badge className="bg-primary/10 text-primary w-fit">AI-Powered</Badge>
@@ -1111,17 +1167,17 @@ export function DashboardTab() {
               Program
             </label>
             <p className="text-xs text-neutral-500 mb-1.5">
-              Scope essays to a course (always applies).
+              Degree programs you teach (e.g. BSCS-DS, BSIT)—not course codes.
             </p>
             <select
               className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-              value={perfCourseFilter}
-              onChange={(e) => setPerfCourseFilter(e.target.value)}
+              value={perfProgramFilter}
+              onChange={(e) => setPerfProgramFilter(e.target.value)}
             >
               <option value="all">All programs</option>
-              {data.activityFilterCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
+              {data.performanceFilterPrograms.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
                 </option>
               ))}
             </select>
@@ -1132,7 +1188,7 @@ export function DashboardTab() {
                 Block
               </label>
               <p className="text-xs text-neutral-500 mb-1.5">
-                Optional: one section only, or all blocks in the program above.
+                Sections for the program above (e.g. 1A, 1B)—or all.
               </p>
               <select
                 className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
@@ -1178,140 +1234,78 @@ export function DashboardTab() {
               {perfChartMode === "blocks" ? " or block" : " or student"}
               —or complete more evaluations.
             </div>
-          ) : perfScatterPoints.length === 0 ? (
+          ) : perfActivityChart.rows.length === 0 ||
+            perfActivityChart.series.length === 0 ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-neutral-500 px-4 text-center">
-              No chart points could be built from this data.
+              Not enough activity data to draw lines yet.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <ScatterChart
-                margin={{ top: 12, right: 20, bottom: 8, left: 8 }}
+            <ResponsiveContainer width="100%" height={380}>
+              <LineChart
+                data={perfActivityChart.rows}
+                margin={{ top: 8, right: 12, left: 4, bottom: 100 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
-                  type="number"
-                  dataKey="x"
-                  domain={perfScatterXDomain}
-                  tick={{ fontSize: 11, fill: "#6b7280" }}
-                  tickLine={false}
-                  label={{
-                    value: "Score change (latest − first, pts)",
-                    position: "bottom",
-                    offset: 0,
-                    style: { fill: "#6b7280", fontSize: 11 },
-                  }}
+                  dataKey="activityTitle"
+                  type="category"
+                  tick={{ fontSize: 10, fill: "#6b7280" }}
+                  interval={0}
+                  angle={-35}
+                  textAnchor="end"
+                  height={95}
                 />
                 <YAxis
-                  type="number"
-                  dataKey="y"
                   domain={[0, 100]}
                   tick={{ fontSize: 11, fill: "#6b7280" }}
-                  tickLine={false}
                   width={44}
                   label={{
-                    value: "Latest score %",
+                    value: "Score %",
                     angle: -90,
                     position: "insideLeft",
                     style: { fill: "#6b7280", fontSize: 11 },
                   }}
                 />
-                <ZAxis
-                  type="number"
-                  dataKey="z"
-                  domain={(() => {
-                    const zs = perfScatterPoints.map((p) => p.z);
-                    const lo = Math.min(...zs);
-                    const hi = Math.max(...zs);
-                    return lo === hi ? [Math.max(1, lo - 1), hi + 1] : [lo, hi];
-                  })()}
-                  range={[120, 700]}
-                />
                 <Tooltip
-                  cursor={{ strokeDasharray: "4 4" }}
-                  content={({ active, payload }) => {
+                  content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
-                    const row = payload[0].payload as PerfScatterPoint;
-                    const sign =
-                      row.improvement > 0
-                        ? "+"
-                        : row.improvement < 0
-                          ? ""
-                          : "";
                     return (
-                      <div className="max-w-xs rounded-rd border border-neutral-200 bg-white px-3 py-2 text-sm shadow-md">
-                        <p className="font-semibold text-neutral-900">
-                          {row.name}
+                      <div className="rounded-rd border border-neutral-200 bg-white px-3 py-2 text-sm shadow-md max-w-xs">
+                        <p className="font-semibold text-neutral-900 border-b border-neutral-100 pb-1 mb-1">
+                          {label}
                         </p>
-                        <p className="text-neutral-600 mt-1">
-                          Latest score:{" "}
-                          <span className="font-medium text-neutral-900">
-                            {row.latestScore}%
-                          </span>
-                        </p>
-                        <p className="text-neutral-600">
-                          Change (first → latest):{" "}
-                          <span className="font-medium text-neutral-900">
-                            {sign}
-                            {row.improvement} pts
-                          </span>{" "}
-                          <span className="text-neutral-500">
-                            (started {row.firstScore}%)
-                          </span>
-                        </p>
-                        <p className="text-xs text-neutral-500 mt-1">
-                          {row.essayCount} evaluated essay
-                          {row.essayCount !== 1 ? "s" : ""}
-                        </p>
-                        {perfChartMode === "blocks" &&
-                          row.studentNamesLine && (
-                            <p className="text-xs text-neutral-600 mt-2 border-t border-neutral-100 pt-2 leading-snug">
-                              <span className="font-medium text-neutral-800">
-                                Students:{" "}
-                              </span>
-                              {row.studentNamesLine}
-                            </p>
-                          )}
-                        {perfChartMode === "students" && (
-                          <p className="text-xs text-neutral-600 mt-2">
-                            Performance / improvement for this student within
-                            your current filters.
+                        {payload.map((item) => (
+                          <p
+                            key={String(item.dataKey)}
+                            className="text-neutral-800"
+                            style={{ color: item.color }}
+                          >
+                            <span className="font-medium">{item.name}</span>
+                            {": "}
+                            {item.value != null && item.value !== ""
+                              ? `${item.value}%`
+                              : "—"}
                           </p>
-                        )}
+                        ))}
                       </div>
                     );
                   }}
                 />
-                <Scatter
-                  name={
-                    perfChartMode === "blocks" ? "Blocks" : "Students"
-                  }
-                  data={perfScatterPoints}
-                  fill={
-                    perfChartMode === "blocks" ? "#dc2626" : "#2563eb"
-                  }
-                  stroke={
-                    perfChartMode === "blocks" ? "#b91c1c" : "#1d4ed8"
-                  }
-                  fillOpacity={0.78}
-                />
-              </ScatterChart>
+                {perfActivityChart.series.map((s) => (
+                  <Line
+                    key={s.dataKey}
+                    type="monotone"
+                    dataKey={s.dataKey}
+                    name={s.label}
+                    stroke={s.color}
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: s.color, strokeWidth: 0 }}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
-          )}
-          {perfScatterPoints.length > 0 && (
-            <p className="text-center text-xs text-neutral-500 mt-2">
-              <span
-                className={
-                  perfChartMode === "blocks"
-                    ? "font-medium text-red-600"
-                    : "font-medium text-blue-600"
-                }
-              >
-                ●
-              </span>{" "}
-              {perfChartMode === "blocks"
-                ? "Red — one dot per block"
-                : "Blue — one dot per student"}
-            </p>
           )}
         </div>
 

@@ -25,7 +25,8 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Teacher/CompareActivities": { label: "Compare Essays", icon: <GitCompare className="w-4 h-4" /> },
   "/Teacher/Essays": { label: "Submissions", icon: <FileText className="w-4 h-4" /> },
   "/Teacher/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
-  
+  "/Teacher/AnalysisResults": { label: "Analysis Results", icon: <FileText className="w-4 h-4" /> },
+
   // Other sections
   "/Teacher/Rubrics": { label: "Rubrics / Criteria", icon: <ClipboardCheck className="w-4 h-4" /> },
   "/Teacher/Metrics": { label: "Metrics", icon: <BarChart3 className="w-4 h-4" /> },
@@ -173,6 +174,42 @@ const Breadcrumb: React.FC = () => {
             });
           }
         }
+      } else if (pathname === "/Teacher/AnalysisResults") {
+        const activityId = getParam("activityId") || getParam("a");
+        const activityTitle = getParam("activityTitle");
+        const programSection = getParam("programSection") || getParam("courseSection");
+        const programName = getParam("programName") || getParam("courseName");
+        const studentName = getParam("studentName");
+
+        items.push({
+          label: "Activities",
+          path: "/Teacher/Activities",
+          icon: <BookOpen className="w-4 h-4" />,
+        });
+
+        if (activityId && activityTitle) {
+          items.push({
+            label: activityTitle,
+            path: buildSecureUrl("/Teacher/Activities", { activityId, activityTitle }),
+          });
+          if (programSection && programName) {
+            items.push({
+              label: `${programName} - ${programSection}`,
+              path: buildSecureUrl("/Teacher/Activities", {
+                activityId,
+                activityTitle,
+                programSection,
+                programName,
+              }),
+            });
+          }
+        }
+
+        items.push({
+          label: studentName ? `${studentName} Results` : "Analysis Results",
+          path: `${pathname}${location.search}`,
+          icon: <FileText className="w-4 h-4" />,
+        });
       } else if (pathname === "/Teacher/Archive") {
         const courseId = getParam("courseId");
         const courseCode = getParam("courseCode");
@@ -341,7 +378,11 @@ const Breadcrumb: React.FC = () => {
       if (pathname === "/Admin/Content") {
         const view = getParam("view");
         if (view) {
-          const labels: any = { programs: "Programs", activities: "Activities", rubrics: "Rubrics" };
+          const labels: Record<string, string> = {
+            programs: "Programs",
+            activities: "Activities",
+            rubrics: "Rubrics",
+          };
           items.push({
             label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
             path: `${pathname}?view=${view}`,
@@ -353,7 +394,10 @@ const Breadcrumb: React.FC = () => {
       if (pathname === "/Admin/Schools") {
         const view = getParam("view");
         if (view) {
-          const labels: any = { schools: "Institutional Hierarchy", courses: "Global Course Registry" };
+          const labels: Record<string, string> = {
+            schools: "Institutional Hierarchy",
+            courses: "Global Course Registry",
+          };
           items.push({
             label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
             path: `${pathname}?view=${view}`,

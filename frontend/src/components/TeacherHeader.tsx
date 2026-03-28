@@ -11,6 +11,7 @@ import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
 import { supabase } from "../lib/supabaseClient";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   fetchUserNotifications,
   markNotificationAsRead,
@@ -47,7 +48,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
   // Load and Subscribe to Notifications
   useEffect(() => {
-    let channel: any;
+    let channel: RealtimeChannel | undefined;
 
     const setupNotifications = async () => {
       const teacherUUID = await fetchTeacherUUID();
@@ -135,6 +136,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     "/Teacher/Metrics": "Metrics",
     "/Teacher/Settings": "Settings",
     "/Teacher/Notifications": "Notifications",
+    "/Teacher/AnalysisResults": "Analysis Results",
   };
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";

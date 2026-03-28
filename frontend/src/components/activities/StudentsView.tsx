@@ -551,6 +551,11 @@ export function StudentsView({
                                   navigate(buildSecureUrl('/Teacher/AnalysisResults', {
                                     s: student.id,
                                     a: activity.id,
+                                    activityId: activity.id,
+                                    activityTitle: activity.title,
+                                    programSection: courseSection,
+                                    programName: courseName,
+                                    studentName: student.name,
                                   }), {
                                     state: {
                                       analysis: analysisData.analysis,
