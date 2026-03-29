@@ -925,6 +925,23 @@ class EssayAnalysisService:
             logger.error(f"Unexpected error fetching rubric {rubric_id}: {e}")
             return None
 
-# Singleton instance
-essay_analysis_service = EssayAnalysisService()
+
+class _LazyEssayAnalysisServiceProxy:
+    """Defer full NLP stack until first analysis (importing this module must stay light for Railway)."""
+
+    __slots__ = ("_inst",)
+
+    def __init__(self) -> None:
+        self._inst: Optional[EssayAnalysisService] = None
+
+    def _get(self) -> EssayAnalysisService:
+        if self._inst is None:
+            self._inst = EssayAnalysisService()
+        return self._inst
+
+    def __getattr__(self, name: str):
+        return getattr(self._get(), name)
+
+
+essay_analysis_service = _LazyEssayAnalysisServiceProxy()
 

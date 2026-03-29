@@ -15,6 +15,7 @@ import tempfile
 import os
 import threading
 import warnings
+import importlib.util
 from typing import Dict, Any, Optional, List
 from io import BytesIO
 from PIL import Image, ImageEnhance, ImageFilter, ExifTags
@@ -40,12 +41,29 @@ except ImportError:
     PYPDF2_AVAILABLE = False
     logging.warning("PyPDF2 not available. Direct text extraction from PDFs will not work.")
 
-try:
-    import easyocr
-    EASYOCR_AVAILABLE = True
-except ImportError:
-    EASYOCR_AVAILABLE = False
-    logging.warning("easyocr not available. OCR will not work.")
+def _easyocr_spec_exists() -> bool:
+    """Cheap check: package on disk — avoids importing torch at app startup."""
+    return importlib.util.find_spec("easyocr") is not None
+
+
+_easyocr_module: Any = None  # lazy: None unchecked, False import failed, else module
+
+
+def _import_easyocr():
+    """Import easyocr only when raster OCR needs the local reader (heavy: PyTorch)."""
+    global _easyocr_module
+    if _easyocr_module is False:
+        return None
+    if _easyocr_module is None:
+        try:
+            import easyocr as _eo
+            _easyocr_module = _eo
+        except ImportError:
+            logging.warning("easyocr not available. OCR will not work.")
+            _easyocr_module = False
+            return None
+    return _easyocr_module
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +87,8 @@ class OCRService:
 
     def _ensure_reader(self) -> bool:
         """Load EasyOCR once, on demand. Returns True if reader is usable."""
-        if not EASYOCR_AVAILABLE:
+        easyocr = _import_easyocr()
+        if easyocr is None:
             return False
         if self.reader is not None:
             return True
@@ -109,10 +128,10 @@ class OCRService:
         if m == "hf":
             return hf_ocr_client.is_configured()
         if m == "local":
-            return EASYOCR_AVAILABLE
+            return _easyocr_spec_exists()
         if hf_ocr_client.is_configured():
             return True
-        if self._wants_local_easyocr() and EASYOCR_AVAILABLE:
+        if self._wants_local_easyocr() and _easyocr_spec_exists():
             return True
         return False
 
