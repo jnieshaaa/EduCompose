@@ -35,6 +35,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
+# Pre-download NLTK data (avoids runtime download + duplicate work on each deploy)
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
+
 # Pre-download EasyOCR models (standard English models)
 # This prevents the app from downloading them on first request
 RUN python -c "import easyocr; reader = easyocr.Reader(['en'], gpu=False)"

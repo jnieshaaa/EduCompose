@@ -1,16 +1,22 @@
 """
-OCR Service
-Extracts text from PDF files using EasyOCR
-Based on ocr.ipynb implementation
+OCR Service — PDF at image text extraction.
+
+PDF: PyPDF2 (text layer) muna; scanned PDF → raster → HF Inference (kung may token) o EasyOCR.
+Image: HF (kung naka-config) → EasyOCR.
+
+OCR_BACKEND: auto (HF kung may HF_API_TOKEN, saka EasyOCR) | hf | local
 """
 import logging
 import tempfile
 import os
+import threading
 import warnings
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from io import BytesIO
 from PIL import Image, ImageEnhance, ImageFilter, ExifTags
 import numpy as np
+
+from . import hf_ocr_client
 
 # Suppress known warnings from EasyOCR and PyTorch
 warnings.filterwarnings('ignore', category=RuntimeWarning, module='easyocr')
@@ -39,25 +45,86 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+def _ocr_backend_mode() -> str:
+    return os.getenv("OCR_BACKEND", "auto").strip().lower()
+
+
 class OCRService:
-    """
-    OCR service for extracting text from PDF files
-    Uses EasyOCR for text recognition
-    """
+    """PDF + image OCR: HF (optional API) at EasyOCR (lokal, lazy-loaded)."""
     
     def __init__(self):
+        # Lazy-init EasyOCR on first OCR request so Railway/small containers
+        # don't OOM at import time (PyTorch + reader is ~500MB+ RAM).
         self.reader = None
-        if EASYOCR_AVAILABLE:
+        self._reader_lock = threading.Lock()
+
+    def _ensure_reader(self) -> bool:
+        """Load EasyOCR once, on demand. Returns True if reader is usable."""
+        if not EASYOCR_AVAILABLE:
+            return False
+        if self.reader is not None:
+            return True
+        with self._reader_lock:
+            if self.reader is not None:
+                return True
             try:
-                # Initialize EasyOCR reader (English only for now)
-                # This may take time on first run as it downloads models
-                logger.info("Initializing EasyOCR reader...")
+                logger.info("Lazy-loading EasyOCR reader (first OCR request)...")
                 self.reader = easyocr.Reader(['en'], gpu=False)
                 logger.info("EasyOCR reader initialized successfully")
+                return True
             except Exception as e:
                 logger.error(f"Failed to initialize EasyOCR: {e}")
                 self.reader = None
-    
+                return False
+
+    def _wants_hf(self) -> bool:
+        m = _ocr_backend_mode()
+        if m == "hf":
+            return True
+        if m == "local":
+            return False
+        return hf_ocr_client.is_configured()
+
+    def _wants_local_easyocr(self) -> bool:
+        m = _ocr_backend_mode()
+        if m == "local":
+            return True
+        if m == "hf":
+            return False
+        return True
+
+    def _can_raster_ocr(self) -> bool:
+        m = _ocr_backend_mode()
+        if m == "hf":
+            return hf_ocr_client.is_configured()
+        if m == "local":
+            return EASYOCR_AVAILABLE
+        return hf_ocr_client.is_configured() or EASYOCR_AVAILABLE
+
+    def _try_remote_ocr_candidates(
+        self, candidates: List[Image.Image]
+    ) -> tuple[Optional[str], str]:
+        """HF Inference kung naka-config (auto o hf). Returns (text, hf|\"\")."""
+        if self._wants_hf():
+            t = self._try_hf_on_pil_candidates(candidates)
+            if t:
+                return t, "hf"
+        return None, ""
+
+    def _try_hf_on_pil_candidates(self, candidates: List[Image.Image]) -> Optional[str]:
+        if not (self._wants_hf() and hf_ocr_client.is_configured()):
+            return None
+        for pil in candidates:
+            try:
+                t = hf_ocr_client.ocr_pil_image(pil)
+                if t and t.strip():
+                    logger.info("HF OCR ok (%d chars)", len(t.strip()))
+                    return t.strip()
+            except Exception as e:
+                logger.warning("HF OCR candidate failed: %s", e)
+        return None
+
     def _correct_orientation(self, image: Image.Image) -> Image.Image:
         """Correct image orientation based on EXIF metadata"""
         try:
@@ -233,12 +300,15 @@ class OCRService:
                 "message": "pdf2image library is not installed. Please install it to use PDF OCR."
             }
         
-        if not EASYOCR_AVAILABLE or self.reader is None:
+        if not self._can_raster_ocr():
             return {
                 "error": "OCR not available",
-                "message": "EasyOCR library is not installed or failed to initialize."
+                "message": (
+                    "Scanned PDF: set HF_API_TOKEN / HUGGINGFACE_API_TOKEN for Hugging Face OCR, "
+                    "and/or install EasyOCR. OCR_BACKEND=auto|hf|local."
+                ),
             }
-        
+
         try:
             # Convert PDF to images
             logger.info(f"Converting PDF to images: {filename}")
@@ -309,82 +379,95 @@ class OCRService:
                 # Correct orientation
                 image = self._correct_orientation(image)
                 
-                # Preprocess image for better OCR
+                # Preprocess image for better OCR (HF + EasyOCR paths)
                 preprocessed_image = self._preprocess_image(image)
-                
-                # Run OCR with optimized parameters
+
+                rgb = image.convert("RGB") if image.mode != "RGB" else image
+                pre_rgb = (
+                    preprocessed_image.convert("RGB")
+                    if preprocessed_image.mode != "RGB"
+                    else preprocessed_image
+                )
+
+                page_text_combined = ""
+                detection_count = 0
+                page_confidence = 0.0
+
                 try:
-                    # First try with standard parameters
-                    bounds = self.reader.readtext(
-                        np.array(preprocessed_image),
-                        min_size=0,
-                        slope_ths=0.2,
-                        ycenter_ths=0.7,
-                        height_ths=0.6,
-                        width_ths=0.8,
-                        decoder='beamsearch',
-                        beamWidth=10,
-                        paragraph=True,  # Group text into paragraphs
-                        text_threshold=0.5,
-                        low_text=0.3
-                    )
-                    
-                    # If no detections, try with more lenient parameters
-                    if len(bounds) == 0:
-                        logger.warning(f"No text detected with standard parameters on page {page_num}, trying lenient parameters...")
+                    cloud_text, cloud_src = self._try_remote_ocr_candidates([rgb, pre_rgb])
+                    if cloud_text:
+                        page_text_combined = cloud_text
+                        detection_count = 1
+                        page_confidence = 0.85
+                        logger.info(
+                            f"Page {page_num}: {cloud_src.upper()} OCR ({len(cloud_text)} chars)"
+                        )
+                    elif self._wants_local_easyocr() and self._ensure_reader():
                         bounds = self.reader.readtext(
                             np.array(preprocessed_image),
+                            min_size=0,
+                            slope_ths=0.2,
+                            ycenter_ths=0.7,
+                            height_ths=0.6,
+                            width_ths=0.8,
+                            decoder='beamsearch',
+                            beamWidth=10,
                             paragraph=True,
-                            text_threshold=0.3,  # Lower threshold
-                            low_text=0.2,  # Lower threshold
-                            width_ths=0.5,  # More lenient
-                            height_ths=0.5  # More lenient
+                            text_threshold=0.5,
+                            low_text=0.3
                         )
-                        logger.info(f"Lenient parameters found {len(bounds)} text regions")
-                    
-                    # If still no detections, try without preprocessing
-                    if len(bounds) == 0:
-                        logger.warning(f"No text detected with preprocessing on page {page_num}, trying original image...")
-                        bounds = self.reader.readtext(
-                            np.array(image),
-                            paragraph=True,
-                            text_threshold=0.3,
-                            low_text=0.2
+                        if len(bounds) == 0:
+                            logger.warning(
+                                f"No text with standard params on page {page_num}, trying lenient..."
+                            )
+                            bounds = self.reader.readtext(
+                                np.array(preprocessed_image),
+                                paragraph=True,
+                                text_threshold=0.3,
+                                low_text=0.2,
+                                width_ths=0.5,
+                                height_ths=0.5
+                            )
+                        if len(bounds) == 0:
+                            logger.warning(
+                                f"No text with preprocessing on page {page_num}, trying original image..."
+                            )
+                            bounds = self.reader.readtext(
+                                np.array(image),
+                                paragraph=True,
+                                text_threshold=0.3,
+                                low_text=0.2
+                            )
+                        page_text = []
+                        page_confidence = 0.0
+                        detection_count = 0
+                        for bound in bounds:
+                            if len(bound) >= 3:
+                                text = bound[1]
+                                confidence = bound[2] if len(bound) > 2 else 0.0
+                                page_text.append(text)
+                                page_confidence += confidence
+                                detection_count += 1
+                        page_text_combined = '\n'.join(page_text)
+                        logger.info(f"Page {page_num}: EasyOCR ({detection_count} regions)")
+                    else:
+                        logger.warning(
+                            f"Page {page_num}: no HF OCR text and EasyOCR disabled or unavailable"
                         )
-                        logger.info(f"Original image found {len(bounds)} text regions")
-                    
-                    # Extract text and calculate confidence
-                    page_text = []
-                    page_confidence = 0.0
-                    detection_count = 0
-                    
-                    for bound in bounds:
-                        if len(bound) >= 3:
-                            text = bound[1]  # Extracted text
-                            confidence = bound[2] if len(bound) > 2 else 0.0
-                            
-                            page_text.append(text)
-                            page_confidence += confidence
-                            detection_count += 1
-                    
-                    # Combine page text
-                    page_text_combined = '\n'.join(page_text)
+
                     all_text.append(page_text_combined)
-                    
                     if detection_count > 0:
                         total_confidence += page_confidence
                         total_detections += detection_count
-                    
-                    logger.info(f"Page {page_num}: Extracted {detection_count} text regions")
-                
+
                 except Exception as e:
                     logger.error(f"Error processing page {page_num}: {e}")
-                    all_text.append("")  # Add empty string for failed page
-                
-                # Explicit cleanup
+                    all_text.append("")
+
                 del image
                 del preprocessed_image
-                if 'bounds' in locals(): del bounds
+                if 'bounds' in locals():
+                    del bounds
                 gc.collect()
             
             # Combine all pages
@@ -433,21 +516,48 @@ class OCRService:
         Returns:
             Dictionary with extracted text and metadata
         """
-        if not EASYOCR_AVAILABLE or self.reader is None:
+        if not self._can_raster_ocr():
             return {
                 "error": "OCR not available",
-                "message": "EasyOCR library is not installed or failed to initialize."
+                "message": (
+                    "Set HF_API_TOKEN / HUGGINGFACE_API_TOKEN (optional), or install EasyOCR. "
+                    "OCR_BACKEND=auto|hf|local."
+                ),
             }
-        
+
         try:
-            # Load image
             image = Image.open(BytesIO(image_bytes))
-            
-            # Correct orientation
             image = self._correct_orientation(image)
-            
-            # Strategy 1: Standard preprocessing with standard parameters
-            logger.info(f"Trying standard preprocessing for {filename}")
+            rgb = image.convert("RGB") if image.mode != "RGB" else image
+            pre_std = self._preprocess_image(image, aggressive=False)
+            pre_agg = self._preprocess_image(image, aggressive=True)
+            candidates = [
+                rgb,
+                pre_std.convert("RGB") if pre_std.mode != "RGB" else pre_std,
+                pre_agg.convert("RGB") if pre_agg.mode != "RGB" else pre_agg,
+            ]
+            cloud_text, cloud_src = self._try_remote_ocr_candidates(candidates)
+            if cloud_text:
+                word_count = len(cloud_text.split()) if cloud_text.strip() else 0
+                logger.info("%s OCR completed for %s: %s words", cloud_src.upper(), filename, word_count)
+                return {
+                    "text": cloud_text,
+                    "word_count": word_count,
+                    "confidence": 0.85,
+                    "detections": 1,
+                }
+            if _ocr_backend_mode() == "hf":
+                return {
+                    "error": "OCR returned no text",
+                    "message": "Hugging Face OCR returned empty for this image. Try OCR_BACKEND=auto to allow EasyOCR fallback.",
+                }
+            if not self._wants_local_easyocr() or not self._ensure_reader():
+                return {
+                    "error": "OCR not available",
+                    "message": "HF OCR returned no text and EasyOCR is unavailable.",
+                }
+
+            logger.info(f"Trying EasyOCR for {filename} (HF skipped or empty)")
             preprocessed_image = self._preprocess_image(image, aggressive=False)
             bounds = self.reader.readtext(
                 np.array(preprocessed_image),
