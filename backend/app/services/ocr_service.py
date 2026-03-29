@@ -1,10 +1,14 @@
 """
 OCR Service — PDF at image text extraction.
 
-PDF: PyPDF2 (text layer) muna; scanned PDF → raster → HF Inference (kung may token) o EasyOCR.
-Image: HF (kung naka-config) → EasyOCR.
+PDF: PyPDF2 muna; scanned → HF Inference (API) kung may token, optional EasyOCR fallback.
+Image: pareho.
 
-OCR_BACKEND: auto (HF kung may HF_API_TOKEN, saka EasyOCR) | hf | local
+Railway / maliit na RAM: set HF_API_TOKEN (+ pwede HUGGING_FACE_HUB_TOKEN) at OCR_DISABLE_LOCAL=1
+para hindi na mag-load ang EasyOCR (iwas OOM).
+
+OCR_BACKEND: auto | hf | local
+OCR_DISABLE_LOCAL: 1 = huwag gumamit ng EasyOCR (kailangan HF para sa raster OCR)
 """
 import logging
 import tempfile
@@ -50,6 +54,10 @@ def _ocr_backend_mode() -> str:
     return os.getenv("OCR_BACKEND", "auto").strip().lower()
 
 
+def _ocr_disable_local() -> bool:
+    return os.getenv("OCR_DISABLE_LOCAL", "").strip().lower() in ("1", "true", "yes")
+
+
 class OCRService:
     """PDF + image OCR: HF (optional API) at EasyOCR (lokal, lazy-loaded)."""
     
@@ -92,6 +100,8 @@ class OCRService:
             return True
         if m == "hf":
             return False
+        if _ocr_disable_local():
+            return False
         return True
 
     def _can_raster_ocr(self) -> bool:
@@ -100,7 +110,11 @@ class OCRService:
             return hf_ocr_client.is_configured()
         if m == "local":
             return EASYOCR_AVAILABLE
-        return hf_ocr_client.is_configured() or EASYOCR_AVAILABLE
+        if hf_ocr_client.is_configured():
+            return True
+        if self._wants_local_easyocr() and EASYOCR_AVAILABLE:
+            return True
+        return False
 
     def _try_remote_ocr_candidates(
         self, candidates: List[Image.Image]
@@ -304,8 +318,9 @@ class OCRService:
             return {
                 "error": "OCR not available",
                 "message": (
-                    "Scanned PDF: set HF_API_TOKEN / HUGGINGFACE_API_TOKEN for Hugging Face OCR, "
-                    "and/or install EasyOCR. OCR_BACKEND=auto|hf|local."
+                    "Scanned PDF: set HF_API_TOKEN, HUGGINGFACE_API_TOKEN, or HUGGING_FACE_HUB_TOKEN "
+                    "for Hugging Face Inference OCR; and/or install EasyOCR. "
+                    "Railway tip: OCR_DISABLE_LOCAL=1 + HF token (no EasyOCR). OCR_BACKEND=auto|hf|local."
                 ),
             }
 
@@ -520,8 +535,8 @@ class OCRService:
             return {
                 "error": "OCR not available",
                 "message": (
-                    "Set HF_API_TOKEN / HUGGINGFACE_API_TOKEN (optional), or install EasyOCR. "
-                    "OCR_BACKEND=auto|hf|local."
+                    "Set HF_API_TOKEN / HUGGINGFACE_API_TOKEN / HUGGING_FACE_HUB_TOKEN, or install EasyOCR. "
+                    "Railway: OCR_DISABLE_LOCAL=1 requires HF token. OCR_BACKEND=auto|hf|local."
                 ),
             }
 

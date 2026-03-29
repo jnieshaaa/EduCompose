@@ -4,12 +4,12 @@ Hugging Face Inference API — OCR (remote)
 Set HF_API_TOKEN (or HUGGINGFACE_API_TOKEN) so scanned PDFs / images can use HF
 Inference API instead of only EasyOCR (when OCR_BACKEND=auto and token is set).
 
-Default model: microsoft/trocr-base-printed (printed English).
-Override with HF_OCR_MODEL. Free tier: cold starts may return 503 once.
+Default model: microsoft/trocr-base-handwritten (essays / sulat-kamay).
+Printed text: HF_OCR_MODEL=microsoft/trocr-base-printed. Free tier: cold starts may return 503.
 
 Env:
-  HF_API_TOKEN or HUGGINGFACE_API_TOKEN  — required for HF OCR
-  HF_OCR_MODEL                           — optional, default microsoft/trocr-base-printed
+  HF_API_TOKEN / HUGGINGFACE_API_TOKEN / HUGGING_FACE_HUB_TOKEN — isa lang kailangan (Inference API)
+  HF_OCR_MODEL                           — optional (see default above)
   HF_OCR_MAX_SIDE                        — optional, default 1024 (resize before API call)
   OCR_BACKEND                            — auto | hf | local (see ocr_service)
 """
@@ -38,7 +38,7 @@ def is_configured() -> bool:
 
 
 def _default_model() -> str:
-    return os.getenv("HF_OCR_MODEL", "microsoft/trocr-base-printed").strip()
+    return os.getenv("HF_OCR_MODEL", "microsoft/trocr-base-handwritten").strip()
 
 
 def _max_side() -> int:

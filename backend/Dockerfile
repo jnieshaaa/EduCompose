@@ -34,6 +34,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
+# Set SKIP_EASYOCR=1 on Railway (Docker build args) kung HF OCR lang — mas maliit ang image, walang OpenCV/EasyOCR deps
+ARG SKIP_EASYOCR=0
+RUN if [ "$SKIP_EASYOCR" = "1" ]; then pip uninstall -y easyocr 2>/dev/null || true; fi
+
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
