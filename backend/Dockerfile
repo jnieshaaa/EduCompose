@@ -5,6 +5,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
+# NLTK: stable path so runtime finds data from image (avoids re-download + RAM spikes)
+ENV NLTK_DATA=/opt/nltk_data
 
 # Install system dependencies
 # - poppler-utils: for pdf2image
@@ -35,12 +37,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
-# Pre-download NLTK data (avoids runtime download + duplicate work on each deploy)
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
+# Pre-download NLTK into NLTK_DATA (runtime must match this path)
+RUN mkdir -p /opt/nltk_data && python -c "import nltk; nltk.download('punkt', download_dir='/opt/nltk_data'); nltk.download('averaged_perceptron_tagger', download_dir='/opt/nltk_data')"
 
-# Pre-download EasyOCR models (standard English models)
-# This prevents the app from downloading them on first request
-RUN python -c "import easyocr; reader = easyocr.Reader(['en'], gpu=False)"
+# EasyOCR: do NOT run Reader() at build — it spikes RAM and can fail on small builders.
+# Models download on first OCR request instead (or use HF_API_TOKEN + OCR_BACKEND=auto).
 
 # Copy the rest of the application
 COPY . .
@@ -50,4 +51,5 @@ EXPOSE ${PORT}
 
 # Command to run the application
 # We use the PORT environment variable provided by Railway
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Single worker avoids loading PyTorch/NLP stacks multiple times (OOM on Railway)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

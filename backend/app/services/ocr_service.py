@@ -70,7 +70,7 @@ class OCRService:
                 return True
             try:
                 logger.info("Lazy-loading EasyOCR reader (first OCR request)...")
-                self.reader = easyocr.Reader(['en'], gpu=False)
+                self.reader = easyocr.Reader(["en"], gpu=False, verbose=False)
                 logger.info("EasyOCR reader initialized successfully")
                 return True
             except Exception as e:
