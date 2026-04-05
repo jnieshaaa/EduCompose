@@ -53,36 +53,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const normalized = message.toLowerCase();
     return (
       normalized.includes("failed to fetch") ||
-      normalized.includes("err_internet_disconnected")
+      normalized.includes("err_internet_disconnected") ||
+      normalized.includes("network error")
     );
   };
 
-  // Helper to identify and update session_id table
-  const syncSessionToDB = async (authUserId: string, token: string) => {
-    try {
-      // 1. Identify which table the user belongs to
-      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()).data;
-      const targetTable = isUser ? "users" : "students";
-      
-      // 2. Perform silent update (no await to keep login fast)
-      supabase.from(targetTable).update({ current_session_id: token }).eq("auth_user_id", authUserId)
-        .then(() => console.log(`Session synced to ${targetTable}`));
-    } catch (err) {
-      console.error("Session sync failed:", err);
-    }
+  // Helper with Timeout for Database calls
+  const safeDbQuery = async (query: any, timeoutMs = 2500) => {
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+      setTimeout(() => resolve({ data: null, error: { message: "DB_TIMEOUT" } }), timeoutMs);
+    });
+    return Promise.race([query, timeoutPromise]);
   };
 
-  // Fetch user data from the users table with timeout
+  // Sync session to DB without blocking
+  const syncSessionToDB = async (authUserId: string, token: string) => {
+    try {
+      const { data: userRec } = await safeDbQuery(
+        supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()
+      );
+      const table = userRec ? "users" : "students";
+      await supabase.from(table).update({ current_session_id: token }).eq("auth_user_id", authUserId);
+    } catch (e) { /* ignore */ }
+  };
+
   const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname")
-        .eq("auth_user_id", authUserId)
-        .maybeSingle();
+      const result: any = await safeDbQuery(
+        supabase.from("users").select("id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
+      );
 
-      if (error || !data) return null;
-
+      if (!result.data) return null;
+      const data = result.data;
       const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
 
       return {
@@ -98,9 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         title: data.title,
         nickname: data.nickname,
       };
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   };
 
   const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
@@ -127,27 +127,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session || !session.user) {
-        if (sessionError && isNetworkDisconnectError(sessionError.message)) {
-          setIsLoading(false);
+        if (sessionError && isNetworkDisconnectError(sessionError.message)) return;
+        setUser(null);
+        return;
+      }
+
+      // Single Session Safety with Timeout
+      try {
+        const query = supabase.from("users").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle();
+        let result: any = await safeDbQuery(query);
+        let dbRecord = result.data;
+        
+        if (!dbRecord) {
+          const sQuery = supabase.from("students").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle();
+          result = await safeDbQuery(sQuery);
+          dbRecord = result.data;
+        }
+
+        if (dbRecord && dbRecord.current_session_id && dbRecord.current_session_id !== session.access_token) {
+          await logout();
+          alert("Logged out: This account is being used on another device.");
           return;
         }
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // --- SAFETY CHECK (ONLY FOR EXISTING SESSIONS) ---
-      // We check if another device logged in. 
-      // But we DONT do this if we are in the middle of a fresh login process.
-      const isUser = (await supabase.from("users").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle()).data;
-      const dbRecord = isUser || (await supabase.from("students").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle()).data;
-
-      if (dbRecord && dbRecord.current_session_id && dbRecord.current_session_id !== session.access_token) {
-        console.warn("Session Mismatch: Another device is active.");
-        await logout();
-        alert("Logged out: This account is being used on another device.");
-        return;
-      }
+      } catch (err) { /* fail silent */ }
 
       const mappedUser = await mapSupabaseUser(session.user);
       setUser(mappedUser);
@@ -168,9 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem("user");
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session.user) {
-          // BOSS MODE: Always claim the session ID in DB, overwriting any old one
           syncSessionToDB(session.user.id, session.access_token);
-          
           const mappedUser = await mapSupabaseUser(session.user);
           localStorage.setItem("auth_token", session.access_token);
           localStorage.setItem("user", JSON.stringify(mappedUser));
@@ -179,21 +179,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    // Realtime Listener for Instant Logout
     let sessionChannel: any;
     const subscribeToSession = async (authId: string) => {
-      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", authId).maybeSingle()).data;
-      const table = isUser ? "users" : "students";
-
-      sessionChannel = supabase.channel(`session-${authId}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `auth_user_id=eq.${authId}` }, (p: any) => {
-          const newestId = p.new.current_session_id;
-          const ourId = localStorage.getItem("auth_token");
-          if (newestId && ourId && newestId !== ourId) {
-            logout();
-            alert("Session Expired: You logged in from another device.");
-          }
-        }).subscribe();
+      try {
+        const { data: userRec } = await safeDbQuery(supabase.from("users").select("id").eq("auth_user_id", authId).maybeSingle());
+        const table = userRec ? "users" : "students";
+        sessionChannel = supabase.channel(`session-${authId}`)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `auth_user_id=eq.${authId}` }, (p: any) => {
+            const newestId = p.new.current_session_id;
+            const ourId = localStorage.getItem("auth_token");
+            if (newestId && ourId && newestId !== ourId) {
+              logout();
+              alert("Session Expired: New login detected on another device.");
+            }
+          }).subscribe();
+      } catch (e) { /* ignore */ }
     }
 
     if (user?.auth_id) subscribeToSession(user.auth_id);
@@ -204,20 +204,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [user?.auth_id]);
 
+  // USE INACTIVITY LOGOUT HOOK
+  useInactivityLogout({
+    timeout: 30 * 60 * 1000, // 30 mins
+    warningTime: 2 * 60 * 1000, // 2 mins warning
+    onLogout: () => {
+      setShowInactivityWarning(false);
+      logout();
+    },
+    onWarning: () => setShowInactivityWarning(true),
+    onWarningDismissed: () => setShowInactivityWarning(false),
+    enabled: !!user,
+  });
+
   const login = (token: string, userData?: User) => {
     localStorage.setItem("auth_token", token);
     if (userData) {
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
-    } else {
-      checkAuth();
     }
+    checkAuth();
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } finally {
+    try { await supabase.auth.signOut(); } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
@@ -225,31 +235,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const handleInactivityLogout = () => {
-    setShowInactivityWarning(false);
-    logout();
-  };
-
-  useInactivityLogout({
-    timeout: 30 * 60 * 1000,
-    warningTime: 2 * 60 * 1000,
-    onLogout: handleInactivityLogout,
-    onWarning: () => setShowInactivityWarning(true),
-    onWarningDismissed: () => setShowInactivityWarning(false),
-    enabled: !!user,
-  });
-
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
       {children}
       <AlertModal
         isOpen={showInactivityWarning}
-        onClose={handleInactivityLogout}
+        onClose={() => logout()}
         type="warning"
         title="Session Timeout"
         message="Your session is about to expire due to inactivity."
-        confirmText="Logout"
-        onConfirm={handleInactivityLogout}
+        confirmText="Logout Now"
+        onConfirm={() => logout()}
         showCancel={false}
       />
     </AuthContext.Provider>
