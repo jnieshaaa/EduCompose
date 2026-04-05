@@ -10,6 +10,7 @@ from .essay_schemas import EssayResponse
 class AnalysisRequest(BaseModel):
     essay_id: int
     analysis_type: str = "comprehensive"  # grammar, readability, coherence, argument, comprehensive
+    force_reanalyze: bool = False  # Set to true to bypass caching and re-run analysis
 
 class TextAnalysisRequest(BaseModel):
     text: str

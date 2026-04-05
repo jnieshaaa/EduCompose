@@ -34,6 +34,7 @@ python-dotenv
 python-dotenv
 httpx
 pyyaml
+requests
 
 # ============================================
 # NLP and Text Processing Libraries

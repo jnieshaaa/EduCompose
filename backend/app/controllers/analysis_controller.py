@@ -36,7 +36,51 @@ async def analyze_essay(
     if not essay:
         raise HTTPException(status_code=404, detail="Essay not found")
     
-    # Perform analysis
+    # Check for cached results to save tokens
+    if (
+        essay.status == "analyzed" 
+        and not getattr(analysis_request, "force_reanalyze", False)
+        and essay.grammar_score is not None 
+        and essay.grammar_errors is not None
+    ):
+        logger.info(f"Using cached analysis for essay {essay.id} to save tokens")
+        
+        # Reconstruct detailed analysis format for response
+        detailed_analysis = {
+            "grammar": {
+                "score": essay.grammar_score,
+                "errors": essay.grammar_errors,
+                "error_count": len(essay.grammar_errors) if isinstance(essay.grammar_errors, list) else 0
+            },
+            "readability": {
+                "score": essay.readability_score,
+                "issues": essay.style_issues
+            },
+            "coherence": essay.argument_analysis.get("coherence", {}) if essay.argument_analysis else {},
+            "argumentation": essay.argument_analysis.get("argumentation", {}) if essay.argument_analysis else {},
+            "knowledge_graph": essay.argument_analysis.get("knowledge_graph", {}) if essay.argument_analysis else {}
+        }
+        
+        # Recalculate summary (fast and doesn't use API)
+        scores = {
+            "grammar": essay.grammar_score,
+            "readability": essay.readability_score,
+            "coherence": essay.coherence_score,
+            "argument_strength": essay.argument_strength_score,
+            "overall": essay.overall_score
+        }
+        
+        return AnalysisResponse(
+            essay_id=essay.id,
+            analysis_type=analysis_request.analysis_type,
+            scores=scores,
+            detailed_analysis=detailed_analysis,
+            recommendations=essay.recommendations if essay.recommendations else [],
+            word_count=len(essay.content.split()),
+            generated_at=essay.submitted_at  # Or analysis date
+        )
+
+    # Perform analysis if not cached or forced
     analysis_result = await essay_analysis_service.analyze_essay(essay, analysis_request.analysis_type)
     
     # Check for errors

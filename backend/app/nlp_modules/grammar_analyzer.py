@@ -32,6 +32,12 @@ class GrammarAnalyzer:
         self.llm_client = None
         self.available_llm = None  # "openai", "gemini", or None
         self.gemini_model = None  # Store model name for Gemini
+        self.lt_tool = None  # LanguageTool for local checking
+        self.hf_model = None # Hugging Face model for local checking
+        self.hf_tokenizer = None
+        self.hf_api_token = os.getenv("HF_API_TOKEN") # For lightweight Inference API
+        self.use_hf = True if self.hf_api_token else False # Auto-enable if token exists
+        self.use_lt = True    # Enable LanguageTool by default if possible
         # Don't initialize here - wait until first use to avoid import errors at startup
     
     def _ensure_llm_loaded(self):
@@ -175,7 +181,7 @@ class GrammarAnalyzer:
             "sentence_count": 0,
             "avg_sentence_length": 0.0,
             "syntax_complexity": 0.0,
-            "analyzer_version": "2.0-pure-llm",  # Debug signature - verify new code is running
+            "analyzer_version": "2.1-hybrid",  # Hybrid: Local GEC + LLM Support
             "request_id": request_id  # Track this specific analysis request
         }
         
@@ -196,74 +202,56 @@ class GrammarAnalyzer:
         total_words = sum(len(s.split()) for s in sentences)
         results["avg_sentence_length"] = total_words / results["sentence_count"]
         
-        # Grammar checking - use LLM with retry mechanism (NO LanguageTool)
+        # 1. Local/API Hugging Face check (Saves tokens for basic errors)
+        local_errors = []
+        if self.use_hf:
+            if self.hf_api_token:
+                local_errors = self._check_with_huggingface_api(text, sentences)
+                if local_errors:
+                    logger.info(f"✓ Hugging Face (API) found {len(local_errors)} errors")
+            else:
+                local_errors = self._check_with_huggingface(text, sentences)
+                if local_errors:
+                    logger.info(f"✓ Hugging Face (Local) found {len(local_errors)} errors")
+        elif self.use_lt:
+            local_errors = self._check_with_languagetool(text)
+            if local_errors:
+                logger.info(f"✓ LanguageTool (Local) found {len(local_errors)} errors")
+        
+        # 2. Grammar checking - use LLM for complex issues
         grammar_errors = []
-        llm_success = False  # Track if LLM call succeeded (even with 0 errors)
+        llm_success = False
         
-        logger.info("Attempting LLM-based grammar checking (LanguageTool completely removed)")
-        
-        # Try LLM with retry mechanism (up to 3 attempts)
+        # Determine if we need LLM (if local results are empty or for high-level logic)
         llm_client = self._ensure_llm_loaded()
         if llm_client:
             try:
-                logger.info(f"LLM client available: {self.available_llm}")
                 grammar_errors, llm_success = self._check_with_llm_with_retry(text, sentences)
                 if llm_success:
-                    logger.info(f"✓ LLM SUCCESS: Found {len(grammar_errors)} grammar errors (V2 PURE LLM)")
+                    logger.info(f"✓ LLM SUCCESS: Found {len(grammar_errors)} complex issues")
                 else:
-                    logger.warning("✗ LLM check failed after all retries - NO LanguageTool fallback")
+                    logger.warning("✗ LLM check failed - using local results only")
             except Exception as e:
-                logger.warning(f"✗ LLM grammar check failed after all retries: {e} - NO LanguageTool fallback")
+                logger.warning(f"✗ LLM grammar check failed: {e}")
                 llm_success = False
-                grammar_errors = []
-        else:
-            logger.warning("✗ No LLM client available - NO LanguageTool fallback (using basic rules only)")
         
-        # If LLM failed, we'll only use basic rules (capitalization checks)
-        # IMPORTANT: LanguageTool has been completely removed - no fallback
-        if not llm_success:
-            logger.info("LLM unavailable or failed - using only basic rule checks (NO LanguageTool)")
+        # Combine and deduplicate errors
+        final_errors = self._merge_grammar_errors(grammar_errors, local_errors)
         
-        # Deduplicate errors before adding (same offset + errorLength = same error)
-        # This prevents duplicate highlights if the analysis runs multiple times
-        seen_errors = set()
-        unique_grammar_errors = []
-        for error in grammar_errors:
-            error_key = (error.get("offset"), error.get("errorLength"))
-            if error_key not in seen_errors:
-                seen_errors.add(error_key)
-                unique_grammar_errors.append(error)
-        
-        if len(unique_grammar_errors) < len(grammar_errors):
-            logger.info(f"Deduplicated {len(grammar_errors) - len(unique_grammar_errors)} duplicate errors")
-        
-        results["errors"].extend(unique_grammar_errors)
-        results["error_count"] = len(unique_grammar_errors)
-        
-        # Basic rule-based checks
+        # 3. Basic rule-based checks (Local Regex)
         basic_errors = self._check_basic_rules(text, sentences)
+        final_errors = self._merge_grammar_errors(final_errors, basic_errors)
         
-        # Deduplicate basic errors against grammar errors
-        for error in basic_errors:
-            error_key = (error.get("offset"), error.get("errorLength"))
-            if error_key not in seen_errors:
-                seen_errors.add(error_key)
-                results["errors"].append(error)
-                results["error_count"] += 1
+        results["errors"] = final_errors
+        results["error_count"] = len(final_errors)
         
         # Calculate grammar score (0-100)
-        # Penalize based on error density
         total_words = len(text.split())
         if total_words > 0:
             error_density = results["error_count"] / total_words
             results["score"] = max(0.0, 100.0 - (error_density * 1000))
         else:
-            results["score"] = 0.0
-        
-        # Final debug log
-        logger.info(f"--- COMPLETED GRAMMAR ANALYSIS (V2 PURE LLM) ---")
-        logger.info(f"Total errors found: {results['error_count']} | Score: {results['score']}")
-        logger.info("=" * 60)
+            results["score"] = 100.0
         
         return results
     
@@ -339,31 +327,6 @@ class GrammarAnalyzer:
         # All retries failed
         return [], False
     
-    def _check_with_llm(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
-        """
-        Check grammar using LLM (OpenAI or Gemini) - single attempt
-        DEPRECATED: Use _check_with_llm_with_retry instead for retry logic
-        
-        Args:
-            text: Full text to check
-            sentences: List of sentences for context
-            
-        Returns:
-            List of grammar error dictionaries
-        """
-        if not self.llm_client or not self.available_llm:
-            return []
-        
-        try:
-            if self.available_llm == "openai":
-                return self._check_with_openai(text, sentences)
-            elif self.available_llm == "gemini":
-                return self._check_with_gemini(text, sentences)
-        except Exception as e:
-            logger.error(f"LLM grammar check error: {e}")
-            return []
-        
-        return []
     
     def _check_with_openai(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
         """Check grammar using OpenAI"""
@@ -487,126 +450,56 @@ Please return your response as a valid JSON object with this structure:
     def _build_grammar_prompt(self, text: str, sentences: List[str]) -> str:
         """Build prompt for LLM grammar checking with enhanced paragraph splitting and context-aware spelling"""
         # Limit text length to avoid token limits (keep it reasonable)
-        max_chars = 4000
+        max_chars = 12000
         if len(text) > max_chars:
             text = text[:max_chars] + "... [text truncated]"
         
-        prompt = f"""Analyze the following essay text for grammatical errors, spelling mistakes, punctuation issues, and structural problems.
+        prompt = f"""Analyze the following essay for structural organization, style, logical flow, and complex grammatical issues.
 
 Text to analyze:
 {text}
 
 Instructions:
-1. Identify all grammatical errors, spelling mistakes, punctuation issues, and structural problems
-2. For each error, provide:
-   - The exact position (offset) in the text where the error starts (character position, starting from 0)
-   - The length of the error (number of characters)
-   - A clear message explaining the error
-   - A suggested correction (ONLY if the error is real and the suggestion is accurate)
-   - Context (surrounding text, ~20 characters before and after)
+1. Identify structural, stylistic, and complex grammatical errors.
+2. For each issue, provide:
+   - type: "grammar" | "spelling" | "punctuation" | "structure" | "style"
+   - message: A brief, professional explanation of why it is an error or how it can be improved.
+   - offset: Exact character position (0-based) from the start of the text.
+   - errorLength: Number of characters the issue spans.
+   - text: The actual text at that position for verification.
+   - suggestion: A corrected version or improvement recommendation.
+   - context: ~20 characters before and after the issue.
 
-3. CRITICAL PARAGRAPH SPLITTING (type: "structure"):
-   - This text appears to be a "wall of text" with multiple topics combined into one long paragraph
-   - STRICTLY identify and split into 3 logical sections:
-     a) Introduction/Personal Background: First section about personal interests, passions, cooking
-     b) Income/Selling Business: Middle section about selling food, earning money, mini waffles, hash browns, etc.
-     c) Freshman Year Events: Final section starting with "My Freshman year" and describing college events
-   - Look for clear transition phrases:
-     * "My Freshman year started" or "My Freshman year" - marks start of section 3
-     * "I sell", "I earn", "I built regular customer" - marks section 2
-     * Topic shifts from background/intro to business activities
-   - For EACH transition point:
-     * Find the period (.) at the end of the sentence BEFORE the new section starts
-     * Set offset to the position of that period
-     * Set errorLength to 1 (just the period)
-     * Set suggestion to: ".\n\n" (period followed by two newlines to create paragraph break)
-     * Set message to: "New section: [describe the transition, e.g., 'transitioning from personal background to business activities']"
-   - You should find at least 2 paragraph breaks (creating 3 sections total)
+3. LOGICAL PARAGRAPHING (type: "structure"):
+   - If the text is a single "wall of text," identify logical transition points where a new paragraph should begin.
+   - Focus on shifts in topic, time, or perspective.
+   - For each break: Set offset to the end of the sentence, errorLength to 1, and suggestion to ".\\n\\n".
 
-4. CONTEXT-AWARE SPELLING (type: "spelling"):
-   - CRITICAL: Flag ALL invalid words, random character sequences, and gibberish text:
-     * Random character strings that don't form valid words (e.g., "asds", "dsds", "dsd", "asd", "sdg", "mana sd ging", "consumpsd", etc.)
-     * Nonsensical character sequences that are clearly not English words
-     * Words with random letters inserted (e.g., "mana sd ging" should be "managing", "consumpsd" should be "consumption")
-     * Any sequence of letters separated by spaces that doesn't form valid words (e.g., "asds dsds dsd")
-   - Pay special attention to PHONETIC TYPOS that are common in fast typing:
-     * "mot" -> "not" (e.g., "this program is mot my passion" -> "this program is not my passion")
-     * "weed" -> "need" (e.g., "I don't weed to sell" -> "I don't need to sell", "what I weed" -> "what I need")
-     * "momy" -> "money" (e.g., "I earn momy" -> "I earn money", "get momy" -> "get money")
-     * "bod" -> "food" (e.g., "my bod taste great" -> "my food taste great")
-     * "buns" -> "bought" or context-dependent (e.g., "professors buns to me" -> "professors bought to me" or "professors came to me")
-     * "atleast" -> "at least" (space needed)
-     * "finaly" -> "finally"
-     * "noone" -> "no one" (space needed)
-   - These are REAL spelling errors that change meaning - flag them even if frequency is low
-   - For gibberish/random character sequences: Flag them even if you can't determine the exact intended word - you can suggest "[remove]" or "[replace with contextually appropriate word]" or leave the suggestion field empty
-   - For regular spelling errors: Only flag if you're confident about the correction based on context
-   - Common misspellings: "recieve" -> "receive", "definately" -> "definitely", "seperate" -> "separate"
-   - Do NOT flag: Proper nouns, brand names, technical terms, regional variations
+4. STYLE AND TONE (type: "style"):
+   - Identify overly informal language, slang, or contractions if inappropriate for the essay's context.
+   - Flag repetitive sentence starters or redundant phrases.
 
-5. REDUCED FALSE POSITIVES:
-   - Word Choice: Be VERY lenient - only flag if the meaning is completely lost or the word makes no sense
-     * DO NOT flag stylistic variations (e.g., "backward" vs "backwards" - both are acceptable)
-     * DO NOT flag informal abbreviations if they're intentional style (e.g., "&" for "and" is acceptable in casual writing)
-     * DO NOT flag correct uses of "to", "then", "your", "there", "its" - only flag when clearly wrong
-   - Repeated Content: IGNORE repetition unless it's EXACT duplication (same sentence/phrase repeated word-for-word)
-     * Do NOT flag similar ideas expressed differently
-     * Do NOT flag thematic repetition or emphasis
-     * Only flag if identical text appears multiple times consecutively
-   - Style Issues: Be lenient on:
-     * Informal language in personal narratives (acceptable)
-     * Contractions (acceptable)
-     * Abbreviations in context (e.g., "U" for University - flag only if context is unclear)
+5. ACCURACY AND LENIENCY:
+   - Do NOT flag valid technical terms, proper nouns, or brand names.
+   - For spelling/grammar: Focus on errors that change the meaning or significantly impact readability. 
+   - Be lenient with minor stylistic choices in personal narratives.
 
-6. Focus on REAL errors:
-   - Subject-verb agreement (e.g., "the program are" -> "the program is")
-   - Tense consistency within paragraphs
-   - Punctuation errors (missing commas, periods, apostrophes)
-   - Spelling errors (especially phonetic typos and gibberish/random character sequences - see section 4)
-   - Invalid words, random character strings, and nonsensical text (CRITICAL - flag all gibberish)
-   - Excessive whitespace (multiple consecutive spaces or tabs, e.g., "word          word" -> "word word")
-   - Missing words or grammar that makes sentences unreadable
-   - Paragraph structure (long paragraphs that need splitting - see section 3)
-
-7. Return results as a JSON object with an "errors" array containing error objects. Each error object must have these fields:
-   - type: "grammar" | "spelling" | "punctuation" | "structure" | "word_choice" | "style"
-   - message: string (brief description explaining WHY it's an error)
-   - offset: number (EXACT character position in text - count carefully from the start, counting every character including spaces and newlines)
-   - errorLength: number (EXACT length of the problematic word/phrase in characters)
-   - text: string (the ACTUAL text at this offset - include this for verification)
-   - suggestion: string (corrected text - must be accurate and contextually appropriate)
-   - context: string (surrounding text showing the error in context)
-
-8. CRITICAL OFFSET ACCURACY:
-   - Count characters VERY carefully - every character counts (letters, spaces, punctuation, newlines)
-   - Test your offset by extracting text[offset:offset+errorLength] - it MUST match the "text" field exactly
-   - The offset is the position of the FIRST character of the error
-   - Verify your offset is correct by checking what text appears at that position
-
-9. IMPORTANT: 
-   - Double-check that the offset points to the EXACT start of the problematic word
-   - Include the "text" field so we can verify the offset is correct
-   - Verify that errorLength matches the actual length of the word/phrase
-   - Only suggest corrections that are definitively correct in the given context
-   - If a word is used correctly or the meaning is clear, do NOT flag it as an error
-   - Prioritize structural paragraph breaks and phonetic spelling errors
-
+6. RETURN FORMAT:
 Return ONLY a valid JSON object with this exact structure:
-{
+{{
   "errors": [
-    {
-      "type": "spelling",
-      "message": "Misspelled word",
-      "offset": 0,
-      "errorLength": 5,
-      "text": "impo rtant",
-      "suggestion": "important",
-      "context": "Time management is very important"
-    }
+    {{
+      "type": "structure",
+      "message": "Start a new paragraph here to separate the introduction from the main body.",
+      "offset": 450,
+      "errorLength": 1,
+      "text": ".",
+      "suggestion": ".\\n\\n",
+      "context": "end of intro. Start of body"
+    }}
   ]
-}
-
-Do not include any text before or after the JSON object."""
+}}
+"""
         
         return prompt
     
@@ -992,6 +885,70 @@ Do not include any text before or after the JSON object."""
         
         return errors
     
+    def _check_with_huggingface_api(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+        """
+        Lightweight check using Hugging Face Inference API (Ideal for Railway)
+        """
+        import requests
+        import difflib
+        import time
+        
+        if not self.hf_api_token:
+            return []
+            
+        api_url = "https://api-inference.huggingface.co/models/vennify/t5-base-grammar-correction"
+        headers = {"Authorization": f"Bearer {self.hf_api_token}"}
+        
+        errors = []
+        text_offset = 0
+        
+        for sentence in sentences:
+            sent_start = text.find(sentence, text_offset)
+            if sent_start == -1: sent_start = text_offset
+            
+            payload = {"inputs": f"gec: {sentence}"}
+            
+            try:
+                # Call HF API
+                response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+                
+                # Handle model loading (503 error)
+                if response.status_code == 503:
+                    logger.warning("HF Model is loading, skipping local GEC for this sentence")
+                    continue
+                    
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, list) and len(result) > 0:
+                        corrected_sentence = result[0].get("generated_text", sentence)
+                    elif isinstance(result, dict):
+                        corrected_sentence = result.get("generated_text", sentence)
+                    else:
+                        corrected_sentence = sentence
+
+                    if corrected_sentence != sentence:
+                        s = difflib.SequenceMatcher(None, sentence, corrected_sentence)
+                        for tag, i1, i2, j1, j2 in s.get_opcodes():
+                            if tag != 'equal':
+                                original_segment = sentence[i1:i2]
+                                replacement = corrected_sentence[j1:j2]
+                                errors.append({
+                                    "type": "grammar",
+                                    "message": f"Replace '{original_segment}' with '{replacement}'" if replacement else f"Remove '{original_segment}'",
+                                    "offset": sent_start + i1,
+                                    "errorLength": i2 - i1,
+                                    "suggestion": replacement,
+                                    "context": sentence[max(0, i1-15):min(len(sentence), i2+15)],
+                                    "source": "hf-api"
+                                })
+                
+            except Exception as e:
+                logger.warning(f"HF API error: {e}")
+                
+            text_offset = sent_start + len(sentence)
+            
+        return errors
+
     def _merge_grammar_errors(
         self, 
         errors1: List[Dict[str, Any]], 
@@ -1035,6 +992,100 @@ Do not include any text before or after the JSON object."""
         merged.sort(key=lambda x: x.get("offset", 0))
         
         return merged
+
+    def _check_with_huggingface(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+        """
+        Local check using Hugging Face GEC models (e.g. T5)
+        Note: Slow on CPU, requires torch and transformers
+        """
+        try:
+            import torch
+            from transformers import T5ForConditionalGeneration, T5Tokenizer
+            import difflib
+            
+            if not self.hf_model:
+                model_name = "vennify/t5-base-grammar-correction"
+                logger.info(f"Loading Hugging Face model {model_name}...")
+                self.hf_tokenizer = T5Tokenizer.from_pretrained(model_name)
+                self.hf_model = T5ForConditionalGeneration.from_pretrained(model_name)
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                self.hf_model.to(device)
+            
+            errors = []
+            text_offset = 0
+            
+            # Process sentence by sentence for best results
+            for sentence in sentences:
+                sent_start = text.find(sentence, text_offset)
+                if sent_start == -1: 
+                    sent_start = text_offset
+                
+                input_text = f"gec: {sentence}"
+                inputs = self.hf_tokenizer(input_text, return_tensors="pt").to(self.hf_model.device)
+                
+                with torch.no_grad():
+                    output = self.hf_model.generate(**inputs, max_length=len(sentence) + 20)
+                
+                corrected_sentence = self.hf_tokenizer.decode(output[0], skip_special_tokens=True)
+                
+                if corrected_sentence != sentence:
+                    # Diff and find exact changes
+                    s = difflib.SequenceMatcher(None, sentence, corrected_sentence)
+                    for tag, i1, i2, j1, j2 in s.get_opcodes():
+                        if tag != 'equal':
+                            original_segment = sentence[i1:i2]
+                            replacement = corrected_sentence[j1:j2]
+                            
+                            errors.append({
+                                "type": "grammar",
+                                "message": f"Replace '{original_segment}' with '{replacement}'" if replacement else f"Remove '{original_segment}'",
+                                "offset": sent_start + i1,
+                                "errorLength": i2 - i1,
+                                "suggestion": replacement,
+                                "context": sentence[max(0, i1-15):min(len(sentence), i2+15)],
+                                "source": "local-hf"
+                            })
+                
+                text_offset = sent_start + len(sentence)
+                
+            return errors
+        except Exception as e:
+            logger.warning(f"HF GEC models not available or error: {e}")
+            self.use_hf = False
+            return []
+
+    def _check_with_languagetool(self, text: str) -> List[Dict[str, Any]]:
+        """Optional local check using LanguageTool (requires Java)"""
+        try:
+            if not self.lt_tool:
+                import language_tool_python
+                self.lt_tool = language_tool_python.LanguageTool('en-US')
+            
+            matches = self.lt_tool.check(text)
+            errors = []
+            for match in matches:
+                # Map LanguageTool types to our format
+                category = match.category.lower()
+                error_type = "grammar"
+                if "spelling" in category:
+                    error_type = "spelling"
+                elif "punctuation" in category or "typographical" in category:
+                    error_type = "punctuation"
+                
+                errors.append({
+                    "type": error_type,
+                    "message": match.message,
+                    "offset": match.offset,
+                    "errorLength": match.errorLength,
+                    "suggestion": match.replacements[0] if match.replacements else "",
+                    "context": text[max(0, match.offset-20):min(len(text), match.offset+match.errorLength+20)],
+                    "source": "local-lt"
+                })
+            return errors
+        except Exception:
+            # Silently fail if LT or Java is not available
+            self.use_lt = False
+            return []
 
     def _check_basic_rules(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
         """
@@ -1098,10 +1149,16 @@ Do not include any text before or after the JSON object."""
         # When LLM is unavailable or misses malformed tokens, we still flag obvious noise
         # (e.g., "ssdsd", "prodassdssducts", "crsdseates") without being too aggressive.
         consonants = "bcdfghjklmnpqrstvwxyz"
-        hard_consonant_cluster = re.compile(rf"[{consonants}]{{4,}}", re.IGNORECASE)
-        no_vowel_token = re.compile(rf"^[{consonants}]{{4,}}$", re.IGNORECASE)
-        suspicious_keyboard_pattern = re.compile(r"(sd|ds|as|sa){2,}", re.IGNORECASE)
-        likely_valid_edge_cases = {"strengths", "rhythms", "schtschurowskia"}
+        # Increase cluster requirement to 6 to avoid common words like 'lengths', 'strengths', 'knights'
+        hard_consonant_cluster = re.compile(rf"[{consonants}]{{6,}}", re.IGNORECASE)
+        no_vowel_token = re.compile(rf"^[{consonants}]{{5,}}$", re.IGNORECASE)
+        suspicious_keyboard_pattern = re.compile(r"(sdsd|dsds|asas|sasa|asds|dsas)", re.IGNORECASE)
+        likely_valid_edge_cases = {
+            "strengths", "rhythms", "schtschurowskia", "assess", "asset", "sads", "bads",
+            "lengths", "knights", "strong", "strongly", "bright", "brightly", "through",
+            "brought", "thought", "caught", "taught", "weight", "height", "straight",
+            "strength", "length", "breadth", "depth"
+        }
 
         for match in re.finditer(r"\b[a-zA-Z]{4,}\b", text):
             token = match.group(0)
@@ -1109,7 +1166,15 @@ Do not include any text before or after the JSON object."""
             if token_lower in likely_valid_edge_cases:
                 continue
 
-            vowel_count = len(re.findall(r"[aeiou]", token_lower))
+            # Count vowels, including 'y' if it's not the first letter
+            vowels = "aeiouy"
+            vowel_count = 0
+            for k, char in enumerate(token_lower):
+                if char in "aeiou":
+                    vowel_count += 1
+                elif char == 'y' and k > 0:
+                    vowel_count += 1
+            
             vowel_ratio = vowel_count / max(1, len(token_lower))
 
             # "ngly" etc. matches 4-consonant regex because final y is treated as a consonant,
