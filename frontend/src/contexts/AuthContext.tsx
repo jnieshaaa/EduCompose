@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const queryPromise = supabase
         .from("users")
         .select(
-          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname",
+          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname, current_session_id",
         )
         .eq("auth_user_id", authUserId)
         .maybeSingle();
@@ -236,6 +236,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
+      // --- UNIVERSAL SINGLE SESSION ENFORCEMENT ---
+      // 1. Try checking the 'users' table first (Admin/Teachers)
+      let sessionData = await supabase
+        .from("users")
+        .select("current_session_id")
+        .eq("auth_user_id", session.user.id)
+        .maybeSingle();
+
+      // 2. If not found, check 'students' table (Students)
+      if (!sessionData.data) {
+        sessionData = await supabase
+          .from("students")
+          .select("current_session_id")
+          .eq("auth_user_id", session.user.id)
+          .maybeSingle();
+      }
+
+      const dbUserRecord = sessionData.data;
+      const dbErr = sessionData.error;
+
+      if (!dbErr && dbUserRecord) {
+        // 3. Compare session ID
+        if (dbUserRecord.current_session_id && dbUserRecord.current_session_id !== session.access_token) {
+          console.warn("Session mismatch! Logging out old session.");
+          await logout();
+          alert("Safety Check: This account was logged in on another device. You have been signed out.");
+          return;
+        }
+
+        // 4. Update if empty (Initial login)
+        if (!dbUserRecord.current_session_id) {
+          // Identify which table to update based on where we found the data
+          const targetTable = (await supabase.from("users").select("id").eq("auth_user_id", session.user.id).maybeSingle()).data ? "users" : "students";
+          
+          await supabase
+            .from(targetTable)
+            .update({ current_session_id: session.access_token })
+            .eq("auth_user_id", session.user.id);
+        }
+      }
+      // ---------------------------------------------
       // Verify session is still valid by checking user (with timeout)
       let currentUser;
       let userError;
@@ -333,13 +374,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" || !session) {
-        // User signed out or session expired
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         setUser(null);
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // User signed in or token refreshed, update user data
         if (session.user) {
+          // Identify if user is in 'users' or 'students' table to update correctly
+          const isUser = (await supabase.from("users").select("id").eq("auth_user_id", session.user.id).maybeSingle()).data;
+          const targetTable = isUser ? "users" : "students";
+
+          await supabase
+            .from(targetTable)
+            .update({ current_session_id: session.access_token })
+            .eq("auth_user_id", session.user.id);
+
           const mappedUser = await mapSupabaseUser(session.user);
           localStorage.setItem("auth_token", session.access_token);
           localStorage.setItem("user", JSON.stringify(mappedUser));
@@ -348,8 +396,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
+    // --- REALTIME SESSION TRACKING ---
+    let sessionChannel: any;
+    const setupRealtime = async () => {
+      if (!user?.auth_id) return;
+      
+      // Determine which table this specific user is in
+      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", user.auth_id).maybeSingle()).data;
+      const tableToWatch = isUser ? "users" : "students";
+
+      sessionChannel = supabase
+        .channel(`single-session-${user.auth_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: tableToWatch,
+            filter: `auth_user_id=eq.${user.auth_id}`
+          },
+          (payload: any) => {
+            const newSessionId = payload.new.current_session_id;
+            const currentToken = localStorage.getItem("auth_token");
+            
+            if (newSessionId && currentToken && newSessionId !== currentToken) {
+              console.warn(`Realtime Mismatch on ${tableToWatch}: Another device logged in.`);
+              logout();
+              alert("Logged out: Your account was accessed on another device.");
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    if (user?.auth_id) setupRealtime();
+
     return () => {
       subscription.unsubscribe();
+      if (sessionChannel) supabase.removeChannel(sessionChannel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
