@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AlertCircle, Home, ArrowLeft, RefreshCw, WifiOff } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 type ErrorPageProps = {
   code: number;
@@ -17,6 +18,7 @@ const errorMessages: Record<number, string> = {
 
 const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
   const [mounted, setMounted] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +26,29 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
   }, [code]);
 
   const handleGoBack = () => window.history.back();
-  const handleGoHome = () => (window.location.href = "/");
+
+  const handleGoHome = () => {
+    if (!user) {
+      window.location.href = "/";
+      return;
+    }
+
+    // Role-based redirection
+    switch (user.role?.toLowerCase()) {
+      case "admin":
+        window.location.href = "/Admin/Dashboard";
+        break;
+      case "student":
+        window.location.href = "/Student/Dashboard";
+        break;
+      case "teacher":
+        window.location.href = "/Teacher/Dashboard";
+        break;
+      default:
+        window.location.href = "/";
+    }
+  };
+
   const handleRefresh = () => window.location.reload();
 
   return (
@@ -51,7 +75,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
         </div>
 
         {/* Big Code */}
-        <h1 className="text-9xl font-black mb-2 text-white/10 tracking-tighter sm:text-[12rem]">
+        <h1 className="text-9xl font-black mb-2 text-white/50 tracking-tighter sm:text-[12rem]">
           {code || "!!!"}
         </h1>
 
@@ -67,25 +91,25 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ code, message }) => {
             
             <div className="space-y-4 text-white/90">
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-blue-300 mb-2">Ano ito?</h3>
+                <h3 className="text-xl font-bold text-blue-300 mb-2">What is this?</h3>
                 <p className="text-lg leading-relaxed">
-                  Nawawala ang connection ng browser mo sa internet habang sinusubukan niyang mag-send ng request (<strong>ERR_INTERNET_DISCONNECTED</strong>).
+                  Your browser has lost connection to the internet while trying to send a request (<strong>ERR_INTERNET_DISCONNECTED</strong>).
                 </p>
               </div>
 
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-purple-300 mb-2">Bakit ito mahalaga?</h3>
+                <h3 className="text-xl font-bold text-purple-300 mb-2">Why does this matter?</h3>
                 <p className="text-lg leading-relaxed italic opacity-80">
-                  "Kapag nagkaproblema sa internet, minsan ang lumalabas na error sa browser ay 'CORS' kahit ang totoong problema ay naputol lang ang connection."
+                  "Sometimes a browser will display a 'CORS' error when the actual problem is just a lost network connection."
                 </p>
               </div>
 
               <div className="p-4 bg-white/10 rounded-xl border border-white/10">
                 <h3 className="text-lg font-bold text-green-300 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-400 animate-ping"></div>
-                  Solusyon:
+                  Solution:
                 </h3>
-                <p className="text-lg">Siguraduhing stable ang internet connection mo habang nagte-test.</p>
+                <p className="text-lg">Ensure you have a stable internet connection and try again.</p>
               </div>
             </div>
           </div>
