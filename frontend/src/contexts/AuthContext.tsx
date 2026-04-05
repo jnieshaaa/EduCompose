@@ -5,10 +5,6 @@ import { supabase } from "../lib/supabaseClient";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
 import AlertModal from "../components/ui/AlertModal";
 
-// Design/demo mode is now disabled so Supabase auth is used.
-export const DESIGN_MODE_ENABLED = false;
-export const DESIGN_MODE_TOKEN = "DESIGN_MODE_AUTH_TOKEN";
-
 interface User {
   auth_id: string;
   id: string | number;

@@ -2,9 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
-  DESIGN_MODE_ENABLED,
-  DESIGN_MODE_TOKEN,
-  DESIGN_MODE_USER,
 } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { authApi } from "../api";
@@ -97,12 +94,6 @@ export function useAuthModal(onClose: () => void) {
     setIsLoggingIn(true);
 
     try {
-      if (DESIGN_MODE_ENABLED) {
-        login(DESIGN_MODE_TOKEN, DESIGN_MODE_USER);
-        navigate("/Teacher/Dashboard");
-        onClose();
-        return;
-      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),

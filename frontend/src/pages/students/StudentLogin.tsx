@@ -3,9 +3,6 @@ import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
-  DESIGN_MODE_ENABLED,
-  DESIGN_MODE_TOKEN,
-  DESIGN_MODE_USER,
 } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -131,11 +128,6 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (DESIGN_MODE_ENABLED) {
-        login(DESIGN_MODE_TOKEN, { ...DESIGN_MODE_USER, role: "student" });
-        navigate("/Student/Dashboard");
-        return;
-      }
 
       const normalizedStudentCode = studentCode.trim();
       const compactStudentCode = normalizedStudentCode.replace(/\s+/g, "");
