@@ -8,16 +8,6 @@ import AlertModal from "../components/ui/AlertModal";
 // Design/demo mode is now disabled so Supabase auth is used.
 export const DESIGN_MODE_ENABLED = false;
 export const DESIGN_MODE_TOKEN = "DESIGN_MODE_AUTH_TOKEN";
-export const DESIGN_MODE_USER = {
-  id: 1,
-  auth_id: "demo-auth-id",
-  email: "demo@educompose.com",
-  username: "demo_user",
-  full_name: "Demo Teacher",
-  role: "teacher",
-  is_active: true,
-  email_verified: true,
-};
 
 interface User {
   auth_id: string;
@@ -31,8 +21,6 @@ interface User {
   onboarding_completed?: boolean;
   title?: string;
   nickname?: string;
-  school?: string;
-  department?: string;
 }
 
 interface AuthContextType {
@@ -65,63 +53,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isNetworkDisconnectError = (maybeMessage?: unknown) => {
     const message = typeof maybeMessage === "string" ? maybeMessage : undefined;
-    // Typical Supabase/browser messages when offline
     if (!message) return false;
     const normalized = message.toLowerCase();
     return (
       normalized.includes("failed to fetch") ||
-      normalized.includes("fetch failed") ||
-      normalized.includes("network request failed") ||
-      normalized.includes("err_internet_disconnected") ||
-      normalized.includes("internet disconnected") ||
-      normalized.includes("networkerror") ||
-      normalized.includes("timeout") // sometimes happens during network loss
+      normalized.includes("err_internet_disconnected")
     );
   };
 
-  // Fetch user data from the users table with timeout
-  const fetchUserFromTable = async (
-    authUserId: string,
-  ): Promise<User | null> => {
+  // Helper to identify and update session_id table
+  const syncSessionToDB = async (authUserId: string, token: string) => {
     try {
-      // Add timeout to prevent hanging - 2 seconds max
-      const timeoutPromise = new Promise<{
-        data: null;
-        error: { message: string };
-      }>((resolve) => {
-        setTimeout(
-          () => resolve({ data: null, error: { message: "Timeout" } }),
-          2000,
-        );
-      });
+      // 1. Identify which table the user belongs to
+      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()).data;
+      const targetTable = isUser ? "users" : "students";
+      
+      // 2. Perform silent update (no await to keep login fast)
+      supabase.from(targetTable).update({ current_session_id: token }).eq("auth_user_id", authUserId)
+        .then(() => console.log(`Session synced to ${targetTable}`));
+    } catch (err) {
+      console.error("Session sync failed:", err);
+    }
+  };
 
-      const queryPromise = supabase
+  // Fetch user data from the users table with timeout
+  const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
+    try {
+      const { data, error } = await supabase
         .from("users")
-        .select(
-          "id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname, current_session_id",
-        )
+        .select("id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname")
         .eq("auth_user_id", authUserId)
         .maybeSingle();
 
-      const result = await Promise.race([queryPromise, timeoutPromise]);
+      if (error || !data) return null;
 
-      // If timeout occurred or error
-      if (result.error || !result.data) {
-        return null;
-      }
-
-      const { data } = result;
-
-      // Compute full_name from first_name, middle_name, last_name
-      const nameParts = [
-        data.first_name,
-        data.middle_name,
-        data.last_name,
-      ].filter(Boolean);
-      const fullName =
-        nameParts.length > 0
-          ? nameParts.join(" ")
-          : data.email?.split("@")[0] || "User";
+      const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
 
       return {
         id: data.id.toString(),
@@ -137,257 +103,78 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         nickname: data.nickname,
       };
     } catch {
-      console.warn("Error fetching user from users table, using fallback");
       return null;
     }
   };
 
-  // Map Supabase user object into our local User shape
-  const mapSupabaseUser = async (supabaseUser: unknown): Promise<User> => {
-    const su = supabaseUser as {
-      id?: string | number;
-      email?: string | null;
-      user_metadata?: Record<string, unknown> | null;
-      email_confirmed_at?: string | null;
-    };
+  const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
+    const su = supabaseUser;
+    const userFromTable = await fetchUserFromTable(su.id);
+    if (userFromTable) return userFromTable;
 
-    // Try to fetch from users table first
-    if (su.id) {
-      const userFromTable = await fetchUserFromTable(su.id.toString());
-      if (userFromTable) {
-        return userFromTable;
-      }
-    }
-
-    // Fallback to metadata if users table doesn't have the record
-    const metadata = su.user_metadata ?? {};
-    const meta = metadata as Record<string, unknown>;
-    const fullName =
-      (meta["display_name"] as string | undefined) ||
-      (meta["full_name"] as string | undefined) ||
-      (meta["name"] as string | undefined) ||
-      su.email?.split("@")[0] ||
-      "Teacher";
-
+    const metadata = su.user_metadata || {};
     return {
-      id: su.id ?? "",
-      auth_id: su.id?.toString() ?? "",
-      email: su.email ?? "",
-      username:
-        (meta["username"] as string | undefined) || su.email || fullName,
-      full_name: fullName,
-      role: (meta["role"] as string | undefined) || "teacher",
+      id: su.id,
+      auth_id: su.id,
+      email: su.email || "",
+      username: metadata.username || su.email || "User",
+      full_name: metadata.full_name || metadata.display_name || su.email?.split("@")[0] || "Teacher",
+      role: metadata.role || "teacher",
       is_active: true,
       email_verified: !!su.email_confirmed_at,
-      onboarding_completed: false, // Default to false for new users
-      title: meta["title"] as string | undefined,
-      nickname: meta["nickname"] as string | undefined,
     };
   };
 
-  // Check if user is authenticated via Supabase on mount and when token changes
   const checkAuth = async () => {
     setIsLoading(true);
     try {
-      // Check localStorage first for faster initial load
-      const cachedUser = localStorage.getItem("user");
-      if (cachedUser) {
-        try {
-          const parsedUser = JSON.parse(cachedUser);
-          setUser(parsedUser);
-        } catch {
-          // Invalid cache, continue with auth check
-        }
-      }
-
-      // Always verify with Supabase to ensure session is valid
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session || !session.user) {
-        // If this is just a temporary network disconnect, keep the current auth state.
         if (sessionError && isNetworkDisconnectError(sessionError.message)) {
-          console.warn(
-            "Network error verifying session, skipping sign-out:",
-            sessionError.message,
-          );
           setIsLoading(false);
           return;
         }
-
-        // Clear all auth data if session is invalid or refresh failed
-        if (sessionError) {
-          console.warn(
-            "Session refresh or retrieval failed, signing out:",
-            sessionError.message,
-          );
-          try {
-            await supabase.auth.signOut();
-          } catch {
-            // Ignore signout errors
-          }
-        }
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user");
         setUser(null);
         setIsLoading(false);
         return;
       }
 
-      // --- UNIVERSAL SINGLE SESSION ENFORCEMENT ---
-      // 1. Try checking the 'users' table first (Admin/Teachers)
-      let sessionData = await supabase
-        .from("users")
-        .select("current_session_id")
-        .eq("auth_user_id", session.user.id)
-        .maybeSingle();
+      // --- SAFETY CHECK (ONLY FOR EXISTING SESSIONS) ---
+      // We check if another device logged in. 
+      // But we DONT do this if we are in the middle of a fresh login process.
+      const isUser = (await supabase.from("users").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle()).data;
+      const dbRecord = isUser || (await supabase.from("students").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle()).data;
 
-      // 2. If not found, check 'students' table (Students)
-      if (!sessionData.data) {
-        sessionData = await supabase
-          .from("students")
-          .select("current_session_id")
-          .eq("auth_user_id", session.user.id)
-          .maybeSingle();
-      }
-
-      const dbUserRecord = sessionData.data;
-      const dbErr = sessionData.error;
-
-      if (!dbErr && dbUserRecord) {
-        // 3. Compare session ID
-        if (dbUserRecord.current_session_id && dbUserRecord.current_session_id !== session.access_token) {
-          console.warn("Session mismatch! Logging out old session.");
-          await logout();
-          alert("Safety Check: This account was logged in on another device. You have been signed out.");
-          return;
-        }
-
-        // 4. Update if empty (Initial login)
-        if (!dbUserRecord.current_session_id) {
-          // Identify which table to update based on where we found the data
-          const targetTable = (await supabase.from("users").select("id").eq("auth_user_id", session.user.id).maybeSingle()).data ? "users" : "students";
-          
-          await supabase
-            .from(targetTable)
-            .update({ current_session_id: session.access_token })
-            .eq("auth_user_id", session.user.id);
-        }
-      }
-      // ---------------------------------------------
-      // Verify session is still valid by checking user (with timeout)
-      let currentUser;
-      let userError;
-      try {
-        const getUserPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise<{
-          data: { user: null };
-          error: { message: string };
-        }>((resolve) => {
-          setTimeout(
-            () =>
-              resolve({ data: { user: null }, error: { message: "Timeout" } }),
-            5000,
-          );
-        });
-
-        const userResult = await Promise.race([getUserPromise, timeoutPromise]);
-        currentUser = userResult.data?.user;
-        userError = userResult.error;
-      } catch (err) {
-        userError = err as { message: string };
-        currentUser = null;
-      }
-
-      if (userError || !currentUser) {
-        // If this is just a temporary network disconnect, do not sign the user out.
-        if (userError?.message && isNetworkDisconnectError(userError.message)) {
-          console.warn(
-            "Network error verifying user, skipping sign-out:",
-            userError.message,
-          );
-          setIsLoading(false);
-          return;
-        }
-
-        // Session expired or invalid, clear everything
-        if (userError?.message !== "Timeout") {
-          console.warn(
-            "User verification failed, signing out:",
-            userError?.message,
-          );
-          try {
-            await supabase.auth.signOut();
-          } catch {
-            // Ignore signout errors
-          }
-        }
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user");
-        setUser(null);
-        setIsLoading(false);
+      if (dbRecord && dbRecord.current_session_id && dbRecord.current_session_id !== session.access_token) {
+        console.warn("Session Mismatch: Another device is active.");
+        await logout();
+        alert("Logged out: This account is being used on another device.");
         return;
       }
 
-      // Session is valid, update user data (with fast fallback)
-      const mappedUser = await mapSupabaseUser(currentUser);
-      localStorage.setItem("auth_token", session.access_token);
-      localStorage.setItem("user", JSON.stringify(mappedUser));
+      const mappedUser = await mapSupabaseUser(session.user);
       setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);
-
-      // On network errors, don't sign out.
-      const maybeMessage =
-        typeof (error as { message?: string }).message === "string"
-          ? (error as { message?: string }).message
-          : undefined;
-      if (isNetworkDisconnectError(maybeMessage)) {
-        console.warn(
-          "Network/auth fetch failure detected, keeping current auth state",
-        );
-        return;
-      }
-
-      // On any other error, clear auth and sign out
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // Ignore signout errors
-      }
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
-      setUser(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Check authentication on mount
     checkAuth();
 
-    // Listen for auth state changes (login, logout, token refresh)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" || !session) {
+        setUser(null);
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
-        setUser(null);
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session.user) {
-          // Identify if user is in 'users' or 'students' table to update correctly
-          const isUser = (await supabase.from("users").select("id").eq("auth_user_id", session.user.id).maybeSingle()).data;
-          const targetTable = isUser ? "users" : "students";
-
-          await supabase
-            .from(targetTable)
-            .update({ current_session_id: session.access_token })
-            .eq("auth_user_id", session.user.id);
-
+          // BOSS MODE: Always claim the session ID in DB, overwriting any old one
+          syncSessionToDB(session.user.id, session.access_token);
+          
           const mappedUser = await mapSupabaseUser(session.user);
           localStorage.setItem("auth_token", session.access_token);
           localStorage.setItem("user", JSON.stringify(mappedUser));
@@ -396,67 +183,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    // --- REALTIME SESSION TRACKING ---
+    // Realtime Listener for Instant Logout
     let sessionChannel: any;
-    const setupRealtime = async () => {
-      if (!user?.auth_id) return;
-      
-      // Determine which table this specific user is in
-      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", user.auth_id).maybeSingle()).data;
-      const tableToWatch = isUser ? "users" : "students";
+    const subscribeToSession = async (authId: string) => {
+      const isUser = (await supabase.from("users").select("id").eq("auth_user_id", authId).maybeSingle()).data;
+      const table = isUser ? "users" : "students";
 
-      sessionChannel = supabase
-        .channel(`single-session-${user.auth_id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: tableToWatch,
-            filter: `auth_user_id=eq.${user.auth_id}`
-          },
-          (payload: any) => {
-            const newSessionId = payload.new.current_session_id;
-            const currentToken = localStorage.getItem("auth_token");
-            
-            if (newSessionId && currentToken && newSessionId !== currentToken) {
-              console.warn(`Realtime Mismatch on ${tableToWatch}: Another device logged in.`);
-              logout();
-              alert("Logged out: Your account was accessed on another device.");
-            }
+      sessionChannel = supabase.channel(`session-${authId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `auth_user_id=eq.${authId}` }, (p: any) => {
+          const newestId = p.new.current_session_id;
+          const ourId = localStorage.getItem("auth_token");
+          if (newestId && ourId && newestId !== ourId) {
+            logout();
+            alert("Session Expired: You logged in from another device.");
           }
-        )
-        .subscribe();
-    };
+        }).subscribe();
+    }
 
-    if (user?.auth_id) setupRealtime();
+    if (user?.auth_id) subscribeToSession(user.auth_id);
 
     return () => {
       subscription.unsubscribe();
       if (sessionChannel) supabase.removeChannel(sessionChannel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.auth_id]);
 
   const login = (token: string, userData?: User) => {
     localStorage.setItem("auth_token", token);
     if (userData) {
-      localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
     } else {
-      // If no userData provided, verify with backend
       checkAuth();
     }
   };
 
   const logout = async () => {
     try {
-      // Sign out from Supabase
       await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Error signing out:", error);
     } finally {
-      // Always clear local storage regardless of Supabase signout result
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
@@ -464,49 +229,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Handle inactivity warning
-  const handleInactivityWarning = () => {
-    setShowInactivityWarning(true);
-  };
-
-  // Handle inactivity logout
   const handleInactivityLogout = () => {
     setShowInactivityWarning(false);
     logout();
   };
 
-  // Use inactivity logout hook (only when user is authenticated)
   useInactivityLogout({
-    timeout: 30 * 60 * 1000, // 30 minutes of inactivity
-    warningTime: 2 * 60 * 1000, // 2 minutes warning before logout
+    timeout: 30 * 60 * 1000,
+    warningTime: 2 * 60 * 1000,
     onLogout: handleInactivityLogout,
-    onWarning: handleInactivityWarning,
-    onWarningDismissed: () => {
-      setShowInactivityWarning(false);
-    },
-    enabled: !!user && !!localStorage.getItem("auth_token"),
+    onWarning: () => setShowInactivityWarning(true),
+    onWarningDismissed: () => setShowInactivityWarning(false),
+    enabled: !!user,
   });
 
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user && !!localStorage.getItem("auth_token"),
-    isLoading,
-    login,
-    logout,
-    checkAuth,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
       {children}
-      {/* Inactivity Warning Modal */}
       <AlertModal
         isOpen={showInactivityWarning}
         onClose={handleInactivityLogout}
         type="warning"
         title="Session Timeout"
-        message="You have been inactive for too long. For security reasons, please click OK to logout."
-        confirmText="OK"
+        message="Your session is about to expire due to inactivity."
+        confirmText="Logout"
         onConfirm={handleInactivityLogout}
         showCancel={false}
       />
