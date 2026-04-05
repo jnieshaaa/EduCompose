@@ -43,14 +43,15 @@ export function AdminDashboardTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Admin Dashboard</h1>
-          <p className="text-neutral-600 mt-1">Manage users, platform rubrics, and system settings</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-tight">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-neutral-600 mt-1">Manage users, platform rubrics, and system settings</p>
         </div>
         <Button
           variant="primary"
           onClick={() => setShowCreateUserModal(true)}
+          className="w-full sm:w-auto justify-center"
         >
           <UserPlus className="w-5 h-5 mr-2" />
           Create User Account

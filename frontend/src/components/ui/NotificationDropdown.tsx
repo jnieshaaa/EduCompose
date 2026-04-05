@@ -13,7 +13,7 @@ import { buildSecureUrl } from "../../utils/secureUrl";
 interface NotificationDropdownProps {
   notifications: Notification[];
   unreadCount: number;
-  role: "Teacher" | "Student";
+  role: "Admin" | "Teacher" | "Student";
   onMarkAsRead?: (id: string) => void;
 }
 
