@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Home,
-  Users,
   Settings,
   ClipboardCheck,
   BookOpen,
@@ -11,6 +10,8 @@ import {
   ChevronRight,
   GraduationCap,
   Archive,
+  UserCog,
+  School,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -82,17 +83,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         path: "/Admin/Dashboard",
       },
       {
-        icon: <Users className="w-5 h-5" />,
+        icon: <UserCog className="w-5 h-5" />,
         label: "User Management",
         path: "/Admin/Users",
       },
       {
-        icon: <Users className="w-5 h-5" />,
+        icon: <GraduationCap className="w-5 h-5" />,
         label: "Students",
         path: "/Admin/Students",
       },
       {
-        icon: <GraduationCap className="w-5 h-5" />,
+        icon: <School className="w-5 h-5" />,
         label: "Academics",
         path: "/Admin/Schools",
       },

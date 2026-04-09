@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
-  // FileText,
   Layers,
   BookOpen,
-  Target,
-  Zap,
-  Shield,
   ClipboardCheck,
   BarChart3,
   Settings,
@@ -18,7 +14,6 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./ui/Tooltip";
-import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 
 interface MenuItem {
@@ -38,13 +33,10 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
-  const [logoShine, setLogoShine] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // All menu items (flat structure - no sub-menus)
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
@@ -57,11 +49,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         label: "Course Management",
         path: "/Teacher/Courses",
       },
-      // {
-      //   icon: <GitCompare className="w-5 h-5" />,
-      //   label: "Blocks / sections",
-      //   path: "/Teacher/Sections",
-      // },
       {
         icon: <BookOpen className="w-5 h-5" />,
         label: "Activities",
@@ -74,7 +61,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       },
       {
         icon: <ClipboardCheck className="w-5 h-5" />,
-        label: "Rubrics / Criteria",
+        label: "Rubrics",
         path: "/Teacher/Rubrics",
       },
       {
@@ -96,170 +83,112 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     [],
   );
 
-  // Routes that belong to Course Management section (for highlighting)
   const courseManagementPaths = useMemo(
     () => ["/Teacher/Courses", "/Teacher/Sections", "/Teacher/Students"],
     [],
   );
 
   const [activePath, setActivePath] = useState(location.pathname);
-
   useEffect(() => setActivePath(location.pathname), [location.pathname]);
 
   const handleItemClick = (path: string) => {
     navigate(path);
+    if (!isDesktop) setIsSidebarOpen(false);
   };
-
-  useEffect(() => {
-    const currentItem = menuItems.find(
-      (item) => item.path.toLowerCase() === location.pathname.toLowerCase(),
-    );
-
-    // For Course Management sub-routes, show "Course Management" in title
-    const isCourseManagementRoute = courseManagementPaths.some((p) =>
-      location.pathname.toLowerCase().startsWith(p.toLowerCase()),
-    );
-
-    if (isCourseManagementRoute) {
-      document.title = "Course Management";
-    } else {
-      document.title = currentItem ? currentItem.label : "EduCompose";
-    }
-  }, [location.pathname, menuItems, courseManagementPaths]);
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
       setIsTablet(width >= 768 && width < 1024);
-      if (width < 768 && isSidebarOpen) {
-        setIsSidebarOpen(false);
+      if (width < 1024 && isSidebarOpen && !isTablet) {
+        // Optionally auto-close on resize to mobile
       }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [setIsSidebarOpen]);
+  }, [isSidebarOpen, setIsSidebarOpen, isTablet]);
 
-  useEffect(() => {
-    setLogoShine(true);
-    const timeout = setTimeout(() => setLogoShine(false), 1000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const textVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-  };
-
-  // Check if a menu item is active (including Course Management sub-routes)
-  const isItemActive = (itemPath: string) => {
-    const currentPath = activePath.toLowerCase();
-    const targetPath = itemPath.toLowerCase();
-
-    // For Course Management, check if current path is any of its sub-routes
-    if (targetPath === "/teacher/courses") {
-      return courseManagementPaths.some((p) =>
-        currentPath.startsWith(p.toLowerCase()),
-      );
+  const isItemActive = (path: string) => {
+    const current = activePath.toLowerCase();
+    const target = path.toLowerCase();
+    if (target === "/teacher/courses") {
+      return courseManagementPaths.some(p => current.startsWith(p.toLowerCase()));
     }
-
-    return (
-      currentPath === targetPath || currentPath.startsWith(targetPath + "/")
-    );
+    return current === target || current.startsWith(target + "/");
   };
 
   return (
-    <div className="flex h-screen relative">
+    <>
+      {/* Overlay Backdrop for Mobile */}
+      <AnimatePresence>
+        {!isDesktop && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       <aside
-        className="fixed lg:relative h-full z-40 flex flex-col border-r border-neutral3 bg-primary"
+        className={`fixed lg:relative h-full z-[70] flex flex-col bg-primary border-r border-white/10 shadow-2xl transition-transform duration-300 ease-in-out
+          ${!isDesktop ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"}
+        `}
         style={{
-          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : isDesktop ? "80px" : "0px",
-          transition: "width 0.2s",
-          overflow: "visible",
+          width: isDesktop ? (isSidebarOpen ? "280px" : "80px") : "280px",
         }}
       >
-        {/* Header */}
-        <div className="flex items-center h-16 border-b border-white p-2.5 relative">
-          <div className="relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group">
-            <img
-              src={eduComposeLogo}
-              alt="EduCompose Logo"
-              className="w-full h-full object-cover cursor-none"
-            />
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div
-                className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
-                    ${
-                      logoShine ? "animate-shine" : ""
-                    } group-hover:animate-shine`}
-                onAnimationEnd={() => setLogoShine(false)}
-              ></div>
-            </div>
+        {/* Header / Logo */}
+        <div className="h-16 flex items-center px-4 border-b border-white/10">
+          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+            <img src={eduComposeLogo} alt="Logo" className="w-8 h-8 object-contain" />
           </div>
-
           {isSidebarOpen && (
-            <div className="ml-2 sm:ml-3 flex flex-col overflow-hidden flex-1 min-w-0">
-              <AnimatePresence>
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  exit="hidden"
-                  variants={textVariants}
-                  className="flex flex-col min-w-0"
-                >
-                  <h1 className="font-bold text-lg sm:text-xl md:text-2xl text-white whitespace-nowrap truncate">
-                    EduCompose
-                  </h1>
-                  <p className="text-[10px] sm:text-xxs font-md mt-0.5 text-white whitespace-nowrap truncate">
-                    Teacher's Companion for Essay Evaluation
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="ml-3 overflow-hidden"
+            >
+              <h1 className="text-white font-bold text-lg truncate">EduCompose</h1>
+              <p className="text-white/60 text-[10px] truncate uppercase tracking-wider font-semibold">Teacher Portal</p>
+            </motion.div>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto scrollbar-hide">
-          <ul
-            className="space-y-2"
-          >
+        {/* Navigation Section */}
+        <nav className="flex-1 py-6 px-3 overflow-y-auto scrollbar-hide">
+          <ul className="space-y-1.5">
             {menuItems.map((item) => {
-              const isActive = isItemActive(item.path);
+              const active = isItemActive(item.path);
               return (
-                <li key={item.label} className="w-full">
-                  <Tooltip
-                    content={item.label}
-                    position="right"
-                    delay={200}
-                    disabled={isSidebarOpen}
-                  >
+                <li key={item.label}>
+                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen}>
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`btn-fade group w-full flex items-center rounded-rd ${
-                        isActive
-                          ? "bg-neutral-50 text-primary"
-                          : "bg-primary text-white hover:text-support-superlight"
+                      className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group ${
+                        active 
+                        ? "bg-white text-primary shadow-lg shadow-black/10" 
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
                       }`}
                     >
-                      <div className="flex items-center w-full flex-1">
-                        <span className="flex-shrink-0 flex items-center justify-center w-12 h-12">
-                          {item.icon}
-                        </span>
-                        <AnimatePresence>
-                          {isSidebarOpen && (
-                            <motion.span
-                              initial="hidden"
-                              animate="visible"
-                              exit="hidden"
-                              variants={textVariants}
-                              className="font-medium whitespace-nowrap flex-1 pr-4 text-left"
-                            >
-                              {item.label}
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
+                      <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                        {item.icon}
                       </div>
+                      <AnimatePresence>
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: "auto" }}
+                            exit={{ opacity: 0, width: 0 }}
+                            className="font-medium whitespace-nowrap overflow-hidden"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </button>
                   </Tooltip>
                 </li>
@@ -268,133 +197,17 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
           </ul>
         </nav>
 
-        {/* Expand/Collapse Toggle Overlay Button (Desktop/Tablet) */}
-        {(isDesktop || isTablet) && (
+        {/* Desktop Toggle Button */}
+        {isDesktop && (
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 hover:text-primary-600 transition-colors focus:outline-none rounded-full cursor-pointer"
-            aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            className="absolute top-1/2 -right-4 -translate-y-1/2 w-8 h-8 bg-white text-primary border border-neutral-200 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[80]"
           >
-            {isSidebarOpen ? (
-              <ChevronLeft className="w-5 h-5" />
-            ) : (
-              <ChevronRight className="w-5 h-5" />
-            )}
+            {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
         )}
       </aside>
-
-      {/* Mobile Sidebar */}
-      {!isDesktop && isSidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Info Modal */}
-      <Modal
-        isOpen={isInfoModalOpen}
-        onClose={() => setIsInfoModalOpen(false)}
-        title="About EduCompose"
-        size="lg"
-      >
-        <div className="space-y-6">
-          {/* Header Card */}
-          <div className="bg-gradient-to-r from-primary to-primary-500 rounded-rd p-6 text-white">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-rd flex items-center justify-center">
-                <img
-                  src={eduComposeLogo}
-                  alt="EduCompose Logo"
-                  className="w-12 h-12 object-contain"
-                />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">EduCompose</h3>
-                <p className="text-white text-opacity-90">
-                  Teacher's Companion for Essay Evaluation
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
-              <div className="flex items-center space-x-3 mb-2">
-                <BookOpen className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">
-                  Essay Management
-                </h4>
-              </div>
-              <p className="text-sm text-neutral-600">
-                Streamline essay collection, organization, and grading with our
-                intuitive management system.
-              </p>
-            </div>
-
-            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
-              <div className="flex items-center space-x-3 mb-2">
-                <Target className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">
-                  Smart Analytics
-                </h4>
-              </div>
-              <p className="text-sm text-neutral-600">
-                Get detailed insights into student performance and writing
-                patterns with advanced analytics.
-              </p>
-            </div>
-
-            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
-              <div className="flex items-center space-x-3 mb-2">
-                <Zap className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">
-                  Quick Grading
-                </h4>
-              </div>
-              <p className="text-sm text-neutral-600">
-                Accelerate your grading process with automated tools and
-                customizable rubrics.
-              </p>
-            </div>
-
-            <div className="bg-neutral-100 rounded-rd p-4 border border-neutral-300">
-              <div className="flex items-center space-x-3 mb-2">
-                <Shield className="w-6 h-6 text-primary" />
-                <h4 className="font-semibold text-neutral-900">
-                  Secure Platform
-                </h4>
-              </div>
-              <p className="text-sm text-neutral-600">
-                Your data and student information are protected with
-                enterprise-grade security.
-              </p>
-            </div>
-          </div>
-
-          {/* Version Info */}
-          <div className="bg-neutral-200 rounded-rd p-4 border border-neutral-300">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-neutral-900">
-                  Version 1.0.0
-                </p>
-                <p className="text-xs text-neutral-600">
-                  Last updated: December 2024
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-neutral-600">
-                  Made with ❤️ for educators
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
-    </div>
+    </>
   );
 };
 

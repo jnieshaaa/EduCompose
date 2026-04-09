@@ -14,6 +14,9 @@ import {
   Filter,
   X,
   Mail,
+  CheckSquare,
+  Square,
+  Zap,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { authApi } from "../../api";
@@ -64,6 +67,9 @@ export const AdminStudentsTab: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -349,6 +355,148 @@ export const AdminStudentsTab: React.FC = () => {
     }
   };
 
+  // --- BULK ACTION HANDLERS ---
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(currentItems.map(s => s.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to archive ${selectedIds.size} students?`)) return;
+    
+    setIsBulkProcessing(true);
+    setBulkProgress({ current: 0, total: selectedIds.size });
+    
+    try {
+      const ids = Array.from(selectedIds);
+      const { error } = await supabase
+        .from("students")
+        .delete()
+        .in("id", ids);
+        
+      if (error) throw error;
+      
+      alert(`Successfully archived ${ids.length} students.`);
+      setSelectedIds(new Set());
+      await loadStudents();
+    } catch (err: any) {
+      alert("Error during bulk delete: " + err.message);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkProvision = async () => {
+    const selectedStudents = students.filter(s => selectedIds.has(s.id));
+    const needProvision = selectedStudents.filter(s => !s.auth_user_id);
+    
+    if (needProvision.length === 0) {
+      alert("All selected students already have auth accounts.");
+      return;
+    }
+
+    if (!confirm(`Provision auth accounts for ${needProvision.length} students and send welcome emails?`)) return;
+
+    setIsBulkProcessing(true);
+    setBulkProgress({ current: 0, total: needProvision.length });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const student of needProvision) {
+      try {
+        const fallbackPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+        const result = await authApi.provisionStudentAccount({
+          email: student.email.trim().toLowerCase(),
+          student_code: student.student_code,
+          first_name: student.first_name,
+          middle_name: student.middle_name || "",
+          last_name: student.last_name,
+          password: fallbackPassword,
+        });
+
+        const tempPassword = result.temp_password || fallbackPassword;
+        await sendStudentWelcomeEmail({
+          to_name: `${student.first_name} ${student.last_name}`.trim(),
+          to_email: student.email,
+          student_code: student.student_code,
+          temp_password: tempPassword,
+        });
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to provision student ${student.student_code}:`, err);
+        failCount++;
+      }
+      setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
+    }
+
+    alert(`Bulk Provisioning Complete:\n- Success: ${successCount}\n- Failed: ${failCount}`);
+    setSelectedIds(new Set());
+    await loadStudents();
+    setIsBulkProcessing(false);
+  };
+
+  const handleBulkResendWelcome = async () => {
+    const selectedStudents = students.filter(s => selectedIds.has(s.id));
+    if (!confirm(`Resend welcome emails with new passwords to ${selectedStudents.length} students?`)) return;
+
+    setIsBulkProcessing(true);
+    setBulkProgress({ current: 0, total: selectedStudents.length });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const student of selectedStudents) {
+      try {
+        const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+        let emailForAuthReset = student.email;
+        
+        if (student.auth_user_id) {
+          const { data: linkedUser } = await supabase
+            .from("users")
+            .select("email")
+            .eq("auth_user_id", student.auth_user_id)
+            .maybeSingle();
+          if (linkedUser?.email) emailForAuthReset = linkedUser.email;
+        }
+
+        const { data: ok } = await supabase.rpc(
+          "admin_reset_student_password",
+          { p_email: emailForAuthReset, p_new_password: newPassword }
+        );
+
+        if (!ok) throw new Error("Auth account not found");
+
+        await sendStudentWelcomeEmail({
+          to_name: `${student.first_name} ${student.last_name}`.trim(),
+          to_email: student.email,
+          student_code: student.student_code,
+          temp_password: newPassword,
+        });
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to reset student ${student.student_code}:`, err);
+        failCount++;
+      }
+      setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
+    }
+
+    alert(`Bulk Reset Complete:\n- Sent: ${successCount}\n- Failed: ${failCount}`);
+    setSelectedIds(new Set());
+    setIsBulkProcessing(false);
+  };
+
   const filteredStudents = students.filter((s) => {
     const fullSearch =
       `${s.first_name || ""} ${s.last_name || ""} ${s.student_code || ""} ${s.email || ""}`.toLowerCase();
@@ -538,6 +686,73 @@ export const AdminStudentsTab: React.FC = () => {
         </div>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedIds.size > 0 && (
+        <Card className="p-4 bg-primary/5 border-primary/20 sticky top-0 z-30 shadow-lg animate-in slide-in-from-top-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold">
+                {selectedIds.size}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-primary">Students Selected</p>
+                <p className="text-[10px] text-primary/60">Choose an action to perform on all selected records</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {isBulkProcessing ? (
+                <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-lg border border-primary/10">
+                   <div className="text-sm font-bold text-primary animate-pulse">
+                     Processing {bulkProgress.current} / {bulkProgress.total}...
+                   </div>
+                   <div className="w-32 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                     <div 
+                       className="h-full bg-primary transition-all duration-300"
+                       style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                     />
+                   </div>
+                </div>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                    Archive All
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleBulkResendWelcome}
+                  >
+                    <Mail className="w-3.5 h-3.5 mr-2" />
+                    Resend Auth
+                  </Button>
+                  <Button 
+                    size="sm"
+                    className="bg-primary text-white"
+                    onClick={handleBulkProvision}
+                  >
+                    <Zap className="w-3.5 h-3.5 mr-2" />
+                    Provision All
+                  </Button>
+                  <button 
+                    onClick={() => setSelectedIds(new Set())}
+                    className="ml-2 p-2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {error && (
         <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
           {error}
@@ -559,6 +774,18 @@ export const AdminStudentsTab: React.FC = () => {
             <table className="w-full">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr className="text-left">
+                  <th className="px-6 py-3">
+                    <button 
+                      onClick={() => handleSelectAll(selectedIds.size < currentItems.length)}
+                      className="flex items-center justify-center p-1 hover:bg-neutral-100 rounded transition-colors text-primary"
+                    >
+                      {selectedIds.size === currentItems.length ? (
+                        <CheckSquare className="w-4 h-4" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
                     Student ID
                   </th>
@@ -586,8 +813,20 @@ export const AdminStudentsTab: React.FC = () => {
                 {currentItems.map((s) => (
                   <tr
                     key={s.id}
-                    className="hover:bg-neutral-50/50 transition-colors group"
+                    className={`hover:bg-neutral-50/50 transition-colors group ${selectedIds.has(s.id) ? "bg-primary/5" : ""}`}
                   >
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => handleToggleSelect(s.id)}
+                        className={`flex items-center justify-center p-1 rounded transition-colors ${selectedIds.has(s.id) ? "text-primary" : "text-neutral-300 group-hover:text-neutral-400"}`}
+                      >
+                        {selectedIds.has(s.id) ? (
+                          <CheckSquare className="w-4 h-4" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-600">
                       {s.student_code}
                     </td>
