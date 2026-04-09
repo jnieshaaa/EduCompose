@@ -27,7 +27,6 @@ export const supabase = createClient(
 
 // Admin client for user management in the frontend as requested
 // WARNING: Using service_role in the frontend is normally discouraged due to security risks.
-// Ensure your Supabase project settings allow this or use with caution.
 export const supabaseAdmin = createClient(
   supabaseUrl ?? "http://localhost:54321",
   supabaseServiceRoleKey || "missing-service-role-key",
@@ -37,9 +36,14 @@ export const supabaseAdmin = createClient(
       persistSession: false
     },
     global: {
-      headers: {
-        // Explicitly set the service role key in headers to ensure it's used correctly
-        "x-address-mode": "service_role"
+      fetch: (url, options) => {
+        const headers = new Headers(options?.headers);
+        // Aggressively remove the apikey header as it triggers the 'Forbidden' error in browsers
+        headers.delete("apikey");
+        if (supabaseServiceRoleKey) {
+          headers.set("Authorization", `Bearer ${supabaseServiceRoleKey}`);
+        }
+        return fetch(url, { ...options, headers });
       }
     }
   }
