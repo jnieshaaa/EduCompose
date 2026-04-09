@@ -19,13 +19,13 @@ import {
   Zap,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { authApi } from "../../api";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import EditStudentModal from "../../components/admin/EditStudentModal";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
+import { supabaseAdmin } from "../../lib/supabaseClient";
 
 interface Student {
   id: string;
@@ -290,28 +290,60 @@ export const AdminStudentsTab: React.FC = () => {
       return;
     }
 
-    if (
-      !confirm(
-        `Provision auth account for ${student.first_name} ${student.last_name} (${student.student_code}) and send a temporary password to ${student.email}?`,
-      )
-    ) {
-      return;
-    }
+    if (!confirm(`Provision auth account for ${student.first_name} ${student.last_name} and send welcome email?`)) return;
 
     try {
       setLoading(true);
-      const fallbackPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const normalizedEmail = student.email.trim().toLowerCase();
 
-      const result = await authApi.provisionStudentAccount({
-        email: student.email.trim().toLowerCase(),
-        student_code: student.student_code,
-        first_name: student.first_name,
-        middle_name: student.middle_name || "",
-        last_name: student.last_name,
-        password: fallbackPassword,
+      // 1. Create Auth User using Admin Client
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          role: "student",
+          student_code: student.student_code,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          full_name: `${student.first_name} ${student.last_name}`.trim(),
+        }
       });
 
-      const tempPassword = result.temp_password || fallbackPassword;
+      if (authError) {
+        // If already exists, we reset the password instead
+        if (authError.message.includes("already registered")) {
+           const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+           const existing = userList.users.find(u => u.email === normalizedEmail);
+           if (existing) {
+             await supabaseAdmin.auth.admin.updateUserById(existing.id, { password: tempPassword });
+             // Ensure the student record is linked
+             await supabase.from("students").update({ auth_user_id: existing.id }).eq("id", student.id);
+           }
+        } else {
+           throw authError;
+        }
+      }
+
+      const authId = authData?.user?.id;
+      if (authId) {
+        // 2. Sync to public.users table
+        await supabase.from("users").upsert({
+          auth_user_id: authId,
+          email: normalizedEmail,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          full_name: `${student.first_name} ${student.last_name}`.trim(),
+          role: "student",
+          is_active: true
+        }, { onConflict: "auth_user_id" });
+
+        // 3. Link student record
+        await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
+      }
+
+      // 4. Send Email
       await sendStudentWelcomeEmail({
         to_name: `${student.first_name} ${student.last_name}`.trim(),
         to_email: student.email,
@@ -321,13 +353,9 @@ export const AdminStudentsTab: React.FC = () => {
 
       await loadStudents();
       setOpenDropdown(null);
-      alert(
-        result.created
-          ? "Auth account provisioned and credentials sent successfully."
-          : "Auth account already existed. Password/metadata were refreshed and credentials were sent.",
-      );
+      alert("Account provisioned and welcome email sent successfully via Supabase.");
     } catch (err: any) {
-      alert(err?.message || "Failed to provision student auth account.");
+      alert("Error: " + (err.message || "Failed to provision account."));
     } finally {
       setLoading(false);
     }
@@ -416,17 +444,47 @@ export const AdminStudentsTab: React.FC = () => {
 
     for (const student of needProvision) {
       try {
-        const fallbackPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
-        const result = await authApi.provisionStudentAccount({
-          email: student.email.trim().toLowerCase(),
-          student_code: student.student_code,
-          first_name: student.first_name,
-          middle_name: student.middle_name || "",
-          last_name: student.last_name,
-          password: fallbackPassword,
+        const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+        const normalizedEmail = student.email.trim().toLowerCase();
+
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: normalizedEmail,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            role: "student",
+            student_code: student.student_code,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            full_name: `${student.first_name} ${student.last_name}`.trim(),
+          }
         });
 
-        const tempPassword = result.temp_password || fallbackPassword;
+        let authId = authData?.user?.id;
+
+        if (authError?.message.includes("already registered")) {
+           const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+           const existing = userList.users.find(u => u.email === normalizedEmail);
+           if (existing) {
+             authId = existing.id;
+             await supabaseAdmin.auth.admin.updateUserById(authId, { password: tempPassword });
+           }
+        }
+
+        if (authId) {
+          await supabase.from("users").upsert({
+            auth_user_id: authId,
+            email: normalizedEmail,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            full_name: `${student.first_name} ${student.last_name}`.trim(),
+            role: "student",
+            is_active: true
+          }, { onConflict: "auth_user_id" });
+
+          await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
+        }
+
         await sendStudentWelcomeEmail({
           to_name: `${student.first_name} ${student.last_name}`.trim(),
           to_email: student.email,

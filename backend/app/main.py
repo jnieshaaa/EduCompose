@@ -35,12 +35,16 @@ allowed_origins = [
     "https://edu-compose-production.vercel.app",
     "https://educompose.vercel.app",
     "https://educompose-production.vercel.app",
+    "https://edu-compose-git-main-jnieshaaa.vercel.app", # Specific preview branch
 ]
 
 # Add production frontend URL if it exists
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+if frontend_url:
+    # Clean up any trailing slashes
+    frontend_url = frontend_url.rstrip("/")
+    if frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
 
 print(f"INFO:    Setting up CORS with origins: {allowed_origins}")
 

@@ -66,7 +66,7 @@ const apiRequest = async <T>(
     if (isTypeError || messageContainsFetch) {
       const networkError = new ApiError(
         0,
-        "Failed to connect to server. Please make sure the backend server is running on http://localhost:8000",
+        `Failed to connect to the server at ${API_BASE_URL}. Please ensure the backend is running and accessible.`,
       );
       throw networkError;
     }
