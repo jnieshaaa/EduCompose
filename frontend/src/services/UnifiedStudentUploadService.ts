@@ -1,6 +1,5 @@
-import { supabase } from "../lib/supabaseClient";
+import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import { FileParserService } from "./FileParserService";
-import { authApi } from "../api";
 
 export type UnifiedUploadResult = {
   success: boolean;
@@ -337,26 +336,59 @@ export class UnifiedStudentUploadService {
                   studentId = newS.id;
                   importedCount++;
 
-                  // Provision authentication account first so emailed credentials are valid.
-                  // If provisioning fails, we keep the student row but skip email to avoid sending unusable login details.
+                  // Provision authentication account directly via Supabase Admin
                   let isProvisioned = false;
                   try {
-                    await authApi.provisionStudentAccount({
-                      email: studentRow.email,
-                      student_code: studentRow.student_code,
-                      first_name: studentRow.first_name,
-                      middle_name: studentRow.middle_name || "",
-                      last_name: studentRow.last_name,
+                    const normalizedEmail = studentRow.email.trim().toLowerCase();
+                    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                      email: normalizedEmail,
                       password: temp_password,
+                      email_confirm: true,
+                      user_metadata: {
+                        role: "student",
+                        student_code: studentRow.student_code,
+                        first_name: studentRow.first_name,
+                        last_name: studentRow.last_name,
+                        full_name: `${studentRow.first_name} ${studentRow.last_name}`.trim(),
+                      }
                     });
-                    isProvisioned = true;
-                  } catch (provisionErr) {
-                    const provisionMessage =
-                      provisionErr instanceof Error
-                        ? provisionErr.message
-                        : "Unknown provisioning error";
+
+                    let authId = authData?.user?.id;
+
+                    if (authError) {
+                      // Handle "already registered" by linking to existing auth account
+                      if (authError.message.includes("already registered")) {
+                        const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+                        const existing = userList.users.find(u => u.email === normalizedEmail);
+                        if (existing) {
+                          authId = existing.id;
+                          await supabaseAdmin.auth.admin.updateUserById(authId, { password: temp_password });
+                        }
+                      } else {
+                        throw authError;
+                      }
+                    }
+
+                    if (authId) {
+                      // Link the student record we just created
+                      await supabase.from("students").update({ auth_user_id: authId }).eq("id", studentId);
+                      
+                      // Sync to public.users table
+                      await supabase.from("users").upsert({
+                        auth_user_id: authId,
+                        email: normalizedEmail,
+                        first_name: studentRow.first_name,
+                        last_name: studentRow.last_name,
+                        full_name: `${studentRow.first_name} ${studentRow.last_name}`.trim(),
+                        role: "student",
+                        is_active: true
+                      }, { onConflict: "auth_user_id" });
+                      
+                      isProvisioned = true;
+                    }
+                  } catch (provisionErr: any) {
                     errors.push(
-                      `Student ${studentRow.student_code}: Account created in roster, but auth provisioning failed (${provisionMessage}).`,
+                      `Student ${studentRow.student_code}: Account created in roster, but auth provisioning failed (${provisionErr.message || "Admin creation failed"}).`,
                     );
                   }
 
