@@ -55,12 +55,7 @@ export function ProgramsTab() {
     showSuccess(`Archived program: ${program.name}`);
   };
 
-  // Removed: Teachers cannot delete programs
-  // const handleDeleteProgram = (program: Program) => {
-  //   if (window.confirm(`Are you sure you want to delete ${program.name}?`)) {
-  //     showSuccess(`Deleted program: ${program.name}`);
-  //   }
-  // };
+  // handleDeleteProgram is already provided by usePrograms hook
 
   // Removed: Selection check not needed
 

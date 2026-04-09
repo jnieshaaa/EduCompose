@@ -14,17 +14,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { MoreVertical, Edit, Archive } from "lucide-react";
+import { MoreVertical, Edit, Archive, Trash2 } from "lucide-react";
 import type { Program } from "../../types/programs";
-
 interface ProgramsTableViewProps {
   programs: Program[];
   onProgramClick: (programName: string) => void;
+  onEditProgram?: (program: Program) => void;
+  onArchiveProgram?: (program: Program) => void;
+  onDeleteProgram?: (program: Program) => void;
 }
 
 export function ProgramsTableView({
   programs,
   onProgramClick,
+  onEditProgram,
+  onArchiveProgram,
+  onDeleteProgram,
 }: ProgramsTableViewProps) {
   return (
     <Card>
@@ -70,13 +75,33 @@ export function ProgramsTableView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end'>
-                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onEditProgram) onEditProgram(program);
+                      }}
+                    >
                       <Edit className='w-4 h-4 mr-2' />
                       Edit Program
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onArchiveProgram) onArchiveProgram(program);
+                      }}
+                    >
                       <Archive className='w-4 h-4 mr-2' />
                       Archive Program
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className='text-error-default focus:text-error-default focus:bg-error-default/10'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onDeleteProgram) onDeleteProgram(program);
+                      }}
+                    >
+                      <Trash2 className='w-4 h-4 mr-2' />
+                      Delete Program
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

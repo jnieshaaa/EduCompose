@@ -408,6 +408,28 @@ export function CourseSectionsView({
     );
   };
 
+  const handleRemoveProgramLoad = (load: TeacherProgramLoad) => {
+    showWarning(
+      `Remove ${load.programs_lookup?.abbr} from this course? This will also delete all created blocks/sections for this program.`,
+      {
+        onConfirm: async () => {
+          try {
+            const { error } = await supabase
+              .from("teacher_program_loads")
+              .delete()
+              .eq("id", load.id);
+
+            if (error) throw error;
+            showSuccess("Program removed successfully.");
+            fetchProgramLoads();
+          } catch (err: any) {
+            showError(err.message || "Failed to remove program.");
+          }
+        },
+      },
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       {/* Header & Breadcrumbs */}
@@ -423,9 +445,14 @@ export function CourseSectionsView({
           <div>
             <h1 className="text-2xl font-bold text-neutral-900 leading-tight">
               {selectedProgramLoad
-                ? `${selectedProgramLoad.programs_lookup?.name} Sections`
+                ? `${selectedProgramLoad.programs_lookup?.abbr}`
                 : course.course_title}
             </h1>
+            {selectedProgramLoad && (
+              <p className="text-xs text-neutral-500 mt-1 font-medium">
+                {selectedProgramLoad.programs_lookup?.name}
+              </p>
+            )}
             {!selectedProgramLoad && (
               <div className="flex gap-2 items-center mt-1">
                 <span className="text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
@@ -487,7 +514,7 @@ export function CourseSectionsView({
               <Card
                 key={load.id}
                 onClick={() => handleProgramClick(load)}
-                className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white border-neutral-200"
+                className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white border-neutral-200 relative"
               >
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-primary/5 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -502,6 +529,17 @@ export function CourseSectionsView({
                     </p>
                   </div>
                 </div>
+                
+                {/* Remove button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveProgramLoad(load);
+                  }}
+                  className="absolute top-2 right-2 p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
               </Card>
             ))
           )}

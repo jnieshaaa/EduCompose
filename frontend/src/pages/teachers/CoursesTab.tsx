@@ -257,7 +257,7 @@ export function CoursesTab() {
                     </div>
                     <div className="flex gap-1">
                       {isMyCourse ? (
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 transition-opacity">
                           <button 
                             onClick={(e) => { e.stopPropagation(); /* handle edit */ }} 
                             className="p-2 text-neutral-400 hover:text-primary transition-colors"
