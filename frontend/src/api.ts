@@ -188,18 +188,61 @@ export const authApi = {
     middle_name?: string;
     password?: string;
   }) => {
-    // Backend will handle Supabase creation and syncing securely
-    return apiRequest<{
-      success: boolean;
-      message: string;
-      created: boolean;
-      temp_password?: string;
-      email: string;
-      student_code: string;
-    }>("/auth/teacher/provision-student-account", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    try {
+      const tempPassword = payload.password || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const normalizedEmail = payload.email.trim().toLowerCase();
+
+      // 1. Create Auth User
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          role: "student",
+          student_code: payload.student_code,
+          first_name: payload.first_name,
+          last_name: payload.last_name,
+          full_name: `${payload.first_name} ${payload.last_name}`.trim(),
+        }
+      });
+
+      let authId = authData?.user?.id;
+
+      if (authError) {
+        if (authError.message.includes("already registered")) {
+          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+          const existing = userList.users.find(u => u.email === normalizedEmail);
+          if (existing) authId = existing.id;
+        } else {
+          throw authError;
+        }
+      }
+
+      if (authId) {
+        // 2. Sync to public.users
+        await supabase.from("users").upsert({
+          auth_user_id: authId,
+          email: normalizedEmail,
+          first_name: payload.first_name,
+          last_name: payload.last_name,
+          full_name: `${payload.first_name} ${payload.last_name}`.trim(),
+          role: "student",
+          is_active: true
+        }, { onConflict: "auth_user_id" });
+      }
+
+      return {
+        success: true,
+        message: "Provisioned via Supabase successfully.",
+        created: !!authData?.user,
+        temp_password: tempPassword,
+        email: normalizedEmail,
+        student_code: payload.student_code
+      };
+    } catch (err: any) {
+      console.error("Supabase provisioning error:", err);
+      throw err;
+    }
   },
 };
 
