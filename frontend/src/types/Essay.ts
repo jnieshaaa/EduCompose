@@ -1,8 +1,8 @@
 export interface Essay {
-  id: number;
-  student_id: number;
-  user_id: number;
-  class_id: number;
+  id: string | number;
+  student_id: string | number;
+  user_id: string | number;
+  class_id: string | number;
   title: string;
   content: string;
   submitted_at: string;
@@ -190,26 +190,26 @@ export interface ArgumentAnalysis {
 }
 
 export interface Student {
-  id: number;
+  id: string | number;
   student_id: string;
   full_name: string;
   email?: string;
-  class_id: number;
+  class_id: string | number;
   created_at: string;
   is_active: boolean;
 }
 
 export interface Class {
-  id: number;
+  id: string | number;
   name: string;
   description?: string;
-  user_id: number;
+  user_id: string | number;
   created_at: string;
   is_active: boolean;
 }
 
 export interface User {
-  id: number;
+  id: string | number;
   email: string;
   username: string;
   full_name: string;
@@ -221,7 +221,7 @@ export interface User {
 }
 
 export interface AnalysisRequest {
-  essay_id: number;
+  essay_id: string | number;
   analysis_type:
     | "grammar"
     | "readability"
@@ -341,7 +341,7 @@ export interface DiagnosticSummary {
 }
 
 export interface AnalysisResponse {
-  essay_id: number;
+  essay_id: string | number;
   analysis_type: string;
   scores: {
     grammar: number;
@@ -395,7 +395,7 @@ export interface TextAnalysisResponse {
 }
 
 export interface BatchAnalysisRequest {
-  essay_ids: number[];
+  essay_ids: (string | number)[];
   analysis_type:
     | "grammar"
     | "readability"
@@ -410,7 +410,7 @@ export interface DashboardStats {
   total_students: number;
   recent_essays: Essay[];
   class_stats: Array<{
-    id: number;
+    id: string | number;
     name: string;
     essay_count: number;
     student_count: number;

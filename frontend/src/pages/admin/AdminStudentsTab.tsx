@@ -25,7 +25,7 @@ import Input from "../../components/ui/Input";
 import EditStudentModal from "../../components/admin/EditStudentModal";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
-import { supabaseAdmin } from "../../lib/supabaseClient";
+import { authApi } from "../../api";
 
 interface Student {
   id: string;
@@ -297,49 +297,18 @@ export const AdminStudentsTab: React.FC = () => {
       const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = student.email.trim().toLowerCase();
 
-      // 1. Create Auth User using Admin Client
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          role: "student",
-          student_code: student.student_code,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          full_name: `${student.first_name} ${student.last_name}`.trim(),
-        }
+      const provisionResult = await authApi.provisionStudentAccount({
+        email: student.email,
+        student_code: student.student_code,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        middle_name: student.middle_name,
+        password: tempPassword
       });
 
-      if (authError) {
-        // If already exists, we reset the password instead
-        if (authError.message.includes("already registered")) {
-           const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-           const existing = userList.users.find(u => u.email === normalizedEmail);
-           if (existing) {
-             await supabaseAdmin.auth.admin.updateUserById(existing.id, { password: tempPassword });
-             // Ensure the student record is linked
-             await supabase.from("students").update({ auth_user_id: existing.id }).eq("id", student.id);
-           }
-        } else {
-           throw authError;
-        }
-      }
-
-      const authId = authData?.user?.id;
+      const authId = provisionResult.auth_id;
       if (authId) {
-        // 2. Sync to public.users table
-        await supabase.from("users").upsert({
-          auth_user_id: authId,
-          email: normalizedEmail,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          full_name: `${student.first_name} ${student.last_name}`.trim(),
-          role: "student",
-          is_active: true
-        }, { onConflict: "auth_user_id" });
-
-        // 3. Link student record
+        // Link student record
         await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
       }
 
@@ -353,7 +322,7 @@ export const AdminStudentsTab: React.FC = () => {
 
       await loadStudents();
       setOpenDropdown(null);
-      alert("Account provisioned and welcome email sent successfully via Supabase.");
+      alert("Account provisioned and welcome email sent successfully via Supabase RPC.");
     } catch (err: any) {
       alert("Error: " + (err.message || "Failed to provision account."));
     } finally {

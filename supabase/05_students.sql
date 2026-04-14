@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS students (
   year         integer,
   block_name   text,
   teacher_id   uuid REFERENCES users(auth_user_id) ON DELETE CASCADE,
+  auth_user_id uuid UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
+  enrollment_status text NOT NULL DEFAULT 'active',
+  is_active        boolean NOT NULL DEFAULT true,
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 

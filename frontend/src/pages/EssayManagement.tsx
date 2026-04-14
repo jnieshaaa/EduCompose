@@ -17,7 +17,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
 import type { Essay, Class, Student } from "../types/Essay";
-import { dummyData, analysisApi } from "../api";
+import { classApi, studentApi, essayApi, analysisApi } from "../api";
 
 const EssayManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -26,32 +26,40 @@ const EssayManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [selectedEssays, setSelectedEssays] = useState<number[]>([]);
+  const [selectedEssays, setSelectedEssays] = useState<(string | number)[]>([]);
   const [showNewEssayModal, setShowNewEssayModal] = useState(false);
   const [newEssay, setNewEssay] = useState({
     title: "",
     content: "",
-    student_id: 0,
-    class_id: 0,
+    student_id: "" as string | number,
+    class_id: "" as string | number,
   });
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // Simulate API calls
-        setTimeout(() => {
-          setEssays(dummyData.essays);
-          setClasses(dummyData.classes);
-          setStudents(dummyData.students);
-          setLoading(false);
-        }, 1000);
+        const [fetchedClasses, fetchedEssays] = await Promise.all([
+          classApi.getClasses(),
+          essayApi.getEssays()
+        ]);
+        
+        setClasses(fetchedClasses);
+        setEssays(fetchedEssays);
+        
+        // Fetch students for the first class or all classes
+        if (fetchedClasses.length > 0) {
+          const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
+          const studentsArrays = await Promise.all(studentPromises);
+          setStudents(studentsArrays.flat());
+        }
       } catch (error) {
         console.error("Error loading data:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -131,24 +139,18 @@ const EssayManagement: React.FC = () => {
 
   const handleCreateEssay = async () => {
     try {
-      // Simulate API call
-      console.log("Creating essay:", newEssay);
-      // In a real app, you would call: await essayApi.createEssay(newEssay);
-
-      const createdEssay: Essay = {
-        id: essays.length + 1,
-        student_id: newEssay.student_id,
-        user_id: 1,
-        class_id: newEssay.class_id,
+      if (!newEssay.class_id || !newEssay.student_id) return;
+      
+      const createdEssay = await essayApi.createEssay({
         title: newEssay.title,
         content: newEssay.content,
-        submitted_at: new Date().toISOString(),
-        status: "submitted",
-      };
+        student_id: newEssay.student_id,
+        class_id: newEssay.class_id
+      });
 
       setEssays((prev) => [createdEssay, ...prev]);
       setShowNewEssayModal(false);
-      setNewEssay({ title: "", content: "", student_id: 0, class_id: 0 });
+      setNewEssay({ title: "", content: "", student_id: "", class_id: "" });
     } catch (error) {
       console.error("Error creating essay:", error);
     }
@@ -293,7 +295,7 @@ const EssayManagement: React.FC = () => {
             <select
               value={selectedClass || ""}
               onChange={(e) =>
-                setSelectedClass(e.target.value ? Number(e.target.value) : null)
+                setSelectedClass(e.target.value || null)
               }
               className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
@@ -418,13 +420,13 @@ const EssayManagement: React.FC = () => {
               onChange={(e) =>
                 setNewEssay((prev) => ({
                   ...prev,
-                  class_id: Number(e.target.value),
+                  class_id: e.target.value,
                 }))
               }
               className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             >
-              <option value={0}>Select a class</option>
+              <option value="">Select a class</option>
               {classes.map((cls) => (
                 <option key={cls.id} value={cls.id}>
                   {cls.name}
@@ -442,13 +444,13 @@ const EssayManagement: React.FC = () => {
               onChange={(e) =>
                 setNewEssay((prev) => ({
                   ...prev,
-                  student_id: Number(e.target.value),
+                  student_id: e.target.value,
                 }))
               }
               className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             >
-              <option value={0}>Select a student</option>
+              <option value="">Select a student</option>
               {students
                 .filter((s) => s.class_id === newEssay.class_id)
                 .map((student) => (

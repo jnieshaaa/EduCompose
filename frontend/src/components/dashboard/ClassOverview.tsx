@@ -5,7 +5,7 @@ import Card from "../ui/Card";
 import ProgressBar from "../ui/ProgressBar";
 
 interface ClassStats {
-  id: number;
+  id: string | number;
   name: string;
   essay_count: number;
   student_count: number;
@@ -13,7 +13,7 @@ interface ClassStats {
 
 interface ClassOverviewProps {
   classes: ClassStats[];
-  onClassClick?: (classId: number) => void;
+  onClassClick?: (classId: string | number) => void;
 }
 
 const ClassOverview: React.FC<ClassOverviewProps> = ({

@@ -25,7 +25,7 @@ interface StudentRow {
 }
 
 interface StudentLoginLookup {
-  student_id: number;
+  student_id: string;
   student_code: string;
   email: string;
   first_name: string;

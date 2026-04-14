@@ -21,7 +21,7 @@ import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ProgressBar from "../components/ui/ProgressBar";
 import type { Class, Student, Essay } from "../types/Essay";
-import { dummyData } from "../api";
+import { classApi, studentApi, essayApi } from "../api";
 import { readSecureParams } from "../utils/secureUrl";
 
 interface GradebookEntry {
@@ -43,7 +43,7 @@ const Gradebook: React.FC = () => {
     []
   );
   const [loading, setLoading] = useState(true);
-  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "score" | "submissions">(
     "name"
@@ -55,14 +55,27 @@ const Gradebook: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        setTimeout(() => {
-          setClasses(dummyData.classes);
-          setStudents(dummyData.students);
-          setEssays(dummyData.essays);
-          setLoading(false);
-        }, 1000);
+        const [fetchedClasses, fetchedEssays] = await Promise.all([
+          classApi.getClasses(),
+          essayApi.getEssays()
+        ]);
+        
+        setClasses(fetchedClasses);
+        setEssays(fetchedEssays);
+        
+        // Fetch students for all classes or selected class
+        // For gradebook, we usually want all students of the teacher
+        const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
+        const studentsArrays = await Promise.all(studentPromises);
+        const allStudents = studentsArrays.flat();
+        
+        // Remove duplicates if any
+        const uniqueStudents = Array.from(new Map(allStudents.map(s => [s.id, s])).values());
+        
+        setStudents(uniqueStudents);
       } catch (error) {
         console.error("Error loading data:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -317,7 +330,7 @@ const Gradebook: React.FC = () => {
             <select
               value={selectedClass || ""}
               onChange={(e) =>
-                setSelectedClass(e.target.value ? Number(e.target.value) : null)
+                setSelectedClass(e.target.value || null)
               }
               className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >

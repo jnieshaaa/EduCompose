@@ -21,14 +21,14 @@ import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ProgressBar from "../components/ui/ProgressBar";
 import type { Class, Student, Essay } from "../types/Essay";
-import { dummyData } from "../api";
+import { classApi, studentApi, essayApi, essayActivityApi } from "../api";
 
 interface Assignment {
-  id: number;
+  id: string | number;
   title: string;
   description: string;
   instructions: string;
-  class_id: number;
+  class_id: string | number;
   due_date: string;
   created_at: string;
   status: "draft" | "published" | "closed";
@@ -37,11 +37,11 @@ interface Assignment {
   time_limit?: number; // in minutes
   rubric_criteria: RubricCriteria[];
   submissions: Essay[];
-  created_by: number;
+  created_by: string | number;
 }
 
 interface RubricCriteria {
-  id: number;
+  id: string | number;
   name: string;
   description: string;
   max_points: number;
@@ -52,13 +52,12 @@ const AssignmentManagement: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [essays, setEssays] = useState<Essay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
-  const [filterClass, setFilterClass] = useState<number | null>(null);
+  const [filterClass, setFilterClass] = useState<string | number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -66,7 +65,7 @@ const AssignmentManagement: React.FC = () => {
     title: "",
     description: "",
     instructions: "",
-    class_id: 0,
+    class_id: "" as string | number,
     due_date: "",
     max_score: 100,
     word_limit: 0,
@@ -77,174 +76,47 @@ const AssignmentManagement: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        setTimeout(() => {
-          setClasses(dummyData.classes);
-          setStudents(dummyData.students);
-          setEssays(dummyData.essays);
-          generateSampleAssignments();
-          setLoading(false);
-        }, 1000);
+        const [fetchedClasses, fetchedEssays, fetchedActivities] = await Promise.all([
+          classApi.getClasses(),
+          essayApi.getEssays(),
+          essayActivityApi.getActivities()
+        ]);
+        
+        setClasses(fetchedClasses);
+        
+        // Map activities to Assignment interface
+        const mappedAssignments: Assignment[] = fetchedActivities.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          description: a.description || "",
+          instructions: a.instructions || "",
+          class_id: a.block_id,
+          due_date: a.deadline || "",
+          created_at: a.created_at,
+          status: a.status || "published",
+          max_score: a.max_score || 100,
+          rubric_criteria: [], // Potentially fetch from linked rubrics later
+          submissions: fetchedEssays.filter((e: Essay) => e.class_id === a.block_id),
+          created_by: a.created_by
+        }));
+
+        setAssignments(mappedAssignments);
+
+        // Fetch students for metrics
+        if (fetchedClasses.length > 0) {
+          const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
+          const studentsArrays = await Promise.all(studentPromises);
+          setStudents(studentsArrays.flat());
+        }
       } catch (error) {
         console.error("Error loading data:", error);
+      } finally {
         setLoading(false);
       }
     };
 
     loadData();
   }, []);
-
-  const generateSampleAssignments = () => {
-    const sampleAssignments: Assignment[] = [
-      {
-        id: 1,
-        title: "Argumentative Essay: Climate Change",
-        description:
-          "Write a persuasive essay arguing for immediate action on climate change",
-        instructions:
-          "Choose a specific aspect of climate change and develop a clear argument with evidence. Include counterarguments and refutations.",
-        class_id: 1,
-        due_date: "2024-02-15T23:59:00Z",
-        created_at: "2024-01-15T10:00:00Z",
-        status: "published",
-        max_score: 100,
-        word_limit: 800,
-        time_limit: 120,
-        rubric_criteria: [
-          {
-            id: 1,
-            name: "Thesis Statement",
-            description: "Clear, arguable thesis",
-            max_points: 20,
-            weight: 20,
-          },
-          {
-            id: 2,
-            name: "Evidence & Support",
-            description: "Strong evidence and examples",
-            max_points: 25,
-            weight: 25,
-          },
-          {
-            id: 3,
-            name: "Organization",
-            description: "Logical structure and flow",
-            max_points: 20,
-            weight: 20,
-          },
-          {
-            id: 4,
-            name: "Grammar & Style",
-            description: "Correct grammar and clear writing",
-            max_points: 20,
-            weight: 20,
-          },
-          {
-            id: 5,
-            name: "Counterarguments",
-            description: "Addresses opposing views",
-            max_points: 15,
-            weight: 15,
-          },
-        ],
-        submissions: essays.filter((e) => e.class_id === 1),
-        created_by: 1,
-      },
-      {
-        id: 2,
-        title: "Literary Analysis: Character Development",
-        description: "Analyze character development in a selected novel",
-        instructions:
-          "Choose a character from our class readings and analyze how they develop throughout the story. Use specific examples from the text.",
-        class_id: 2,
-        due_date: "2024-02-20T23:59:00Z",
-        created_at: "2024-01-20T14:30:00Z",
-        status: "published",
-        max_score: 100,
-        word_limit: 1000,
-        time_limit: 90,
-        rubric_criteria: [
-          {
-            id: 1,
-            name: "Analysis Depth",
-            description: "Insightful character analysis",
-            max_points: 30,
-            weight: 30,
-          },
-          {
-            id: 2,
-            name: "Textual Evidence",
-            description: "Relevant quotes and examples",
-            max_points: 25,
-            weight: 25,
-          },
-          {
-            id: 3,
-            name: "Critical Thinking",
-            description: "Original insights and connections",
-            max_points: 25,
-            weight: 25,
-          },
-          {
-            id: 4,
-            name: "Writing Quality",
-            description: "Clear, engaging writing",
-            max_points: 20,
-            weight: 20,
-          },
-        ],
-        submissions: essays.filter((e) => e.class_id === 2),
-        created_by: 1,
-      },
-      {
-        id: 3,
-        title: "Research Paper: Historical Event",
-        description: "Research and analyze a significant historical event",
-        instructions:
-          "Choose a historical event from the 20th century and analyze its causes, effects, and historical significance. Include proper citations.",
-        class_id: 1,
-        due_date: "2024-03-01T23:59:00Z",
-        created_at: "2024-02-01T09:15:00Z",
-        status: "draft",
-        max_score: 100,
-        word_limit: 1500,
-        time_limit: 0,
-        rubric_criteria: [
-          {
-            id: 1,
-            name: "Research Quality",
-            description: "Thorough research and sources",
-            max_points: 25,
-            weight: 25,
-          },
-          {
-            id: 2,
-            name: "Historical Analysis",
-            description: "Clear cause and effect analysis",
-            max_points: 30,
-            weight: 30,
-          },
-          {
-            id: 3,
-            name: "Citations",
-            description: "Proper formatting and citations",
-            max_points: 15,
-            weight: 15,
-          },
-          {
-            id: 4,
-            name: "Writing & Organization",
-            description: "Clear structure and writing",
-            max_points: 30,
-            weight: 30,
-          },
-        ],
-        submissions: [],
-        created_by: 1,
-      },
-    ];
-
-    setAssignments(sampleAssignments);
-  };
 
   const filteredAssignments = assignments.filter((assignment) => {
     const matchesClass = !filterClass || assignment.class_id === filterClass;
@@ -309,7 +181,7 @@ const AssignmentManagement: React.FC = () => {
     }
   };
 
-  const handlePublishAssignment = (assignmentId: number) => {
+  const handlePublishAssignment = (assignmentId: string | number) => {
     setAssignments((prev) =>
       prev.map((a) =>
         a.id === assignmentId ? { ...a, status: "published" as const } : a
@@ -317,7 +189,7 @@ const AssignmentManagement: React.FC = () => {
     );
   };
 
-  const handleCloseAssignment = (assignmentId: number) => {
+  const handleCloseAssignment = (assignmentId: string | number) => {
     setAssignments((prev) =>
       prev.map((a) =>
         a.id === assignmentId ? { ...a, status: "closed" as const } : a
@@ -749,13 +621,13 @@ const AssignmentManagement: React.FC = () => {
                 onChange={(e) =>
                   setNewAssignment((prev) => ({
                     ...prev,
-                    class_id: Number(e.target.value),
+                    class_id: e.target.value,
                   }))
                 }
                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 required
               >
-                <option value={0}>Select a class</option>
+                <option value="">Select a class</option>
                 {classes.map((cls) => (
                   <option key={cls.id} value={cls.id}>
                     {cls.name}

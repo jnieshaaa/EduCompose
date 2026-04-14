@@ -14,7 +14,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import type { DashboardStats, Essay, Class } from "../types/Essay";
-import { dummyData } from "../api";
+import { classApi, essayApi, studentApi } from "../api";
 import CreateClassModal from "../components/dashboard/CreateClassModal";
 import CreateEssayModal from "../components/dashboard/CreateEssayModal";
 
@@ -28,24 +28,41 @@ const Dashboard: React.FC = () => {
   const [showCreateEssayModal, setShowCreateEssayModal] = useState(false);
 
   useEffect(() => {
-    // Simulate API call
     const loadDashboardData = async () => {
       setLoading(true);
       try {
-        // In a real app, you would call the API here
-        // const statsData = await analysisApi.getDashboardStats();
-        // const essaysData = await essayApi.getEssays();
-        // const classesData = await classApi.getClasses();
+        const [fetchedClasses, fetchedEssays] = await Promise.all([
+          classApi.getClasses(),
+          essayApi.getEssays()
+        ]);
 
-        // For now, use dummy data
-        setTimeout(() => {
-          setStats(dummyData.dashboardStats);
-          setRecentEssays(dummyData.essays);
-          setClasses(dummyData.classes);
-          setLoading(false);
-        }, 1000);
+        setClasses(fetchedClasses);
+        setRecentEssays(fetchedEssays);
+
+        // Fetch students to count total
+        const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
+        const studentsArrays = await Promise.all(studentPromises);
+        const allStudents = studentsArrays.flat();
+        const uniqueStudentsCount = new Set(allStudents.map(s => s.id)).size;
+
+        // Construct stats object
+        const dashboardStats: DashboardStats = {
+          total_essays: fetchedEssays.length,
+          total_classes: fetchedClasses.length,
+          total_students: uniqueStudentsCount,
+          recent_essays: fetchedEssays.slice(0, 5),
+          class_stats: fetchedClasses.map(cls => ({
+            id: cls.id,
+            name: cls.name,
+            essay_count: fetchedEssays.filter(e => e.class_id === cls.id).length,
+            student_count: allStudents.filter(s => s.class_id === cls.id).length
+          }))
+        };
+
+        setStats(dashboardStats);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
+      } finally {
         setLoading(false);
       }
     };

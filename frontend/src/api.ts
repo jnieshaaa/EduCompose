@@ -8,7 +8,6 @@ import type {
   DashboardStats,
   SystemStatsResponse,
 } from "./types/Essay";
-import dummyDataJson from "./data/dummyData.json";
 import { supabase, supabaseAdmin } from "./lib/supabaseClient";
 
 // Get API base URL from environment variable, fallback to localhost for development
@@ -148,8 +147,6 @@ export const authApi = {
     });
   },
 
-  // Note: Most auth functions moved to direct Supabase calls in useAuthModal
-
   createUser: async (userData: {
     email: string;
     password: string;
@@ -192,52 +189,31 @@ export const authApi = {
       const tempPassword = payload.password || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
-      // 1. Create Auth User
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          role: "student",
-          student_code: payload.student_code,
-          first_name: payload.first_name,
-          last_name: payload.last_name,
-          full_name: `${payload.first_name} ${payload.last_name}`.trim(),
+      // Use the RPC function (SECURITY DEFINER) to bypass browser authorization restrictions
+      const { data: authId, error: provisionError } = await supabase.rpc(
+        "admin_provision_student",
+        {
+          p_email: normalizedEmail,
+          p_password: tempPassword,
+          p_first_name: payload.first_name,
+          p_last_name: payload.last_name,
+          p_student_code: payload.student_code,
+          p_middle_name: payload.middle_name || null,
         }
-      });
+      );
 
-      let authId = authData?.user?.id;
-
-      if (authError) {
-        if (authError.message.includes("already registered")) {
-          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-          const existing = userList.users.find(u => u.email === normalizedEmail);
-          if (existing) authId = existing.id;
-        } else {
-          throw authError;
-        }
-      }
-
-      if (authId) {
-        // 2. Sync to public.users
-        await supabase.from("users").upsert({
-          auth_user_id: authId,
-          email: normalizedEmail,
-          first_name: payload.first_name,
-          last_name: payload.last_name,
-          full_name: `${payload.first_name} ${payload.last_name}`.trim(),
-          role: "student",
-          is_active: true
-        }, { onConflict: "auth_user_id" });
+      if (provisionError) {
+        throw new Error(`Provisioning Error: ${provisionError.message}`);
       }
 
       return {
         success: true,
-        message: "Provisioned via Supabase successfully.",
-        created: !!authData?.user,
+        message: "Provisioned via Supabase RPC successfully.",
+        created: true, // RPC handles creating or updating
         temp_password: tempPassword,
         email: normalizedEmail,
-        student_code: payload.student_code
+        student_code: payload.student_code,
+        auth_id: authId as string
       };
     } catch (err: any) {
       console.error("Supabase provisioning error:", err);
@@ -267,32 +243,119 @@ export const userApi = {
 // Class API
 export const classApi = {
   getClasses: async () => {
-    return apiRequest<Class[]>("/classes");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    // In this system, "Blocks" are the equivalent of "Classes" for teachers
+    const { data, error } = await supabase
+      .from("blocks")
+      .select(`
+        id,
+        name,
+        year,
+        teacher_id,
+        created_at,
+        is_active,
+        teacher_program_loads (
+          id,
+          teacher_course_loads (
+            id,
+            courses_lookup (
+              id,
+              course_title,
+              course_code
+            )
+          )
+        )
+      `)
+      .eq("teacher_id", user.id);
+
+    if (error) {
+      console.error("Error fetching classes (blocks):", error);
+      return [];
+    }
+
+    return (data || []).map((b: any) => ({
+      id: b.id,
+      name: `${b.teacher_program_loads?.teacher_course_loads?.courses_lookup?.course_code || ""} - ${b.name}`,
+      description: `${b.teacher_program_loads?.teacher_course_loads?.courses_lookup?.course_title || ""} (Year ${b.year})`,
+      user_id: b.teacher_id,
+      created_at: b.created_at,
+      is_active: b.is_active || true
+    })) as Class[];
   },
 
-  getClass: async (id: number) => {
-    return apiRequest<Class>(`/classes/${id}`);
+  getClass: async (id: string | number) => {
+    const { data, error } = await supabase
+      .from("blocks")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+    return data as Class;
   },
 
   createClass: async (classData: { name: string; description?: string }) => {
-    return apiRequest<Class>("/classes", {
-      method: "POST",
-      body: JSON.stringify(classData),
-    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const { data, error } = await supabase
+      .from("blocks")
+      .insert({
+        name: classData.name,
+        teacher_id: user.id,
+        year: 1
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Class;
   },
 };
 
 // Student API
 export const studentApi = {
-  getStudentsByClass: async (classId: number) => {
-    return apiRequest<Student[]>(`/students/class/${classId}`);
+  getStudentsByClass: async (classId: string | number) => {
+    const { data, error } = await supabase
+      .from("block_students")
+      .select(`
+        student_id,
+        students (
+          id,
+          student_code,
+          first_name,
+          last_name,
+          email,
+          year,
+          block_name,
+          created_at,
+          is_active
+        )
+      `)
+      .eq("block_id", classId);
+
+    if (error) {
+      console.error("Error fetching students for block:", error);
+      return [];
+    }
+
+    return (data || [])
+      .map((item: any) => item.students)
+      .filter(Boolean)
+      .map((s: any) => ({
+        ...s,
+        full_name: `${s.first_name} ${s.last_name}`.trim(),
+        class_id: classId
+      })) as Student[];
   },
 
   createStudent: async (studentData: {
     student_id: string;
     full_name: string;
     email?: string;
-    class_id: number;
+    class_id: string | number;
   }) => {
     return apiRequest<Student>("/students", {
       method: "POST",
@@ -303,33 +366,118 @@ export const studentApi = {
 
 // Essay API
 export const essayApi = {
-  getEssays: async (classId?: number) => {
-    const params = classId ? `?class_id=${classId}` : "";
-    return apiRequest<Essay[]>(`/essays${params}`);
+  getEssays: async (classId?: string | number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    let query = supabase
+      .from("essays")
+      .select("*")
+      .order("submitted_at", { ascending: false });
+
+    if (classId) {
+      query = query.eq("class_id", classId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("Error fetching essays:", error);
+      return [];
+    }
+
+    return (data || []) as Essay[];
   },
 
-  getEssay: async (id: number) => {
-    return apiRequest<Essay>(`/essays/${id}`);
+  getEssay: async (id: string | number) => {
+    const { data, error } = await supabase
+      .from("essays")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+    return data as Essay;
   },
 
   createEssay: async (essayData: {
     title: string;
     content: string;
-    student_id: number;
-    class_id: number;
+    student_id: string | number;
+    class_id: string | number;
   }) => {
-    return apiRequest<Essay>("/essays", {
-      method: "POST",
-      body: JSON.stringify(essayData),
-    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const { data, error } = await supabase
+      .from("essays")
+      .insert({
+        ...essayData,
+        user_id: user.id,
+        status: "submitted",
+        submitted_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Essay;
+  },
+};
+
+// Essay Activity API (Assignments)
+export const essayActivityApi = {
+  getActivities: async (classId?: string | number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    let query = supabase
+      .from("essay_activities")
+      .select(`
+        *,
+        courses_lookup (
+          course_title,
+          course_code
+        ),
+        blocks (
+          name
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (classId) {
+      query = query.eq("block_id", classId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("Error fetching activities:", error);
+      return [];
+    }
+
+    return (data || []).map((a: any) => ({
+      ...a,
+      course_name: a.courses_lookup?.course_title,
+      class_name: a.blocks?.name
+    }));
+  },
+
+  getActivity: async (id: string | number) => {
+    const { data, error } = await supabase
+      .from("essay_activities")
+      .select("*, courses_lookup(*), blocks(*)")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 };
 
 // Knowledge Graph API
 export const kgApi = {
-  getKnowledgeGraph: async (essayId: number) => {
+  getKnowledgeGraph: async (essayId: string | number) => {
     return apiRequest<{
-      essay_id: number;
+      essay_id: string | number;
       nodes: Array<{
         id: string;
         label: string;
@@ -350,24 +498,13 @@ export const kgApi = {
     }>(`/kg/essay/${essayId}/knowledge-graph`);
   },
 
-  buildAndExportGraph: async (essayId: number) => {
+  buildAndExportKG: async (essayId: string | number) => {
     return apiRequest<{
-      essay_id: number;
-      nodes: Array<{
-        id: string;
-        label: string;
-        type?: string;
-        properties?: Record<string, unknown>;
-      }>;
-      edges: Array<{
-        source: string;
-        target: string;
-        type?: string;
-        properties?: Record<string, unknown>;
-      }>;
-      export_stats: {
-        nodes_created: number;
-        edges_created: number;
+      success: boolean;
+      data: {
+        nodes: any[];
+        edges: any[];
+        metadata: any;
         status: string;
       };
       stats: {
@@ -385,7 +522,7 @@ export const kgApi = {
 // Analysis API
 export const analysisApi = {
   analyzeEssay: async (
-    essayId: number,
+    essayId: string | number,
     analysisType:
       | "grammar"
       | "readability"
@@ -400,7 +537,7 @@ export const analysisApi = {
   },
 
   batchAnalyze: async (
-    essayIds: number[],
+    essayIds: (string | number)[],
     analysisType:
       | "grammar"
       | "readability"
@@ -411,9 +548,9 @@ export const analysisApi = {
     return apiRequest<{
       total_analyzed: number;
       results: Array<{
-        essay_id: number;
+        essay_id: string | number;
         essay_title: string;
-        student_id: number;
+        student_id: string | number;
         analysis: AnalysisResponse;
         error?: string;
       }>;
@@ -441,7 +578,6 @@ export const analysisApi = {
       | "comprehensive" = "comprehensive",
     rubricId?: string,
   ): Promise<TextAnalysisResponse> => {
-    // This endpoint doesn't require authentication, so we make a direct fetch call
     const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
       method: "POST",
       headers: {
@@ -480,17 +616,9 @@ export const ocrApi = {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Debug: Log file info
-    console.log("Uploading file:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-
     const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
       method: "POST",
       body: formData,
-      // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
     });
 
     if (!response.ok) {
@@ -501,17 +629,8 @@ export const ocrApi = {
     }
 
     const result = await response.json();
-    // Debug: Log the response to check what we're receiving
-    console.log("OCR API Response:", result);
-
-    // Ensure word_count is valid - calculate if missing
-    if (
-      result.text &&
-      result.text.trim() &&
-      (!result.word_count || result.word_count === 0)
-    ) {
+    if (result.text && result.text.trim() && (!result.word_count || result.word_count === 0)) {
       result.word_count = result.text.trim().split(/\s+/).length;
-      console.log("Calculated word_count:", result.word_count);
     }
 
     return result;
@@ -763,8 +882,6 @@ export const adminApi = {
   },
 
   getSystemStats: async (): Promise<SystemStatsResponse> => {
-    // We use Supabase directly to bypass the 403 error from the backend.
-    // Note: This relies on Supabase RLS policies allowing the current user to count these records.
     try {
       const [
         { count: totalUsers },
@@ -876,11 +993,17 @@ export const adminApi = {
   },
 };
 
-// Dummy data for development - loaded from JSON file
-export const dummyData = dummyDataJson as unknown as {
-  essays: Essay[];
-  classes: Class[];
-  students: Student[];
-  users: User[];
-  dashboardStats: DashboardStats;
+// Dummy data fallback - no longer used by real features
+export const dummyData = {
+  essays: [] as Essay[],
+  classes: [] as Class[],
+  students: [] as Student[],
+  users: [] as User[],
+  dashboardStats: {
+    total_essays: 0,
+    total_classes: 0,
+    total_students: 0,
+    recent_essays: [],
+    class_stats: []
+  } as DashboardStats,
 };

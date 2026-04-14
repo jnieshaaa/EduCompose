@@ -41,42 +41,42 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
     () => [
       {
         icon: <Home className="w-5 h-5" />,
-        label: "Dashboard",
+        label: "Dashboard ",
         path: "/Teacher/Dashboard",
       },
       {
         icon: <Layers className="w-5 h-5" />,
-        label: "Course Management",
+        label: "Course Management ",
         path: "/Teacher/Courses",
       },
       {
         icon: <BookOpen className="w-5 h-5" />,
-        label: "Activities",
+        label: "Activities ",
         path: "/Teacher/Activities",
       },
       {
         icon: <GitCompare className="w-5 h-5" />,
-        label: "Compare Essays",
+        label: "Compare Essays ",
         path: "/Teacher/CompareActivities",
       },
       {
         icon: <ClipboardCheck className="w-5 h-5" />,
-        label: "Rubrics",
+        label: "Rubrics ",
         path: "/Teacher/Rubrics",
       },
       {
         icon: <BarChart3 className="w-5 h-5" />,
-        label: "Metrics",
+        label: "Metrics ",
         path: "/Teacher/Metrics",
       },
       {
         icon: <Archive className="w-5 h-5" />,
-        label: "Archive",
+        label: "Archive ",
         path: "/Teacher/Archive",
       },
       {
         icon: <Settings className="w-5 h-5" />,
-        label: "Settings",
+        label: "Settings ",
         path: "/Teacher/Settings",
       },
     ],
