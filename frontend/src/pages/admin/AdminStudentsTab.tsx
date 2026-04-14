@@ -26,6 +26,7 @@ import EditStudentModal from "../../components/admin/EditStudentModal";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
 import { authApi } from "../../api";
+import AlertModal from "../../components/ui/AlertModal";
 
 interface Student {
   id: string;
@@ -79,6 +80,11 @@ export const AdminStudentsTab: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState("");
   const [progFilter, setProgFilter] = useState("");
   const [blockFilter, setBlockFilter] = useState("");
+
+  const [confirmingAction, setConfirmingAction] = useState<{
+    type: "delete" | "resend" | "provision" | "bulk_delete" | "bulk_provision" | "bulk_resend";
+    student?: Student;
+  } | null>(null);
 
   const logStudentId = searchParams.get("logs");
 
@@ -225,16 +231,17 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleResendPassword = async (student: Student) => {
-    if (
-      !student.email ||
-      !confirm(
-        `Generate a new password and email it to ${student.first_name} ${student.last_name}?`
-      )
-    )
-      return;
+    if (!student.email) return;
+    setConfirmingAction({ type: "resend", student });
+  };
 
+  const executeResend = async () => {
+    const student = confirmingAction?.student;
+    if (!student) return;
+    
     try {
       setLoading(true);
+      setConfirmingAction(null);
       const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
 
       // Prefer the auth-linked email (from users table) when available.
@@ -289,11 +296,16 @@ export const AdminStudentsTab: React.FC = () => {
       alert("Student email is required before provisioning an auth account.");
       return;
     }
+    setConfirmingAction({ type: "provision", student });
+  };
 
-    if (!confirm(`Provision auth account for ${student.first_name} ${student.last_name} and send welcome email?`)) return;
+  const executeProvision = async () => {
+    const student = confirmingAction?.student;
+    if (!student) return;
 
     try {
       setLoading(true);
+      setConfirmingAction(null);
       const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = student.email.trim().toLowerCase();
 
@@ -331,14 +343,16 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleDeleteStudent = async (student: Student) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete/archive student ${student.first_name} ${student.last_name}?`,
-      )
-    )
-      return;
+    setConfirmingAction({ type: "delete", student });
+  };
+
+  const executeDelete = async () => {
+    const student = confirmingAction?.student;
+    if (!student) return;
 
     try {
+      setLoading(true);
+      setConfirmingAction(null);
       const { error: deleteError } = await supabase
         .from("students")
         .delete()
@@ -349,6 +363,8 @@ export const AdminStudentsTab: React.FC = () => {
       setOpenDropdown(null);
     } catch (err: any) {
       alert(err.message || "Failed to delete student");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -370,9 +386,12 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to archive ${selectedIds.size} students?`)) return;
-    
+    setConfirmingAction({ type: "bulk_delete" });
+  };
+
+  const executeBulkDelete = async () => {
     setIsBulkProcessing(true);
+    setConfirmingAction(null);
     setBulkProgress({ current: 0, total: selectedIds.size });
     
     try {
@@ -403,9 +422,15 @@ export const AdminStudentsTab: React.FC = () => {
       return;
     }
 
-    if (!confirm(`Provision auth accounts for ${needProvision.length} students and send welcome emails?`)) return;
+    setConfirmingAction({ type: "bulk_provision" });
+  };
 
+  const executeBulkProvision = async () => {
+    const selectedStudents = students.filter(s => selectedIds.has(s.id));
+    const needProvision = selectedStudents.filter(s => !s.auth_user_id);
+    
     setIsBulkProcessing(true);
+    setConfirmingAction(null);
     setBulkProgress({ current: 0, total: needProvision.length });
 
     let successCount = 0;
@@ -475,10 +500,13 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleBulkResendWelcome = async () => {
-    const selectedStudents = students.filter(s => selectedIds.has(s.id));
-    if (!confirm(`Resend welcome emails with new passwords to ${selectedStudents.length} students?`)) return;
+    setConfirmingAction({ type: "bulk_resend" });
+  };
 
+  const executeBulkResend = async () => {
+    const selectedStudents = students.filter(s => selectedIds.has(s.id));
     setIsBulkProcessing(true);
+    setConfirmingAction(null);
     setBulkProgress({ current: 0, total: selectedStudents.length });
 
     let successCount = 0;
@@ -1000,6 +1028,78 @@ export const AdminStudentsTab: React.FC = () => {
           onSuccess={loadStudents}
         />
       )}
+
+      {selectedIds.size > 0 && isBulkProcessing && (
+        <div className="fixed inset-0 z-[110] bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          {/* Silent progress indicator for bulk */}
+        </div>
+      )}
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "delete"}
+        onClose={() => setConfirmingAction(null)}
+        type="error"
+        title="Archive Student"
+        message={`Are you sure you want to archive ${confirmingAction?.student?.first_name} ${confirmingAction?.student?.last_name}? This will remove them from the active list.`}
+        showCancel
+        confirmText="Confirm Archive"
+        onConfirm={executeDelete}
+      />
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "resend"}
+        onClose={() => setConfirmingAction(null)}
+        type="warning"
+        title="Reset Password"
+        message={`Generate a new temporary password for ${confirmingAction?.student?.first_name}? A welcome email will be sent immediately.`}
+        showCancel
+        confirmText="Generate & Send"
+        onConfirm={executeResend}
+      />
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "provision"}
+        onClose={() => setConfirmingAction(null)}
+        type="info"
+        title="Provision Account"
+        message={`Create a new auth account for ${confirmingAction?.student?.first_name}? They will receive their login credentials via email.`}
+        showCancel
+        confirmText="Provision Now"
+        onConfirm={executeProvision}
+      />
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "bulk_delete"}
+        onClose={() => setConfirmingAction(null)}
+        type="error"
+        title="Bulk Archive"
+        message={`Are you sure you want to archive ${selectedIds.size} selected students? This will remove them from the active roster.`}
+        showCancel
+        confirmText="Archive Selected"
+        onConfirm={executeBulkDelete}
+      />
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "bulk_provision"}
+        onClose={() => setConfirmingAction(null)}
+        type="info"
+        title="Bulk Provision"
+        message={`Provision auth accounts for ${selectedIds.size} students? This may take a moment and will send emails to each student.`}
+        showCancel
+        confirmText="Start Provisioning"
+        onConfirm={executeBulkProvision}
+      />
+
+      <AlertModal
+        isOpen={confirmingAction?.type === "bulk_resend"}
+        onClose={() => setConfirmingAction(null)}
+        type="warning"
+        title="Bulk Resend"
+        message={`Reset passwords and resend credentials to ${selectedIds.size} students? Existing passwords will be invalidated.`}
+        showCancel
+        confirmText="Reset & Resend"
+        onConfirm={executeBulkResend}
+      />
 
       {/* Portal dropdown — renders above the overflow-x-auto table */}
       {openDropdown && dropdownPos &&

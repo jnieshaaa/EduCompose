@@ -245,79 +245,56 @@ export function EssayTextDisplay({
   );
 
   return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-neutral-900">Essay Text</h3>
-        <div className="flex items-center space-x-3">
-          {/* Error Type Legend - Inline */}
-          <div className="hidden sm:flex items-center gap-3">
+    <div className="flex flex-col relative z-20">
+      {/* Header - Institutional Transcript Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h3 className="text-xl font-black text-neutral-900 tracking-tight uppercase tracking-widest text-xs flex items-center gap-2">
+             <div className="w-1.5 h-6 bg-primary rounded-full" />
+             Manuscript <span className="text-primary">Transcript</span>
+          </h3>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Legend - Premium glass pills */}
+          <div className="hidden lg:flex items-center gap-2 p-1 bg-white/40 border border-white/60 rounded-2xl shadow-sm backdrop-blur-md">
             {[
-              {
-                type: "grammar",
-                label: "Grammar",
-                color: "rgba(239, 68, 68, 0.35)",
-                textColor: "#991b1b",
-              },
-              {
-                type: "spelling",
-                label: "Spelling",
-                color: "rgba(249, 115, 22, 0.35)",
-                textColor: "#9a3412",
-              },
-              {
-                type: "punctuation",
-                label: "Punctuation",
-                color: "rgba(234, 179, 8, 0.35)",
-                textColor: "#854d0e",
-              },
-              {
-                type: "word_choice",
-                label: "Word Choice",
-                color: "rgba(168, 85, 247, 0.35)",
-                textColor: "#6b21a8",
-              },
+              { type: "grammar", label: "Grammar", color: "bg-error-default", border: "border-error-200" },
+              { type: "spelling", label: "Spelling", color: "bg-warning-default", border: "border-warning-200" },
+              { type: "punctuation", label: "Punc.", color: "bg-info-default", border: "border-info-200" },
             ].map((item) => (
-              <div
-                key={item.type}
-                className="flex items-center space-x-1.5 text-xs"
-              >
-                <div
-                  className="w-2.5 h-2.5 rounded"
-                  style={{
-                    backgroundColor: item.color,
-                    border: `1px solid ${item.textColor}`,
-                  }}
-                />
-                <span className="text-neutral-500">{item.label}</span>
+              <div key={item.type} className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-xl shadow-sm border border-neutral-100">
+                <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">{item.label}</span>
               </div>
             ))}
           </div>
           {textSegments.errors.length > 0 && (
-            <Badge variant="warning" size="sm">
-              {textSegments.errors.length} issues
+            <Badge variant="error" size="sm" className="rounded-xl px-3 py-1 font-black text-[9px] uppercase tracking-widest bg-error-50/50">
+              {textSegments.errors.length} Anomalies found
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Instruction Text */}
+      {/* Instructional HUD */}
       {textSegments.errors.length > 0 && (
-        <p className="text-xs text-neutral-500 mb-3 italic">
-          💡 Click on highlighted text to see error details and suggestions
-        </p>
+        <div className="flex items-center gap-2 mb-4 bg-primary-50/30 p-3 rounded-2xl border border-white/40 backdrop-blur-sm">
+           <Lightbulb className="w-3.5 h-3.5 text-primary" />
+           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Protocol: Interact with highlights for diagnostic depth</p>
+        </div>
       )}
 
-      {/* Essay Content */}
-      <Card className="p-6">
+      {/* Manuscript Container */}
+      <Card variant="glass" className="p-10 border-white/80 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-100/10 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
         <div
           ref={containerRef}
-          className="leading-relaxed text-neutral-800 text-[15px] selection:bg-primary/20"
+          className="relative z-10 leading-loose text-neutral-800 text-[16px] selection:bg-primary/20 font-serif"
         >
           <div className="whitespace-pre-wrap">
             {textSegments.segments.map((segment: any, idx) => {
               if (segment.type === "text") {
-                return <span key={idx}>{segment.text}</span>;
+                return <span key={idx} className="font-medium opacity-90">{segment.text}</span>;
               } else {
                 // Highlight segment
                 const errorIndex = segment.errorIndex!;
@@ -334,23 +311,19 @@ export function EssayTextDisplay({
                     <mark
                       id={`error-mark-${markKey}`}
                       onClick={() => handleMarkActivate(errorIndex)}
+                      className={`cursor-pointer transition-all duration-300 rounded-md px-1 font-semibold ${isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:brightness-95'}`}
                       style={{
                         background: color.bg,
                         color: color.text,
-                        padding: "1px 3px",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
                         boxShadow: isSelected
-                          ? `0 0 0 2px ${color.text}`
+                          ? `0 10px 15px -3px rgba(0, 0, 0, 0.1)`
                           : "none",
                       }}
-                      title={error.message || "Grammar issue"}
-                      className="error-highlight hover:opacity-80"
+                      title={error.message || "Diagnostic anomaly"}
                     >
                       {segment.text}
                     </mark>
-                    {/* Show inline error details right after the selected highlight */}
+                    {/* Inline Detail Modal-like expansion */}
                     {isSelected && (
                       <InlineErrorDetails
                         error={error}
@@ -369,7 +342,7 @@ export function EssayTextDisplay({
   );
 }
 
-// Inline Error Details Component
+// Inline Error Details Component - Modernized HUD
 interface InlineErrorDetailsProps {
   error: HighlightError;
   errorIndex: number;
@@ -384,60 +357,62 @@ function InlineErrorDetails({
   return (
     <div
       id={`error-details-${errorIndex}`}
-      className="block w-full mt-2 mb-2"
-      style={{ animation: "slideIn 0.2s ease-out" }}
+      className="block w-full mt-4 mb-4 relative z-30"
+      style={{ animation: "slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
     >
-      <div className="bg-white rounded-lg shadow-md border border-neutral-200 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-neutral-50 to-neutral-100 border-b border-neutral-200">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+      <div className="bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden ring-4 ring-primary-50">
+        {/* Detail Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-neutral-900 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+              <AlertTriangle className="w-5 h-5 text-error-default" />
             </div>
-            <Badge
-              variant={getErrorBadgeVariant(error.type || "grammar")}
-              size="sm"
-            >
-              {getErrorTypeLabel(error.type || "grammar")}
-            </Badge>
+            <div>
+              <p className="text-[10px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Diagnostic Alert</p>
+              <h4 className="text-sm font-black tracking-tight">{getErrorTypeLabel(error.type || "grammar")}</h4>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-neutral-200 transition-colors text-neutral-500 hover:text-neutral-700"
-            aria-label="Dismiss"
+            className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-4 py-3 space-y-2.5">
-          {/* Error Message */}
+        {/* Detail Content */}
+        <div className="p-6 space-y-4">
           <div>
-            <p className="text-sm font-medium text-neutral-900">
-              {error.message || "Grammar issue detected"}
+            <p className="text-lg font-black text-neutral-900 tracking-tight leading-snug">
+              {error.message || "Manuscript anomaly detected"}
             </p>
             {error.context && (
-              <p className="text-xs text-neutral-500 mt-1 italic">
-                Context: "{error.context}"
+              <p className="text-[11px] font-medium text-neutral-400 mt-2 p-2 bg-neutral-50 rounded-xl border border-neutral-100">
+                <span className="font-black text-[9px] uppercase tracking-widest text-neutral-300 mr-2">Context Index:</span>
+                "{error.context}"
               </p>
             )}
           </div>
 
-          {/* Suggestion */}
+          {/* AI Refinement Suggestion */}
           {error.suggestion && (
-            <div className="flex items-start space-x-2 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200">
-              <Lightbulb className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">
-                  Suggestion
-                </p>
-                <p className="text-sm text-emerald-700 mt-0.5">
+            <div className="flex items-start gap-4 p-5 bg-primary-50 rounded-2xl border border-primary-100 relative group overflow-hidden">
+               <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-white/40 to-transparent pointer-events-none" />
+               <div className="p-2 bg-white rounded-xl shadow-sm text-primary flex-shrink-0">
+                  <Lightbulb className="w-5 h-5" />
+               </div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1.5 leading-none">AI Resolution Protocol</p>
+                <p className="text-sm font-bold text-primary-900 leading-relaxed">
                   {error.suggestion}
                 </p>
               </div>
             </div>
           )}
+          
+          <div className="pt-2">
+             <Button variant="ghost" size="sm" className="w-full rounded-xl text-neutral-400 hover:text-primary font-black text-[9px] uppercase tracking-widest bg-neutral-50/50" onClick={onClose}>Dismiss Diagnostic</Button>
+          </div>
         </div>
       </div>
     </div>

@@ -54,66 +54,84 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
   };
 
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-neutral-900">
-          Recent Activity
-        </h3>
-        <Badge variant="info" size="sm">
-          {essays.length} essays
+    <Card variant="glass" className="h-full border-primary-100/30">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-100 rounded-xl">
+             <Clock className="w-5 h-5 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold text-neutral-900 leading-none">
+            Recent Engagement
+          </h3>
+        </div>
+        <Badge variant="info" size="sm" className="rounded-full px-3">
+          {essays.length} Submissions
         </Badge>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-1">
         {essays.length === 0 ? (
-          <div className="text-center py-8">
-            <BookOpen className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-            <p className="text-neutral-500">No essays submitted yet</p>
+          <div className="text-center py-12 bg-white/50 rounded-2xl border border-dashed border-neutral-200">
+            <BookOpen className="w-16 h-16 text-neutral-300 mx-auto mb-4 opacity-50" />
+            <p className="text-neutral-500 font-medium">Waiting for student activity...</p>
           </div>
         ) : (
-          essays.map((essay, index) => {
+          essays.slice(0, 5).map((essay, index) => {
             const ActivityIcon = getActivityIcon(essay.status);
 
             return (
               <motion.div
                 key={essay.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center space-x-3 p-3 rounded-rd hover:bg-neutral-50 transition-colors duration-200 cursor-pointer"
+                className={`flex items-center space-x-4 p-4 rounded-2xl hover:bg-white/80 transition-all duration-300 cursor-pointer group border border-transparent hover:border-primary-100/50 hover:shadow-sm ${
+                  index !== essays.slice(0, 5).length - 1 ? "" : ""
+                }`}
                 onClick={() => onEssayClick?.(essay)}
               >
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-primary-100 rounded-rs flex items-center justify-center">
-                    <ActivityIcon className="w-5 h-5 text-primary" />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 ${
+                    status === 'analyzed' ? 'bg-info-50 text-info-default' : 
+                    status === 'reviewed' ? 'bg-success-50 text-success-default' : 
+                    'bg-primary-50 text-primary'
+                  }`}>
+                    <ActivityIcon className="w-6 h-6" />
                   </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <p className="text-sm font-medium text-neutral-900 truncate">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-base font-bold text-neutral-900 truncate group-hover:text-primary transition-colors">
                       {essay.title}
                     </p>
-                    <Badge variant={getStatusColor(essay.status)} size="sm">
+                    <Badge 
+                      variant={getStatusColor(essay.status)} 
+                      size="sm"
+                      className="capitalize font-bold tracking-tight px-2 py-0.5 rounded-md"
+                    >
                       {essay.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center space-x-4 text-xs text-neutral-500">
-                    <div className="flex items-center space-x-1">
-                      <User className="w-3 h-3" />
-                      <span>Student {essay.student_id}</span>
+                  <div className="flex items-center space-x-4 text-xs font-semibold text-neutral-400">
+                    <div className="flex items-center space-x-1 py-1 px-2 rounded-md bg-neutral-100/50">
+                      <User className="w-3.5 h-3.5" />
+                      <span>ID: {essay.student_id}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3.5 h-3.5" />
                       <span>{formatDate(essay.submitted_at)}</span>
                     </div>
                     {essay.overall_score !== undefined && (
-                      <div className="flex items-center space-x-1">
-                        <TrendingUp className="w-3 h-3" />
-                        <span>{Math.round(essay.overall_score)}/100</span>
+                      <div className="flex items-center space-x-1 text-success-default">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Score: {Math.round(essay.overall_score)}/100</span>
                       </div>
                     )}
                   </div>
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowRight className="w-5 h-5 text-primary" />
                 </div>
               </motion.div>
             );

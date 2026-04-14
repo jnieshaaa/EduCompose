@@ -6,7 +6,9 @@ import {
   TrendingUp,
   Plus,
   Filter,
+  ArrowRight,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentActivity from "../components/dashboard/RecentActivity";
 import ClassOverview from "../components/dashboard/ClassOverview";
@@ -17,6 +19,7 @@ import type { DashboardStats, Essay, Class } from "../types/Essay";
 import { classApi, essayApi, studentApi } from "../api";
 import CreateClassModal from "../components/dashboard/CreateClassModal";
 import CreateEssayModal from "../components/dashboard/CreateEssayModal";
+import DiagnosticFindings from "../components/dashboard/DiagnosticFindings";
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -39,13 +42,11 @@ const Dashboard: React.FC = () => {
         setClasses(fetchedClasses);
         setRecentEssays(fetchedEssays);
 
-        // Fetch students to count total
         const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
         const studentsArrays = await Promise.all(studentPromises);
         const allStudents = studentsArrays.flat();
         const uniqueStudentsCount = new Set(allStudents.map(s => s.id)).size;
 
-        // Construct stats object
         const dashboardStats: DashboardStats = {
           total_essays: fetchedEssays.length,
           total_classes: fetchedClasses.length,
@@ -78,13 +79,17 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className='p-6'>
+      <div className='p-6 min-h-screen bg-neutral-50'>
         <div className='animate-pulse space-y-6'>
-          <div className='h-8 bg-primary-500 rounded w-1/4'></div>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className='h-24 bg-primary-500 rounded-rd'></div>
+          <div className='h-12 bg-neutral-200 rounded-2xl w-1/3'></div>
+          <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className='h-32 bg-neutral-200 rounded-2xl'></div>
             ))}
+          </div>
+          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+            <div className='lg:col-span-2 h-96 bg-neutral-200 rounded-2xl'></div>
+            <div className='h-96 bg-neutral-200 rounded-2xl'></div>
           </div>
         </div>
       </div>
@@ -92,177 +97,150 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className='p-6 space-y-6'>
+    <div className='relative p-6 space-y-8 min-h-screen bg-neutral-50/50 overflow-hidden'>
+      {/* Visual background flourishes */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-200/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-success-200/10 blur-[100px] rounded-full pointer-events-none" />
+
       {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold text-neutral-900'>Dashboard</h1>
-          <p className='text-neutral-600 mt-1'>
-            Welcome back! Here's what's happening with your classes.
+      <div className='relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <h1 className='text-4xl font-black text-neutral-900 tracking-tight'>
+            Institutional <span className="text-primary">Dashboard</span>
+          </h1>
+          <p className='text-neutral-500 font-medium mt-1'>
+            Welcome back, Prof. Administrator. Here is today's academic snapshot.
           </p>
-        </div>
-        <div className='mt-4 sm:mt-0 flex space-x-3'>
-          <Button variant='ghost' size='sm'>
-            <Filter className='w-4 h-4 mr-2' />
-            Filter
-          </Button>
-          <Button variant='primary' size='sm'>
+        </motion.div>
+        
+        <div className='flex items-center gap-3'>
+          <div className="relative hidden md:block">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input 
+              type="text"
+              placeholder="Quick search findings..."
+              className="pl-10 pr-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all w-64 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button 
+            variant='primary' 
+            className='shadow-lg shadow-primary/20 rounded-xl px-6'
+            onClick={() => setShowCreateEssayModal(true)}
+          >
             <Plus className='w-4 h-4 mr-2' />
-            New Essay
+            New Analysis
           </Button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className='max-w-md'>
-        <Input
-          placeholder='Search essays...'
-          value={searchTerm}
-          onChange={setSearchTerm}
-          type='text'
-        />
-      </div>
-
-      {/* Stats Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+      {/* Stats Cards Section */}
+      <div className='relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
         <StatsCard
-          title='Total Essays'
+          title='Academic Output'
           value={stats?.total_essays || 0}
           icon={BookOpen}
           color='primary'
-          change={{ value: 12, type: "increase" }}
+          className="shadow-md hover:shadow-xl transition-shadow"
         />
         <StatsCard
-          title='Active Classes'
+          title='Academic Blocks'
           value={stats?.total_classes || 0}
           icon={GraduationCap}
           color='success'
-          change={{ value: 5, type: "increase" }}
+          className="shadow-md hover:shadow-xl transition-shadow"
         />
         <StatsCard
-          title='Total Students'
+          title='Active Students'
           value={stats?.total_students || 0}
           icon={Users}
           color='info'
-          change={{ value: 8, type: "increase" }}
+          className="shadow-md hover:shadow-xl transition-shadow"
         />
         <StatsCard
-          title='Avg Score'
-          value='87%'
+          title='Institutional Avg'
+          value='87.4%'
           icon={TrendingUp}
           color='warning'
-          change={{ value: 3, type: "increase" }}
+          className="shadow-md hover:shadow-xl transition-shadow"
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-        {/* Recent Activity */}
-        <div className='lg:col-span-2'>
+      {/* Insights & Activity Grid */}
+      <div className='relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8'>
+        {/* Diagnostic Findings - Prioritized */}
+        <div className='lg:col-span-1 h-full'>
+          <DiagnosticFindings />
+        </div>
+
+        {/* Global Recent Activity */}
+        <div className='lg:col-span-2 h-full'>
           <RecentActivity
             essays={filteredEssays}
             onEssayClick={(essay) => {
               console.log("Essay clicked:", essay);
-              // Navigate to essay detail or open modal
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Managed Blocks & Quick Actions */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          <ClassOverview
+            classes={classes.map((cls) => ({
+              ...cls,
+              essay_count: stats?.class_stats.find(s => s.id === cls.id)?.essay_count || 0,
+              student_count: stats?.class_stats.find(s => s.id === cls.id)?.student_count || 0,
+            }))}
+            onClassClick={(classId) => {
+              console.log("Class clicked:", classId);
             }}
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className='space-y-6'>
-          <Card>
-            <h3 className='text-lg font-semibold text-neutral-900 mb-4'>
+        <div className="space-y-6">
+          <Card variant="glass" className="border-primary-100/30">
+            <h3 className='text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2'>
+              <TrendingUp className="w-5 h-5 text-primary" />
               Quick Actions
             </h3>
-            <div className='space-y-3'>
+            <div className='grid grid-cols-1 gap-3'>
               <Button
                 variant='primary'
-                className='w-full justify-start'
+                className='w-full justify-between group rounded-xl py-6'
                 onClick={() => setShowCreateEssayModal(true)}
               >
-                <Plus className='w-4 h-4 mr-2' />
-                Add New Essay
+                <span className="flex items-center">
+                  <Plus className='w-4 h-4 mr-3' />
+                  Add New Essay
+                </span>
+                <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </Button>
-              <Button variant='secondary' className='w-full justify-start'>
-                <Users className='w-4 h-4 mr-2' />
-                Manage Students
+              <Button 
+                variant='secondary' 
+                className='w-full justify-start rounded-xl py-6'
+                onClick={() => window.location.href = "/Teacher/Gradebook"}
+              >
+                <GraduationCap className='w-4 h-4 mr-3' />
+                View Gradebook
               </Button>
               <Button
                 variant='ghost'
-                className='w-full justify-start'
+                className='w-full justify-start rounded-xl text-neutral-600 hover:bg-neutral-100 py-6'
                 onClick={() => setShowCreateClassModal(true)}
               >
-                <GraduationCap className='w-4 h-4 mr-2' />
-                Create Class
+                <Plus className='w-4 h-4 mr-3' />
+                Create Block
               </Button>
-            </div>
-          </Card>
-
-          {/* Performance Overview */}
-          <Card>
-            <h3 className='text-lg font-semibold text-neutral-900 mb-4'>
-              Performance Overview
-            </h3>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-neutral-600'>
-                  Grammar Accuracy
-                </span>
-                <span className='text-sm font-semibold text-neutral-900'>
-                  92%
-                </span>
-              </div>
-              <div className='w-full bg-neutral-200 rounded-full h-2'>
-                <div
-                  className='bg-success-default h-2 rounded-full'
-                  style={{ width: "92%" }}
-                ></div>
-              </div>
-
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-neutral-600'>Readability</span>
-                <span className='text-sm font-semibold text-neutral-900'>
-                  87%
-                </span>
-              </div>
-              <div className='w-full bg-neutral-200 rounded-full h-2'>
-                <div
-                  className='bg-primary h-2 rounded-full'
-                  style={{ width: "87%" }}
-                ></div>
-              </div>
-
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-neutral-600'>
-                  Argument Strength
-                </span>
-                <span className='text-sm font-semibold text-neutral-900'>
-                  89%
-                </span>
-              </div>
-              <div className='w-full bg-neutral-200 rounded-full h-2'>
-                <div
-                  className='bg-info-default h-2 rounded-full'
-                  style={{ width: "89%" }}
-                ></div>
-              </div>
             </div>
           </Card>
         </div>
       </div>
-
-      {/* Class Overview */}
-      <ClassOverview
-        classes={classes.map((cls) => ({
-          ...cls,
-          essay_count: 0,
-          student_count: 0,
-        }))}
-        onClassClick={(classId) => {
-          console.log("Class clicked:", classId);
-          // Navigate to class detail
-        }}
-      />
 
       <CreateClassModal
         isOpen={showCreateClassModal}

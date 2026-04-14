@@ -20,6 +20,7 @@ import CreateUserModal from "../../components/admin/CreateUserModal";
 import EditUserModal from "../../components/admin/EditUserModal";
 import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
+import AlertModal from "../../components/ui/AlertModal";
 
 interface User {
   id: string;
@@ -47,6 +48,7 @@ export function AdminUsersTab() {
   const [error, setError] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<{id: string, email: string} | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -105,19 +107,21 @@ export function AdminUsersTab() {
   }, [roleFilter, searchTerm]);
 
   const handleDeleteUser = async (userId: string, email: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete user ${email}? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setDeletingUser({ id: userId, email });
+  };
 
+  const confirmDelete = async () => {
+    if (!deletingUser) return;
+    
     try {
-      await adminApi.deleteUser(userId);
+      setLoading(true);
+      await adminApi.deleteUser(deletingUser.id);
       await loadUsers();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete user");
+      setError(err instanceof Error ? err.message : "Failed to delete user");
+    } finally {
+      setDeletingUser(null);
+      setLoading(false);
     }
   };
 
@@ -519,6 +523,20 @@ export function AdminUsersTab() {
           user={resettingPasswordUser}
           isOpen={!!resettingPasswordUser}
           onClose={() => setResettingPasswordUser(null)}
+        />
+      )}
+
+      {deletingUser && (
+        <AlertModal
+          isOpen={!!deletingUser}
+          onClose={() => setDeletingUser(null)}
+          type="error"
+          title="Delete User"
+          message={`Are you sure you want to delete user ${deletingUser.email}? This action cannot be undone and will remove all associated data.`}
+          showCancel
+          confirmText="Delete User"
+          cancelText="Keep User"
+          onConfirm={confirmDelete}
         />
       )}
     </div>

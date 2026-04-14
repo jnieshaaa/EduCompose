@@ -17,8 +17,10 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
+import { motion } from 'framer-motion';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, getGrammarErrorSelectionKey, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi, plagiarismApi, aiDetectionApi, type PlagiarismCheckResponse, type PlagiarismMatch, type AIDetectionResponse } from '../api';
@@ -1216,56 +1218,61 @@ const AnalysisResults: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
-      {/* Header - Fixed height */}
-      <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-b border-neutral-200 px-6 py-3">
+    <div className="relative h-screen flex flex-col bg-neutral-50/50 overflow-hidden font-sans">
+      {/* Premium visual background flourishes */}
+      <div className="absolute top-[-5%] right-[-10%] w-[45%] h-[45%] bg-primary-200/20 blur-[130px] rounded-full pointer-events-none z-0" />
+      <div className="absolute bottom-[10%] left-[-10%] w-[35%] h-[35%] bg-success-200/10 blur-[110px] rounded-full pointer-events-none z-0" />
+
+      {/* Header - Fixed height with glassmorphism */}
+      <header className="relative z-20 flex-shrink-0 bg-white/70 backdrop-blur-xl border-b border-white/40 px-8 py-4 shadow-sm">
         <div className="max-w-[1920px] mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+              className="group flex items-center space-x-2 text-neutral-500 hover:text-primary transition-all duration-300"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back</span>
+              <div className="p-2 rounded-xl group-hover:bg-primary-50 transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+              </div>
+              <span className="font-black text-xs uppercase tracking-widest px-2">Back</span>
             </button>
-            <div className="h-6 w-px bg-neutral-300" />
+            <div className="h-8 w-px bg-neutral-200/60" />
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-bold text-neutral-900">
-                  {isPreviewMode ? 'Analysis Preview (Demo)' : 'Essay Analysis'}
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-black text-neutral-900 tracking-tight leading-none">
+                  {isPreviewMode ? 'Analysis <span className="text-primary">Preview</span>' : 'Manuscript <span className="text-primary">Diagnostic</span>'}
                 </h1>
                 {rubricData?.rubric_name && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-lg">
-                      <BookOpen className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-primary">{rubricData.rubric_name}</span>
-                      <button
-                        onClick={handlePreviewRubric}
-                        className="p-0.5 text-primary hover:bg-primary/20 rounded transition-colors"
-                        title="Preview rubric details"
-                      >
-                        <Info className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50/50 border border-primary-100/50 rounded-xl">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{rubricData.rubric_name}</span>
+                    <button
+                      onClick={handlePreviewRubric}
+                      className="p-1 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-primary-100"
+                      title="Preview rubric details"
+                    >
+                      <Info className="w-3.5 h-3.5 text-primary" />
+                    </button>
                   </div>
                 )}
               </div>
-              <div className="flex items-center space-x-3 text-xs text-neutral-500">
-                {analysis.word_count && <span>{analysis.word_count} words</span>}
-                <span>•</span>
-                <span>{new Date(analysis.generated_at).toLocaleDateString()}</span>
+              <div className="flex items-center space-x-3 mt-1.5">
+                {analysis.word_count && <div className="flex items-center gap-1.5"><Badge variant="neutral" size="sm" className="bg-neutral-100 text-[9px] font-black uppercase rounded-md">{analysis.word_count} Words</Badge></div>}
+                <span className="text-neutral-300">•</span>
+                <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{new Date(analysis.generated_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
               </div>
             </div>
           </div>
-          <button
+          <Button
+            variant="primary"
             onClick={handleExportPDF}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors shadow-sm"
+            className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-6 px-6 font-black text-[10px] uppercase tracking-widest"
           >
-            <Download className="w-4 h-4" />
-            <span className="font-medium">Export PDF</span>
-          </button>
+            <Download className="w-4 h-4 mr-2" />
+            Export Manuscript
+          </Button>
         </div>
-      </div>
+      </header>
 
       {/* Main 50/50 Split-Screen Layout */}
       <div className="flex-1 overflow-hidden">
@@ -1293,15 +1300,15 @@ const AnalysisResults: React.FC = () => {
           </div>
 
           {/* Right Panel - Analysis Tabs */}
-          <div className="h-full flex flex-col bg-neutral-50/50 overflow-hidden">
+          <div className="h-full flex flex-col bg-white/30 backdrop-blur-md overflow-hidden relative z-10">
             {/* Tabs Header */}
-            <div className="flex-shrink-0 bg-white border-b border-neutral-200">
-              <div className="flex">
+            <div className="flex-shrink-0 bg-white/80 border-b border-neutral-200">
+              <div className="flex px-4">
                 {[
-                  { id: 'insights', label: 'Insights', icon: TrendingUp },
-                  { id: 'feedback', label: 'Feedback', icon: Lightbulb },
-                  { id: 'rubric', label: 'Rubric', icon: ClipboardList },
-                  { id: 'plagiarism', label: 'Plagiarism', icon: Shield },
+                  { id: 'insights', label: 'Analysis Insights', icon: TrendingUp },
+                  { id: 'feedback', label: 'Diagnostic Feedback', icon: Lightbulb },
+                  { id: 'rubric', label: 'Rubric Index', icon: ClipboardList },
+                  { id: 'plagiarism', label: 'Integrity Scan', icon: Shield },
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -1309,14 +1316,21 @@ const AnalysisResults: React.FC = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric' | 'plagiarism')}
-                      className={`flex-1 flex items-center justify-center space-x-2 px-4 py-4 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'text-primary border-b-2 border-primary bg-primary-50/50'
-                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      className={`relative flex-1 flex flex-col items-center justify-center py-5 transition-all duration-300 group ${
+                        isActive ? 'text-primary' : 'text-neutral-400 hover:text-neutral-700'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
-                      <span>{tab.label}</span>
+                      <div className="flex items-center gap-2">
+                         <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                         <span className={`text-[10px] font-black uppercase tracking-widest transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{tab.label}</span>
+                      </div>
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeTabUnderline"
+                          className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                      )}
                     </button>
                   );
                 })}
@@ -1324,7 +1338,7 @@ const AnalysisResults: React.FC = () => {
             </div>
 
             {/* Tab Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               {activeTab === 'insights' && (
                 <AnalysisMetrics 
                   analysis={analysis} 

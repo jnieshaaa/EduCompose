@@ -8,6 +8,7 @@ import {
   TrendingUp,
   CheckCircle,
   Download,
+  Target,
 } from "lucide-react";
 import EssayCard from "../components/essay/EssayCard";
 import EnhancedEssayAnalysisModal from "../components/essay/EnhancedEssayAnalysisModal";
@@ -51,7 +52,6 @@ const EssayManagement: React.FC = () => {
         setClasses(fetchedClasses);
         setEssays(fetchedEssays);
         
-        // Fetch students for the first class or all classes
         if (fetchedClasses.length > 0) {
           const studentPromises = fetchedClasses.map(cls => studentApi.getStudentsByClass(cls.id));
           const studentsArrays = await Promise.all(studentPromises);
@@ -80,11 +80,6 @@ const EssayManagement: React.FC = () => {
 
   const handleAnalyzeEssay = async (essay: Essay) => {
     try {
-      // Simulate analysis API call
-      console.log("Analyzing essay:", essay.id);
-      // In a real app, you would call: await analysisApi.analyzeEssay(essay.id);
-
-      // Update essay status
       setEssays((prev) =>
         prev.map((e) =>
           e.id === essay.id
@@ -98,12 +93,8 @@ const EssayManagement: React.FC = () => {
   };
 
   const handleViewAnalysis = async (essay: Essay) => {
-    // Navigate to results page with essay data
-    // If essay is already analyzed, we can pass the analysis
-    // Otherwise, the results page will analyze it
     try {
       if (essay.status === "analyzed") {
-        // Try to get existing analysis or analyze it
         const result = await analysisApi.analyzeEssay(
           essay.id,
           "comprehensive",
@@ -116,7 +107,6 @@ const EssayManagement: React.FC = () => {
           },
         });
       } else {
-        // Navigate with essay content - results page will analyze
         navigate("/Teacher/AnalysisResults", {
           state: {
             text: essay.content,
@@ -126,7 +116,6 @@ const EssayManagement: React.FC = () => {
         });
       }
     } catch (_error) {
-      // If analysis fails, still navigate with text to analyze
       navigate("/Teacher/AnalysisResults", {
         state: {
           text: essay.content,
@@ -169,12 +158,17 @@ const EssayManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-neutral-300 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="p-6 min-h-screen bg-neutral-50/50">
+        <div className="animate-pulse space-y-8">
+          <div className="h-12 bg-neutral-200 rounded-2xl w-1/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-neutral-200 rounded-2xl"></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-neutral-300  rounded-rd"></div>
+              <div key={i} className="h-96 bg-neutral-200 rounded-3xl"></div>
             ))}
           </div>
         </div>
@@ -183,18 +177,24 @@ const EssayManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">
-            Essay Management
+    <div className="relative p-6 space-y-8 min-h-screen bg-neutral-50/50 overflow-hidden">
+      <div className="absolute top-[-5%] right-[-10%] w-[45%] h-[45%] bg-primary-200/20 blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[10%] left-[-10%] w-[35%] h-[35%] bg-info-200/10 blur-[110px] rounded-full pointer-events-none" />
+
+      {/* Header Section */}
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <motion.div
+           initial={{ opacity: 0, x: -20 }}
+           animate={{ opacity: 1, x: 0 }}
+        >
+          <h1 className="text-4xl font-black text-neutral-900 tracking-tight">
+            Submission <span className="text-primary font-black">Archive</span>
           </h1>
-          <p className="text-neutral-600 mt-1">
-            Manage and analyze student essays
+          <p className="text-neutral-500 font-medium mt-1">
+            Analyze, review, and manage student essay rosters.
           </p>
-        </div>
-        <div className="mt-4 sm:mt-0 flex space-x-3">
+        </motion.div>
+        <div className="flex items-center gap-3">
           {selectedEssays.length > 0 && (
             <BatchAnalysisButton
               selectedEssays={essays.filter((e) =>
@@ -202,136 +202,124 @@ const EssayManagement: React.FC = () => {
               )}
               onAnalysisComplete={() => {
                 setSelectedEssays([]);
-                // Refresh essays list
               }}
             />
           )}
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" className="rounded-xl border border-neutral-200 bg-white shadow-sm">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
           <Button
             variant="primary"
-            size="sm"
+            className="rounded-xl shadow-lg shadow-primary/20 px-6 py-5"
             onClick={() => setShowNewEssayModal(true)}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-5 h-5 mr-2" />
             New Essay
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary-100 rounded-rs">
-              <BookOpen className="w-6 h-6 text-primary" />
+      {/* Institutional Insight HUD */}
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card variant="glass" className="border-primary-100/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary-100/50 rounded-2xl">
+              <BookOpen className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-neutral-600">Total Essays</p>
-              <p className="text-2xl font-bold text-neutral-900">
-                {statusCounts.all}
-              </p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Total Vault</p>
+              <p className="text-3xl font-black text-neutral-900 leading-none">{statusCounts.all}</p>
             </div>
           </div>
         </Card>
 
-        <Card>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-warning-100 rounded-rs">
-              <Clock className="w-6 h-6 text-warning-default" />
+        <Card variant="glass" className="border-warning-100/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-warning-100/50 rounded-2xl">
+              <Clock className="w-7 h-7 text-warning-default" />
             </div>
             <div>
-              <p className="text-sm text-neutral-600">Pending</p>
-              <p className="text-2xl font-bold text-neutral-900">
-                {statusCounts.submitted}
-              </p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Awaiting Intel</p>
+              <p className="text-3xl font-black text-neutral-900 leading-none">{statusCounts.submitted}</p>
             </div>
           </div>
         </Card>
 
-        <Card>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-info-100 rounded-rs">
-              <TrendingUp className="w-6 h-6 text-info-default" />
+        <Card variant="glass" className="border-info-100/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-info-100/50 rounded-2xl">
+              <TrendingUp className="w-7 h-7 text-info-default" />
             </div>
             <div>
-              <p className="text-sm text-neutral-600">Analyzed</p>
-              <p className="text-2xl font-bold text-neutral-900">
-                {statusCounts.analyzed}
-              </p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Analyzed</p>
+              <p className="text-3xl font-black text-neutral-900 leading-none">{statusCounts.analyzed}</p>
             </div>
           </div>
         </Card>
 
-        <Card>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-success-100 rounded-rs">
-              <CheckCircle className="w-6 h-6 text-success-default" />
+        <Card variant="glass" className="border-success-100/30 bg-neutral-900/90 text-white shadow-2xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 rounded-2xl">
+              <CheckCircle className="w-7 h-7 text-success-default" />
             </div>
             <div>
-              <p className="text-sm text-neutral-600">Reviewed</p>
-              <p className="text-2xl font-bold text-neutral-900">
-                {statusCounts.reviewed}
-              </p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Finalized</p>
+              <p className="text-3xl font-black text-white leading-none">{statusCounts.reviewed}</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Search essays..."
+      {/* Diagnostic Filters */}
+      <Card variant="glass" className="relative z-10 p-5 border-white/40">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              placeholder="Search by title, content, or student keyword..."
               value={searchTerm}
-              onChange={setSearchTerm}
-              type="text"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/70 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all font-medium shadow-sm outline-none"
             />
           </div>
-          <div className="sm:w-48">
+          <div className="md:w-64">
             <select
               value={selectedClass || ""}
-              onChange={(e) =>
-                setSelectedClass(e.target.value || null)
-              }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
+              onChange={(e) =>setSelectedClass(e.target.value || null)}
+              className="w-full px-4 py-3 bg-white/70 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-sm"
             >
-              <option value="">All Classes</option>
+              <option value="">Aesthetic All Classes</option>
               {classes.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
               ))}
             </select>
           </div>
-          <div className="sm:w-48">
+          <div className="md:w-64">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 bg-white/70 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-sm"
             >
-              <option value="all">All Status</option>
-              <option value="submitted">Submitted</option>
-              <option value="analyzed">Analyzed</option>
-              <option value="reviewed">Reviewed</option>
+              <option value="all">Any Strategy Status</option>
+              <option value="submitted">Initial Submission</option>
+              <option value="analyzed">AI Diagnostic Done</option>
+              <option value="reviewed">Verified & Reviewed</option>
             </select>
           </div>
         </div>
       </Card>
 
-      {/* Essays Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {filteredEssays.map((essay) => (
+      {/* Submissions Stream */}
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <AnimatePresence mode="popLayout">
+          {filteredEssays.map((essay, index) => (
             <motion.div
               key={essay.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
             >
               <EssayCard
                 essay={essay}
@@ -345,24 +333,17 @@ const EssayManagement: React.FC = () => {
       </div>
 
       {filteredEssays.length === 0 && (
-        <Card className="text-center py-12">
-          <BookOpen className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-            No essays found
-          </h3>
-          <p className="text-neutral-600 mb-4">
-            {searchTerm || selectedClass || statusFilter !== "all"
-              ? "Try adjusting your filters to see more results."
-              : "Get started by creating your first essay."}
-          </p>
-          <Button variant="primary" onClick={() => setShowNewEssayModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Essay
+        <Card variant="glass" className="relative z-10 text-center py-24 border-dashed border-2 border-primary-200">
+          <BookOpen className="w-20 h-20 text-primary/20 mx-auto mb-6" />
+          <h3 className="text-2xl font-black text-neutral-900 mb-2">No Submissions Found</h3>
+          <p className="text-neutral-500 max-w-sm mx-auto font-medium mb-8">Refine your search parameters or initialize a manual intake process.</p>
+          <Button variant="primary" className="rounded-2xl px-8 py-6 shadow-xl shadow-primary/20" onClick={() => setShowNewEssayModal(true)}>
+            <Plus className="w-5 h-5 mr-3" />Manual Archive Intake
           </Button>
         </Card>
       )}
 
-      {/* Enhanced Analysis Modal */}
+      {/* Enhanced Analysis HUD */}
       {selectedEssay && (
         <EnhancedEssayAnalysisModal
           isOpen={showAnalysisModal}
@@ -372,7 +353,6 @@ const EssayManagement: React.FC = () => {
           }}
           essay={selectedEssay}
           onAnalysisComplete={(analysis) => {
-            // Update essay with analysis results
             setEssays((prev) =>
               prev.map((e) =>
                 e.id === selectedEssay.id
@@ -383,8 +363,7 @@ const EssayManagement: React.FC = () => {
                       grammar_score: analysis.scores.grammar,
                       readability_score: analysis.scores.readability,
                       coherence_score: analysis.scores.coherence,
-                      argument_strength_score:
-                        analysis.scores.argument_strength,
+                      argument_strength_score: analysis.scores.argument_strength,
                     }
                   : e,
               ),
@@ -393,101 +372,78 @@ const EssayManagement: React.FC = () => {
         />
       )}
 
-      {/* New Essay Modal */}
+      {/* New Essay Intake Modal */}
       <Modal
         isOpen={showNewEssayModal}
         onClose={() => setShowNewEssayModal(false)}
-        title="Create New Essay"
+        title="Institutional Protocol: Manual Intake"
         size="lg"
       >
-        <div className="space-y-4">
+        <div className="space-y-6 pt-2">
           <Input
-            label="Essay Title"
+            label="Intel Title"
             value={newEssay.title}
-            onChange={(value) =>
-              setNewEssay((prev) => ({ ...prev, title: value }))
-            }
-            placeholder="Enter essay title..."
+            onChange={(v) => setNewEssay((p) => ({ ...p, title: v }))}
+            placeholder="e.g. Philosophical Analysis on AI Ethics"
+            className="rounded-xl"
             required
           />
 
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Class
-            </label>
-            <select
-              value={newEssay.class_id}
-              onChange={(e) =>
-                setNewEssay((prev) => ({
-                  ...prev,
-                  class_id: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="">Select a class</option>
-              {classes.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Student
-            </label>
-            <select
-              value={newEssay.student_id}
-              onChange={(e) =>
-                setNewEssay((prev) => ({
-                  ...prev,
-                  student_id: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="">Select a student</option>
-              {students
-                .filter((s) => s.class_id === newEssay.class_id)
-                .map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.full_name}
-                  </option>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">Block Allocation</label>
+              <select
+                value={newEssay.class_id}
+                onChange={(e) => setNewEssay((p) => ({ ...p, class_id: e.target.value }))}
+                className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                required
+              >
+                <option value="">Select Target Block</option>
+                {classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
                 ))}
-            </select>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">Student Identity</label>
+              <select
+                value={newEssay.student_id}
+                onChange={(e) => setNewEssay((p) => ({ ...p, student_id: e.target.value }))}
+                className="w-full px-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                required
+                disabled={!newEssay.class_id}
+              >
+                <option value="">{newEssay.class_id ? "Select Student" : "Select Block First"}</option>
+                {students
+                  .filter((s) => s.class_id === newEssay.class_id)
+                  .map((student) => (
+                    <option key={student.id} value={student.id}>{student.full_name}</option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           <Input
-            label="Essay Content"
+            label="Intel Content (Manuscript)"
             value={newEssay.content}
-            onChange={(value) =>
-              setNewEssay((prev) => ({ ...prev, content: value }))
-            }
-            placeholder="Enter essay content..."
+            onChange={(v) => setNewEssay((p) => ({ ...p, content: v }))}
+            placeholder="Paste student manuscript content here..."
             type="textarea"
-            rows={8}
+            rows={10}
+            className="rounded-xl"
             required
           />
 
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button variant="ghost" onClick={() => setShowNewEssayModal(false)}>
-              Cancel
-            </Button>
+          <div className="flex gap-4 pt-4 border-t border-neutral-100">
+            <Button variant="ghost" className="flex-1 rounded-xl py-4" onClick={() => setShowNewEssayModal(false)}>Discard Intake</Button>
             <Button
               variant="primary"
+              className="flex-1 rounded-xl py-4 shadow-xl shadow-primary/10"
               onClick={handleCreateEssay}
-              disabled={
-                !newEssay.title ||
-                !newEssay.content ||
-                !newEssay.class_id ||
-                !newEssay.student_id
-              }
+              disabled={!newEssay.title || !newEssay.content || !newEssay.class_id || !newEssay.student_id}
             >
-              Create Essay
+              Finalize Submission
             </Button>
           </div>
         </div>

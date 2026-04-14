@@ -3,18 +3,30 @@ import type { HTMLMotionProps } from "framer-motion";
 
 interface CardProps extends HTMLMotionProps<"div"> {
   hover?: boolean;
+  variant?: "default" | "glass" | "outline";
 }
 
 const Card = ({
   children,
   className = "",
   hover = false,
+  variant = "default",
   ...rest
 }: CardProps) => {
-  const baseClasses =
-    "bg-white rounded-rd shadow-sm border border-neutral-200 p-6";
+  const getVariantClasses = () => {
+    switch (variant) {
+      case "glass":
+        return "bg-white/70 backdrop-blur-md border border-white/20 shadow-lg";
+      case "outline":
+        return "bg-transparent border-2 border-dashed border-neutral-200 shadow-none p-8";
+      default:
+        return "bg-white border border-neutral-200 shadow-sm";
+    }
+  };
+
+  const baseClasses = `rounded-2xl p-6 ${getVariantClasses()}`;
   const hoverClasses = hover
-    ? "hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer"
+    ? "hover:shadow-xl hover:border-primary-300/50 transition-all duration-300 cursor-pointer"
     : "";
 
   return (
@@ -24,13 +36,12 @@ const Card = ({
       whileHover={
         hover
           ? {
-              boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
-              backgroundColor: "rgba(255,255,255,0.97)",
-              scale: 1.015, // subtle “pop” illusion
+              y: -4,
+              scale: 1.01,
+              transition: { duration: 0.2 }
             }
           : {}
       }
-      transition={{ duration: 0.15, ease: "easeOut" }}
     >
       {children}
     </motion.div>
