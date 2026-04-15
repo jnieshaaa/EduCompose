@@ -28,7 +28,7 @@ export interface ComparisonAnalysis {
   insights: string;
   highlights: any;
   similarityScore: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 /** Resolve `students.id` for `essays.student_id` filters: UUID pass-through, else `student_code` lookup. */
@@ -265,12 +265,13 @@ export const fetchTeacherActivities = async (
     }
 
     // Count submissions per activity
-    const submissionCounts = new Map<number, number>();
+    const submissionCounts = new Map<string, number>();
     if (submissionsData) {
       submissionsData.forEach((submission) => {
         if (submission.activity_id) {
-          const count = submissionCounts.get(submission.activity_id) || 0;
-          submissionCounts.set(submission.activity_id, count + 1);
+          const sId = String(submission.activity_id);
+          const count = submissionCounts.get(sId) || 0;
+          submissionCounts.set(sId, count + 1);
         }
       });
     }
@@ -296,7 +297,7 @@ export const fetchTeacherActivities = async (
       description: row.instructions || undefined,
       minWordCount: row.min_word_count || 150,
       createdAt: row.created_at.split("T")[0], // Extract date part
-      submissionCount: submissionCounts.get(row.id) || 0,
+      submissionCount: submissionCounts.get(String(row.id)) || 0,
       programId:
         Array.isArray(row.program_id) && row.program_id.length > 0
           ? String(row.program_id[0])

@@ -2,6 +2,8 @@ import { useRef, useEffect, useMemo, useCallback, Fragment } from "react";
 import { X, AlertTriangle, Lightbulb } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import { motion } from "framer-motion";
 import type { GrammarError } from "../../types/Essay";
 
 export type HighlightError = GrammarError & {

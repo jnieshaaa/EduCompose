@@ -1,8 +1,10 @@
 import React from "react";
-import { CheckCircle, AlertCircle, Award, Info } from "lucide-react";
+import { CheckCircle, AlertCircle, Award, Info, Target } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import ProgressBar from "../ui/ProgressBar";
+import Button from "../ui/Button";
+import { motion } from "framer-motion";
 import type { AnalysisResponse, TextAnalysisResponse } from "../../types/Essay";
 
 interface RubricScoresProps {
@@ -107,7 +109,7 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
       {/* Criterion Scores Stream */}
       <div className="space-y-6">
         <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] px-1">Criterion Matrices</h3>
-        {criterion_scores.map((criterion, index) => {
+        {criterion_scores.map((criterion: any, index: number) => {
           const percentage = (criterion.points_earned / criterion.max_points) * 100;
           const isExcellent = criterion.points_earned === criterion.max_points;
           const isNeedsImprovement = percentage < 60;

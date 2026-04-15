@@ -44,7 +44,7 @@ type SupabaseProgramRow = {
 export function usePrograms() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
+  const { showAlert, showError, showSuccess, showWarning, AlertComponent } = useAlert();
 
   // Read search query from URL params
   const urlSearchQuery = searchParams.get("search");
@@ -179,9 +179,9 @@ export function usePrograms() {
       if (inputNameSet.has(lower)) {
         setIsAddDialogOpen(false);
         setTimeout(() => {
-          showError(
+          showAlert(
             "Duplicate program names detected in your list. Please remove duplicates and try again.",
-            { title: "Duplicate Program" },
+            { title: "Duplicate Program", type: "error" },
           );
         }, 100);
         setIsCreating(false);

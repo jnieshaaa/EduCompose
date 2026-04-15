@@ -245,7 +245,8 @@ export function CompareActivitiesTab() {
           insights: analysisResult.insights,
           highlights: analysisResult.highlights,
           similarityScore: analysisResult.similarityScore,
-        });
+          createdAt: new Date().toISOString(),
+        } as ComparisonAnalysis);
       } catch (error) {
         console.error("Error saving comparison:", error);
         // Continue even if save fails
