@@ -14,10 +14,10 @@ class Student(Base):
     student_id = Column(String, unique=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True)
-    class_id = Column(Integer, ForeignKey("classes.id"))
+    class_id = Column(String, ForeignKey("classes.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    created_by = Column(Integer, nullable=True)
+    created_by = Column(String, nullable=True)
     
     # Relationships
     class_obj = relationship("Class", back_populates="students")

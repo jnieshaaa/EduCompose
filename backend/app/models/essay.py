@@ -10,12 +10,12 @@ from .base import Base
 class Essay(Base):
     __tablename__ = "essays"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     student_id = Column(String, ForeignKey("students.id"))  # uuid
-    teacher_id = Column(Integer, ForeignKey("users.id"))
-    class_id = Column(Integer, ForeignKey("classes.id"))
+    teacher_id = Column(String, ForeignKey("users.id"))
+    class_id = Column(String, ForeignKey("classes.id"))
     submitted_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="submitted")  # submitted, analyzed, reviewed
     

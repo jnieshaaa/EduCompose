@@ -10,10 +10,10 @@ from .base import Base
 class Class(Base):
     __tablename__ = "classes"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(Text)
-    teacher_id = Column(Integer, ForeignKey("users.id"))
+    teacher_id = Column(String, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     
