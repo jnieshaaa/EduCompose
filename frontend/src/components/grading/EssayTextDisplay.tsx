@@ -3,7 +3,6 @@ import { X, AlertTriangle, Lightbulb } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
-import { motion } from "framer-motion";
 import type { GrammarError } from "../../types/Essay";
 
 export type HighlightError = GrammarError & {
@@ -21,22 +20,6 @@ export function getGrammarErrorSelectionKey(
 }
 
 // Helper functions for error badge
-const getErrorBadgeVariant = (
-  type: string,
-): "error" | "warning" | "info" | "neutral" => {
-  switch (type?.toLowerCase()) {
-    case "grammar":
-      return "error";
-    case "spelling":
-    case "punctuation":
-      return "warning";
-    case "word_choice":
-    case "capitalization":
-      return "info";
-    default:
-      return "neutral";
-  }
-};
 
 const getErrorTypeLabel = (type: string): string => {
   const labels: Record<string, string> = {
