@@ -187,32 +187,41 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 overflow-y-auto scrollbar-hide">
-          <ul className="space-y-2">
-            {menuItems.map((item) => (
-              <li key={item.path}>
-                <Tooltip content={item.label} position="right" delay={200} disabled={isSidebarOpen}>
-                  <button
-                    onClick={() => handleItemClick(item.path)}
-                    className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
-                      isSidebarOpen ? "px-4 py-3" : "justify-center w-12 h-12 mx-auto"
-                    } ${isItemActive(item.path) ? "bg-white text-primary shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"}`}
-                  >
-                    <span className="flex-shrink-0 flex items-center justify-center">
-                      {item.icon}
-                    </span>
-                    {isSidebarOpen && (
-                      <motion.span 
-                        initial="hidden" animate="visible" exit="hidden" variants={textVariants}
-                        className="font-medium text-sm truncate ml-3"
-                      >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </button>
-                </Tooltip>
-              </li>
-            ))}
+        <nav className="flex-1 py-6 px-3 overflow-y-auto scrollbar-hide">
+          <ul className="space-y-1.5">
+            {menuItems.map((item) => {
+              const active = isItemActive(item.path);
+              return (
+                <li key={item.path}>
+                  <Tooltip content={item.label} position="right" delay={200} disabled={isSidebarOpen} className="block w-full">
+                    <button
+                      onClick={() => handleItemClick(item.path)}
+                      className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group ${
+                        active
+                        ? "bg-white text-primary shadow-lg shadow-black/10"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                        {item.icon}
+                      </div>
+                      <AnimatePresence>
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: "auto" }}
+                            exit={{ opacity: 0, width: 0 }}
+                            className="font-medium whitespace-nowrap overflow-hidden text-sm"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </button>
+                  </Tooltip>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

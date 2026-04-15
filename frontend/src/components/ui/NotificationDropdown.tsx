@@ -115,7 +115,7 @@ export function NotificationDropdown({
             navigate(buildSecureUrl('/Teacher/Activities', params));
             break;
           default:
-            if (!isNaN(parseInt(idToUse))) {
+            if (idToUse) {
                navigate(buildSecureUrl('/Teacher/Activities', params));
             }
             break;
@@ -151,7 +151,7 @@ export function NotificationDropdown({
             navigate(buildSecureUrl('/Student/Feedback', params));
             break;
           default:
-            if (!isNaN(parseInt(activityId))) {
+            if (activityId) {
               navigate(buildSecureUrl('/Student/Submit', params));
             }
             break;

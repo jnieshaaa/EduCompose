@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
 import AlertModal from "../components/ui/AlertModal";
+import { useNotification } from "../context/NotificationContext";
 
 interface User {
   auth_id: string;
@@ -46,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const { showNotification } = useNotification();
 
   const isNetworkDisconnectError = (maybeMessage?: unknown) => {
     const message = typeof maybeMessage === "string" ? maybeMessage : undefined;
@@ -146,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (dbRecord && dbRecord.current_session_id && dbRecord.current_session_id !== session.access_token) {
           await logout();
-          alert("Logged out: This account is being used on another device.");
+          showNotification('error', "Logged out: This account is being used on another device.");
           return;
         }
       } catch (err) { /* fail silent */ }
@@ -190,7 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const ourId = localStorage.getItem("auth_token");
             if (newestId && ourId && newestId !== ourId) {
               logout();
-              alert("Session Expired: New login detected on another device.");
+              showNotification('warning', "Session Expired: New login detected on another device.");
             }
           }).subscribe();
       } catch (e) { /* ignore */ }

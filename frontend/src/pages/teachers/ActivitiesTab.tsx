@@ -8,6 +8,7 @@ import { EditActivityModal } from "../../components/activities/EditActivityModal
 import { useActivities } from "../../hooks/useActivities";
 import type { NewActivityForm } from "../../types/activityTypes";
 import { readSecureParams } from "../../utils/secureUrl";
+import { useNotification } from "../../context/NotificationContext";
 
 export function ActivitiesTab() {
   const [searchParams] = useSearchParams();
@@ -19,6 +20,7 @@ export function ActivitiesTab() {
   const [editingActivityId, setEditingActivityId] = useState<string | null>(
     null,
   );
+  const { showNotification } = useNotification();
 
   const {
     activities,
@@ -83,7 +85,7 @@ export function ActivitiesTab() {
     try {
       await handleDeleteActivity(activityId);
     } catch {
-      alert("Failed to delete activity. Please try again.");
+      showNotification('error', "Failed to delete activity. Please try again.");
     }
   };
 

@@ -49,3 +49,42 @@ CREATE POLICY "Students can view themselves"
 
 CREATE INDEX IF NOT EXISTS students_teacher_id_idx ON students(teacher_id);
 CREATE INDEX IF NOT EXISTS students_program_id_idx ON students(program_id);
+
+--------------------------------------------------------------------------------
+-- RPC: get_student_login_email
+-- Used by StudentLogin.tsx to look up a student's email by student code.
+-- Returns a single row with student identity info for authentication.
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_student_login_email(p_student_code text)
+RETURNS TABLE (
+  student_id   uuid,
+  student_code text,
+  email        text,
+  first_name   text,
+  middle_name  text,
+  last_name    text,
+  is_active    boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    s.id,
+    s.student_code,
+    s.email,
+    s.first_name,
+    s.middle_name,
+    s.last_name,
+    s.is_active
+  FROM public.students s
+  WHERE upper(trim(s.student_code)) = upper(trim(p_student_code))
+    AND s.is_active = true
+  LIMIT 1;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_student_login_email(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_student_login_email(text) TO authenticated;

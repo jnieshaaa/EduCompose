@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import AlertModal, { type AlertType } from "../components/ui/AlertModal";
+import { useNotification } from "../context/NotificationContext";
 
 interface AlertOptions {
   type?: AlertType;
@@ -32,6 +33,7 @@ const AlertUI = (props: {
 );
 
 export const useAlert = () => {
+  const { showNotification } = useNotification();
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     type: AlertType;
@@ -58,13 +60,13 @@ export const useAlert = () => {
 
   const closeAlert = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setAlertState((prev) => ({ ...prev, isOpen: false }));
+    setAlertState((prev: any) => ({ ...prev, isOpen: false }));
   }, []);
 
   const showAlert = useCallback(
     (message: string, options: AlertOptions = {}) => {
       // 1. Immediately close any open alert
-      setAlertState((prev) => ({ ...prev, isOpen: false }));
+      setAlertState((prev: any) => ({ ...prev, isOpen: false }));
       
       // 2. Clear any pending showAlert timeouts
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -88,31 +90,36 @@ export const useAlert = () => {
   );
 
   const showError = useCallback(
-    (message: string, options?: Omit<AlertOptions, "type">) => {
-      showAlert(message, { ...options, type: "error" });
+    (message: string) => {
+      showNotification('error', message);
     },
-    [showAlert]
+    [showNotification]
   );
 
   const showSuccess = useCallback(
-    (message: string, options?: Omit<AlertOptions, "type">) => {
-      showAlert(message, { ...options, type: "success" });
+    (message: string) => {
+      showNotification('success', message);
     },
-    [showAlert]
+    [showNotification]
   );
 
   const showWarning = useCallback(
     (message: string, options?: Omit<AlertOptions, "type">) => {
-      showAlert(message, { ...options, type: "warning" });
+      // Keep warnings as modals if they have a confirm action
+      if (options?.onConfirm) {
+        showAlert(message, { ...options, type: "warning" });
+      } else {
+        showNotification('info', message);
+      }
     },
-    [showAlert]
+    [showAlert, showNotification]
   );
 
   const showInfo = useCallback(
-    (message: string, options?: Omit<AlertOptions, "type">) => {
-      showAlert(message, { ...options, type: "info" });
+    (message: string) => {
+      showNotification('info', message);
     },
-    [showAlert]
+    [showNotification]
   );
 
   // Use a stable wrapper for the UI component

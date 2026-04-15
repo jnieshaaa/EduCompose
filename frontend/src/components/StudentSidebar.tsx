@@ -375,6 +375,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                     position='right'
                     delay={200}
                     disabled={isSidebarOpen}
+                    className="block w-full"
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
@@ -407,6 +408,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                 position='right'
                 delay={200}
                 disabled={isSidebarOpen}
+                className="block w-full"
               >
                 <button
                   onClick={() => {
@@ -500,6 +502,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                     position='right'
                     delay={200}
                     disabled={isSidebarOpen}
+                    className="block w-full"
                   >
                     <button
                       onClick={() => handleItemClick(item.path)}
@@ -534,6 +537,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
             position='right'
             delay={200}
             disabled={isSidebarOpen}
+            className="block w-full"
           >
             <button
               onClick={() => setIsInfoModalOpen(true)}

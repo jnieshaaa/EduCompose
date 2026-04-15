@@ -220,6 +220,53 @@ export const authApi = {
       throw err;
     }
   },
+
+  enrollStudentAtomic: async (payload: {
+    email: string;
+    student_code: string;
+    first_name: string;
+    last_name: string;
+    middle_name?: string;
+    password?: string;
+    teacher_id: string;
+    program_id: string;
+    year: number;
+    block_name: string;
+  }) => {
+    try {
+      const tempPassword = payload.password || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const normalizedEmail = payload.email.trim().toLowerCase();
+
+      const { data: authId, error: enrollError } = await supabase.rpc(
+        "admin_enroll_student_v2",
+        {
+          p_email: normalizedEmail,
+          p_password: tempPassword,
+          p_first_name: payload.first_name,
+          p_last_name: payload.last_name,
+          p_student_code: payload.student_code,
+          p_teacher_id: payload.teacher_id,
+          p_program_id: payload.program_id,
+          p_year: payload.year,
+          p_block_name: payload.block_name,
+          p_middle_name: payload.middle_name || null,
+        }
+      );
+
+      if (enrollError) {
+        throw new Error(`Enrollment Error: ${enrollError.message}`);
+      }
+
+      return {
+        success: true,
+        student_id: authId as string, // Note: the RPC now returns students.id
+        temp_password: tempPassword
+      };
+    } catch (err: any) {
+      console.error("Supabase enrollment error:", err);
+      throw err;
+    }
+  },
 };
 
 // User API

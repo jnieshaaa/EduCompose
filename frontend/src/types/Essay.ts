@@ -1,6 +1,6 @@
 export interface Essay {
-  id: string | number;
-  student_id: string | number;
+  id: string;
+  student_id: string;  // uuid
   user_id: string | number;
   class_id: string | number;
   title: string;
@@ -190,7 +190,7 @@ export interface ArgumentAnalysis {
 }
 
 export interface Student {
-  id: string | number;
+  id: string;  // uuid
   student_id: string;
   full_name: string;
   email?: string;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import { BookOpen, ChevronRight, Users, Calendar, GraduationCap } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildSecureUrl } from '../../utils/secureUrl';
 
@@ -19,6 +20,7 @@ export function MyClassesTab() {
   const navigate = useNavigate();
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -114,8 +116,9 @@ export function MyClassesTab() {
         });
 
         setClasses(flattenedClasses);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching classes tab:", err);
+        showNotification('error', "Failed to load your classes. Please refresh.");
       } finally {
         setIsLoading(false);
       }

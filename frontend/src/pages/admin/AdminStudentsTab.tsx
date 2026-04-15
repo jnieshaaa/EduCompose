@@ -6,6 +6,7 @@ import {
   Edit2,
   Trash2,
   UserX,
+  Users,
   UserCheck,
   MoreVertical,
   RefreshCw,
@@ -18,7 +19,7 @@ import {
   Square,
   Zap,
 } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
+import { supabase, supabaseAdmin } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -27,6 +28,8 @@ import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
 import { authApi } from "../../api";
 import AlertModal from "../../components/ui/AlertModal";
+import { AdminPendingStudentsTab } from "./AdminPendingStudentsTab";
+import { useNotification } from "../../context/NotificationContext";
 
 interface Student {
   id: string;
@@ -85,6 +88,9 @@ export const AdminStudentsTab: React.FC = () => {
     type: "delete" | "resend" | "provision" | "bulk_delete" | "bulk_provision" | "bulk_resend";
     student?: Student;
   } | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"enrolled" | "pending">("enrolled");
+  const { showNotification } = useNotification();
 
   const logStudentId = searchParams.get("logs");
 
@@ -226,7 +232,7 @@ export const AdminStudentsTab: React.FC = () => {
       await loadStudents();
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.message || "Failed to update student status");
+      showNotification('error', err.message || "Failed to update student status");
     }
   };
 
@@ -277,15 +283,13 @@ export const AdminStudentsTab: React.FC = () => {
       });
 
       if (emailForAuthReset !== student.email) {
-        alert(
-          `Password was reset using linked auth email (${emailForAuthReset}). The welcome email was sent to ${student.email}. Please align student email with auth email to avoid future login issues.`,
-        );
+        showNotification('warning', `Password was reset using linked auth email (${emailForAuthReset}). The welcome email was sent to ${student.email}. Please align student email with auth email to avoid future login issues.`);
       } else {
-        alert("New password generated and sent to the student's email successfully.");
+        showNotification('success', "New password generated and sent to the student's email successfully.");
       }
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.message || "Failed to resend password.");
+      showNotification('error', err.message || "Failed to resend password.");
     } finally {
       setLoading(false);
     }
@@ -293,7 +297,7 @@ export const AdminStudentsTab: React.FC = () => {
 
   const handleProvisionAuthAccount = async (student: Student) => {
     if (!student.email) {
-      alert("Student email is required before provisioning an auth account.");
+      showNotification('warning', "Student email is required before provisioning an auth account.");
       return;
     }
     setConfirmingAction({ type: "provision", student });
@@ -307,7 +311,6 @@ export const AdminStudentsTab: React.FC = () => {
       setLoading(true);
       setConfirmingAction(null);
       const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
-      const normalizedEmail = student.email.trim().toLowerCase();
 
       const provisionResult = await authApi.provisionStudentAccount({
         email: student.email,
@@ -334,9 +337,9 @@ export const AdminStudentsTab: React.FC = () => {
 
       await loadStudents();
       setOpenDropdown(null);
-      alert("Account provisioned and welcome email sent successfully via Supabase RPC.");
+      showNotification('success', "Account provisioned and welcome email sent successfully via Supabase RPC.");
     } catch (err: any) {
-      alert("Error: " + (err.message || "Failed to provision account."));
+      showNotification('error', "Error: " + (err.message || "Failed to provision account."));
     } finally {
       setLoading(false);
     }
@@ -362,7 +365,7 @@ export const AdminStudentsTab: React.FC = () => {
       await loadStudents();
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.message || "Failed to delete student");
+      showNotification('error', err.message || "Failed to delete student");
     } finally {
       setLoading(false);
     }
@@ -403,11 +406,11 @@ export const AdminStudentsTab: React.FC = () => {
         
       if (error) throw error;
       
-      alert(`Successfully archived ${ids.length} students.`);
+      showNotification('success', `Successfully archived ${ids.length} students.`);
       setSelectedIds(new Set());
       await loadStudents();
     } catch (err: any) {
-      alert("Error during bulk delete: " + err.message);
+      showNotification('error', "Error during bulk delete: " + err.message);
     } finally {
       setIsBulkProcessing(false);
     }
@@ -418,7 +421,7 @@ export const AdminStudentsTab: React.FC = () => {
     const needProvision = selectedStudents.filter(s => !s.auth_user_id);
     
     if (needProvision.length === 0) {
-      alert("All selected students already have auth accounts.");
+      showNotification('info', "All selected students already have auth accounts.");
       return;
     }
 
@@ -493,7 +496,7 @@ export const AdminStudentsTab: React.FC = () => {
       setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
 
-    alert(`Bulk Provisioning Complete:\n- Success: ${successCount}\n- Failed: ${failCount}`);
+    showNotification('success', `Bulk Provisioning Complete:\n- Success: ${successCount}\n- Failed: ${failCount}`);
     setSelectedIds(new Set());
     await loadStudents();
     setIsBulkProcessing(false);
@@ -547,7 +550,7 @@ export const AdminStudentsTab: React.FC = () => {
       setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
 
-    alert(`Bulk Reset Complete:\n- Sent: ${successCount}\n- Failed: ${failCount}`);
+    showNotification('success', `Bulk Reset Complete:\n- Sent: ${successCount}\n- Failed: ${failCount}`);
     setSelectedIds(new Set());
     setIsBulkProcessing(false);
   };
@@ -645,16 +648,49 @@ export const AdminStudentsTab: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadStudents}>
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+          {activeTab === "enrolled" && (
+            <Button variant="outline" onClick={loadStudents}>
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab("enrolled")}
+          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+            activeTab === "enrolled"
+              ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
+              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50"
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          Enrolled Students
+        </button>
+        <button
+          onClick={() => setActiveTab("pending")}
+          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all relative ${
+            activeTab === "pending"
+              ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
+              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Pending Approvals
+          {/* We could add a badge here if we fetch pending count */}
+        </button>
+      </div>
+
+      {activeTab === "pending" ? (
+         <AdminPendingStudentsTab />
+      ) : (
+        <>
+          {/* Filters */}
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
@@ -1019,6 +1055,8 @@ export const AdminStudentsTab: React.FC = () => {
           )}
         </Card>
       )}
+    </>
+  )}
 
       {editingStudent && (
         <EditStudentModal

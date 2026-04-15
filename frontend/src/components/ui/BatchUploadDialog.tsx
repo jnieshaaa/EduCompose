@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "./dialog";
 import Button from "./Button";
+import { useNotification } from "../../context/NotificationContext";
 import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 import { BatchUploadController } from "../../services/BatchUploadController";
 import type { UploadResult } from "../../services/BatchUploadController";
@@ -45,6 +46,7 @@ export function BatchUploadDialog({
   defaultProgram,
   defaultSection,
 }: BatchUploadDialogProps) {
+  const { showNotification } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -57,8 +59,7 @@ export function BatchUploadDialog({
 
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (extension !== "csv" && extension !== "xlsx" && extension !== "xls") {
-      // File type validation - using alert for now, can be replaced with modal if needed
-      alert("Please select a .csv or .xlsx file");
+      showNotification('warning', "Please select a .csv or .xlsx file");
       return;
     }
 

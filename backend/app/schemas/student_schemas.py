@@ -12,11 +12,11 @@ class StudentBase(BaseModel):
     email: Optional[str] = None
 
 class StudentCreate(StudentBase):
-    class_id: int
+    class_id: str
 
 class StudentResponse(StudentBase):
-    id: int
-    class_id: int
+    id: str  # uuid
+    class_id: str
     created_at: datetime
     is_active: bool
     

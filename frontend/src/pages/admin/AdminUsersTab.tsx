@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useNotification } from "../../context/NotificationContext";
 import { adminApi } from "../../api";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -45,7 +46,7 @@ export function AdminUsersTab() {
     useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [error, setError] = useState("");
+  const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<{id: string, email: string} | null>(null);
@@ -83,19 +84,18 @@ export function AdminUsersTab() {
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
       const data = await adminApi.getUsers({
         limit: 1000,
         role: roleFilter !== "all" ? roleFilter : undefined,
         search: searchTerm || undefined,
       });
       setUsers(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+    } catch (err: any) {
+      showNotification('error', err.message || "Failed to load users");
     } finally {
       setLoading(false);
     }
-  }, [roleFilter, searchTerm]);
+  }, [roleFilter, searchTerm, showNotification]);
 
   useEffect(() => {
     loadUsers();
@@ -117,8 +117,9 @@ export function AdminUsersTab() {
       setLoading(true);
       await adminApi.deleteUser(deletingUser.id);
       await loadUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete user");
+      showNotification('success', `Successfully deleted user ${deletingUser.email}`);
+    } catch (err: any) {
+      showNotification('error', err.message || "Failed to delete user");
     } finally {
       setDeletingUser(null);
       setLoading(false);
@@ -131,8 +132,9 @@ export function AdminUsersTab() {
         is_active: !user.is_active,
       });
       await loadUsers();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update user");
+      showNotification('success', `User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
+    } catch (err: any) {
+      showNotification('error', err.message || "Failed to update user");
     }
   };
 
@@ -247,12 +249,6 @@ export function AdminUsersTab() {
         </div>
       </Card>
 
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-          {error}
-        </div>
-      )}
 
       {/* Users Table */}
       {loading ? (

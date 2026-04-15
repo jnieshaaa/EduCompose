@@ -2,7 +2,7 @@
 Student Model
 Student model
 """
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
@@ -10,7 +10,7 @@ from .base import Base
 class Student(Base):
     __tablename__ = "students"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)  # uuid
     student_id = Column(String, unique=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True)

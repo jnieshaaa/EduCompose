@@ -21,6 +21,7 @@ import ProgressBar from "../components/ui/ProgressBar";
 import AlertModal from "../components/ui/AlertModal";
 import type { Class, Student, Essay } from "../types/Essay";
 import { classApi, studentApi, essayApi, essayActivityApi } from "../api";
+import { useNotification } from "../context/NotificationContext";
 
 interface Assignment {
   id: string | number;
@@ -59,6 +60,7 @@ const AssignmentManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<Assignment | null>(null);
+  const { showNotification } = useNotification();
 
   const [newAssignment, setNewAssignment] = useState({
     title: "",
@@ -105,8 +107,9 @@ const AssignmentManagement: React.FC = () => {
           const studentsArrays = await Promise.all(studentPromises);
           setStudents(studentsArrays.flat());
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading data:", error);
+        showNotification('error', error.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -143,13 +146,15 @@ const AssignmentManagement: React.FC = () => {
       };
 
       setAssignments((prev) => [createdAssignment, ...prev]);
+      showNotification('success', "Activity initialized successfully");
       setShowCreateModal(false);
       setNewAssignment({
         title: "", description: "", instructions: "", class_id: 0,
         due_date: "", max_score: 100, word_limit: 0, time_limit: 0,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating assignment:", error);
+      showNotification('error', error.message || "Failed to initialize activity");
     }
   };
 
@@ -159,6 +164,7 @@ const AssignmentManagement: React.FC = () => {
         a.id === assignmentId ? { ...a, status: "published" as const } : a
       )
     );
+    showNotification('success', "Activity deployed to live stream");
   };
 
   const handleCloseAssignment = (assignmentId: string | number) => {
@@ -167,7 +173,9 @@ const AssignmentManagement: React.FC = () => {
         a.id === assignmentId ? { ...a, status: "closed" as const } : a
       )
     );
+    showNotification('info', "Activity terminated and closed");
   };
+
 
   const handleDeleteAssignment = async (assignment: Assignment) => {
     setConfirmingDelete(assignment);
@@ -177,9 +185,11 @@ const AssignmentManagement: React.FC = () => {
     if (!confirmingDelete) return;
     try {
       setAssignments(prev => prev.filter(a => a.id !== confirmingDelete.id));
+      showNotification('success', "Activity profile archived");
       setConfirmingDelete(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete assignment:", error);
+      showNotification('error', error.message || "Failed to archive activity");
     }
   };
 

@@ -115,7 +115,7 @@ export function NotificationsTab() {
           break;
         default:
           // Try to navigate to Activities if it looks like an ID
-          if (!isNaN(parseInt(relatedId || essayId || ""))) {
+          if (relatedId || essayId) {
              navigate(buildSecureUrl('/Teacher/Activities', params));
           }
           break;

@@ -16,6 +16,7 @@ import { supabase } from "../../lib/supabaseClient";
 import type { EssayActivity, CourseSection } from "../../types/activityTypes";
 import { getCoursesLabel, getBlocksLabel } from "../../utils/activityUtils";
 import { fetchCourseSectionCounts } from "../../services/activityService";
+import { useNotification } from "../../context/NotificationContext";
 
 interface CourseSectionsViewProps {
   activity: EssayActivity;
@@ -41,6 +42,7 @@ export function CourseSectionsView({
 }: CourseSectionsViewProps) {
   const [sectionsWithCounts, setSectionsWithCounts] =
     useState<CourseSection[]>(courseSections);
+  const { showNotification } = useNotification();
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -154,7 +156,7 @@ export function CourseSectionsView({
       window.location.reload();
     } catch (error) {
       console.error("Error updating activity sections:", error);
-      alert("Failed to update sections. Please try again.");
+      showNotification('error', "Failed to update sections. Please try again.");
     } finally {
       setIsUpdating(false);
     }

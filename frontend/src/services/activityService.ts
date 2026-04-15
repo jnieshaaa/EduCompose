@@ -13,22 +13,16 @@ export function isUuidString(value: string): boolean {
   );
 }
 
-function coerceEssayIdParam(id: string | number): string | number | null {
-  if (typeof id === "number") {
-    return Number.isNaN(id) ? null : id;
-  }
-  const t = id.trim();
-  if (!t) return null;
-  if (isUuidString(t)) return t;
-  const n = parseInt(t, 10);
-  if (!Number.isNaN(n) && String(n) === t) return n;
-  return null;
+function coerceId(id: string | number | null | undefined): string | null {
+  if (id == null) return null;
+  const s = String(id).trim();
+  return s || null;
 }
 
-/** Resolve `students.id` for `essays.student_id` filters: UUID pass-through, else `student_code`, else numeric legacy id. */
+/** Resolve `students.id` for `essays.student_id` filters: UUID pass-through, else `student_code` lookup. */
 export async function resolveStudentIdForEssayFilter(
   rawStudentId: string,
-): Promise<string | number | null> {
+): Promise<string | null> {
   const t = rawStudentId.trim();
   if (!t) return null;
   if (isUuidString(t)) return t;
@@ -38,31 +32,24 @@ export async function resolveStudentIdForEssayFilter(
     .select("id")
     .eq("student_code", t)
     .maybeSingle();
-  if (byCode?.id != null) return byCode.id as string | number;
-
-  const asNum = parseInt(t, 10);
-  if (!Number.isNaN(asNum) && String(asNum) === t) return asNum;
-
-  return null;
+  
+  return byCode?.id || null;
 }
 
 /** Resolve activity id for `essays.activity_id` filters. */
 export function resolveActivityIdForEssayFilter(
   rawActivityId: string,
-): string | number | null {
+): string | null {
   const t = rawActivityId.trim();
   if (!t) return null;
-  if (isUuidString(t)) return t;
-  const asNum = parseInt(t, 10);
-  if (!Number.isNaN(asNum)) return asNum;
-  return null;
+  return t; // Activities are always UUIDs now
 }
 
 /** Look up `essays.id` from route/ref `studentId` + `activityId` strings. */
 export async function resolveEssayIdFromStudentActivity(
   studentId: string,
   activityId: string,
-): Promise<string | number | null> {
+): Promise<string | null> {
   const sid = await resolveStudentIdForEssayFilter(studentId);
   const aid = resolveActivityIdForEssayFilter(activityId);
   if (sid == null || aid == null) return null;
@@ -79,14 +66,13 @@ export async function resolveEssayIdFromStudentActivity(
  * Fetches necessary information to build a full breadcrumb and navigation context.
  */
 export const fetchActivityBreadcrumbInfo = async (
-  activityId: string | number,
-  studentId?: string | number,
-  essayId?: string | number,
+  activityId: string,
+  studentId?: string,
+  essayId?: string,
 ) => {
   try {
-    const actId =
-      typeof activityId === "string" ? parseInt(activityId) : activityId;
-    if (isNaN(actId)) return null;
+    const actId = activityId.trim();
+    if (!actId) return null;
 
     // 1. Fetch Activity Basic Info
     const { data: activity, error: actErr } = await supabase
@@ -661,8 +647,8 @@ export const updateActivity = async (
       throw new Error("Teacher UUID not available");
     }
 
-    const id = parseInt(activityId, 10);
-    if (isNaN(id)) {
+    const id = activityId.trim();
+    if (!id) {
       throw new Error("Invalid activity ID");
     }
 
@@ -773,8 +759,8 @@ export const updateActivity = async (
 // Delete an activity
 export const deleteActivity = async (activityId: string): Promise<void> => {
   try {
-    const id = parseInt(activityId, 10);
-    if (isNaN(id)) {
+    const id = activityId.trim();
+    if (!id) {
       throw new Error("Invalid activity ID");
     }
 
@@ -1182,9 +1168,9 @@ export const fetchStudentsByCourseAndSection = async (
 
     // Extract students from junction table results
     type BlockStudentRow = {
-      student_id: number;
+      student_id: string;  // uuid
       students: {
-        id: number;
+        id: string;  // uuid
         student_code: string;
         first_name: string;
         middle_name: string | null;
@@ -1204,7 +1190,7 @@ export const fetchStudentsByCourseAndSection = async (
 
     // If activityId is provided, fetch essay submissions for this activity
     const essaySubmissions = new Map<
-      number,
+      string,  // uuid
       {
         grammar?: number;
         score?: number;
@@ -1217,8 +1203,8 @@ export const fetchStudentsByCourseAndSection = async (
     >();
 
     if (activityId) {
-      const activityDbId = parseInt(activityId, 10);
-      if (!isNaN(activityDbId)) {
+      const activityDbId = activityId;
+      if (activityDbId) {
         const studentIds = studentsData.map((s) => s.id);
         const { data: essaysData, error: essaysError } = await supabase
           .from("essays")
@@ -1347,9 +1333,9 @@ export const uploadEssayFile = async (
       };
     }
 
-    // Parse student ID (it might be a string ID or numeric DB ID)
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    // Parse student ID (it might be a UUID or student_code)
+    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
+    if (!studentDbId) {
       // If studentId is a student_code, fetch the actual DB ID
       const { data: studentData, error: studentError } = await supabase
         .from("students")
@@ -1364,8 +1350,8 @@ export const uploadEssayFile = async (
     }
 
     // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return { success: false, error: "Invalid activity ID" };
     }
 
@@ -1414,8 +1400,8 @@ export const updateEssayFile = async (
     // Verify session context (not used anymore, but we keep the params)
 
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
+    if (!studentDbId) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
@@ -1429,8 +1415,8 @@ export const updateEssayFile = async (
     }
 
     // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return { success: false, error: "Invalid activity ID" };
     }
 
@@ -1522,8 +1508,8 @@ export const deleteEssay = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
+    if (!studentDbId) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
@@ -1537,8 +1523,8 @@ export const deleteEssay = async (
     }
 
     // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return { success: false, error: "Invalid activity ID" };
     }
 
@@ -1607,9 +1593,9 @@ export const fetchCourseSectionCounts = async (
       console.error("Error counting students:", studentsCountError);
     }
 
-    // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    // Activity ID is now a UUID string
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return { studentCount: studentCount || 0, submissionCount: 0 };
     }
 
@@ -1647,8 +1633,8 @@ export const fetchEssayByStudentAndActivity = async (
 } | null> => {
   try {
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
+    if (!studentDbId) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
@@ -1663,8 +1649,8 @@ export const fetchEssayByStudentAndActivity = async (
     }
 
     // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       console.error("Invalid activity ID");
       return null;
     }
@@ -1740,9 +1726,9 @@ export const checkEssayGraded = async (
       studentDbId = studentData.id;
     }
 
-    // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    // Activity ID is now a UUID string
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return false;
     }
 
@@ -1821,17 +1807,17 @@ export const allowResubmission = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // 1. Get student's auth_user_id and DB ID
-    let studentDbId = parseInt(studentId, 10);
+    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
     let authUserId: string | null = null;
 
-    if (isNaN(studentDbId)) {
+    if (!studentDbId) {
       const { data: studentData } = await supabase
         .from("students")
         .select("id, auth_user_id")
         .eq("student_code", studentId)
         .single();
       authUserId = studentData?.auth_user_id || null;
-      studentDbId = studentData?.id || 0;
+      studentDbId = studentData?.id || null;
     } else {
       const { data: studentData } = await supabase
         .from("students")
@@ -1839,7 +1825,6 @@ export const allowResubmission = async (
         .eq("id", studentDbId)
         .single();
       authUserId = studentData?.auth_user_id || null;
-      studentDbId = studentData?.id || 0;
     }
 
     if (!authUserId || !studentDbId) {
@@ -1852,7 +1837,7 @@ export const allowResubmission = async (
       .from("essays")
       .select("id, file_path")
       .eq("student_id", studentDbId)
-      .eq("activity_id", parseInt(activityId, 10))
+      .eq("activity_id", activityId)
       .maybeSingle();
 
     if (existingEssay) {
@@ -1934,9 +1919,9 @@ export const gradeEssay = async (
       }
     }
 
-    // Parse activity ID
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    // Activity ID is now a UUID string
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return { success: false, error: "Invalid activity ID" };
     }
 
@@ -3218,8 +3203,8 @@ export const fetchStudentsForActivity = async (
   }>
 > => {
   try {
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return [];
     }
 
@@ -3260,11 +3245,11 @@ export const fetchStudentsForActivity = async (
     // Map to expected format
     // Supabase returns nested data as an object (not array) when using !inner
     type EssayWithStudentData = {
-      id: number;
-      student_id: number;
-      block_id: number | null;
+      id: string;  // uuid
+      student_id: string;  // uuid
+      block_id: string | null;  // uuid
       students: {
-        id: number;
+        id: string;  // uuid
         first_name: string;
         middle_name: string | null;
         last_name: string;
@@ -3316,8 +3301,8 @@ export const fetchEssayTextsForStudents = async (
   }>
 > => {
   try {
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId) || studentIds.length === 0) {
+    const activityDbId = activityId;
+    if (!activityDbId || studentIds.length === 0) {
       return [];
     }
 
@@ -3336,10 +3321,10 @@ export const fetchEssayTextsForStudents = async (
 
     // Type definitions for Supabase query results
     type EssayWithStudent = {
-      id: number;
-      student_id: number;
+      id: string;  // uuid
+      student_id: string;  // uuid
       students: {
-        id: number;
+        id: string;  // uuid
         first_name: string;
         middle_name: string | null;
         last_name: string;
@@ -3401,12 +3386,12 @@ export const fetchEssayTextsForStudents = async (
 export const fetchEssayText = async (
   studentId: string,
   activityId: string,
-): Promise<{ text: string; essayId: number } | null> => {
+): Promise<{ text: string; essayId: string } | null> => {
   try {
-    const studentDbId = parseInt(studentId, 10);
-    const activityDbId = parseInt(activityId, 10);
+    const studentDbId = studentId;
+    const activityDbId = activityId;
 
-    if (isNaN(studentDbId) || isNaN(activityDbId)) {
+    if (!studentDbId || !activityDbId) {
       return null;
     }
 
@@ -3500,8 +3485,8 @@ export const fetchComparisonHistory = async (
       return [];
     }
 
-    const activityDbId = parseInt(activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = activityId;
+    if (!activityDbId) {
       return [];
     }
 
@@ -3518,11 +3503,11 @@ export const fetchComparisonHistory = async (
     }
 
     type EssayComparisonRow = {
-      id: number;
-      activity_id: number;
-      user_id: number;
-      student_ids: number[];
-      essay_ids: number[];
+      id: string;  // uuid
+      activity_id: string;  // uuid
+      user_id: string;  // uuid
+      student_ids: string[];  // uuid[]
+      essay_ids: string[];  // uuid[]
       insights: string;
       similarity_highlights: ComparisonHighlight[];
       similarity_score: number | null;

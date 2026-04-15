@@ -31,6 +31,7 @@ import {
 } from "../../services/activityService";
 import type { EssayActivity } from "../../types/activityTypes";
 import { ViewEssayModal } from "../../components/activities/ViewEssayModal";
+import { useNotification } from "../../context/NotificationContext";
 
 type ComparisonResult = {
   insights: string;
@@ -88,6 +89,7 @@ export function CompareActivitiesTab() {
     ComparisonAnalysis[]
   >([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const { showNotification } = useNotification();
 
   // Load activities with duplicates
   useEffect(() => {
@@ -191,7 +193,7 @@ export function CompareActivitiesTab() {
 
   const handleCompareStudents = async () => {
     if (selectedStudents.size < 2) {
-      alert("Please select at least 2 students to compare");
+      showNotification('warning', "Please select at least 2 students to compare");
       return;
     }
 
@@ -208,9 +210,7 @@ export function CompareActivitiesTab() {
       );
 
       if (essayData.length < 2) {
-        alert(
-          "Could not fetch essays for selected students. Please ensure they have submitted essays."
-        );
+        showNotification('error', "Could not fetch essays for selected students. Please ensure they have submitted essays.");
         setIsComparing(false);
         return;
       }
@@ -252,7 +252,7 @@ export function CompareActivitiesTab() {
       }
     } catch (error) {
       console.error("Error comparing essays:", error);
-      alert("Failed to compare essays. Please try again.");
+      showNotification('error', "Failed to compare essays. Please try again.");
     } finally {
       setIsComparing(false);
     }

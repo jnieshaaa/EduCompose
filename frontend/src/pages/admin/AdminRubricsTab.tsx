@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import { useNotification } from "../../context/NotificationContext";
 import type { CriteriaRow } from "../../types/rubricTypes";
 import { logActivity } from "../../utils/logger";
 
@@ -10,6 +11,7 @@ export function AdminRubricsTab() {
   const [platformRubrics, setPlatformRubrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     loadPlatformRubrics();
@@ -101,7 +103,7 @@ export function AdminRubricsTab() {
       await loadPlatformRubrics();
     } catch (err) {
       console.error("Error deleting platform rubric:", err);
-      alert("Failed to delete platform rubric. Please try again.");
+      showNotification('error', "Failed to delete platform rubric. Please try again.");
     }
   };
 

@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { useNotification } from '../../context/NotificationContext';
 
 // Types
 interface ActivityDetails {
@@ -40,6 +41,7 @@ export function SubmitEssayTab() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showNotification } = useNotification();
 
   // Decode secure URL params (with fallback to raw searchParams for backwards compatibility)
   const secureParams = readSecureParams(window.location.search);
@@ -51,7 +53,7 @@ export function SubmitEssayTab() {
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityDetails | null>(null);
   const [posts, setPosts] = useState<SidebarPost[]>([]);
-  const [studentId, setStudentId] = useState<number | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState('my-work');
   const [uploadMode, setUploadMode] = useState<'file' | 'text'>('text');
@@ -100,7 +102,7 @@ export function SubmitEssayTab() {
               auth_user_id
             )
           `)
-          .eq('id', parseInt(activityIdParam))
+          .eq('id', activityIdParam)
           .maybeSingle();
 
         if (actError) throw actError;
@@ -143,7 +145,7 @@ export function SubmitEssayTab() {
         const { data: essayData } = await supabase
           .from('essays')
           .select('*')
-          .eq('activity_id', parseInt(activityIdParam))
+          .eq('activity_id', activityIdParam)
           .eq('student_id', studentData.id)
           .maybeSingle();
 
@@ -221,8 +223,7 @@ export function SubmitEssayTab() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 10 * 1024 * 1024) {
-        // File size validation - using alert for now, can be replaced with modal if needed
-        alert("File is too large. Maximum size is 10MB.");
+        showNotification('error', "File is too large. Maximum size is 10MB.");
         return;
       }
       setSelectedFile(file);
@@ -281,7 +282,7 @@ export function SubmitEssayTab() {
     if (uploadMode === 'text') {
       const qualityError = validateTextEssayQuality(essayContent);
       if (qualityError) {
-        alert(qualityError);
+        showNotification('warning', qualityError);
         return;
       }
     }
@@ -308,7 +309,7 @@ export function SubmitEssayTab() {
         .from('essays')
         .insert({
           student_id: studentId,
-          activity_id: parseInt(activityIdParam),
+          activity_id: activityIdParam,
           block_id: blockId || null, // Use UUID from URL or null
           teacher_id: activity?.teacherId || null, // Ensure teacher can see it
           content: uploadMode === 'text' ? essayContent : null,
@@ -367,7 +368,7 @@ export function SubmitEssayTab() {
       }
     } catch (err) {
       console.error("Submission error:", err);
-      alert(getErrorMessage(err));
+      showNotification('error', getErrorMessage(err));
     } finally {
       // Always clear loading state so the page does not get stuck
       // after a successful submission.
@@ -396,11 +397,11 @@ export function SubmitEssayTab() {
       if (requestError) throw requestError;
 
       setIsResubmitRequested(true);
-      alert("Resubmission request sent to your teacher.");
+      showNotification('success', "Resubmission request sent to your teacher.");
     } catch (err: unknown) {
       console.error("Error requesting resubmission:", err);
       const message = err instanceof Error ? err.message : "Unknown error";
-      alert("Failed to send request: " + message);
+      showNotification('error', "Failed to send request: " + message);
     } finally {
       setRequestingResubmission(false);
     }

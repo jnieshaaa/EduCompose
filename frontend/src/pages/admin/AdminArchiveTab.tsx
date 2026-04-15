@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Search, Loader2, Calendar, User, BookOpen, Layers, Filter, Printer, Download, Trash } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import { useNotification } from "../../context/NotificationContext";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 import { fetchAllTeacherLoads, fetchAcademicSettings, deleteTeacherCourseLoad } from "../../services/academicService";
@@ -19,6 +20,7 @@ export function AdminArchiveTab() {
   const [loadToDelete, setLoadToDelete] = useState<any>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     loadInitialData();
@@ -102,7 +104,7 @@ export function AdminArchiveTab() {
       setLoadToDelete(null);
       handleFilterChange();
     } else {
-      alert("Failed to delete course load: " + result.error);
+      showNotification('error', "Failed to delete course load: " + result.error);
     }
     
     setIsDeleting(false);

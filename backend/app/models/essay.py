@@ -13,7 +13,7 @@ class Essay(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    student_id = Column(Integer, ForeignKey("students.id"))
+    student_id = Column(String, ForeignKey("students.id"))  # uuid
     teacher_id = Column(Integer, ForeignKey("users.id"))
     class_id = Column(Integer, ForeignKey("classes.id"))
     submitted_at = Column(DateTime, default=datetime.utcnow)

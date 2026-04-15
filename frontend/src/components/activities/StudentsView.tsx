@@ -16,7 +16,7 @@ import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
-import AlertModal, { type AlertType } from "../ui/AlertModal";
+import { useNotification } from "../../context/NotificationContext";
 import {
   Table,
   TableBody,
@@ -79,26 +79,10 @@ export function StudentsView({
     string | null
   >(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
-  const [alertState, setAlertState] = useState<{
-    isOpen: boolean;
-    type: AlertType;
-    title?: string;
-    message: string;
-  }>({
-    isOpen: false,
-    type: "info",
-    title: undefined,
-    message: "",
-  });
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
-  const showAlert = (
-    type: AlertType,
-    message: string,
-    title?: string,
-  ) => {
-    setAlertState({ isOpen: true, type, title, message });
-  };
+  // showAlert is now handled by NotificationContext
 
   // Check which students have been graded
   useEffect(() => {
@@ -145,20 +129,16 @@ export function StudentsView({
       );
 
       if (result.success) {
-        showAlert("success", "Essay deleted successfully.");
+        showNotification('success', "Essay deleted successfully.");
         setIsDeleteModalOpen(false);
         setSelectedStudentForDelete(null);
         if (onRefresh) await onRefresh();
       } else {
-        showAlert(
-          "error",
-          `Failed to delete essay: ${result.error || "Unknown error"}`,
-          "Delete Failed",
-        );
+        showNotification('error', `Failed to delete essay: ${result.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Delete error:", error);
-      showAlert("error", "Failed to delete essay. Please try again.", "Delete Failed");
+      showNotification('error', "Failed to delete essay. Please try again.");
     } finally {
       setIsDeleting(false);
     }
@@ -173,27 +153,16 @@ export function StudentsView({
         activity.title,
       );
       if (result.success) {
-        showAlert(
-          "success",
-          "Notification sent to student allowing resubmission or reupload.",
-        );
+        showNotification('success', "Notification sent to student allowing resubmission or reupload.");
         if (onRefresh) {
           await onRefresh();
         }
       } else {
-        showAlert(
-          "error",
-          `Failed to send notification: ${result.error}`,
-          "Notification Failed",
-        );
+        showNotification('error', `Failed to send notification: ${result.error}`);
       }
     } catch (error) {
       console.error("Allow resubmission error:", error);
-      showAlert(
-        "error",
-        "An error occurred while sending the notification.",
-        "Notification Failed",
-      );
+      showNotification('error', "An error occurred while sending the notification.");
     } finally {
       setIsAllowingResubmission(null);
     }
@@ -214,12 +183,9 @@ export function StudentsView({
         (s) => s.status === "submitted" && !gradedStudents.has(s.id),
       );
       if (allSubmitted.length > 0) {
-        showAlert(
-          "warning",
-          `No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`,
-        );
+        showNotification('warning', `No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`);
       } else {
-        showAlert("info", "No pending essays to grade.");
+        showNotification('info', "No pending essays to grade.");
       }
       return;
     }
@@ -276,7 +242,7 @@ export function StudentsView({
 
     if (onRefresh) await onRefresh();
     setIsGradingAll(false);
-    showAlert("success", "Batch grading process completed.");
+    showNotification('success', "Batch grading process completed.");
   };
 
   return (
@@ -519,10 +485,7 @@ export function StudentsView({
                               });
                               setIsViewEssayModalOpen(true);
                             } else {
-                              showAlert(
-                                "info",
-                                "This student has not submitted an essay yet.",
-                              );
+                              showNotification('info', "This student has not submitted an essay yet.");
                             }
                           }}
                           disabled={student.status !== "submitted"}
@@ -567,11 +530,7 @@ export function StudentsView({
                                     },
                                   });
                                 } else {
-                                  showAlert(
-                                    "error",
-                                    "Failed to load analysis results.",
-                                    "Analysis Error",
-                                  );
+                                  showNotification('error', "Failed to load analysis results.");
                                 }
                               } else {
                                 setGradingStudents((prev) => {
@@ -613,11 +572,7 @@ export function StudentsView({
                                   });
                                   if (onRefresh) await onRefresh();
                                 } else {
-                                  showAlert(
-                                    "error",
-                                    `Failed to grade essay: ${result.error}`,
-                                    "Grading Failed",
-                                  );
+                                  showNotification('error', `Failed to grade essay: ${result.error}`);
                                   if (onRefresh) await onRefresh();
                                 }
                               }
@@ -744,16 +699,6 @@ export function StudentsView({
           </div>
         </div>
       </Modal>
-
-      <AlertModal
-        isOpen={alertState.isOpen}
-        onClose={() =>
-          setAlertState((prev) => ({ ...prev, isOpen: false }))
-        }
-        type={alertState.type}
-        title={alertState.title}
-        message={alertState.message}
-      />
     </div>
   );
 }

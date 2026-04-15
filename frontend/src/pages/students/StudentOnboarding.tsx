@@ -21,6 +21,7 @@ import {
   Building2,
   FileText,
 } from "lucide-react";
+import { useNotification } from "../../context/NotificationContext";
 
 interface StudentData {
   id: number;
@@ -57,6 +58,7 @@ const StudentOnboarding: React.FC = () => {
   const [passwordError, setPasswordError] = useState("");
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const { showNotification } = useNotification();
 
   // Password requirements Check
   const hasMinLength = newPassword.length >= 8;
@@ -137,8 +139,9 @@ const StudentOnboarding: React.FC = () => {
 
         if (error) throw error;
         setStudentData(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching student data:", err);
+        showNotification('error', "Failed to load student record");
       }
     };
     fetchStudentData();
@@ -194,9 +197,11 @@ const StudentOnboarding: React.FC = () => {
       }
 
       await checkAuth();
+      showNotification('success', "Account setup complete! Welcome to EduCompose.");
       navigate("/Student/Dashboard");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error completing onboarding:", err);
+      showNotification('error', err.message || "Failed to complete setup");
     } finally {
       setIsLoading(false);
     }

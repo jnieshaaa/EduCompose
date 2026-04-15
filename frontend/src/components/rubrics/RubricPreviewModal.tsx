@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { useNotification } from "../../context/NotificationContext";
 
 interface RubricPreviewModalProps {
   rubric:
@@ -48,6 +49,7 @@ export function RubricPreviewModal({
   onClose,
   onUseTemplate,
 }: RubricPreviewModalProps) {
+  const { showNotification } = useNotification();
   if (!isOpen) return null;
 
   // Calculate total possible points
@@ -250,7 +252,7 @@ export function RubricPreviewModal({
                       await exportRubricToPDF(rubric as PlatformRubric);
                     } catch (error) {
                       console.error("Error exporting to PDF:", error);
-                      alert("Failed to export rubric to PDF");
+                      showNotification('error', "Failed to export rubric to PDF");
                     }
                   }}
                 >
@@ -266,7 +268,7 @@ export function RubricPreviewModal({
                       await exportRubricToExcel(rubric as PlatformRubric);
                     } catch (error) {
                       console.error("Error exporting to Excel:", error);
-                      alert("Failed to export rubric to Excel");
+                      showNotification('error', "Failed to export rubric to Excel");
                     }
                   }}
                 >

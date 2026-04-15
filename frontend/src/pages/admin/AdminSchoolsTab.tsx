@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import type { School, Department, Program } from "../../types/academic";
+import { useNotification } from "../../context/NotificationContext";
 
 export const AdminSchoolsTab: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { showNotification } = useNotification();
 
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
@@ -134,7 +136,7 @@ export const AdminSchoolsTab: React.FC = () => {
       setShowSchoolModal(false);
     } catch (error) {
       console.error("Error saving school:", error);
-      alert("Error saving school. Please check if the code is unique.");
+      showNotification('error', "Error saving school. Please check if the code is unique.");
     }
   };
 

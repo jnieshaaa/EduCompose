@@ -5,6 +5,7 @@ import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import { useAuth } from "../contexts/AuthContext";
 import { authApi, userApi } from "../api";
+import { useNotification } from "../context/NotificationContext";
 
 const USERNAME_REGEX = /^[A-Za-z.,]{3,20}$/;
 
@@ -26,6 +27,7 @@ const formatUsernameInput = (value: string): string => {
 
 const Settings: React.FC = () => {
   const { user, checkAuth } = useAuth();
+  const { showNotification } = useNotification();
 
   // Account settings
   const [username, setUsername] = useState<string>("");
@@ -66,8 +68,8 @@ const Settings: React.FC = () => {
     // Placeholder save action
     // In a real app, call an API to persist preferences
 
-    // Settings saved notification - using alert for now, can be replaced with modal if needed
-    alert("Settings saved.");
+    // Settings saved notification
+    showNotification('success', "Settings saved.");
   };
 
   // Account settings handlers

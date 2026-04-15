@@ -11,14 +11,14 @@ class EssayBase(BaseModel):
     content: str
 
 class EssayCreate(EssayBase):
-    student_id: int
-    class_id: int
+    student_id: str  # uuid
+    class_id: str
 
 class EssayResponse(EssayBase):
-    id: int
-    student_id: int
-    teacher_id: int
-    class_id: int
+    id: str  # uuid
+    student_id: str  # uuid
+    teacher_id: str
+    class_id: str
     submitted_at: datetime
     status: str
     grammar_score: Optional[float] = None

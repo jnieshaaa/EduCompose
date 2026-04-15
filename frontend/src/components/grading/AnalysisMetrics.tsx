@@ -137,7 +137,7 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
               Manuscript <span className="text-primary">Architecture</span>
             </h4>
             <div className="flex items-center gap-2">
-               <Badge variant="primary" size="sm" className="rounded-lg px-3 py-1 font-black text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Toulmin's Protocol</Badge>
+               <Badge variant="outline" size="sm" className="rounded-lg px-3 py-1 font-black text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Toulmin's Protocol</Badge>
             </div>
           </div>
           

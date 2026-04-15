@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import { useNotification } from "../../context/NotificationContext";
 import { fetchAcademicSettings, updateAcademicSettings } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 
@@ -20,6 +21,7 @@ export function AdminSettingsTab() {
   const [saving, setSaving] = useState(false);
   const [savingAcademic, setSavingAcademic] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
   const months = [
@@ -68,11 +70,11 @@ export function AdminSettingsTab() {
   };
 
   const handleExportData = () => {
-    alert("Data export functionality will be implemented here");
+    showNotification('info', "Data export functionality will be implemented here");
   };
-
+  
   const handleImportData = () => {
-    alert("Data import functionality will be implemented here");
+    showNotification('info', "Data import functionality will be implemented here");
   };
 
   return (

@@ -10,6 +10,7 @@ import {
 } from "../ui/dropdown-menu";
 import type { PlatformRubric } from "../../types/rubricTypes";
 import { getTypeBadgeColor } from "../../services/rubricService";
+import { useNotification } from "../../context/NotificationContext";
 
 interface PlatformRubricCardProps {
   rubric: PlatformRubric;
@@ -20,6 +21,7 @@ export function PlatformRubricCard({
   rubric,
   onClick,
 }: PlatformRubricCardProps) {
+  const { showNotification } = useNotification();
   const totalPoints = rubric.criteria.reduce(
     (sum, c) => sum + Math.max(...c.scores.map((s) => s.points)),
     0
@@ -81,7 +83,7 @@ export function PlatformRubricCard({
                     await exportRubricToPDF(rubric);
                   } catch (error) {
                     console.error("Error exporting to PDF:", error);
-                    alert("Failed to export rubric to PDF");
+                    showNotification('error', "Failed to export rubric to PDF");
                   }
                 }}
               >
@@ -98,7 +100,7 @@ export function PlatformRubricCard({
                     await exportRubricToExcel(rubric);
                   } catch (error) {
                     console.error("Error exporting to Excel:", error);
-                    alert("Failed to export rubric to Excel");
+                    showNotification('error', "Failed to export rubric to Excel");
                   }
                 }}
               >

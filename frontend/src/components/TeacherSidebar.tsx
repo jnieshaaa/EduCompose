@@ -165,7 +165,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
               const active = isItemActive(item.path);
               return (
                 <li key={item.label}>
-                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen}>
+                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen} className="block w-full">
                     <button
                       onClick={() => handleItemClick(item.path)}
                       className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group ${

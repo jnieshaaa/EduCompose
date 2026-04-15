@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, Edit2, Loader2, Search, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
+import { useNotification } from "../../context/NotificationContext";
 
 
 import { supabase } from "../../lib/supabaseClient";
@@ -11,6 +12,7 @@ export const AdminCoursesTab: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { showNotification } = useNotification();
   
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -64,14 +66,31 @@ export const AdminCoursesTab: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      // First, get the unique user_ids from courses
+      const { data: courseUsers, error: courseError } = await supabase
+        .from("courses")
+        .select("user_id");
+      
+      if (courseError) throw courseError;
+      
+      const contributorIds = [...new Set(courseUsers?.map(c => c.user_id).filter(Boolean))];
+      
+      if (contributorIds.length === 0) {
+        setUsers([]);
+        return;
+      }
+
+      // Then fetch the names of those specific users
       const { data, error } = await supabase
         .from("users")
         .select("auth_user_id, first_name, last_name")
+        .in("auth_user_id", contributorIds)
         .order("last_name");
+
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching contributing users:", error);
     }
   };
 
@@ -145,10 +164,12 @@ export const AdminCoursesTab: React.FC = () => {
       }
 
       await fetchCourses();
+      showNotification('success', editingCourse ? "Course updated successfully" : "New course added successfully");
       resetForm();
       setShowCourseModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving course:", error);
+      showNotification('error', error.message || "Failed to save course");
     }
   };
 
@@ -158,8 +179,10 @@ export const AdminCoursesTab: React.FC = () => {
         const { error } = await supabase.from("courses").delete().eq("id", id);
         if (error) throw error;
         await fetchCourses();
-      } catch (error) {
+        showNotification('success', "Course deleted successfully");
+      } catch (error: any) {
         console.error("Error deleting course:", error);
+        showNotification('error', error.message || "Failed to delete course");
       }
     }
   };
