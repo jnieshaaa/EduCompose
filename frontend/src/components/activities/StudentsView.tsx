@@ -577,49 +577,49 @@ export function StudentsView({
                                 }
                               }
                             } else {
-                              showAlert(
-                                "info",
-                                "This student has not submitted an essay yet.",
-                              );
-                            }
-                          }}
-                          disabled={
-                            student.status !== "submitted" ||
-                            gradingStudents.has(student.id)
+                            showNotification(
+                              "info",
+                              "This student has not submitted an essay yet.",
+                            );
                           }
-                        >
-                          {gradingStudents.has(student.id) ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Grading...
-                            </>
-                          ) : gradedStudents.has(student.id) ? (
-                            <>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Show Result
-                            </>
-                          ) : (
-                            <>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Grade Essay
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (student.status === "submitted") {
-                              setSelectedStudentForDelete({
-                                id: student.id,
-                                name: student.name,
-                              });
-                              setIsDeleteModalOpen(true);
-                            } else {
-                              showAlert(
-                                "info",
-                                "This student has not submitted an essay yet.",
-                              );
-                            }
+                        }}
+                        disabled={
+                          student.status !== "submitted" ||
+                          gradingStudents.has(student.id)
+                        }
+                      >
+                        {gradingStudents.has(student.id) ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Grading...
+                          </>
+                        ) : gradedStudents.has(student.id) ? (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Show Result
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Grade Essay
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (student.status === "submitted") {
+                            setSelectedStudentForDelete({
+                              id: student.id,
+                              name: student.name,
+                            });
+                            setIsDeleteModalOpen(true);
+                          } else {
+                            showNotification(
+                              "info",
+                              "This student has not submitted an essay yet.",
+                            );
+                          }
                           }}
                           disabled={student.status !== "submitted"}
                           className="text-error-default focus:text-error-default focus:bg-error-default/10"

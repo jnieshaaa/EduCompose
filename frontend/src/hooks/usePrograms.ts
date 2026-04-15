@@ -219,17 +219,18 @@ export function usePrograms() {
         setIsCreating(false);
         setIsAddDialogOpen(false);
         setTimeout(() => {
-          showError(
-            `All selected programs already exist: ${duplicatesExisting
-              .map((p) => p.name)
-              .join(", ")}.`,
-            {
-              title: "Duplicate Program",
-              onConfirm: () => {
-                setIsAddDialogOpen(true);
-              },
+        showAlert(
+          `All selected programs already exist: ${duplicatesExisting
+            .map((p) => p.name)
+            .join(", ")}.`,
+          {
+            type: "error",
+            title: "Duplicate Program",
+            onConfirm: () => {
+              setIsAddDialogOpen(true);
             },
-          );
+          },
+        );
         }, 100);
         return;
       }
@@ -256,9 +257,10 @@ export function usePrograms() {
         ) {
           setIsAddDialogOpen(false);
           setTimeout(() => {
-            showError(
+            showAlert(
               "One or more programs already exist. Please use different names.",
               {
+                type: "error",
                 title: "Duplicate Program",
                 onConfirm: () => {
                   setIsAddDialogOpen(true);
@@ -269,7 +271,7 @@ export function usePrograms() {
         } else {
           setIsAddDialogOpen(false);
           setTimeout(() => {
-            showError(`Failed to create program: ${error.message}`);
+            showAlert(`Failed to create program: ${error.message}`, { type: 'error' });
           }, 100);
         }
         return;

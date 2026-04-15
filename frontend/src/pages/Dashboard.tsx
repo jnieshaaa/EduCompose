@@ -14,7 +14,6 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import ClassOverview from "../components/dashboard/ClassOverview";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import Input from "../components/ui/Input";
 import type { DashboardStats, Essay, Class } from "../types/Essay";
 import { classApi, essayApi, studentApi } from "../api";
 import CreateClassModal from "../components/dashboard/CreateClassModal";

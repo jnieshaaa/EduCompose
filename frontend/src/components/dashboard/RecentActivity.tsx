@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, BookOpen, User, TrendingUp } from "lucide-react";
+import { Clock, BookOpen, User, TrendingUp, ArrowRight } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import type { Essay } from "../../types/Essay";
@@ -92,8 +92,8 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
               >
                 <div className="flex-shrink-0">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 ${
-                    status === 'analyzed' ? 'bg-info-50 text-info-default' : 
-                    status === 'reviewed' ? 'bg-success-50 text-success-default' : 
+                    essay.status === 'analyzed' ? 'bg-info-50 text-info-default' : 
+                    essay.status === 'reviewed' ? 'bg-success-50 text-success-default' : 
                     'bg-primary-50 text-primary'
                   }`}>
                     <ActivityIcon className="w-6 h-6" />

@@ -13,10 +13,22 @@ export function isUuidString(value: string): boolean {
   );
 }
 
-function coerceId(id: string | number | null | undefined): string | null {
+export function coerceEssayIdParam(id: string | number | null | undefined): string | null {
   if (id == null) return null;
   const s = String(id).trim();
   return s || null;
+}
+
+/** Results of comparing multiple essays. */
+export interface ComparisonAnalysis {
+  id?: string;
+  activityId: string;
+  studentIds: string[];
+  essayIds: string[];
+  insights: string;
+  highlights: any;
+  similarityScore: number;
+  createdAt: string;
 }
 
 /** Resolve `students.id` for `essays.student_id` filters: UUID pass-through, else `student_code` lookup. */
@@ -165,13 +177,13 @@ export const fetchActivityBreadcrumbInfo = async (
 
 // Supabase row type for essay_activities
 type SupabaseActivityRow = {
-  id: number;
+  id: string;
   teacher_id: string | null;
   title: string;
   program_id: string[] | null;
   block_id: string[] | null;
   course_id: string[] | null;
-  rubric_id: number | null;
+  rubric_id: string | null;
   due_date: string | null;
   instructions: string | null;
   academic_year: string | null;
@@ -179,8 +191,8 @@ type SupabaseActivityRow = {
   min_word_count: number;
   created_at: string;
   rubrics?:
-    | { id: number; name: string }
-    | { id: number; name: string }[]
+    | { id: string; name: string }
+    | { id: string; name: string }[]
     | null;
 };
 
@@ -2622,8 +2634,8 @@ export const fetchStudentAnalysisResults = async (
 export interface DuplicateEssayGroup {
   contentHash: string; // Normalized content for grouping
   essays: Array<{
-    essayId: number;
-    studentId: number;
+    essayId: string;
+    studentId: string;
     studentName: string;
     programName: string;
     sectionName: string;
@@ -2723,28 +2735,28 @@ const generateContentHash = (text: string): string => {
 const processSimilarityGroups = (
   groups: Map<string, DuplicateEssayGroup["essays"]>,
   sourceData: Array<{
-    essay_id?: number;
+    essay_id?: string | number;
     original_text?: string | null;
     content?: string | null;
     essays?: unknown;
-    id?: number;
+    id?: string | number;
   }>,
   textField: "original_text" | "content",
 ): DuplicateEssayGroup[] => {
   // Get all texts
-  const essayTexts = new Map<number, string>();
+  const essayTexts = new Map<string, string>();
   for (const item of sourceData) {
     const text =
       textField === "original_text" ? item.original_text : item.content;
-    let essayId: number | undefined;
+    let essayId: string | undefined;
 
     if (textField === "original_text") {
       // For original_text, extract essay ID from nested structure
       // Supabase returns essays as an object (not array) when using !inner
-      const essaysData = item.essays as { id?: number } | undefined;
-      essayId = essaysData?.id || item.essay_id;
+      const essaysData = item.essays as { id?: string | number } | undefined;
+      essayId = essaysData?.id ? String(essaysData.id) : (item.essay_id ? String(item.essay_id) : undefined);
     } else {
-      essayId = item.id;
+      essayId = item.id ? String(item.id) : undefined;
     }
 
     if (text && essayId) {
@@ -2758,7 +2770,7 @@ const processSimilarityGroups = (
   const SIMILARITY_THRESHOLD = 0.6;
 
   // Collect all essays from all hash groups for cross-group comparison
-  const allEssays: Array<{ essayId: number; hash: string }> = [];
+  const allEssays: Array<{ essayId: string; hash: string }> = [];
   for (const [hash, essays] of groups.entries()) {
     for (const essay of essays) {
       allEssays.push({ essayId: essay.essayId, hash });
@@ -2767,7 +2779,7 @@ const processSimilarityGroups = (
 
   // Group essays by similarity (compare across hash groups too)
   const similarityGroups: Array<DuplicateEssayGroup["essays"]> = [];
-  const processedEssays = new Set<number>();
+  const processedEssays = new Set<string>();
 
   for (let i = 0; i < allEssays.length; i++) {
     if (processedEssays.has(allEssays[i].essayId)) {
@@ -2956,13 +2968,13 @@ export const fetchDuplicateEssays = async (
 
       // Try to use essays.content if available
       type EssayWithNested = {
-        id: number;
+        id: string;
         title: string;
         submitted_at: string;
         content?: string | null;
         block_id?: string | null;
         students?: {
-          id: number;
+          id: string;
           first_name: string;
           middle_name: string | null;
           last_name: string;
@@ -3099,8 +3111,8 @@ export const fetchDuplicateEssays = async (
       }
 
       const essayInfo = {
-        essayId: essayData.id,
-        studentId: student.id,
+        essayId: String(essayData.id),
+        studentId: String(student.id),
         studentName: buildFullNameFromObject(student, "Unknown"),
         programName: program.abbr || program.name || "Unknown",
         sectionName: block.year
@@ -3177,16 +3189,6 @@ export interface ComparisonHighlight {
   studentIndex: number;
 }
 
-export interface ComparisonAnalysis {
-  id?: number;
-  activityId: string;
-  studentIds: number[];
-  essayIds: number[];
-  insights: string;
-  highlights: ComparisonHighlight[];
-  similarityScore?: number;
-  createdAt?: string;
-}
 
 // Fetch all students who submitted essays for an activity
 export const fetchStudentsForActivity = async (
@@ -3194,8 +3196,8 @@ export const fetchStudentsForActivity = async (
 ): Promise<
   Array<{
     id: string;
-    studentId: number;
-    essayId: number;
+    studentId: string;
+    essayId: string;
     name: string;
     programName: string;
     sectionName: string;
@@ -3274,13 +3276,13 @@ export const fetchStudentsForActivity = async (
 
       return {
         id: String(student.id),
-        studentId: student.id,
-        essayId: essay.id,
+        studentId: String(student.id),
+        essayId: String(essay.id),
         name: buildFullNameFromObject(student, "Unknown"),
         programName: program?.abbr || program?.name || "Unknown",
         sectionName: block?.name || "Unknown",
         hasEssay: true,
-      };
+      } as const;
     });
   } catch (err) {
     console.error("Error fetching students for activity:", err);
@@ -3290,13 +3292,13 @@ export const fetchStudentsForActivity = async (
 
 // Fetch essay texts for multiple students at once (for comparison)
 export const fetchEssayTextsForStudents = async (
-  studentIds: number[],
+  studentIds: string[],
   activityId: string,
 ): Promise<
   Array<{
-    studentId: number;
+    studentId: string;
     text: string;
-    essayId: number;
+    essayId: string;
     studentName: string;
   }>
 > => {
@@ -3332,7 +3334,7 @@ export const fetchEssayTextsForStudents = async (
     };
 
     type AnalysisDataItem = {
-      essay_id: number;
+      essay_id: string;  // uuid
       original_text: string | null;
     };
 
@@ -3351,11 +3353,11 @@ export const fetchEssayTextsForStudents = async (
     }
 
     // Create a map of essay_id -> original_text
-    const textMap = new Map<number, string>();
+    const textMap = new Map<string, string>();
     if (analysisData) {
       (analysisData as unknown as AnalysisDataItem[]).forEach((item) => {
         if (item.original_text) {
-          textMap.set(item.essay_id, item.original_text);
+          textMap.set(String(item.essay_id), item.original_text);
         }
       });
     }
@@ -3367,9 +3369,9 @@ export const fetchEssayTextsForStudents = async (
           ? essay.students[0]
           : essay.students;
         return {
-          studentId: essay.student_id,
-          text: textMap.get(essay.id) || "",
-          essayId: essay.id,
+          studentId: String(essay.student_id),
+          text: textMap.get(String(essay.id)) || "",
+          essayId: String(essay.id),
           studentName: buildFullNameFromObject(student, "Unknown"),
         };
       },
@@ -3434,15 +3436,15 @@ export const fetchEssayText = async (
 // Save comparison analysis
 export const saveComparisonAnalysis = async (
   comparison: ComparisonAnalysis,
-): Promise<{ success: boolean; id?: number; error?: string }> => {
+): Promise<{ success: boolean; id?: string; error?: string }> => {
   try {
     const teacherId = await fetchTeacherId();
     if (!teacherId) {
       return { success: false, error: "Teacher ID not available" };
     }
 
-    const activityDbId = parseInt(comparison.activityId, 10);
-    if (isNaN(activityDbId)) {
+    const activityDbId = comparison.activityId;
+    if (!activityDbId) {
       return { success: false, error: "Invalid activity ID" };
     }
 
@@ -3516,7 +3518,7 @@ export const fetchComparisonHistory = async (
     };
 
     return data.map((row: EssayComparisonRow) => ({
-      id: row.id,
+      id: String(row.id),
       activityId: String(row.activity_id),
       studentIds: row.student_ids || [],
       essayIds: row.essay_ids || [],
@@ -3524,7 +3526,7 @@ export const fetchComparisonHistory = async (
       highlights: row.similarity_highlights || [],
       similarityScore: row.similarity_score ?? undefined,
       createdAt: row.created_at,
-    }));
+    } as ComparisonAnalysis));
   } catch (err) {
     console.error("Error fetching comparison history:", err);
     return [];

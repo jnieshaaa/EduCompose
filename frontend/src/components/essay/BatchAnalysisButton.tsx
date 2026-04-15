@@ -21,9 +21,9 @@ const BatchAnalysisButton: React.FC<BatchAnalysisButtonProps> = ({
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<
     Array<{
-      essay_id: number;
+      essay_id: number | string;
       essay_title: string;
-      student_id: number;
+      student_id: number | string;
       analysis?: AnalysisResponse;
       error?: string;
     }>

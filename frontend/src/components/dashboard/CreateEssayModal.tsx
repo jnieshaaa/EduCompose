@@ -61,11 +61,11 @@ const CreateEssayModal: React.FC<CreateEssayModalProps> = ({
       return;
     }
 
-    const parsedStudentId = Number(studentId);
-    const parsedClassId = Number(classId);
+    const parsedStudentId = studentId;
+    const parsedClassId = classId;
 
-    if (Number.isNaN(parsedStudentId) || Number.isNaN(parsedClassId)) {
-      setError("Student ID and Class ID must be numeric.");
+    if (!parsedStudentId || !parsedClassId) {
+      setError("Student ID and Class ID are required.");
       return;
     }
 
@@ -89,7 +89,7 @@ const CreateEssayModal: React.FC<CreateEssayModalProps> = ({
         apiError,
       );
       const fallbackEssay: Essay = {
-        id: Date.now(),
+        id: String(Date.now()),
         student_id: parsedStudentId,
         user_id: 1,
         class_id: parsedClassId,

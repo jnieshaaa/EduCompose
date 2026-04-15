@@ -38,9 +38,9 @@ type ComparisonResult = {
   similarityScore: number;
   highlights: ComparisonHighlight[];
   studentEssays: Array<{
-    studentId: number;
+    studentId: string;
     studentName: string;
-    essayId: number;
+    essayId: string;
     text: string;
   }>;
 };
@@ -56,8 +56,8 @@ export function CompareActivitiesTab() {
   const [allStudents, setAllStudents] = useState<
     Array<{
       id: string;
-      studentId: number;
-      essayId: number;
+      studentId: string;
+      essayId: string;
       name: string;
       programName: string;
       sectionName: string;
@@ -68,7 +68,7 @@ export function CompareActivitiesTab() {
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<Set<number>>(
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
     new Set()
   );
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
@@ -179,7 +179,7 @@ export function CompareActivitiesTab() {
     setIsStudentModalOpen(true);
   };
 
-  const handleToggleStudent = (studentId: number) => {
+  const handleToggleStudent = (studentId: string) => {
     setSelectedStudents((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(studentId)) {
@@ -258,8 +258,8 @@ export function CompareActivitiesTab() {
     }
   };
 
-  const handleViewEssay = (studentId: number, studentName: string) => {
-    setViewingEssayStudentId({ id: String(studentId), name: studentName });
+  const handleViewEssay = (studentId: string, studentName: string) => {
+    setViewingEssayStudentId({ id: studentId, name: studentName });
     setIsViewEssayModalOpen(true);
   };
 

@@ -3,15 +3,10 @@ import {
   Users, 
   UserCheck, 
   MoreVertical, 
-  ChevronRight, 
   ArrowLeft, 
-  CheckCircle2, 
   Loader2,
-  Mail,
   Search,
-  Filter,
-  RefreshCw,
-  AlertCircle
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/ui/Card";
@@ -321,7 +316,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
             type="text"
             placeholder="Search blocks or teachers..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(val) => setSearchTerm(val)}
             className="pl-9 h-11 text-sm bg-white border-neutral-200"
           />
         </div>
@@ -400,7 +395,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
                           variant="ghost" 
                           className="text-primary hover:bg-primary/10 font-bold text-xs"
                           onClick={(e) => {
-                            e.stopPropagation();
+                            e?.stopPropagation();
                             enrollAllInBlock(block);
                           }}
                           disabled={isProcessing}
