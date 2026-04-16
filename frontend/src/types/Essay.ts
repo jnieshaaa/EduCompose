@@ -77,7 +77,7 @@ export interface GrammarSyntaxPatterns {
 
 export interface ArgumentGraphNode {
   id: string;
-  type: "thesis" | "claim" | "evidence" | "warrant" | "rebuttal";
+  type: "thesis" | "claim" | "evidence" | "warrant" | "rebuttal" | "qualifier";
   text: string;
   sentence_index?: number;
   confidence?: string;
@@ -132,6 +132,7 @@ export interface ArgumentAnalysis {
   evidence_score: number;
   warrant_score: number;
   rebuttal_score: number;
+  qualifier_score?: number;
   thesis_statement?: {
     sentence: string;
     paragraph: number;
@@ -161,22 +162,32 @@ export interface ArgumentAnalysis {
     indicator: string;
     type: string;
   }>;
+  qualifiers?: Array<{
+    sentence_index: number;
+    sentence: string;
+    indicator?: string;
+    indicators?: string[];
+    type: string;
+  }>;
   argument_structure: {
     total_claims: number;
     total_grounds: number;
     total_warrants: number;
     total_rebuttals: number;
+    total_qualifiers?: number;
     grounds_per_claim: number;
     has_thesis: boolean;
     has_evidence: boolean;
     has_reasoning: boolean;
     has_counterarguments: boolean;
+    has_qualifiers?: boolean;
   };
   toulmin_analysis: {
     has_claim: boolean;
     has_ground: boolean;
     has_warrant: boolean;
     has_rebuttal: boolean;
+    has_qualifier?: boolean;
     completeness_score: number;
   };
   argument_issues: Array<{

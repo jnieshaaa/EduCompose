@@ -1,7 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { Program } from "../data/programsData";
-import { initialNewProgramState } from "../data/programsData";
+import type { Program } from "../types/Common";
+
+const initialNewProgramState: Partial<Program> = {
+  name: "",
+  description: "",
+};
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";

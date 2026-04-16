@@ -141,12 +141,13 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
             </div>
           </div>
           
-          <div className="px-6 grid grid-cols-4 gap-3 mb-6">
+          <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
             {[
               { label: 'Claims', val: analysis.detailed_analysis.argumentation.argument_structure.total_claims, bg: 'bg-primary-50/50', txt: 'text-primary' },
               { label: 'Evidence', val: analysis.detailed_analysis.argumentation.argument_structure.total_grounds, bg: 'bg-success-50/50', txt: 'text-success-default' },
               { label: 'Warrants', val: analysis.detailed_analysis.argumentation.argument_structure.total_warrants, bg: 'bg-info-50/50', txt: 'text-info-default' },
               { label: 'Rebuttals', val: analysis.detailed_analysis.argumentation.argument_structure.total_rebuttals, bg: 'bg-error-50/50', txt: 'text-error-default' },
+              { label: 'Qualifiers', val: analysis.detailed_analysis.argumentation.argument_structure.total_qualifiers || 0, bg: 'bg-purple-50/50', txt: 'text-purple-600' },
             ].map((stat) => (
               <div key={stat.label} className={`text-center p-3 ${stat.bg} border border-white backdrop-blur-sm rounded-2xl shadow-sm`}>
                 <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tight mb-1">{stat.label}</p>

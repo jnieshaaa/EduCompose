@@ -5,9 +5,7 @@
 
 import { FileParserService } from "./FileParserService";
 import type { ParsedRow } from "./FileParserService";
-import type { Program } from "../data/programsData";
-import type { Section } from "../data/sectionsData";
-import type { Student } from "../data/studentsData";
+import type { Program, Section, Student } from "../types/Common";
 
 export type UploadResult = {
   success: boolean;
@@ -128,7 +126,7 @@ export class BatchUploadController {
     const imported: Section[] = [];
     let nextId =
       existingSections.length > 0
-        ? Math.max(...existingSections.map((s) => s.id)) + 1
+        ? Math.max(...existingSections.map((s) => Number(s.id) || 0)) + 1
         : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
@@ -191,14 +189,14 @@ export class BatchUploadController {
           existingSections.some(
             (s) =>
               s.name.toLowerCase() === name.toLowerCase() &&
-              s.program.toLowerCase() === program.toLowerCase() &&
-              s.term.toLowerCase() === term.toLowerCase(),
+              (s.program || "").toLowerCase() === program.toLowerCase() &&
+              (s.term || "").toLowerCase() === term.toLowerCase(),
           ) ||
           imported.some(
             (s) =>
               s.name.toLowerCase() === name.toLowerCase() &&
-              s.program.toLowerCase() === program.toLowerCase() &&
-              s.term.toLowerCase() === term.toLowerCase(),
+              (s.program || "").toLowerCase() === program.toLowerCase() &&
+              (s.term || "").toLowerCase() === term.toLowerCase(),
           );
 
         if (duplicate) {
@@ -400,6 +398,7 @@ export class BatchUploadController {
 
         const student: Student = {
           id: id.trim(),
+          student_code: id.trim(),
           name: studentNameParts.join(" "),
           email: email.trim(),
           program: program.trim(),

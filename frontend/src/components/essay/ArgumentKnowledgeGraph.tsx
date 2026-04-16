@@ -19,6 +19,7 @@ const NODE_COLORS: Record<string, string> = {
   evidence: "#f59e0b",
   warrant: "#6366f1",
   rebuttal: "#6366f1",
+  qualifier: "#a855f7",
 };
 
 const LINK_COLORS: Record<string, string> = {
@@ -80,6 +81,7 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
       evidence: [],
       warrant: [],
       rebuttal: [],
+      qualifier: [],
     };
 
     graph.nodes.forEach((node) => {
@@ -133,6 +135,15 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
         const spacing = dimensions.width / (totalRebuttals + 1);
         x = spacing * (rebuttalIndex + 1);
         y = centerY - layerDistance * 1.2;
+      } else if (node.type === "qualifier") {
+        // Qualifiers at bottom
+        const qualifierIndex = nodesByType.qualifier.findIndex(
+          (n) => n.id === node.id
+        );
+        const totalQualifiers = nodesByType.qualifier.length;
+        const spacing = dimensions.width / (totalQualifiers + 1);
+        x = spacing * (qualifierIndex + 1);
+        y = centerY + layerDistance * 1.5;
       } else {
         // Default: random placement
         x = centerX + (Math.random() - 0.5) * 200;
@@ -369,6 +380,15 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                   <span>{entry.label}</span>
                 </div>
               ))}
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: NODE_COLORS.qualifier,
+                  }}
+                ></span>
+                <span>Qualifier</span>
+              </div>
             </div>
           )}
 

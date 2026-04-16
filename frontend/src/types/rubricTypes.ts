@@ -22,4 +22,4 @@ export type {
 } from "../components/rubrics/types";
 
 // Re-export RubricTemplate from data/rubricsData
-export type { RubricTemplate } from "../data/rubricsData";
+export type { RubricTemplate } from "../constants/rubrics";

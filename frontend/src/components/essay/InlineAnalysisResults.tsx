@@ -411,7 +411,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                 <h4 className='text-lg font-semibold text-neutral-900 mb-4'>
                   Argument Structure (Toulmin's Model)
                 </h4>
-                <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
+                <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-4'>
                   <div className='text-center p-3 bg-success-50 rounded-rd'>
                     <p className='text-sm text-neutral-600'>Claims</p>
                     <p className='text-2xl font-bold text-primary'>
@@ -445,6 +445,15 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                       {
                         analysis.detailed_analysis.argumentation
                           .argument_structure.total_rebuttals
+                      }
+                    </p>
+                  </div>
+                  <div className='text-center p-3 bg-purple-50 rounded-rd'>
+                    <p className='text-sm text-neutral-600'>Qualifiers</p>
+                    <p className='text-2xl font-bold text-purple-600'>
+                      {
+                        analysis.detailed_analysis.argumentation
+                          .argument_structure.total_qualifiers || 0
                       }
                     </p>
                   </div>

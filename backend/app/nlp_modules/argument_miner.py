@@ -76,6 +76,14 @@ class ArgumentMiner:
             "admittedly", "granted", "while it is true",
             "yet", "but", "rather", "instead"
         ]
+        
+        # Qualifier indicators (degree of certainty)
+        self.qualifier_indicators = [
+            "certainly", "probably", "presumably", "likely", "possibly",
+            "perhaps", "maybe", "in most cases", "always", "never",
+            "definitely", "absolutely", "clearly", "obviously",
+            "conceivably", "for the most part", "usually", "frequently"
+        ]
     
     def _ensure_transformer_classifier_loaded(self):
         """Lazy load transformer-based claim classifier if requested and available"""
@@ -149,6 +157,7 @@ class ArgumentMiner:
             "grounds": [],
             "warrants": [],
             "rebuttals": [],
+            "qualifiers": [],
             "argument_structure": {},
             "argument_issues": [],
             "toulmin_analysis": {}
@@ -189,12 +198,17 @@ class ArgumentMiner:
         results["rebuttals"] = rebuttals
         results["rebuttal_score"] = self._calculate_rebuttal_score(rebuttals)
         
+        # Extract qualifiers
+        qualifiers = self._extract_qualifiers(text, sentences)
+        results["qualifiers"] = qualifiers
+        results["qualifier_score"] = self._calculate_qualifier_score(qualifiers)
+        
         # Analyze argument structure
-        structure = self._analyze_argument_structure(claims, grounds, warrants, rebuttals)
+        structure = self._analyze_argument_structure(claims, grounds, warrants, rebuttals, qualifiers)
         results["argument_structure"] = structure
         
         # Toulmin model completeness
-        toulmin_analysis = self._analyze_toulmin_completeness(claims, grounds, warrants, rebuttals)
+        toulmin_analysis = self._analyze_toulmin_completeness(claims, grounds, warrants, rebuttals, qualifiers)
         results["toulmin_analysis"] = toulmin_analysis
         
         # Identify argument issues
@@ -520,6 +534,37 @@ class ArgumentMiner:
                     break
         
         return rebuttals
+
+    def _extract_qualifiers(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Extract qualifier statements (words indicating degree of certainty)"""
+        qualifiers = []
+        for i, sentence in enumerate(sentences):
+            sentence_lower = sentence.lower()
+            found_indicators = []
+            for indicator in self.qualifier_indicators:
+                if indicator in sentence_lower:
+                    found_indicators.append(indicator)
+            
+            if found_indicators:
+                qualifiers.append({
+                    "sentence_index": i,
+                    "sentence": sentence,
+                    "indicators": found_indicators,
+                    "type": "qualifier",
+                    "classification_method": "pattern"
+                })
+        return qualifiers
+
+    def _calculate_qualifier_score(self, qualifiers: List[Dict]) -> float:
+        """Calculate score for presence of qualifiers"""
+        if not qualifiers:
+            return 50.0  # Qualifiers are good but simple presence is enough
+        
+        score = 80.0
+        if len(qualifiers) >= 2:
+            score += 20.0
+        
+        return min(100.0, score)
     
     def _calculate_claim_score(self, claims: List[Dict], thesis: Optional[Dict]) -> float:
         """Calculate score for claim presence and quality"""
@@ -597,41 +642,48 @@ class ArgumentMiner:
         return min(100.0, score)
     
     def _analyze_argument_structure(self, claims: List[Dict], grounds: List[Dict],
-                                   warrants: List[Dict], rebuttals: List[Dict]) -> Dict[str, Any]:
+                                   warrants: List[Dict], rebuttals: List[Dict],
+                                   qualifiers: List[Dict]) -> Dict[str, Any]:
         """Analyze overall argument structure"""
         return {
             "total_claims": len(claims),
             "total_grounds": len(grounds),
             "total_warrants": len(warrants),
             "total_rebuttals": len(rebuttals),
+            "total_qualifiers": len(qualifiers),
             "grounds_per_claim": len(grounds) / len(claims) if claims else 0,
             "has_thesis": len(claims) > 0,
             "has_evidence": len(grounds) > 0,
             "has_reasoning": len(warrants) > 0,
-            "has_counterarguments": len(rebuttals) > 0
+            "has_counterarguments": len(rebuttals) > 0,
+            "has_qualifiers": len(qualifiers) > 0
         }
     
     def _analyze_toulmin_completeness(self, claims: List[Dict], grounds: List[Dict],
-                                     warrants: List[Dict], rebuttals: List[Dict]) -> Dict[str, Any]:
+                                     warrants: List[Dict], rebuttals: List[Dict],
+                                     qualifiers: List[Dict]) -> Dict[str, Any]:
         """Analyze completeness of Toulmin's model components"""
         completeness = {
             "has_claim": len(claims) > 0,
             "has_ground": len(grounds) > 0,
             "has_warrant": len(warrants) > 0,
             "has_rebuttal": len(rebuttals) > 0,
+            "has_qualifier": len(qualifiers) > 0,
             "completeness_score": 0.0
         }
         
-        # Calculate completeness (claims and grounds are essential)
+        # Calculate completeness
         score = 0.0
         if completeness["has_claim"]:
-            score += 40.0
+            score += 30.0
         if completeness["has_ground"]:
-            score += 40.0
+            score += 30.0
         if completeness["has_warrant"]:
-            score += 15.0
+            score += 20.0
         if completeness["has_rebuttal"]:
-            score += 5.0
+            score += 10.0
+        if completeness["has_qualifier"]:
+            score += 10.0
         
         completeness["completeness_score"] = score
         
@@ -694,23 +746,34 @@ class ArgumentMiner:
                 "message": "No counterarguments addressed",
                 "suggestion": "Consider acknowledging and addressing opposing viewpoints to strengthen your argument."
             })
+            
+        # Qualifier issues
+        if not structure["has_qualifiers"]:
+            issues.append({
+                "type": "qualifiers",
+                "severity": "low",
+                "message": "No qualifiers used to moderate claims",
+                "suggestion": "Use qualifiers (e.g., 'probably', 'mostly', 'certainly') to indicate the strength or limits of your claims."
+            })
         
         return issues
     
     def _calculate_argument_score(self, results: Dict[str, Any]) -> float:
         """Calculate overall argument strength score"""
         weights = {
-            "claim": 0.35,
-            "evidence": 0.35,
+            "claim": 0.30,
+            "evidence": 0.30,
             "warrant": 0.20,
-            "rebuttal": 0.10
+            "rebuttal": 0.10,
+            "qualifier": 0.10
         }
         
         score = (
             results["claim_score"] * weights["claim"] +
             results["evidence_score"] * weights["evidence"] +
             results["warrant_score"] * weights["warrant"] +
-            results["rebuttal_score"] * weights["rebuttal"]
+            results["rebuttal_score"] * weights["rebuttal"] +
+            results.get("qualifier_score", 50.0) * weights["qualifier"]
         )
         
         return round(score, 2)

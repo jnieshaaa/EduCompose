@@ -16,7 +16,8 @@ import AuthModal from "../components/LoginModal";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
 import Modal from "../components/ui/Modal";
 import { supabase } from "../lib/supabaseClient";
-import { platformRubrics, getTypeBadgeColor } from "../data/rubricData";
+import { getTypeBadgeColor } from "../utils/rubricUtils";
+import { platformRubrics } from "../components/rubrics/types";
 import type { PlatformRubric } from "../components/rubrics/types";
 import { ocrApi } from "../api";
 

@@ -10,7 +10,7 @@ import EssayActivity from "./EssayActivity";
 import {
   PROGRAM_SUGGESTIONS,
   BLOCK_CODE_OPTIONS,
-} from "../data/classOptions";
+} from "../constants/classes";
 
 // Types
 interface Program {

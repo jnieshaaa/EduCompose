@@ -235,6 +235,8 @@ class EssayAnalysisService:
                 "grounds": argument_analysis.get("grounds", []),
                 "warrants": argument_analysis.get("warrants", []),
                 "rebuttals": argument_analysis.get("rebuttals", []),
+                "qualifiers": argument_analysis.get("qualifiers", []),
+                "qualifier_score": argument_analysis.get("qualifier_score", 0.0),
                 "argument_structure": argument_analysis.get("argument_structure", {}),
                 "toulmin_analysis": argument_analysis.get("toulmin_analysis", {}),
                 "argument_issues": argument_analysis.get("argument_issues", []),
