@@ -29,23 +29,21 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-# We explicitly install the CPU versions of torch and torchvision to save space and avoid version mismatches
+# Set SKIP_HEAVY_ML=1 to create a "Slim" image (Uses Hugging Face API instead of local)
+ARG SKIP_HEAVY_ML=0
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
+    if [ "$SKIP_HEAVY_ML" != "1" ]; then \
+        pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+        echo "Skipping heavy ML libraries (torch/torchvision) for Slim build"; \
+    fi && \
     pip install --no-cache-dir -r requirements.txt
-
-# Set SKIP_EASYOCR=1 on Railway (Docker build args) kung HF OCR lang — mas maliit ang image, walang OpenCV/EasyOCR deps
-ARG SKIP_EASYOCR=0
-RUN if [ "$SKIP_EASYOCR" = "1" ]; then pip uninstall -y easyocr 2>/dev/null || true; fi
 
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
 # Pre-download NLTK into NLTK_DATA (runtime must match this path)
 RUN mkdir -p /opt/nltk_data && python -c "import nltk; nltk.download('punkt', download_dir='/opt/nltk_data'); nltk.download('averaged_perceptron_tagger', download_dir='/opt/nltk_data')"
-
-# EasyOCR: do NOT run Reader() at build — it spikes RAM and can fail on small builders.
-# Models download on first OCR request instead (or use HF_API_TOKEN + OCR_BACKEND=auto).
 
 # Copy the rest of the application
 COPY . .

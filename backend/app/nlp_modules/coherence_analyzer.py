@@ -34,9 +34,12 @@ class CoherenceAnalyzer:
                 from sentence_transformers import SentenceTransformer
                 # Load sentence transformer for semantic similarity
                 self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
+            except ImportError:
+                logger.info("SentenceTransformer not installed, skipping semantic analysis fallback.")
+                self.sentence_model = False # Mark as unavailable
             except Exception as e:
                 logger.warning(f"SentenceTransformer initialization failed: {e}")
-                self.sentence_model = None
+                self.sentence_model = False
     
     def analyze(self, text: str) -> Dict[str, Any]:
         """

@@ -64,18 +64,18 @@ networkx
 # For argument mining and discourse analysis
 # Note: spacy-transformers requires C++ build tools on Windows
 # If installation fails, you can skip this (argument mining will use basic spaCy features)
-spacy-transformers
+# spacy-transformers
 
 # For semantic similarity and embeddings (optional, for advanced features)
 # Note: sentence-transformers requires tokenizers which needs Rust
 # For Python 3.12+, pip will automatically select compatible versions with pre-built wheels
-sentence-transformers
+# sentence-transformers
 
 # For transformer-based claim classification
 # Note: transformers requires torch (PyTorch) which is a large dependency
 # For Python 3.12+, pip will automatically select compatible versions
-transformers
-torch
+# transformers
+# torch
 
 # For knowledge graph visualization
 pyvis
@@ -96,8 +96,8 @@ google-genai
 PyPDF2
 # PDF to image conversion (for scanned PDFs)
 pdf2image
-# OCR library
-easyocr
+# OCR library (Heavy: Consider using Hugging Face API instead)
+# easyocr
 # Image processing (Pillow is usually already installed)
 Pillow
 

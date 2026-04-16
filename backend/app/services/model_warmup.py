@@ -51,16 +51,9 @@ def warmup_all_models() -> Dict[str, Any]:
     startup, we ensure that when a real user submits an essay for analysis, all the models 
     are already loaded into memory and ready to use. This eliminates the cold start problem 
     where the first analysis request would otherwise take a very long time while models load.
-    
-    The warmup process includes loading spaCy models for syntactic analysis, SentenceTransformer 
-    models for semantic similarity calculations, transformer-based classifiers for argument 
-    mining, and LLM clients for grammar checking. Each of these components requires significant 
-    memory and processing time to initialize, so preloading them dramatically improves the user 
-    experience by making the first analysis request as fast as subsequent ones.
     """
     
     # Warm up by calling the actual analysis service with dummy text
-    # This ensures we're using the exact same code path as real requests
     try:
         logger.info("  → Warming up EssayAnalysisService...")
         from .essay_analysis_service import essay_analysis_service
@@ -73,66 +66,35 @@ def warmup_all_models() -> Dict[str, Any]:
                 warmup_results["grammar_llm"] = True
                 logger.info("      GrammarAnalyzer LLM ready")
             else:
-                logger.info("      ℹ GrammarAnalyzer LLM not available (no API keys)")
+                logger.info("      ℹ GrammarAnalyzer LLM not available")
         except Exception as e:
-            warmup_results["errors"].append(f"GrammarAnalyzer: {str(e)}")
-            logger.warning(f"      ✗ GrammarAnalyzer: {e}")
+            logger.debug(f"      GrammarAnalyzer warmup skipped: {e}")
         
         logger.info("    → CoherenceAnalyzer...")
         try:
             essay_analysis_service.coherence_analyzer._ensure_nlp_loaded()
             essay_analysis_service.coherence_analyzer._ensure_sentence_model_loaded()
+            if essay_analysis_service.coherence_analyzer.sentence_model:
+                warmup_results["sentence_transformer"] = True
             warmup_results["spacy"] = True
-            warmup_results["sentence_transformer"] = True
             logger.info("      CoherenceAnalyzer ready")
         except Exception as e:
-            warmup_results["errors"].append(f"CoherenceAnalyzer: {str(e)}")
-            logger.warning(f"      ✗ CoherenceAnalyzer: {e}")
+            logger.debug(f"      CoherenceAnalyzer warmup skipped: {e}")
         
         logger.info("    → ArgumentMiner...")
         try:
-            # Trigger lazy loading by analyzing dummy text
             _ = essay_analysis_service.argument_miner.analyze(dummy_text[:200])
-            warmup_results["argument_miner"] = True
+            if essay_analysis_service.argument_miner._transformer_available:
+                warmup_results["argument_miner"] = True
             logger.info("      ArgumentMiner ready")
         except Exception as e:
-            warmup_results["errors"].append(f"ArgumentMiner: {str(e)}")
-            logger.warning(f"      ✗ ArgumentMiner: {e}")
-        
-        logger.info("    → KnowledgeGraphBuilder...")
-        try:
-            essay_analysis_service.knowledge_graph_builder._ensure_nlp_loaded()
-            logger.info("      KnowledgeGraphBuilder ready")
-        except Exception as e:
-            warmup_results["errors"].append(f"KnowledgeGraphBuilder: {str(e)}")
-            logger.warning(f"      ✗ KnowledgeGraphBuilder: {e}")
-        
-        # Note: We skip full test analysis here to avoid blocking startup too long
-        # The individual component warmups above are sufficient
-        
+            logger.debug(f"      ArgumentMiner warmup skipped: {e}")
+            
     except Exception as e:
-        warmup_results["errors"].append(f"Service warmup: {str(e)}")
-        logger.error(f"  ✗ Service warmup failed: {e}")
+        logger.warning(f"  ⚠ Warmup partial: {e}")
     
     _warmup_duration = time.time() - _warmup_start_time
     _warmup_complete = True
-    
-    success_count = sum([
-        warmup_results["spacy"],
-        warmup_results["sentence_transformer"],
-        warmup_results["argument_miner"],
-        warmup_results["grammar_llm"]
-    ])
-    
-    logger.info(f"Model warmup complete in {_warmup_duration:.2f}s")
-    logger.info(f"  {success_count} core models warmed up successfully")
-    if warmup_results["errors"]:
-        logger.warning(f"  ⚠ {len(warmup_results['errors'])} warnings/errors")
-    
-    warmup_results["status"] = "complete"
-    warmup_results["duration"] = round(_warmup_duration, 2)
-    warmup_results["success_count"] = success_count
-    
     return warmup_results
 
 def get_warmup_status() -> Dict[str, Any]:

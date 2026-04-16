@@ -6,12 +6,23 @@ Uses a fine-tuned DistilBERT model for fast and accurate argument classification
 
 import logging
 import os
+import time
+import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from enum import Enum
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch.nn.functional as F
+
+# Use httpx for remote API calls
+import httpx
+
+# Conditional imports for local ML
+try:
+    import torch
+    import torch.nn.functional as F
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +37,8 @@ class ArgumentComponent(str, Enum):
 
 class TransformerClaimClassifier:
     """
-    Fine-tuned DistilBERT classifier for argumentation components.
-    Fast, accurate, and optimized for production use.
+    DistilBERT classifier for argumentation components.
+    Supports both local execution (PyTorch) and remote execution (HF Inference API).
     """
 
     def __init__(
@@ -37,18 +48,6 @@ class TransformerClaimClassifier:
         fine_tuned_model_path: Optional[str] = None,
         device: str = "cpu"
     ):
-        """
-        Initialize the classifier.
-
-        Args:
-            model_name: Base model name or path
-                - "distilbert-base-uncased" (default, fastest)
-                - "przvl/persuasive_essays_distilbert_uncased" (pre-fine-tuned)
-                - Custom path to fine-tuned model
-            use_fine_tuned: If True, load a fine-tuned model (preferred)
-            fine_tuned_model_path: Path to fine-tuned model
-            device: "cuda" or "cpu"
-        """
         self.model_name = model_name
         self.device = device
         self.fine_tuned_model_path = fine_tuned_model_path
@@ -66,315 +65,190 @@ class TransformerClaimClassifier:
         }
         self.id2label = {v: k for k, v in self.label2id.items()}
 
-        # Prefer the local fine-tuned model by default; require it if requested
-        hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
-        hf_repo = os.environ.get("HUGGING_FACE_MODEL_ID", "przvl/persuasive_essays_distilbert_uncased")
+        # HF API Configuration
+        self.hf_token = (
+            os.getenv("HUGGING_FACE_HUB_TOKEN") or 
+            os.getenv("HF_API_TOKEN") or 
+            os.getenv("HUGGINGFACE_API_TOKEN")
+        )
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "przvl/persuasive_essays_distilbert_uncased")
         
+        # Decide whether to use remote API or local
+        # If torch is missing but token is present, force remote
+        self.use_remote = bool(self.hf_token and (not TORCH_AVAILABLE or os.getenv("FORCE_REMOTE_NLP") == "1"))
+        
+        if self.use_remote:
+            logger.info(f"Claim Classifier: Using Hugging Face Inference API (Repo: {self.hf_repo})")
+            self._initialized = True
+            return
+
+        # Local initialization logic
+        if not TORCH_AVAILABLE:
+            logger.warning("PyTorch/Transformers not available and no HF token found. Classifier will be unavailable.")
+            return
+
         if use_fine_tuned and self.fine_tuned_model_path is None:
             backend_root = Path(__file__).parent.parent.parent
             default_path = backend_root / "my_finetuned_distilbert"
             self.fine_tuned_model_path = str(default_path)
 
         if use_fine_tuned and self.fine_tuned_model_path:
-            # Check if local path exists
             if not Path(self.fine_tuned_model_path).exists():
-                if hf_token:
-                    logger.warning(
-                        f"Local fine-tuned model not found at {self.fine_tuned_model_path}. "
-                        f"HUGGING_FACE_HUB_TOKEN found, attempting to load from Hugging Face repo: {hf_repo}"
-                    )
-                    # Redirect to Hugging Face repo
-                    self.fine_tuned_model_path = hf_repo
+                if self.hf_token:
+                    logger.info(f"Local model not found, but token exists. Switching to Remote API for Repo: {self.hf_repo}")
+                    self.use_remote = True
+                    self._initialized = True
+                    return
                 else:
-                    logger.warning(
-                        f"Fine-tuned DistilBERT expected at {self.fine_tuned_model_path} "
-                        "but was not found and HUGGING_FACE_HUB_TOKEN is not set. "
-                        "Falling back to base model (use_fine_tuned=False)."
-                    )
+                    logger.warning(f"Local model not found at {self.fine_tuned_model_path} and no HF token. Falling back to base model.")
                     use_fine_tuned = False
                     self.fine_tuned_model_path = None
 
-        # Initialize model
-        self._initialize(use_fine_tuned, self.fine_tuned_model_path)
+        self._initialize_local(use_fine_tuned, self.fine_tuned_model_path)
 
-    def _initialize(self, use_fine_tuned: bool = False, model_path: Optional[str] = None):
-        """Load tokenizer and model"""
-        if self._initialized:
+    def _initialize_local(self, use_fine_tuned: bool = False, model_path: Optional[str] = None):
+        """Load tokenizer and model locally"""
+        if not TORCH_AVAILABLE or self._initialized:
             return
 
         try:
-            # Choose model path
-            hf_token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
-            
-            if use_fine_tuned and model_path:
-                load_path = model_path
-                logger.info(f"Loading fine-tuned model from: {load_path}")
-            else:
-                load_path = self.model_name
-                logger.info(f"Loading base model: {load_path}")
+            load_path = model_path if (use_fine_tuned and model_path) else self.model_name
+            logger.info(f"Loading local model: {load_path}")
 
-            # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                load_path,
-                token=hf_token if hf_token else None
-            )
-
-            # Load model
-            # For fine-tuned models, don't pass num_labels/id2label/label2id as they're in the model config
-            # For base models, we need to specify them
+            self.tokenizer = AutoTokenizer.from_pretrained(load_path, token=self.hf_token)
             if use_fine_tuned and model_path:
-                # Fine-tuned model: let it load its own config
-                self.model = AutoModelForSequenceClassification.from_pretrained(
-                    load_path,
-                    token=hf_token if hf_token else None
-                )
-                # Update label mappings from model config if available
+                self.model = AutoModelForSequenceClassification.from_pretrained(load_path, token=self.hf_token)
                 if hasattr(self.model.config, 'id2label') and self.model.config.id2label:
                     self.id2label = self.model.config.id2label
-                    # Convert id2label to label2id
                     self.label2id = {v: int(k) for k, v in self.id2label.items()}
             else:
-                # Base model: specify labels
                 self.model = AutoModelForSequenceClassification.from_pretrained(
-                    load_path,
-                    num_labels=5,
-                    id2label=self.id2label,
-                    label2id=self.label2id
+                    load_path, num_labels=5, id2label=self.id2label, label2id=self.label2id
                 )
 
-            # Move to device
-            self.model.to(self.device)
-            self.model.eval()
-
+            self.model.to(self.device).eval()
             self._initialized = True
-            logger.info(f"Model initialized successfully on device: {self.device}")
-
+            logger.info(f"Local model initialized on {self.device}")
         except Exception as e:
-            logger.error(f"Failed to initialize model: {e}")
+            logger.error(f"Failed to initialize local model: {e}")
             self._initialized = False
-            raise
 
-    def classify_sentence(
-        self,
-        sentence: str,
-        return_confidence: bool = True,
-        return_all_scores: bool = False
-    ) -> Dict[str, Any]:
-        """
-        Classify a single sentence.
+    async def _classify_remote(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Call Hugging Face Inference API for classification"""
+        if not self.hf_token:
+            return []
 
-        Args:
-            sentence: Text to classify
-            return_confidence: Include confidence score
-            return_all_scores: Include scores for all classes
-
-        Returns:
-            Dictionary with classification results
-        """
-        if not sentence or len(sentence.strip()) < 5:
-            return {
-                "component": ArgumentComponent.UNKNOWN.value,
-                "confidence": 0.0,
-                "all_scores": {} if return_all_scores else None
-            }
-
-        try:
-            # Tokenize
-            inputs = self.tokenizer(
-                sentence,
-                return_tensors="pt",
-                truncation=True,
-                max_length=128,
-                padding=True
-            ).to(self.device)
-
-            # Forward pass
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-
-            # Get predictions
-            logits = outputs.logits
-            probabilities = F.softmax(logits, dim=-1)
-            predicted_class = torch.argmax(probabilities, dim=-1).item()
-            confidence = probabilities[0][predicted_class].item()
-
-            # Map to component
-            component = self.id2label.get(predicted_class, "unknown")
-
-            result = {
-                "component": component,
-                "confidence": confidence
-            }
-
-            if return_all_scores:
-                all_scores = probabilities[0].detach().cpu().numpy().tolist()
-                result["all_scores"] = {
-                    self.id2label[i]: score for i, score in enumerate(all_scores)
-                }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Classification error: {e}")
-            return {
-                "component": ArgumentComponent.UNKNOWN.value,
-                "confidence": 0.0,
-                "all_scores": {} if return_all_scores else None
-            }
-
-    def classify_sentences(
-        self,
-        sentences: List[str],
-        batch_size: int = 16,
-        return_confidence: bool = True,
-        return_all_scores: bool = False
-    ) -> List[Dict[str, Any]]:
-        """
-        Classify multiple sentences with batching.
-
-        Args:
-            sentences: List of sentences
-            batch_size: Batch size for processing
-            return_confidence: Include confidence scores
-            return_all_scores: Include all class scores
-
-        Returns:
-            List of classification results
-        """
+        url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
+        headers = {"Authorization": f"Bearer {self.hf_token}"}
+        
         results = []
-
-        # Process in batches for efficiency
+        # Process in small batches for API stability
+        batch_size = 5
         for i in range(0, len(sentences), batch_size):
-            batch_sentences = sentences[i:i + batch_size]
-
+            batch = sentences[i:i + batch_size]
+            payload = {"inputs": batch, "options": {"wait_for_model": True}}
+            
             try:
-                # Tokenize batch
-                inputs = self.tokenizer(
-                    batch_sentences,
-                    return_tensors="pt",
-                    truncation=True,
-                    max_length=128,
-                    padding=True
-                ).to(self.device)
-
-                # Forward pass
-                with torch.no_grad():
-                    outputs = self.model(**inputs)
-
-                # Get predictions
-                logits = outputs.logits
-                probabilities = F.softmax(logits, dim=-1)
-                predicted_classes = torch.argmax(probabilities, dim=-1)
-
-                # Process each result in batch
-                for j, sentence in enumerate(batch_sentences):
-                    predicted_class = predicted_classes[j].item()
-                    confidence = probabilities[j][predicted_class].item()
-                    component = self.id2label.get(predicted_class, "unknown")
-
-                    result = {
-                        "component": component,
-                        "confidence": confidence
-                    }
-
-                    if return_all_scores:
-                        all_scores = probabilities[j].detach().cpu().numpy().tolist()
-                        result["all_scores"] = {
-                            self.id2label[k]: score for k, score in enumerate(all_scores)
-                        }
-
-                    results.append(result)
-
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(url, json=payload, headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    # HF API returns list of lists of dicts (for multi-sentence) or list of dicts
+                    # We need to map it back to our format
+                    for item in data:
+                        # Find highest score
+                        if isinstance(item, list):
+                            best = max(item, key=lambda x: x['score'])
+                            results.append({
+                                "component": best['label'].lower(),
+                                "confidence": best['score']
+                            })
+                        else:
+                            # Unexpected format fallback
+                            results.append({"component": "unknown", "confidence": 0.0})
+                else:
+                    logger.error(f"HF API Error {response.status_code}: {response.text}")
+                    for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
             except Exception as e:
-                logger.error(f"Batch classification error: {e}")
-                # Add fallback results
-                for _ in batch_sentences:
-                    results.append({
-                        "component": ArgumentComponent.UNKNOWN.value,
-                        "confidence": 0.0,
-                        "all_scores": {} if return_all_scores else None
-                    })
-
+                logger.error(f"HF API request failed: {e}")
+                for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
+                
         return results
 
-    def classify_text(
-        self,
-        text: str,
-        return_confidence: bool = True,
-        return_all_scores: bool = False
-    ) -> Dict[str, Any]:
-        """
-        Classify all sentences in a text.
+    def _classify_local(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Local classification using PyTorch"""
+        if not self.model or not self.tokenizer:
+            return []
+            
+        results = []
+        batch_size = 16
+        for i in range(0, len(sentences), batch_size):
+            batch = sentences[i:i+batch_size]
+            inputs = self.tokenizer(batch, return_tensors="pt", truncation=True, max_length=128, padding=True).to(self.device)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            probs = F.softmax(outputs.logits, dim=-1)
+            classes = torch.argmax(probs, dim=-1)
+            for j in range(len(batch)):
+                idx = classes[j].item()
+                results.append({
+                    "component": self.id2label.get(idx, "unknown"),
+                    "confidence": probs[j][idx].item()
+                })
+        return results
 
-        Args:
-            text: Full text document
-            return_confidence: Include confidence scores
-            return_all_scores: Include all class scores
+    def classify_sentences(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Synchronous wrapper for classification"""
+        if not self._initialized:
+            return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
 
-        Returns:
-            Dictionary with overall classification results
-        """
-        # Prioritize regex-based sentence splitting (no spaCy dependency)
-        # Fine-tuned models work better without spaCy dependency
+        if self.use_remote:
+            import asyncio
+            try:
+                # Use a loop if we are already in one, or run a new one
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # This is tricky in a sync wrapper, but for small batches it's usually via a controller
+                        # In FastAPI, we are usually in an async context anyway if called from router
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        return loop.run_until_complete(self._classify_remote(sentences))
+                    return loop.run_until_complete(self._classify_remote(sentences))
+                except RuntimeError:
+                    return asyncio.run(self._classify_remote(sentences))
+            except Exception as e:
+                logger.error(f"Remote classification failed: {e}")
+                return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
+        else:
+            return self._classify_local(sentences)
+
+    def classify_text(self, text: str) -> Dict[str, Any]:
+        """Split text and classify components"""
         import re
-        # Use regex for sentence splitting - works well for most texts
         sentences = re.split(r'(?<=[.!?])\s+', text)
-        sentences = [s.strip() for s in sentences if s.strip() and len(s) > 5]
-        # Fallback to simpler splitting if needed
-        if not sentences:
-            sentences = re.split(r'[.!?]+', text)
-            sentences = [s.strip() for s in sentences if s.strip() and len(s) > 5]
-
-        # Classify all sentences
-        sentence_classifications = self.classify_sentences(
-            sentences,
-            return_confidence=return_confidence,
-            return_all_scores=return_all_scores
-        )
-
-        # Calculate statistics
-        component_counts = {}
-        for result in sentence_classifications:
-            comp = result["component"]
-            component_counts[comp] = component_counts.get(comp, 0) + 1
-
-        total = len(sentence_classifications)
-        component_distribution = {
-            comp: count / total if total > 0 else 0.0
-            for comp, count in component_counts.items()
-        }
-
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 5]
+        
+        classifications = self.classify_sentences(sentences)
+        
+        counts = {}
+        for c in classifications:
+            comp = c["component"]
+            counts[comp] = counts.get(comp, 0) + 1
+            
+        total = len(classifications)
+        dist = {k: v/total for k, v in counts.items()} if total > 0 else {}
+        
         return {
-            "sentences": sentence_classifications,
-            "component_counts": component_counts,
-            "component_distribution": component_distribution,
+            "sentences": classifications,
+            "component_counts": counts,
+            "component_distribution": dist,
             "total_sentences": total
         }
 
     def is_available(self) -> bool:
-        """Check if model is ready"""
-        return self._initialized and self.model is not None and self.tokenizer is not None
+        return self._initialized
 
-
-# Convenience function
-def get_claim_classifier(
-    use_fine_tuned: bool = True,
-    fine_tuned_model_path: Optional[str] = None,
-    device: str = "cpu"
-) -> TransformerClaimClassifier:
-    """
-    Get a claim classifier instance.
-
-    Args:
-        use_fine_tuned: Load fine-tuned model (default: True)
-        fine_tuned_model_path: Path to fine-tuned model
-        device: "cuda" or "cpu"
-
-    Returns:
-        TransformerClaimClassifier instance
-    """
-    return TransformerClaimClassifier(
-        use_fine_tuned=use_fine_tuned,
-        fine_tuned_model_path=fine_tuned_model_path,
-        device=device
-    )
+def get_claim_classifier(**kwargs) -> TransformerClaimClassifier:
+    return TransformerClaimClassifier(**kwargs)

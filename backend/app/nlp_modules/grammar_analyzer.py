@@ -1000,7 +1000,11 @@ Return ONLY a valid JSON object with this exact structure:
         """
         try:
             import torch
-            from transformers import T5ForConditionalGeneration, T5Tokenizer
+            try:
+                from transformers import T5ForConditionalGeneration, T5Tokenizer
+            except ImportError:
+                logger.warning("Transformers not found, skipping local HF GEC")
+                return []
             import difflib
             
             if not self.hf_model:
