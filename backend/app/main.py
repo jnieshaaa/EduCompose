@@ -52,11 +52,21 @@ if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
     # But we'll try to be specific first, or use a regex
     pass
 
+# Use more robust CORS handling
+cors_origins = allowed_origins.copy()
+# Explicitly add the Vercel URL from the error log to be safe
+cors_origins.append("https://edu-compose.vercel.app")
+cors_origins.append("https://edu-compose-production.vercel.app")
+
+# In Railway, allow all for debugging if STRICT_CORS is not set
+is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID")
+final_origins = ["*"] if is_railway and not os.getenv("STRICT_CORS") else cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins + ["*"] if not os.getenv("STRICT_CORS") else allowed_origins,
+    allow_origins=final_origins,
     allow_origin_regex=r"https://edu-compose-.*\.vercel\.app",
-    allow_credentials=True,
+    allow_credentials=True if " * " not in str(final_origins) else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

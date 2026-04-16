@@ -7,6 +7,10 @@ import PyPDF2
 ocr_router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@ocr_router.get("/test")
+async def test_ocr():
+    return {"status": "ok", "message": "OCR Router is reachable"}
+
 @ocr_router.post("/extract-text")
 async def extract_text(file: UploadFile = File(...)):
     """

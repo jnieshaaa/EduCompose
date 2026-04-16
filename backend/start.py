@@ -24,7 +24,9 @@ if sys.platform == "win32":
 if __name__ == "__main__":
     # Get configuration from environment variables
     host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("API_PORT", 8000))
+    # Railway uses PORT environment variable
+    port_str = os.getenv("PORT") or os.getenv("API_PORT") or "8000"
+    port = int(port_str)
     # ENABLE RELOAD FOR DEVELOPMENT
     reload = True
     

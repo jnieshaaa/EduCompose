@@ -22,8 +22,27 @@ interface GradingContextType {
 const GradingContext = createContext<GradingContextType | undefined>(undefined);
 
 export const GradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tasks, setTasks] = useState<GradingTask[]>([]);
+  const [tasks, setTasks] = useState<GradingTask[]>(() => {
+    const saved = localStorage.getItem('grading_tasks');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Mark any 'grading' status as 'interrupted' on reload
+        return parsed.map((t: any) => 
+          t.status === 'grading' ? { ...t, status: 'error', message: 'Evaluation interrupted' } : t
+        );
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
   const { showNotification } = useNotification();
+
+  // Persist tasks to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('grading_tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   const updateTask = useCallback((id: string, updates: Partial<GradingTask>) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
