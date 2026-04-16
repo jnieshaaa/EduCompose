@@ -84,6 +84,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     "/Admin/Schools": "Academics",
     "/Admin/Settings": "System Settings",
     "/Admin/Archive": "Archive Records",
+    "/Admin/Help": "Support Center",
   };
 
   const currentLabel = routeLabels[location.pathname] || "Admin Portal";

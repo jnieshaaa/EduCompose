@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, Link, useSearchParams } from "react-router-dom";
 import { readSecureParams, buildSecureUrl } from "../../utils/secureUrl";
-import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare, Users, GraduationCap, School, Archive } from "lucide-react";
+import { ChevronRight, Layers, Home, FileText, ClipboardCheck, BarChart3, Settings, Bell, BookOpen, GitCompare, Users, GraduationCap, School, Archive, HelpCircle } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -54,6 +54,9 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Admin/Settings": { label: "System Settings", icon: <Settings className="w-4 h-4" /> },
   "/Admin/Archive": { label: "Archive", icon: <Archive className="w-4 h-4" /> },
   "/Teacher/Archive": { label: "Academic Archive", icon: <Archive className="w-4 h-4" /> },
+  "/Student/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
+  "/Teacher/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
+  "/Admin/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
   
   // Legacy routes
   "/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },

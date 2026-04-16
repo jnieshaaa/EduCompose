@@ -10,6 +10,7 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -196,6 +197,29 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
             })}
           </ul>
         </nav>
+
+        {/* Help Link at Bottom */}
+        <div className="p-4 border-t border-white/10">
+          <Tooltip content="Help & Support" position="right" disabled={isSidebarOpen} className="block w-full">
+            <button
+              onClick={() => handleItemClick("/Teacher/Help")}
+              className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group ${
+                activePath.toLowerCase() === "/teacher/help"
+                ? "bg-white text-primary shadow-lg"
+                : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                <HelpCircle className="w-5 h-5" />
+              </div>
+              {isSidebarOpen && (
+                <span className="font-medium whitespace-nowrap overflow-hidden">
+                  Help
+                </span>
+              )}
+            </button>
+          </Tooltip>
+        </div>
 
         {/* Desktop Toggle Button */}
         {isDesktop && (

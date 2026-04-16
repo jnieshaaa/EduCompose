@@ -12,6 +12,7 @@ import {
   Archive,
   UserCog,
   School,
+  HelpCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -229,7 +230,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="p-4 border-t border-white/10 relative" ref={menuRef}>
           {isUserMenuOpen && (
             <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 z-50">
-              <button onClick={() => { setIsInfoModalOpen(true); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-50"><Info size={16} /> About Platform</button>
+              <button onClick={() => { handleItemClick("/Admin/Help"); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-50"><HelpCircle size={16} /> Help & Support</button>
               <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50"><LogOut size={16} /> Sign Out</button>
             </div>
           )}
@@ -257,9 +258,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
       </motion.aside>
 
-      <Modal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} title="About EduCompose">
-        <p className="text-neutral-600">EduCompose v1.0.0 — Empowering educators through intelligent essay evaluation.</p>
-      </Modal>
     </>
   );
 };

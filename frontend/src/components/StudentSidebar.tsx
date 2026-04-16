@@ -8,6 +8,7 @@ import {
   // ClipboardList,
   // Award,
   Info,
+  HelpCircle,
   // BookOpen,
   // Target,
   // Zap,
@@ -530,26 +531,30 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           </ul>
         </nav>
 
-        {/* About EduCompose at Bottom */}
+        {/* Help at Bottom */}
         <div className='p-4 border-t border-white/10'>
           <Tooltip
-            content='About EduCompose'
+            content='Help & Support'
             position='right'
             delay={200}
             disabled={isSidebarOpen}
             className="block w-full"
           >
             <button
-              onClick={() => setIsInfoModalOpen(true)}
-              className='group w-full flex items-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200'
+              onClick={() => handleItemClick('/Student/Help')}
+              className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
+                activePath.toLowerCase() === "/student/help"
+                  ? "bg-white text-primary shadow-md"
+                  : "text-white/70 hover:text-white hover:bg-white/10"
+              }`}
             >
               <div className='flex items-center w-full flex-1'>
                 <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                  <Info className='w-5 h-5' />
+                  <HelpCircle className='w-5 h-5' />
                 </span>
                 {isSidebarOpen && (
                   <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
-                    About EduCompose
+                    Help
                   </span>
                 )}
               </div>
@@ -573,112 +578,6 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         )}
       </motion.aside>
 
-      {/* Info Modal */}
-      <Modal
-        isOpen={isInfoModalOpen}
-        onClose={() => setIsInfoModalOpen(false)}
-        title='About EduCompose'
-        size='lg'
-      >
-        <div className='space-y-6'>
-          {/* Header Card */}
-          <div className='bg-gradient-to-r from-primary to-primary-600 rounded-2xl p-6 text-white'>
-            <div className='flex items-center space-x-4'>
-              <div className='w-16 h-16 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center'>
-                <img
-                  src={eduComposeLogo}
-                  alt='EduCompose Logo'
-                  className='w-12 h-12 object-contain'
-                />
-              </div>
-              <div>
-                <h3 className='text-2xl font-bold'>EduCompose</h3>
-                <p className='text-white/80'>
-                  AI-Powered Essay Evaluation Platform
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Features Grid */}
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
-              <div className='flex items-center space-x-3 mb-2'>
-                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
-                  <Upload className='w-5 h-5 text-primary' />
-                </div>
-                <h4 className='font-semibold text-neutral-900'>
-                  Essay Submission
-                </h4>
-              </div>
-              <p className='text-sm text-neutral-600'>
-                Easily submit your essays and track their status through the portal.
-              </p>
-            </div>
-
-            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
-              <div className='flex items-center space-x-3 mb-2'>
-                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
-                  <MessageSquare className='w-5 h-5 text-primary' />
-                </div>
-                <h4 className='font-semibold text-neutral-900'>
-                  AI-Powered Feedback
-                </h4>
-              </div>
-              <p className='text-sm text-neutral-600'>
-                Receive instant, constructive feedback on your writing to help you improve.
-              </p>
-            </div>
-
-            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
-              <div className='flex items-center space-x-3 mb-2'>
-                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
-                  <TrendingUp className='w-5 h-5 text-primary' />
-                </div>
-                <h4 className='font-semibold text-neutral-900'>
-                  Track Progress
-                </h4>
-              </div>
-              <p className='text-sm text-neutral-600'>
-                Visualize your improvement over time with detailed progress and analytics.
-              </p>
-            </div>
-
-            <div className='bg-neutral-50 rounded-xl p-4 border border-neutral-200'>
-              <div className='flex items-center space-x-3 mb-2'>
-                <div className='w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center'>
-                  <ClipboardCheck className='w-5 h-5 text-primary' />
-                </div>
-                <h4 className='font-semibold text-neutral-900'>
-                  View Rubrics
-                </h4>
-              </div>
-              <p className='text-sm text-neutral-600'>
-                Understand the grading criteria for each assignment to meet expectations.
-              </p>
-            </div>
-          </div>
-
-          {/* Version Info */}
-          <div className='bg-neutral-100 rounded-xl p-4 border border-neutral-200'>
-            <div className='flex justify-between items-center'>
-              <div>
-                <p className='text-sm font-bold text-neutral-900'>
-                  Version 1.2.0
-                </p>
-                <p className='text-xs text-neutral-500'>
-                  Latest Platform Update: March 2024
-                </p>
-              </div>
-              <div className='text-right'>
-                <p className='text-xs text-neutral-500'>
-                  Made for educators & students
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 };

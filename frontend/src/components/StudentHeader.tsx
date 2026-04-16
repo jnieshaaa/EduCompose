@@ -101,9 +101,16 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     "/Student/Rubric": "Rubric / Criteria",
     "/Student/Notifications": "Notifications",
     "/Student/Settings": "Settings",
+    "/Student/Help": "Support Center",
+    "/Student/Classes": "My Classes",
   };
 
-  const currentLabel = routeLabels[location.pathname] || "Dashboard";
+  const getLabel = () => {
+    if (location.pathname.startsWith("/Student/Classes/")) return "Class Detail";
+    return routeLabels[location.pathname] || "Dashboard";
+  };
+
+  const currentLabel = getLabel();
 
   // Animate progress bar (Same logic)
   useEffect(() => {

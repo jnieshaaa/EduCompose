@@ -137,6 +137,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     "/Teacher/Settings": "Settings",
     "/Teacher/Notifications": "Notifications",
     "/Teacher/AnalysisResults": "Analysis Results",
+    "/Teacher/Help": "Support Center",
   };
 
   const currentLabel = routeLabels[location.pathname] || "Dashboard";

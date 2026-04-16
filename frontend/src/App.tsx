@@ -39,6 +39,7 @@ import { NotificationsTab } from "./pages/students/NotificationsTab.tsx"; // Cre
 import { StudentSettingsTab } from "./pages/students/StudentSettingsTab.tsx"; // Create this file
 import { MyClassesTab } from "./pages/students/MyClassesTab.tsx"; // Create this file
 import { ClassDetailTab } from "./pages/students/ClassDetailTab.tsx"; // Create this file
+import HelpPage from "./pages/general/HelpPage.tsx";
 
 // General/Legacy Imports (kept for reference or removal later)
 import Dashboard_v2 from "./pages/Dashboard_v2"; // Kept, but moved under /Teacher
@@ -164,6 +165,7 @@ const AppContent: React.FC = () => {
           <Route path="Archive" element={<ArchivePage />} />
           <Route path="Notifications" element={<TeacherNotificationsTab />} />
           <Route path="AnalysisResults" element={<AnalysisResults />} />
+          <Route path="Help" element={<HelpPage />} />
 
           {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
           <Route path="Dashboard_v2" element={<Dashboard_v2 />} />
@@ -205,6 +207,7 @@ const AppContent: React.FC = () => {
           <Route path="Rubric" element={<RubricTab />} />
           <Route path="Notifications" element={<NotificationsTab />} />
           <Route path="Settings" element={<StudentSettingsTab />} />
+          <Route path="Help" element={<HelpPage />} />
 
           {/* Redirect to Dashboard if hitting /Student without a sub-path */}
           <Route index element={<StudentDashboardTab />} />
@@ -231,6 +234,7 @@ const AppContent: React.FC = () => {
           <Route path="Schools" element={<SchoolManagement />} />
           <Route path="Settings" element={<AdminSettingsTab />} />
           <Route path="Archive" element={<AdminArchiveTab />} />
+          <Route path="Help" element={<HelpPage />} />
 
           {/* Redirect to Dashboard if hitting /Admin without a sub-path */}
           <Route index element={<AdminDashboardTab />} />
