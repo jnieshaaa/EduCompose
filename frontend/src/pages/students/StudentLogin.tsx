@@ -258,6 +258,13 @@ const Login: React.FC = () => {
         });
       }
 
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem("rememberedStudentCode", pendingStudent.student_code);
+      } else {
+        localStorage.removeItem("rememberedStudentCode");
+      }
+
       // Automatically push to Onboarding
       navigate("/Student/Onboarding", { state: { student: { ...pendingStudent, id: pendingStudent.student_id, auth_user_id: authUserId } } });
       
@@ -360,6 +367,13 @@ const Login: React.FC = () => {
             is_active: studentIdentity.is_active,
             email_verified: !!data.user.email_confirmed_at,
           });
+          
+          // Handle Remember Me
+          if (rememberMe) {
+            localStorage.setItem("rememberedStudentCode", studentIdentity.student_code);
+          } else {
+            localStorage.removeItem("rememberedStudentCode");
+          }
           
           navigate("/Student/Onboarding", { state: { student: { ...studentIdentity, id: studentIdentity.student_id } } });
           return;

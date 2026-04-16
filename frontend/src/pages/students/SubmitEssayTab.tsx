@@ -522,9 +522,31 @@ export function SubmitEssayTab() {
                 <Card className="p-6">
                   <h2 className="text-xl text-neutral-900 mb-4">Add Work</h2>
                   <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'file' | 'text')}>
-                    <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-                      <TabsTrigger value="file"><Upload className="w-4 h-4 mr-2" />File Upload</TabsTrigger>
-                      <TabsTrigger value="text"><FileText className="w-4 h-4 mr-2" />Text Editor</TabsTrigger>
+                    <TabsList className="grid w-full max-w-md grid-cols-2 mb-6 bg-neutral-100/50 p-1 rounded-xl">
+                      <TabsTrigger 
+                        value="file"
+                        className="
+                          data-[state=active]:bg-primary 
+                          data-[state=active]:text-white 
+                          data-[state=active]:shadow-md
+                          transition-all duration-200
+                        "
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        File Upload
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="text"
+                        className="
+                          data-[state=active]:bg-primary 
+                          data-[state=active]:text-white 
+                          data-[state=active]:shadow-md
+                          transition-all duration-200
+                        "
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Text Editor
+                      </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="file" className="space-y-4">
