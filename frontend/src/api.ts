@@ -665,8 +665,14 @@ export const ocrApi = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
+    const token = localStorage.getItem("auth_token");
+    const baseUrl = API_BASE_URL.rstrip ? (API_BASE_URL as any).rstrip("/") : API_BASE_URL.replace(/\/$/, "");
+    
+    const response = await fetch(`${baseUrl}/ocr/extract-text`, {
       method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: formData,
     });
 

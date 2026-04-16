@@ -35,22 +35,27 @@ allowed_origins = [
     "https://edu-compose-production.vercel.app",
     "https://educompose.vercel.app",
     "https://educompose-production.vercel.app",
-    "https://edu-compose-git-main-jnieshaaa.vercel.app", # Specific preview branch
+    "https://edu-compose-git-main-jnieshaaa.vercel.app",
 ]
 
-# Add production frontend URL if it exists
+# Add any additional origins from ENV
 frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url:
-    # Clean up any trailing slashes
-    frontend_url = frontend_url.rstrip("/")
-    if frontend_url not in allowed_origins:
-        allowed_origins.append(frontend_url)
+    for url in frontend_url.split(","):
+        clean_url = url.strip().rstrip("/")
+        if clean_url and clean_url not in allowed_origins:
+            allowed_origins.append(clean_url)
 
-print(f"INFO:    Setting up CORS with origins: {allowed_origins}")
+# Allow all in production/railway if needed for debugging CORS issues
+if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+    # If standard origins fail, some developers prefer allow_origins=["*"] for debugging
+    # But we'll try to be specific first, or use a regex
+    pass
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=allowed_origins + ["*"] if not os.getenv("STRICT_CORS") else allowed_origins,
+    allow_origin_regex=r"https://edu-compose-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
