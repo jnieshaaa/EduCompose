@@ -7,7 +7,6 @@ import {
   // GraduationCap,
   // ClipboardList,
   // Award,
-  Info,
   HelpCircle,
   // BookOpen,
   // Target,
@@ -15,14 +14,11 @@ import {
   // Shield,
   // LayoutDashboard,
   // Users,
-  ClipboardCheck,
   // BarChart3,
   Settings,
   // X,
   LayoutDashboard, // New icon for student dashboard
   BookOpen, // Icon for My Classes
-  Upload, // Icon for Essay Submission in Info Modal
-  MessageSquare, // New icon for AI Feedback
   TrendingUp,
   ChevronDown,
   ChevronRight,
@@ -32,7 +28,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 import Tooltip from "./ui/Tooltip";
-import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 import { readSecureParams } from "../utils/secureUrl";
 
@@ -88,7 +83,6 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isClassesOpen, setIsClassesOpen] = useState(false);
 
   const navigate = useNavigate();
