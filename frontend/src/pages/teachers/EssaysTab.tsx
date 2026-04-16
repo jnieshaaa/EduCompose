@@ -6,7 +6,7 @@ import Input from "../../components/ui/Input";
 import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import { 
-  Search, Eye, Play, MessageSquare, Download, MoreVertical, Filter, 
+  Search, Eye, MessageSquare, Download, MoreVertical, Filter, 
   Upload, FileText, X, ClipboardList, Loader2, Info, Brain
 } from 'lucide-react';
 import { useGrading } from '../../context/GradingContext';
@@ -27,8 +27,6 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { buildSecureUrl } from '../../utils/secureUrl';
 import { useAuth } from '../../contexts/AuthContext';
-import { gradeEssay } from '../../services/activityService';
-
 // Types
 type EssayActivity = {
   id: string;
@@ -162,7 +160,7 @@ export function EssaysTab() {
   }, [fetchSubmissions]);
 
   // Handlers
-  const handleTriggerAI = async (essayId: string, studentId: string, studentName: string, activityId: string, activityTitle: string) => {
+  const handleTriggerAI = async (_essayId: string, studentId: string, studentName: string, activityId: string, activityTitle: string) => {
     try {
       await startGrading(activityId, studentId, activityTitle, studentName);
     } catch (err) {

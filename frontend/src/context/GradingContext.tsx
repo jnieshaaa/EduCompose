@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotification } from './NotificationContext';
-import activityService from '../services/activityService';
+import { gradeEssay } from '../services/activityService';
 
 interface GradingTask {
   id: string; // usually essayId or activityId
@@ -56,10 +56,11 @@ export const GradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     showNotification('info', `Background grading started for ${studentName}.`);
 
     try {
-      const result = await activityService.gradeEssay(
-        activityId, 
+      const result = await gradeEssay(
         studentId, 
-        (progress, message) => {
+        studentName,
+        activityId,
+        (progress: number, message: string) => {
           updateTask(taskId, { progress, message });
         }
       );
