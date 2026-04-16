@@ -3,7 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
-import AlertModal from "../components/ui/AlertModal";
 import { useNotification } from "../context/NotificationContext";
 
 interface User {
@@ -25,7 +24,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (token: string, userData?: User) => void;
-  logout: () => void;
+  logout: (reason?: string) => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -46,7 +45,6 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   const { showNotification } = useNotification();
 
   const isNetworkDisconnectError = (maybeMessage?: unknown) => {
@@ -69,14 +67,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Sync session to DB without blocking
-  const syncSessionToDB = async (authUserId: string, token: string) => {
-    try {
-      const { data: userRec } = await safeDbQuery(
-        supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()
-      );
-      const table = userRec ? "users" : "students";
-      await supabase.from(table).update({ current_session_id: token }).eq("auth_user_id", authUserId);
-    } catch (e) { /* ignore */ }
+  const syncSessionToDB = async (_authUserId: string, _token: string) => {
+    // try {
+    //   const { data: userRec } = await safeDbQuery(
+    //     supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()
+    //   );
+    //   const table = userRec ? "users" : "students";
+    //   await supabase.from(table).update({ current_session_id: token }).eq("auth_user_id", authUserId);
+    // } catch (e) { /* ignore */ }
   };
 
   const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
@@ -134,24 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // Single Session Safety with Timeout
-      try {
-        const query = supabase.from("users").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle();
-        let result: any = await safeDbQuery(query);
-        let dbRecord = result.data;
-        
-        if (!dbRecord) {
-          const sQuery = supabase.from("students").select("id, current_session_id").eq("auth_user_id", session.user.id).maybeSingle();
-          result = await safeDbQuery(sQuery);
-          dbRecord = result.data;
-        }
-
-        if (dbRecord && dbRecord.current_session_id && dbRecord.current_session_id !== session.access_token) {
-          await logout();
-          showNotification('error', "Logged out: This account is being used on another device.");
-          return;
-        }
-      } catch (err) { /* fail silent */ }
+      // Single Session Safety - Removed to prevent false positives during token refreshes
 
       const mappedUser = await mapSupabaseUser(session.user);
       setUser(mappedUser);
@@ -181,28 +162,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    let sessionChannel: any;
-    const subscribeToSession = async (authId: string) => {
-      try {
-        const { data: userRec } = await safeDbQuery(supabase.from("users").select("id").eq("auth_user_id", authId).maybeSingle());
-        const table = userRec ? "users" : "students";
-        sessionChannel = supabase.channel(`session-${authId}`)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `auth_user_id=eq.${authId}` }, (p: any) => {
-            const newestId = p.new.current_session_id;
-            const ourId = localStorage.getItem("auth_token");
-            if (newestId && ourId && newestId !== ourId) {
-              logout();
-              showNotification('warning', "Session Expired: New login detected on another device.");
-            }
-          }).subscribe();
-      } catch (e) { /* ignore */ }
-    }
-
-    if (user?.auth_id) subscribeToSession(user.auth_id);
-
+    // Realtime Session Monitoring - Removed
+    
     return () => {
       subscription.unsubscribe();
-      if (sessionChannel) supabase.removeChannel(sessionChannel);
     };
   }, [user?.auth_id]);
 
@@ -211,11 +174,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     timeout: 30 * 60 * 1000, // 30 mins
     warningTime: 2 * 60 * 1000, // 2 mins warning
     onLogout: () => {
-      setShowInactivityWarning(false);
-      logout();
+      logout("Session expired due to inactivity.");
     },
-    onWarning: () => setShowInactivityWarning(true),
-    onWarningDismissed: () => setShowInactivityWarning(false),
+    onWarning: () => {
+      showNotification('warning', "Your session will expire in 2 minutes due to inactivity.");
+    },
     enabled: !!user,
   });
 
@@ -228,28 +191,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   };
 
-  const logout = async () => {
-    try { await supabase.auth.signOut(); } finally {
+  const logout = async (reason?: string) => {
+    try { 
+      await supabase.auth.signOut(); 
+    } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
       setUser(null);
-      setShowInactivityWarning(false);
+      
+      if (reason) {
+        showNotification('warning', reason);
+      } else {
+        showNotification('info', "Signed out successfully.");
+      }
     }
   };
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
       {children}
-      <AlertModal
-        isOpen={showInactivityWarning}
-        onClose={() => logout()}
-        type="warning"
-        title="Session Timeout"
-        message="Your session is about to expire due to inactivity."
-        confirmText="Logout Now"
-        onConfirm={() => logout()}
-        showCancel={false}
-      />
     </AuthContext.Provider>
   );
 };

@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS students (
   block_name   text,
   teacher_id   uuid REFERENCES users(auth_user_id) ON DELETE CASCADE,
   auth_user_id uuid UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
+  onboarding_completed boolean NOT NULL DEFAULT false,
+  birthday         text,
   enrollment_status text NOT NULL DEFAULT 'active',
   is_active        boolean NOT NULL DEFAULT true,
   created_at   timestamptz NOT NULL DEFAULT now()
@@ -55,6 +57,7 @@ CREATE INDEX IF NOT EXISTS students_program_id_idx ON students(program_id);
 -- Used by StudentLogin.tsx to look up a student's email by student code.
 -- Returns a single row with student identity info for authentication.
 --------------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_student_login_email(text);
 CREATE OR REPLACE FUNCTION public.get_student_login_email(p_student_code text)
 RETURNS TABLE (
   student_id   uuid,
@@ -63,7 +66,9 @@ RETURNS TABLE (
   first_name   text,
   middle_name  text,
   last_name    text,
-  is_active    boolean
+  is_active    boolean,
+  birthday     text,
+  onboarding_completed boolean
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -78,7 +83,9 @@ BEGIN
     s.first_name,
     s.middle_name,
     s.last_name,
-    s.is_active
+    s.is_active,
+    s.birthday,
+    s.onboarding_completed
   FROM public.students s
   WHERE upper(trim(s.student_code)) = upper(trim(p_student_code))
     AND s.is_active = true

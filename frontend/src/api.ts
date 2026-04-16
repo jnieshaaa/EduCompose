@@ -232,13 +232,14 @@ export const authApi = {
     program_id: string;
     year: number;
     block_name: string;
+    birthday?: string;
   }) => {
     try {
       const tempPassword = payload.password || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
       const { data: authId, error: enrollError } = await supabase.rpc(
-        "admin_enroll_student_v2",
+        "admin_enroll_student_v3",
         {
           p_email: normalizedEmail,
           p_password: tempPassword,
@@ -250,6 +251,7 @@ export const authApi = {
           p_year: payload.year,
           p_block_name: payload.block_name,
           p_middle_name: payload.middle_name || null,
+          p_birthday: payload.birthday || null,
         }
       );
 

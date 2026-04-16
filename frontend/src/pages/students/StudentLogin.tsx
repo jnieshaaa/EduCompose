@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { User, Lock, Eye, EyeOff, Mail, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  useAuth,
-} from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { useNotification } from "../../context/NotificationContext";
 import { supabase } from "../../lib/supabaseClient";
+import { sendSignupCodeEmail } from "../../services/emailService";
 
 // Minimal typed shape for Supabase user metadata
 interface UserMetadata {
@@ -32,8 +32,17 @@ interface StudentLoginLookup {
   middle_name: string | null;
   last_name: string;
   is_active: boolean;
+  onboarding_completed: boolean;
+  auth_user_id: string | null;
+  birthday: string | null;
 }
+
 const Login: React.FC = () => {
+  // View states for swapping Login <-> Verification
+  const [view, setView] = useState<"login" | "verification">("login");
+  const [pendingStudent, setPendingStudent] = useState<StudentLoginLookup | null>(null);
+  const [pendingPassword, setPendingPassword] = useState("");
+
   const [studentCode, setStudentCode] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -42,6 +51,14 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showNotification } = useNotification();
+
+  // Verification state
+  const [otp, setOtp] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Load remembered student code on mount
   React.useEffect(() => {
@@ -113,6 +130,145 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleStartVerification = async (studentToVerify?: StudentLoginLookup) => {
+    const student = studentToVerify || pendingStudent;
+    if (!student?.email) return;
+    
+    setIsSendingCode(true);
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      const { error: insertError } = await supabase
+        .from("signup_verification_codes")
+        .insert({
+          email: student.email.toLowerCase(),
+          code: code,
+          expires_at: expiresAt,
+        });
+
+      if (insertError) throw insertError;
+
+      await sendSignupCodeEmail({
+        toEmail: student.email,
+        code: code,
+      });
+      
+      showNotification('success', "Verification code sent to your email!");
+      setOtpSent(true);
+      setTimer(60);
+    } catch (err: any) {
+      showNotification('error', err.message || "Failed to send code");
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => setTimer(prev => prev - 1), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [timer]);
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6 || !pendingStudent) {
+      showNotification('error', "Please enter the complete 6-digit code.");
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { data: isValid, error: rpcError } = await supabase.rpc(
+        "verify_signup_code",
+        {
+          p_email: pendingStudent.email,
+          p_code: otp,
+        },
+      );
+
+      if (rpcError) throw rpcError;
+      if (!isValid) {
+        showNotification('error', "Invalid or expired code.");
+        return;
+      }
+
+      const finalPassword = pendingPassword || pendingStudent.birthday || "EduCompose2025!";
+      
+      let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: pendingStudent.email,
+        password: finalPassword,
+        options: {
+          data: {
+            role: "student",
+            first_name: pendingStudent.first_name,
+            last_name: pendingStudent.last_name,
+          }
+        }
+      });
+
+      if (signUpError?.message?.includes("already registered")) {
+        console.log("[Verification] User already registered, attempting sign in...");
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: pendingStudent.email,
+          password: finalPassword
+        });
+        
+        if (signInError) {
+          if (signInError.message.toLowerCase().includes("invalid login credentials")) {
+            throw new Error("Account exists, but password doesn't match. Please go back to Login and use the correct password, or click 'Forgot password'.");
+          }
+          throw signInError;
+        }
+        signUpData = signInData;
+        signUpError = null;
+      }
+
+      if (signUpError) throw signUpError;
+      if (!signUpData.user) throw new Error("Could not create or find user");
+
+      const authUserId = signUpData.user.id;
+
+      const { error: updateError } = await supabase.rpc("link_student_auth", {
+        p_student_id: pendingStudent.student_id,
+        p_auth_user_id: authUserId
+      });
+        
+      if (updateError) throw updateError;
+
+      showNotification('success', "Email verified successfully!");
+
+      // Sign the user directly into the context
+      if (signUpData.session) {
+        login(signUpData.session.access_token, {
+          id: pendingStudent.student_id,
+          auth_id: authUserId,
+          email: pendingStudent.email.trim().toLowerCase() || signUpData.user.email || "",
+          username: pendingStudent.student_code,
+          full_name: buildStudentName({
+            first_name: pendingStudent.first_name,
+            middle_name: pendingStudent.middle_name,
+            last_name: pendingStudent.last_name,
+            student_code: pendingStudent.student_code,
+            email: pendingStudent.email,
+          }),
+          role: "student",
+          is_active: pendingStudent.is_active,
+          email_verified: !!signUpData.user.email_confirmed_at,
+        });
+      }
+
+      // Automatically push to Onboarding
+      navigate("/Student/Onboarding", { state: { student: { ...pendingStudent, id: pendingStudent.student_id, auth_user_id: authUserId } } });
+      
+    } catch (err: any) {
+      console.error(err);
+      showNotification('error', err.message || "Verification failed. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -128,7 +284,6 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-
       const normalizedStudentCode = studentCode.trim();
       const compactStudentCode = normalizedStudentCode.replace(/\s+/g, "");
       const uppercaseStudentCode = compactStudentCode.toUpperCase();
@@ -166,6 +321,52 @@ const Login: React.FC = () => {
         return;
       }
 
+      // STATE 1: Not Verified Yet (No auth_user_id) -> Show View
+      if (!studentIdentity.auth_user_id) {
+        setPendingStudent(studentIdentity);
+        setPendingPassword(password.trim());
+        setError("");
+        setView("verification");
+        return;
+      }
+
+      // STATE 2: Verified, but Not Onboarded (auth_user_id exists, onboarding_completed is false)
+      if (!studentIdentity.onboarding_completed) {
+        // Authenticate first, then go to Onboarding
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: studentIdentity.email.trim().toLowerCase(),
+          password: password.trim(),
+        });
+
+        if (error) {
+          setError("Invalid student code or password.");
+          return;
+        }
+
+        if (data.session && data.user) {
+          login(data.session.access_token, {
+            id: studentIdentity.student_id,
+            auth_id: data.user.id,
+            email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
+            username: studentIdentity.student_code,
+            full_name: buildStudentName({
+              first_name: studentIdentity.first_name,
+              middle_name: studentIdentity.middle_name,
+              last_name: studentIdentity.last_name,
+              student_code: studentIdentity.student_code,
+              email: studentIdentity.email,
+            }),
+            role: "student",
+            is_active: studentIdentity.is_active,
+            email_verified: !!data.user.email_confirmed_at,
+          });
+          
+          navigate("/Student/Onboarding", { state: { student: { ...studentIdentity, id: studentIdentity.student_id } } });
+          return;
+        }
+      }
+
+      // STATE 3: Verified AND Onboarded
       const { data, error } = await supabase.auth.signInWithPassword({
         email: studentIdentity.email.trim().toLowerCase(),
         password: password.trim(),
@@ -223,6 +424,233 @@ const Login: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const renderLoginForm = () => (
+    <>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">
+          Welcome Back
+        </h2>
+        <p className="text-neutral-600 text-sm">
+          Login with your student code to access your essays
+        </p>
+      </div>
+
+      <form onSubmit={handleAuthSubmit} className="space-y-4">
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Student Code Input */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="studentCode"
+            className="block text-sm font-medium text-neutral-600"
+          >
+            Student Code
+          </label>
+          <div className="relative group">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
+            <input
+              id="studentCode"
+              type="text"
+              value={studentCode}
+              onChange={(e) => {
+                setStudentCode(e.target.value);
+                setError("");
+              }}
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+              placeholder="Enter your student code"
+            />
+          </div>
+        </div>
+
+        {/* Password Input */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-neutral-600"
+          >
+            Password
+          </label>
+          <div className="relative group">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              className="w-full pl-10 pr-12 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Remember + Forgot */}
+        <div className="flex items-center justify-between text-xs pt-1">
+          <label className="flex items-center cursor-pointer group">
+            <input 
+              type="checkbox" 
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-neutral-300 text-primary focus:ring-primary transition-colors" 
+            />
+            <span className="ml-2 text-neutral-600 group-hover:text-neutral-800 transition-colors">Remember me</span>
+          </label>
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="font-bold text-primary hover:text-primary-600 transition-colors"
+          >
+            Forgot password?
+          </button>
+        </div>
+
+        {/* Primary Auth Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full mt-2 text-white py-2.5 text-sm rounded-lg font-bold bg-primary shadow-lg shadow-primary/20 hover:bg-primary-600 hover:translate-y-[-1px] active:translate-y-[0px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <span>Signing in...</span>
+            </div>
+          ) : (
+            "Login to Portal"
+          )}
+        </button>
+      </form>
+    </>
+  );
+
+  const renderVerificationForm = () => (
+    <div className="duration-300">
+      <button 
+        onClick={() => {
+           setView("login");
+           setOtpSent(false);
+           setOtp("");
+        }}
+        className="flex items-center text-xs text-neutral-500 hover:text-neutral-900 font-bold tracking-wide uppercase group mb-6 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+        Back to Login
+      </button>
+
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Verify Email</h2>
+        <p className="text-neutral-600 text-sm">
+          Secure your academic records by verifying your registered email address first.
+        </p>
+      </div>
+
+      {!otpSent ? (
+        <div className="space-y-6">
+          <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200">
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5" /> Registered Email
+            </label>
+            <p className="font-bold text-neutral-900 break-all text-sm">
+              {pendingStudent?.email || "No email assigned"}
+            </p>
+          </div>
+          
+          <button
+            onClick={() => handleStartVerification()}
+            disabled={isSendingCode}
+            className="w-full bg-primary hover:bg-primary-600 disabled:bg-neutral-200 text-white font-bold py-2.5 text-sm rounded-lg shadow-lg transition-all active:translate-y-[0px] hover:-translate-y-[1px] flex items-center justify-center gap-2"
+          >
+            {isSendingCode ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Sending Code...</span>
+              </>
+            ) : "Send Verification Code"}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6 text-center">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-neutral-600">Enter the 6-digit code sent to your email</p>
+          </div>
+
+          <div className="flex justify-center gap-2 py-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <input
+                key={i}
+                id={`otp-${i}`}
+                type="text"
+                maxLength={1}
+                value={otp[i] || ""}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "");
+                  if (!val) return;
+                  const newOtp = otp.split("");
+                  newOtp[i] = val;
+                  setOtp(newOtp.join(""));
+                  if (i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Backspace" && !otp[i] && i > 0) {
+                    document.getElementById(`otp-${i - 1}`)?.focus();
+                    const currentOtp = otp.split("");
+                    currentOtp[i-1] = "";
+                    setOtp(currentOtp.join(""));
+                  }
+                }}
+                className="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-white border-2 border-neutral-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
+              />
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={handleVerifyOtp}
+              disabled={isVerifying || otp.length < 6}
+              className="w-full bg-primary hover:bg-primary-600 disabled:bg-neutral-200 disabled:opacity-70 text-white font-bold py-2.5 text-sm rounded-lg shadow-lg transition-all active:translate-y-[0px] hover:-translate-y-[1px] flex items-center justify-center gap-2"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : "Verify & Continue"}
+            </button>
+            
+            <button
+              disabled={timer > 0 || isSendingCode}
+              onClick={() => handleStartVerification()}
+              className="text-primary font-bold hover:underline disabled:text-neutral-400 disabled:no-underline text-xs"
+            >
+              {timer > 0 ? `Resend code in ${timer}s` : "Didn't get the code? Resend"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="relative min-h-screen flex flex-col lg:flex-row bg-gradient-to-tr from-primary via-primary-400 to-primary overflow-hidden">
@@ -291,9 +719,10 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Dynamic Content */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
-        <div className="w-full max-w-md animate-fade-in">
+        <div className="w-full max-w-md animate-fade-in relative">
+          
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-10">
             <h1 className="text-4xl font-bold mb-2 text-white">
@@ -304,128 +733,16 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          <div className="rounded-2xl shadow-2xl bg-white p-8 md:p-10 border border-white/20">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-neutral-900 mb-2">
-                Welcome Back
-              </h2>
-              <p className="text-neutral-600 text-sm">
-                Login with your student code to access your essays
-              </p>
-            </div>
-
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
-                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Student Code Input */}
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="studentCode"
-                  className="block text-sm font-medium text-neutral-600"
-                >
-                  Student Code
-                </label>
-                <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
-                  <input
-                    id="studentCode"
-                    type="text"
-                    value={studentCode}
-                    onChange={(e) => {
-                      setStudentCode(e.target.value);
-                      setError("");
-                    }}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                    placeholder="Enter your student code"
-                  />
-                </div>
+          <div className="rounded-2xl shadow-2xl bg-white p-8 md:p-10 border border-white/20 min-h-[460px] flex flex-col overflow-hidden relative">
+            {view === "login" ? renderLoginForm() : renderVerificationForm()}
+            
+            {view === "login" && (
+              <div className="mt-auto pt-6 border-t border-neutral-100 text-center relative z-20">
+                <p className="text-xs text-neutral-500 leading-relaxed italic">
+                  Manage your student account through your teacher or administrator.
+                </p>
               </div>
-
-              {/* Password Input */}
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-neutral-600"
-                >
-                  Password
-                </label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setError("");
-                    }}
-                    className="w-full pl-10 pr-12 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember + Forgot */}
-              <div className="flex items-center justify-between text-xs pt-1">
-                <label className="flex items-center cursor-pointer group">
-                  <input 
-                    type="checkbox" 
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-neutral-300 text-primary focus:ring-primary transition-colors" 
-                  />
-                  <span className="ml-2 text-neutral-600 group-hover:text-neutral-800 transition-colors">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="font-bold text-primary hover:text-primary-600 transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              {/* Primary Auth Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full mt-2 text-white py-2.5 text-sm rounded-lg font-bold bg-primary shadow-lg shadow-primary/20 hover:bg-primary-600 hover:translate-y-[-1px] active:translate-y-[0px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>Signing in...</span>
-                  </div>
-                ) : (
-                  "Login to Portal"
-                )}
-              </button>
-            </form>
-
-            <div className="mt-8 pt-6 border-t border-neutral-100 text-center">
-              <p className="text-xs text-neutral-500 leading-relaxed italic">
-                Manage your student account through your teacher or administrator.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>

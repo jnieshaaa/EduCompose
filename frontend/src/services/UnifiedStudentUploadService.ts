@@ -186,9 +186,10 @@ export class UnifiedStudentUploadService {
             const lastName = this.getFieldValue(row, headerRow, ["last name", "lastname", "last_name", "last"]);
             const email = this.getFieldValue(row, headerRow, ["email", "e-mail", "email_address"]);
             const middleName = this.getFieldValue(row, headerRow, ["middle name", "middlename", "middle_name", "middle"]);
+            const birthday = this.getFieldValue(row, headerRow, ["birthday", "birth date", "birthdate", "birth_date"]);
 
             if (!studentCode || !firstName || !lastName || !email) {
-              errors.push(`Row ${totalRows + 4}: Missing required student data`);
+              errors.push(`Row ${totalRows + 4}: Missing required student data (ID, Name, or Email)`);
               continue;
             }
 
@@ -231,6 +232,7 @@ export class UnifiedStudentUploadService {
                 last_name: lastName,
                 middle_name: middleName || null,
                 email: email,
+                birthday: birthday || null, // Capture birthday here
                 year: year,
                 block_name: blockName,
                 academic_year: context.ay,

@@ -62,6 +62,7 @@ import ClickEffect from "./components/ClickEffect";
 import LandingPage from "./pages/LandingPage";
 import About from "./pages/About.tsx";
 import Login from "./pages/students/StudentLogin.tsx";
+import StudentOnboarding from "./pages/students/StudentOnboarding.tsx";
 import EmailConfirmation from "./pages/EmailConfirmation.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import { LoaderProvider, useLoader } from "./components/ui/LoaderContext";
@@ -122,9 +123,7 @@ const AppContent: React.FC = () => {
         <Route
           path="/Student/Onboarding"
           element={
-            <ProtectedRoute requiredRole="student">
-              <Onboarding />
-            </ProtectedRoute>
+              <StudentOnboarding />
           }
         />
         <Route

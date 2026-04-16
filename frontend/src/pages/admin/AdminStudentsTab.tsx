@@ -175,6 +175,7 @@ export const AdminStudentsTab: React.FC = () => {
         .select(
           `
           *,
+          users(is_active, onboarding_completed),
           programs_lookup(
             id,
             name,
@@ -895,6 +896,9 @@ export const AdminStudentsTab: React.FC = () => {
                   <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Account Status
+                  </th>
                   <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
                     Actions
                   </th>
@@ -955,6 +959,19 @@ export const AdminStudentsTab: React.FC = () => {
                       >
                         {s.enrollment_status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {s.users && s.users.onboarding_completed === true ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
+                          <div className="w-1 h-1 rounded-full bg-green-500" />
+                          Opened
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100">
+                          <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+                          Not yet opened
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                       <div className="relative inline-block text-left">
