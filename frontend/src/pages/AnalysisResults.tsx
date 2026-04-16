@@ -1246,7 +1246,7 @@ const AnalysisResults: React.FC = () => {
             <div>
               <div className="flex items-center gap-4">
                 <h1 className="text-2xl font-bold text-neutral-900 tracking-tight leading-none">
-                  {isPreviewMode ? <>Analysis <span className="text-primary">Preview</span></> : <>Manuscript <span className="text-primary">Diagnostic</span></>}
+                  {isPreviewMode ? <>Analysis <span className="text-primary">Preview</span></> : <>Analysis <span className="text-primary">Report</span></>}
                 </h1>
                 {rubricData?.rubric_name && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50/50 border border-primary-100/50 rounded-xl">
@@ -1275,7 +1275,7 @@ const AnalysisResults: React.FC = () => {
             className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-3 px-6 font-bold text-[10px] uppercase tracking-widest"
           >
             <Download className="w-4 h-4 mr-2" />
-            Export Manuscript
+            Export Report
           </Button>
         </div>
       </header>

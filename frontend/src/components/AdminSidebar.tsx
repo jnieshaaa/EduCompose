@@ -4,7 +4,6 @@ import {
   Settings,
   ClipboardCheck,
   BookOpen,
-  Info,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +17,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabaseClient";
-import Modal from "./ui/Modal";
 import eduComposeLogo from "../assets/EduCompose.png";
 import Tooltip from "./ui/Tooltip";
 
@@ -35,7 +33,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [logoShine, setLogoShine] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navigate = useNavigate();

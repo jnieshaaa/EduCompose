@@ -134,7 +134,7 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
         <Card variant="glass" className={prominentGraph ? 'border-primary-200/40 shadow-xl p-0 overflow-hidden' : 'p-0 overflow-hidden'}>
           <div className="p-6 pb-0 flex items-center justify-between mb-6">
             <h4 className={`font-bold text-neutral-900 tracking-tight ${prominentGraph ? 'text-2xl' : 'text-sm uppercase tracking-widest'}`}>
-              <>Manuscript <span className="text-primary">Architecture</span></>
+              <>Argument <span className="text-primary">Structure</span></>
             </h4>
             <div className="flex items-center gap-2">
                <Badge variant="outline" size="sm" className="rounded-lg px-3 py-1 font-bold text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Toulmin's Protocol</Badge>

@@ -236,7 +236,7 @@ export function EssayTextDisplay({
         <div>
           <h3 className="text-xl font-bold text-neutral-900 tracking-tight uppercase tracking-widest text-xs flex items-center gap-2">
              <div className="w-1.5 h-6 bg-primary rounded-full" />
-             Manuscript <span className="text-primary">Transcript</span>
+             Essay <span className="text-primary">Transcript</span>
           </h3>
         </div>
         <div className="flex items-center gap-3">
