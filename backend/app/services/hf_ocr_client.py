@@ -30,7 +30,12 @@ INFERENCE_BASE = "https://api-inference.huggingface.co/models"
 
 
 def get_hf_token() -> Optional[str]:
-    return (os.getenv("HF_API_TOKEN") or os.getenv("HUGGINGFACE_API_TOKEN") or "").strip() or None
+    return (
+        os.getenv("HF_API_TOKEN") or 
+        os.getenv("HUGGINGFACE_API_TOKEN") or 
+        os.getenv("HUGGING_FACE_HUB_TOKEN") or 
+        ""
+    ).strip() or None
 
 
 def is_configured() -> bool:
