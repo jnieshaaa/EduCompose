@@ -146,8 +146,18 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     setShowLogoutConfirm(false);
   };
 
-  const userName = user?.full_name || user?.username || "Student";
-  const userInitial = userName.split(/\s+/).map((part) => part.charAt(0).toUpperCase()).join("");
+  // Extract only the last name if possible, otherwise use full name or fallback
+  const getDisplayName = () => {
+    if (!user?.full_name || user.full_name === "Student" || user.full_name.includes("@")) {
+      return user?.username || "Student";
+    }
+    // If it's a full name like "John Doe", just get "Doe"
+    const nameParts = user.full_name.trim().split(/\s+/);
+    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+  };
+
+  const userName = getDisplayName();
+  const userInitial = (user?.full_name || userName).split(/\s+/).map((part) => part.charAt(0).toUpperCase()).join("").slice(0, 2);
 
   return (
     <header className='relative flex flex-row justify-between items-center px-4 py-3 border-b bg-white shadow-sm'>

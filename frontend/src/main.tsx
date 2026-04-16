@@ -4,11 +4,14 @@ import "./index.css";
 import App from "./App.tsx";
 
 import { NotificationProvider } from "./context/NotificationContext";
+import { GradingProvider } from "./context/GradingContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <NotificationProvider>
-      <App />
+      <GradingProvider>
+        <App />
+      </GradingProvider>
     </NotificationProvider>
   </StrictMode>
 );

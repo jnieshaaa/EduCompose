@@ -7,8 +7,9 @@ import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import { 
   Search, Eye, Play, MessageSquare, Download, MoreVertical, Filter, 
-  Upload, FileText, X, ClipboardList, Loader2, Info
+  Upload, FileText, X, ClipboardList, Loader2, Info, Brain
 } from 'lucide-react';
+import { useGrading } from '../../context/GradingContext';
 import {
   Table,
   TableBody,
@@ -49,6 +50,7 @@ type EssaySubmission = {
   status: string;
   score: number | null;
   teacherReview: string;
+  activityTitle: string;
 };
 
 export function EssaysTab() {
@@ -63,7 +65,7 @@ export function EssaysTab() {
   const [activities, setActivities] = useState<EssayActivity[]>([]);
   const [essays, setEssays] = useState<EssaySubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [evaluatingIds, setEvaluatingIds] = useState<Set<string>>(new Set());
+  const { startGrading, isTaskActive } = useGrading();
 
   // 1. Fetch Teacher context and activities
   useEffect(() => {
@@ -107,6 +109,7 @@ export function EssaysTab() {
           overall_score, 
           activity_id,
           student_id,
+          essay_activities (title),
           students (
             id, 
             first_name, 
@@ -143,7 +146,8 @@ export function EssaysTab() {
           submitted: new Date(e.submitted_at).toLocaleDateString(),
           status: e.status === 'analyzed' ? 'Completed' : (e.status === 'submitted' ? 'Pending' : 'In Progress'),
           score: e.overall_score,
-          teacherReview: e.status === 'reviewed' ? 'Reviewed' : 'Pending'
+          teacherReview: e.status === 'reviewed' ? 'Reviewed' : 'Pending',
+          activityTitle: (e.essay_activities as any)?.title || "Unknown Activity"
         };
       });
 
@@ -158,24 +162,11 @@ export function EssaysTab() {
   }, [fetchSubmissions]);
 
   // Handlers
-  const handleTriggerAI = async (essayId: string, studentId: string, studentName: string, activityId: string) => {
-    setEvaluatingIds(prev => new Set(prev).add(essayId));
+  const handleTriggerAI = async (essayId: string, studentId: string, studentName: string, activityId: string, activityTitle: string) => {
     try {
-      // Using gradeEssay which is the correct export name
-      const result = await gradeEssay(studentId, studentName, activityId);
-      if (result.success) {
-        fetchSubmissions();
-      } else {
-        console.warn("AI Evaluation partial failure:", result.error);
-      }
+      await startGrading(activityId, studentId, activityTitle, studentName);
     } catch (err) {
       console.error("Error triggering AI evaluation:", err);
-    } finally {
-      setEvaluatingIds(prev => {
-        const next = new Set(prev);
-        next.delete(essayId);
-        return next;
-      });
     }
   };
 
@@ -447,15 +438,15 @@ export function EssaysTab() {
                         {(essay.status === 'Pending' || essay.status === 'In Progress') && (
                           <DropdownMenuItem 
                             className="cursor-pointer"
-                            onClick={() => handleTriggerAI(essay.id, essay.studentId, essay.studentName, essay.activityId)}
-                            disabled={evaluatingIds.has(essay.id)}
+                            onClick={() => handleTriggerAI(essay.id, essay.studentId, essay.studentName, essay.activityId, essay.activityTitle)}
+                            disabled={isTaskActive(`${essay.activityId}-${essay.studentId}`)}
                           >
-                            {evaluatingIds.has(essay.id) ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin text-amber-500" />
+                            {isTaskActive(`${essay.activityId}-${essay.studentId}`) ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
                             ) : (
-                              <Play className="w-4 h-4 mr-2 text-amber-500" />
+                              <Brain className="w-4 h-4 mr-2 text-primary" />
                             )}
-                            {evaluatingIds.has(essay.id) ? "Evaluating..." : "Trigger AI Evaluation"}
+                            {isTaskActive(`${essay.activityId}-${essay.studentId}`) ? "Evaluating..." : "Trigger AI Evaluation"}
                           </DropdownMenuItem>
                         )}
                         

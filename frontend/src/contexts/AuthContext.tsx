@@ -79,27 +79,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
     try {
-      const result: any = await safeDbQuery(
-        supabase.from("users").select("id, email, first_name, middle_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
+      // 1. Try fetching from users table (Teacher/Admin)
+      const userResult: any = await safeDbQuery(
+        supabase.from("users").select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
       );
 
-      if (!result.data) return null;
-      const data = result.data;
-      const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
+      if (userResult.data) {
+        const data = userResult.data;
+        const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
+        return {
+          id: data.id.toString(),
+          auth_id: authUserId,
+          email: data.email ?? "",
+          username: data.email ?? "",
+          full_name: fullName,
+          role: data.role || "teacher",
+          is_active: data.is_active ?? true,
+          email_verified: true,
+          onboarding_completed: data.onboarding_completed ?? false,
+          title: data.title,
+          nickname: data.nickname,
+        };
+      }
 
-      return {
-        id: data.id.toString(),
-        auth_id: authUserId,
-        email: data.email ?? "",
-        username: data.email ?? "",
-        full_name: fullName,
-        role: data.role || "teacher",
-        is_active: data.is_active ?? true,
-        email_verified: true,
-        onboarding_completed: data.onboarding_completed ?? false,
-        title: data.title,
-        nickname: data.nickname,
-      };
+      // 2. Try fetching from students table
+      const studentResult: any = await safeDbQuery(
+        supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
+      );
+
+      if (studentResult.data) {
+        const data = studentResult.data;
+        const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "Student";
+        return {
+          id: data.id.toString(),
+          auth_id: authUserId,
+          email: data.email ?? "",
+          username: data.email ?? "",
+          full_name: fullName,
+          role: "student",
+          is_active: true,
+          email_verified: true,
+          onboarding_completed: data.onboarding_completed ?? false,
+        };
+      }
+
+      return null;
     } catch { return null; }
   };
 
