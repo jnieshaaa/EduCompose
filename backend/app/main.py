@@ -54,26 +54,36 @@ if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
 
 # Use more robust CORS handling
 cors_origins = allowed_origins.copy()
-# Explicitly add the Vercel URL and Railway URL from the error log to be safe
-cors_origins.append("https://edu-compose.vercel.app")
-cors_origins.append("https://edu-compose-production.vercel.app")
-cors_origins.append("https://educompose-production.up.railway.app")
+# Explicitly add critical production origins
+cors_origins.extend([
+    "https://edu-compose.vercel.app",
+    "https://edu-compose-production.vercel.app",
+    "https://educompose.vercel.app",
+    "https://educompose-production.vercel.app",
+    "https://educompose-production.up.railway.app"
+])
 
-# In Railway, allow all for debugging if STRICT_CORS is not set
+# Get environment flags
 is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID")
-final_origins = ["*"] if is_railway and not os.getenv("STRICT_CORS") else cors_origins
+strict_cors = os.getenv("STRICT_CORS", "0").lower() in ("1", "true", "yes")
 
-# Safari and some modern browsers require allow_credentials=False if allow_origins=['*']
-allow_creds = False if "*" in final_origins else True
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=final_origins,
-    allow_origin_regex=r"https://edu-compose-.*\.vercel\.app",
-    allow_credentials=allow_creds,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# In production (non-strict), allow all to prevent endpoint blocking
+if is_railway and not strict_cors:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False, # Must be False for wildcard origins
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Security
 security = HTTPBearer()

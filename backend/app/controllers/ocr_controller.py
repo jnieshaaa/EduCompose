@@ -38,25 +38,31 @@ async def extract_text(file: UploadFile = File(...)):
                 "text": extracted_text,
                 "word_count": len(extracted_text.split()),
                 "filename": filename,
-                "success": True
+                "success": True,
+                "extraction_method": "text"
             }
         
         elif "pdf" in content_type or filename.endswith('.pdf'):
-            # Use the robust OCR service for PDFs (handles text and scanned)
+            # Use the robust OCR service for PDFs
             ocr_result = ocr_service.extract_text_from_pdf(content, filename)
-            if "error" in ocr_result:
-                raise HTTPException(status_code=500, detail=ocr_result.get("message", "PDF extraction failed"))
+            if ocr_result.get("error"):
+                status_code = 422 if "not found" in ocr_result.get("message", "").lower() else 500
+                return JSONResponse(status_code=status_code, content=ocr_result)
             result = ocr_result
             
         elif "image" in content_type or any(filename.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]):
             # Use the robust OCR service for images
             ocr_result = ocr_service.extract_text_from_image(content, filename)
-            if "error" in ocr_result:
-                raise HTTPException(status_code=500, detail=ocr_result.get("message", "Image OCR failed"))
+            if ocr_result.get("error"):
+                return JSONResponse(status_code=500, content=ocr_result)
             result = ocr_result
-            
+        
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {content_type}")
+            return JSONResponse(status_code=400, content={
+                "success": False,
+                "error": "Unsupported file type",
+                "message": f"File type {content_type} is not supported."
+            })
 
         # Ensure word count is present
         if "word_count" not in result and "text" in result:

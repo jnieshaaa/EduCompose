@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     ffmpeg \
+    libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -30,7 +31,7 @@ COPY requirements.txt .
 
 # Install dependencies
 # Set SKIP_HEAVY_ML=1 to create a "Slim" image (Uses Hugging Face API instead of local)
-ARG SKIP_HEAVY_ML=0
+ARG SKIP_HEAVY_ML=1
 RUN pip install --no-cache-dir --upgrade pip && \
     if [ "$SKIP_HEAVY_ML" != "1" ]; then \
         pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu; \

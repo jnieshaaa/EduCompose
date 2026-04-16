@@ -35,6 +35,7 @@ python-dotenv
 httpx
 pyyaml
 requests
+nest-asyncio
 
 # ============================================
 # NLP and Text Processing Libraries
