@@ -2,9 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import logging
 import io
-
-# Optional: You might need pytesseract or similar if you want heavy OCR
-# For now, let's provide a robust structure that can handle text-based PDFs or basic images
+import PyPDF2
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -20,25 +18,50 @@ async def extract_text(file: UploadFile = File(...)):
         
         logger.info(f"Extracting text from {filename} ({content_type})")
         
-        # 1. Simple content reader for now
-        # In a real production app, you'd use pytesseract (for images) or PyPDF2 (for PDFs)
         content = await file.read()
-        
-        # Placeholder for real OCR logic
-        # For demonstration/MVP, we assume text files or simple PDF metadata
-        # We can integrate a real library like 'tesseract' or 'easyocr' if installed
-        
         extracted_text = ""
         
-        if "text" in content_type:
-            extracted_text = content.decode("utf-8")
+        if "text" in content_type or filename.endswith('.txt'):
+            try:
+                extracted_text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                # Fallback to latin-1 if utf-8 fails
+                extracted_text = content.decode("latin-1")
+        
+        elif "pdf" in content_type or filename.endswith('.pdf'):
+            try:
+                # Use PyPDF2 for text-based PDF extraction
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text_parts = []
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+                
+                extracted_text = "\n".join(text_parts)
+                
+                # If extraction failed but it's a valid PDF (e.g. scanned image)
+                if not extracted_text.strip():
+                    extracted_text = "[OCR Warning: This PDF seems to be an image. Please upload a text-based PDF or wait for further OCR updates.]"
+                    
+            except Exception as pdf_err:
+                logger.error(f"PDF extraction error: {str(pdf_err)}")
+                extracted_text = f"[Error reading PDF: {str(pdf_err)}]"
+        
         else:
-            # Fallback message
-            extracted_text = "Text extraction from binary files (Image/PDF) is ready for processing."
+            # For images or other types, we might want easyocr later
+            extracted_text = f"[Unsupported file type: {content_type}. Please upload a PDF or TXT file.]"
             
+        # Clean up text a bit
+        final_text = extracted_text.strip()
+        
+        # Calculate word count for feedback
+        word_count = len(final_text.split()) if final_text else 0
+        
         return JSONResponse(content={
             "success": True,
-            "text": extracted_text,
+            "text": final_text,
+            "word_count": word_count,
             "filename": filename
         })
         

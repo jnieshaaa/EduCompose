@@ -25,13 +25,13 @@ if __name__ == "__main__":
     # Get configuration from environment variables
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", 8000))
-    # Disable reload on Windows to avoid multiprocessing issues
-    reload = os.getenv("ENVIRONMENT", "development") == "development" and sys.platform != "win32"
+    # ENABLE RELOAD FOR DEVELOPMENT
+    reload = True
     
     print(f"Starting EduCompose API server...")
     print(f"Host: {host}")
     print(f"Port: {port}")
-    print(f"Reload: {reload} ({'disabled on Windows' if sys.platform == 'win32' else 'enabled'})")
+    print(f"Reload: {reload} (Forcing true for live migration)")
     print(f"API Documentation: http://{host}:{port}/api/docs")
     
     uvicorn.run(

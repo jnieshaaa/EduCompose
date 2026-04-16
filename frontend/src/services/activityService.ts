@@ -8,9 +8,12 @@ import { buildFullNameFromObject } from "../utils/nameUtils";
 
 /** Essay / student / activity IDs may be UUID strings or legacy integers in some deployments. */
 export function isUuidString(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    value.trim(),
-  );
+  const t = value.trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t);
+  if (!isUuid && t.length > 10) {
+    console.log("[isUuidString] Testing value:", `"${t}"`, "Result:", isUuid);
+  }
+  return isUuid;
 }
 
 export function coerceEssayIdParam(id: string | number | null | undefined): string | null {
@@ -39,14 +42,31 @@ export async function resolveStudentIdForEssayFilter(
   if (!t) return null;
   if (isUuidString(t)) return t;
 
-  const { data: byCode } = await supabase
-    .from("students")
-    .select("id")
-    .eq("student_code", t)
-    .maybeSingle();
-  
-  return byCode?.id || null;
+  try {
+    const { data: byCode, error: lookupError } = await supabase
+      .from("students")
+      .select("*")
+      .eq("student_code", t)
+      .maybeSingle();
+    
+    if (lookupError) {
+      console.error("[resolveStudentIdForEssayFilter] Supabase Error:", {
+        message: lookupError.message,
+        details: lookupError.details,
+        hint: lookupError.hint,
+        code: lookupError.code,
+        queryValue: t
+      });
+      return null;
+    }
+    
+    return byCode?.id || null;
+  } catch (err) {
+    console.error("[resolveStudentIdForEssayFilter] Unexpected error in lookup:", err);
+    return null;
+  }
 }
+
 
 /** Resolve activity id for `essays.activity_id` filters. */
 export function resolveActivityIdForEssayFilter(
@@ -1347,17 +1367,18 @@ export const uploadEssayFile = async (
     }
 
     // Parse student ID (it might be a UUID or student_code)
-    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
-    if (!studentDbId) {
+    let studentDbId = studentId;
+    
+    if (!isUuidString(studentId)) {
       // If studentId is a student_code, fetch the actual DB ID
-      const { data: studentData, error: studentError } = await supabase
+      const { data: studentData } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
-      if (studentError || !studentData) {
-        return { success: false, error: "Student not found" };
+      if (!studentData) {
+        return { success: false, error: "Student not found with code: " + studentId };
       }
       studentDbId = studentData.id;
     }
@@ -1412,17 +1433,16 @@ export const updateEssayFile = async (
 
     // Verify session context (not used anymore, but we keep the params)
 
-    // Parse student ID
-    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
-    if (!studentDbId) {
-      const { data: studentData, error: studentError } = await supabase
+    let studentDbId = studentId;
+    if (!isUuidString(studentId)) {
+      const { data: studentData } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
-      if (studentError || !studentData) {
-        return { success: false, error: "Student not found" };
+      if (!studentData) {
+        return { success: false, error: "Student not found with code: " + studentId };
       }
       studentDbId = studentData.id;
     }
@@ -1520,17 +1540,16 @@ export const deleteEssay = async (
   activityId: string,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Parse student ID
-    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
-    if (!studentDbId) {
-      const { data: studentData, error: studentError } = await supabase
+    let studentDbId = studentId;
+    if (!isUuidString(studentId)) {
+      const { data: studentData } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
-      if (studentError || !studentData) {
-        return { success: false, error: "Student not found" };
+      if (!studentData) {
+        return { success: false, error: "Student not found with code: " + studentId };
       }
       studentDbId = studentData.id;
     }
@@ -1646,16 +1665,16 @@ export const fetchEssayByStudentAndActivity = async (
 } | null> => {
   try {
     // Parse student ID
-    let studentDbId: string | null = isUuidString(studentId) ? studentId : null;
-    if (!studentDbId) {
+    let studentDbId = studentId;
+    if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
       if (studentError || !studentData) {
-        console.error("Error finding student:", studentError);
+        console.error("Error finding student:", studentError || "No student found with code: " + studentId);
         return null;
       }
       studentDbId = studentData.id;
@@ -1725,13 +1744,13 @@ export const checkEssayGraded = async (
 ): Promise<boolean> => {
   try {
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    let studentDbId = studentId;
+    if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
       if (studentError || !studentData) {
         return false;
@@ -1828,7 +1847,7 @@ export const allowResubmission = async (
         .from("students")
         .select("id, auth_user_id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
       authUserId = studentData?.auth_user_id || null;
       studentDbId = studentData?.id || null;
     } else {
@@ -1836,7 +1855,7 @@ export const allowResubmission = async (
         .from("students")
         .select("id, auth_user_id")
         .eq("id", studentDbId)
-        .single();
+        .maybeSingle();
       authUserId = studentData?.auth_user_id || null;
     }
 
@@ -1905,15 +1924,15 @@ export const gradeEssay = async (
     onProgress?.(5, "Preparing...");
 
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
+    let studentDbId = studentId;
     let authUserId: string | null = null;
 
-    if (isNaN(studentDbId)) {
+    if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id, auth_user_id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
       if (studentError || !studentData) {
         return { success: false, error: "Student not found" };
@@ -1925,7 +1944,7 @@ export const gradeEssay = async (
         .from("students")
         .select("auth_user_id")
         .eq("id", studentDbId)
-        .single();
+        .maybeSingle();
 
       if (stdData) {
         authUserId = stdData.auth_user_id;
@@ -2541,13 +2560,13 @@ export const fetchStudentAnalysisResults = async (
 > => {
   try {
     // Parse student ID
-    let studentDbId = parseInt(studentId, 10);
-    if (isNaN(studentDbId)) {
+    let studentDbId = studentId;
+    if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
         .from("students")
         .select("id")
         .eq("student_code", studentId)
-        .single();
+        .maybeSingle();
 
       if (studentError || !studentData) {
         return [];

@@ -234,7 +234,7 @@ export function EssayTextDisplay({
       {/* Header - Institutional Transcript Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-black text-neutral-900 tracking-tight uppercase tracking-widest text-xs flex items-center gap-2">
+          <h3 className="text-xl font-bold text-neutral-900 tracking-tight uppercase tracking-widest text-xs flex items-center gap-2">
              <div className="w-1.5 h-6 bg-primary rounded-full" />
              Manuscript <span className="text-primary">Transcript</span>
           </h3>
@@ -249,12 +249,12 @@ export function EssayTextDisplay({
             ].map((item) => (
               <div key={item.type} className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-xl shadow-sm border border-neutral-100">
                 <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">{item.label}</span>
+                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{item.label}</span>
               </div>
             ))}
           </div>
           {textSegments.errors.length > 0 && (
-            <Badge variant="error" size="sm" className="rounded-xl px-3 py-1 font-black text-[9px] uppercase tracking-widest bg-error-50/50">
+            <Badge variant="error" size="sm" className="rounded-xl px-3 py-1 font-bold text-[9px] uppercase tracking-widest bg-error-50/50">
               {textSegments.errors.length} Anomalies found
             </Badge>
           )}
@@ -265,7 +265,7 @@ export function EssayTextDisplay({
       {textSegments.errors.length > 0 && (
         <div className="flex items-center gap-2 mb-4 bg-primary-50/30 p-3 rounded-2xl border border-white/40 backdrop-blur-sm">
            <Lightbulb className="w-3.5 h-3.5 text-primary" />
-           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Protocol: Interact with highlights for diagnostic depth</p>
+           <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Protocol: Interact with highlights for diagnostic depth</p>
         </div>
       )}
 
@@ -276,7 +276,7 @@ export function EssayTextDisplay({
           ref={containerRef}
           className="relative z-10 leading-loose text-neutral-800 text-[16px] selection:bg-primary/20 font-serif"
         >
-          <div className="whitespace-pre-wrap">
+          <div className="whitespace-normal text-justify">
             {textSegments.segments.map((segment: any, idx) => {
               if (segment.type === "text") {
                 return <span key={idx} className="font-medium opacity-90">{segment.text}</span>;
@@ -353,8 +353,8 @@ function InlineErrorDetails({
               <AlertTriangle className="w-5 h-5 text-error-default" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Diagnostic Alert</p>
-              <h4 className="text-sm font-black tracking-tight">{getErrorTypeLabel(error.type || "grammar")}</h4>
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none mb-1">Diagnostic Alert</p>
+              <h4 className="text-sm font-bold tracking-tight">{getErrorTypeLabel(error.type || "grammar")}</h4>
             </div>
           </div>
           <button
@@ -368,12 +368,12 @@ function InlineErrorDetails({
         {/* Detail Content */}
         <div className="p-6 space-y-4">
           <div>
-            <p className="text-lg font-black text-neutral-900 tracking-tight leading-snug">
+            <p className="text-lg font-bold text-neutral-900 tracking-tight leading-snug">
               {error.message || "Manuscript anomaly detected"}
             </p>
             {error.context && (
               <p className="text-[11px] font-medium text-neutral-400 mt-2 p-2 bg-neutral-50 rounded-xl border border-neutral-100">
-                <span className="font-black text-[9px] uppercase tracking-widest text-neutral-300 mr-2">Context Index:</span>
+                <span className="font-bold text-[9px] uppercase tracking-widest text-neutral-300 mr-2">Context Index:</span>
                 "{error.context}"
               </p>
             )}
@@ -387,7 +387,7 @@ function InlineErrorDetails({
                   <Lightbulb className="w-5 h-5" />
                </div>
               <div className="relative z-10">
-                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1.5 leading-none">AI Resolution Protocol</p>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5 leading-none">AI Resolution Protocol</p>
                 <p className="text-sm font-bold text-primary-900 leading-relaxed">
                   {error.suggestion}
                 </p>
@@ -396,7 +396,7 @@ function InlineErrorDetails({
           )}
           
           <div className="pt-2">
-             <Button variant="ghost" size="sm" className="w-full rounded-xl text-neutral-400 hover:text-primary font-black text-[9px] uppercase tracking-widest bg-neutral-50/50" onClick={onClose}>Dismiss Diagnostic</Button>
+             <Button variant="ghost" size="sm" className="w-full rounded-xl text-neutral-400 hover:text-primary font-bold text-[9px] uppercase tracking-widest bg-neutral-50/50" onClick={onClose}>Dismiss Diagnostic</Button>
           </div>
         </div>
       </div>

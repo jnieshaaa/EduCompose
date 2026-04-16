@@ -287,7 +287,7 @@ const AnalysisResults: React.FC = () => {
     plagiarismResultSavedRef.current = false; // Reset when new result is set
   }, [plagiarismResult]);
 
-  const handleAnalyze = async (text: string, title: string, essayId?: number) => {
+  const handleAnalyze = async (text: string, title: string, essayId?: string | number) => {
     if (!text.trim() || text.trim().split(/\s+/).length < 150) {
       setError('Essay must be at least 150 words for analysis');
       return;
@@ -565,7 +565,7 @@ const AnalysisResults: React.FC = () => {
       handleAnalyze(
         textToAnalyze,
         state.title || 'Essay Analysis',
-        typeof state.essayId === 'number' ? state.essayId : undefined,
+        state.essayId,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -693,18 +693,22 @@ const AnalysisResults: React.FC = () => {
         try {
           const { supabase } = await import('../lib/supabaseClient');
           
-          let studentDbId = parseInt(currentStudentId, 10);
-          if (isNaN(studentDbId)) {
+          let studentDbId = currentStudentId;
+          const { isUuidString } = await import('../services/activityService');
+          
+          if (!isUuidString(currentStudentId)) {
             const { data: studentData } = await supabase
               .from('students')
               .select('id')
               .eq('student_code', currentStudentId)
               .maybeSingle();
-            if (studentData) studentDbId = studentData.id;
+            if (studentData) {
+              studentDbId = studentData.id;
+            }
           }
           
-          const activityDbId = parseInt(currentActivityId, 10);
-          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
+          const activityDbId = currentActivityId;
+          if (studentDbId && activityDbId) {
             const { data: essayData } = await supabase
               .from('essays')
               .select('id')
@@ -851,8 +855,10 @@ const AnalysisResults: React.FC = () => {
           const { supabase } = await import('../lib/supabaseClient');
           
           // Parse student ID
-          let studentDbId = parseInt(currentStudentId, 10);
-          if (isNaN(studentDbId)) {
+          let studentDbId = currentStudentId;
+          const { isUuidString } = await import('../services/activityService');
+          
+          if (!isUuidString(currentStudentId)) {
             const { data: studentData } = await supabase
               .from('students')
               .select('id')
@@ -861,8 +867,8 @@ const AnalysisResults: React.FC = () => {
             if (studentData) studentDbId = studentData.id;
           }
           
-          const activityDbId = parseInt(currentActivityId, 10);
-          if (!isNaN(studentDbId) && !isNaN(activityDbId)) {
+          const activityDbId = currentActivityId;
+          if (studentDbId && activityDbId) {
             // Get essay_id
             const { data: essayData } = await supabase
               .from('essays')
@@ -1234,18 +1240,18 @@ const AnalysisResults: React.FC = () => {
               <div className="p-2 rounded-xl group-hover:bg-primary-50 transition-colors">
                 <ArrowLeft className="w-5 h-5" />
               </div>
-              <span className="font-black text-xs uppercase tracking-widest px-2">Back</span>
+              <span className="font-bold text-xs uppercase tracking-widest px-2">Back</span>
             </button>
             <div className="h-8 w-px bg-neutral-200/60" />
             <div>
               <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-black text-neutral-900 tracking-tight leading-none">
-                  {isPreviewMode ? 'Analysis <span className="text-primary">Preview</span>' : 'Manuscript <span className="text-primary">Diagnostic</span>'}
+                <h1 className="text-2xl font-bold text-neutral-900 tracking-tight leading-none">
+                  {isPreviewMode ? <>Analysis <span className="text-primary">Preview</span></> : <>Manuscript <span className="text-primary">Diagnostic</span></>}
                 </h1>
                 {rubricData?.rubric_name && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50/50 border border-primary-100/50 rounded-xl">
                     <BookOpen className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{rubricData.rubric_name}</span>
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{rubricData.rubric_name}</span>
                     <button
                       onClick={handlePreviewRubric}
                       className="p-1 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-primary-100"
@@ -1257,16 +1263,16 @@ const AnalysisResults: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center space-x-3 mt-1.5">
-                {analysis.word_count && <div className="flex items-center gap-1.5"><Badge variant="neutral" size="sm" className="bg-neutral-100 text-[9px] font-black uppercase rounded-md">{analysis.word_count} Words</Badge></div>}
+                {analysis.word_count && <div className="flex items-center gap-1.5"><Badge variant="neutral" size="sm" className="bg-neutral-100 text-[9px] font-bold uppercase rounded-md">{analysis.word_count} Words</Badge></div>}
                 <span className="text-neutral-300">•</span>
-                <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{new Date(analysis.generated_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">{new Date(analysis.generated_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
               </div>
             </div>
           </div>
           <Button
             variant="primary"
             onClick={handleExportPDF}
-            className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-6 px-6 font-black text-[10px] uppercase tracking-widest"
+            className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-3 px-6 font-bold text-[10px] uppercase tracking-widest"
           >
             <Download className="w-4 h-4 mr-2" />
             Export Manuscript
@@ -1322,7 +1328,7 @@ const AnalysisResults: React.FC = () => {
                     >
                       <div className="flex items-center gap-2">
                          <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                         <span className={`text-[10px] font-black uppercase tracking-widest transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{tab.label}</span>
+                         <span className={`text-[10px] font-bold uppercase tracking-widest transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{tab.label}</span>
                       </div>
                       {isActive && (
                         <motion.div

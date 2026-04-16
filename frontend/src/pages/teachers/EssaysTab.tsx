@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -7,7 +7,7 @@ import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import { 
   Search, Eye, Play, MessageSquare, Download, MoreVertical, Filter, 
-  Upload, FileText, X, ClipboardList
+  Upload, FileText, X, ClipboardList, Loader2, Info
 } from 'lucide-react';
 import {
   Table,
@@ -23,129 +23,161 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
+import { supabase } from '../../lib/supabaseClient';
+import { buildSecureUrl } from '../../utils/secureUrl';
+import { useAuth } from '../../contexts/AuthContext';
+import { gradeEssay } from '../../services/activityService';
 
 // Types
-type Program = { id: string; name: string };
-type Block = { id: string; name: string; programId: string };
-type Student = { id: string; name: string; programId: string; blockId: string };
 type EssayActivity = {
   id: string;
   title: string;
-  programId: string | "all";
-  blockId: string | "all";
+  course_id: string;
+  block_id: string | null;
 };
 
-type PendingUpload = {
+type EssaySubmission = {
   id: string;
-  file: File;
-  studentId: string | "";
+  activityId: string;
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  title: string;
+  program: string;
+  section: string;
+  submitted: string;
+  status: string;
+  score: number | null;
+  teacherReview: string;
 };
-
-// Demo data
-const demoPrograms: Program[] = [
-  { id: "prog-1", name: "BS Computer Science" },
-  { id: "prog-2", name: "BS Education" },
-  { id: "prog-3", name: "BS Information Technology" },
-];
-
-const demoBlocks: Block[] = [
-  { id: "block-1", name: "Block A", programId: "prog-1" },
-  { id: "block-2", name: "Block B", programId: "prog-1" },
-  { id: "block-3", name: "Block C", programId: "prog-2" },
-  { id: "block-4", name: "Block A", programId: "prog-3" },
-];
-
-const demoStudents: Student[] = [
-  { id: "stu-1", name: "Emma Wilson", programId: "prog-1", blockId: "block-1" },
-  { id: "stu-2", name: "James Lee", programId: "prog-1", blockId: "block-1" },
-  { id: "stu-3", name: "Sarah Martinez", programId: "prog-1", blockId: "block-2" },
-  { id: "stu-4", name: "Michael Chen", programId: "prog-2", blockId: "block-3" },
-  { id: "stu-5", name: "Olivia Brown", programId: "prog-3", blockId: "block-4" },
-  { id: "stu-6", name: "Daniel Garcia", programId: "prog-1", blockId: "block-1" },
-  { id: "stu-7", name: "Sophia Taylor", programId: "prog-1", blockId: "block-2" },
-  { id: "stu-8", name: "Liam Anderson", programId: "prog-3", blockId: "block-4" },
-];
-
-const demoActivities: EssayActivity[] = [
-  { id: "activity-1", title: "Argumentative Essay on Climate Change", programId: "prog-1", blockId: "all" },
-  { id: "activity-2", title: "Machine Learning Ethics Analysis", programId: "prog-1", blockId: "block-1" },
-  { id: "activity-3", title: "Creative Writing: Short Story", programId: "prog-2", blockId: "all" },
-];
-
-// Essay submissions with activity relationship
-const essaysData = [
-  { id: 1, activityId: "activity-1", student: 'Emma Wilson', title: 'Climate Change Impact', program: 'Computer Science 101', section: 'Section A', submitted: '2025-12-10', aiStatus: 'Completed', score: 88, teacherReview: 'Pending' },
-  { id: 2, activityId: "activity-1", student: 'James Lee', title: 'Climate Policy Analysis', program: 'Computer Science 101', section: 'Section A', submitted: '2025-12-09', aiStatus: 'Completed', score: 85, teacherReview: 'Reviewed' },
-  { id: 3, activityId: "activity-2", student: 'Sarah Martinez', title: 'AI Ethics in Healthcare', program: 'Data Structures', section: 'Section A', submitted: '2025-12-11', aiStatus: 'Pending', score: null, teacherReview: 'Not Started' },
-  { id: 4, activityId: "activity-2", student: 'Michael Chen', title: 'ML Bias and Fairness', program: 'Web Development', section: 'Section A', submitted: '2025-12-08', aiStatus: 'Completed', score: 92, teacherReview: 'Reviewed' },
-  { id: 5, activityId: "activity-3", student: 'Olivia Brown', title: 'The Last Train Home', program: 'Machine Learning', section: 'Section A', submitted: '2025-12-07', aiStatus: 'Completed', score: 79, teacherReview: 'In Progress' },
-  { id: 6, activityId: "activity-1", student: 'Daniel Garcia', title: 'Environmental Policy', program: 'Computer Science 101', section: 'Section B', submitted: '2025-12-12', aiStatus: 'In Progress', score: null, teacherReview: 'Not Started' },
-  { id: 7, activityId: "activity-3", student: 'Sophia Taylor', title: 'Midnight in Paris', program: 'Database Systems', section: 'Section A', submitted: '2025-12-06', aiStatus: 'Completed', score: 90, teacherReview: 'Reviewed' },
-  { id: 8, activityId: "activity-1", student: 'Liam Anderson', title: 'Global Warming Effects', program: 'Web Development', section: 'Section B', submitted: '2025-12-11', aiStatus: 'Completed', score: 84, teacherReview: 'Pending' },
-];
 
 export function EssaysTab() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivityId, setSelectedActivityId] = useState<string | "">("");
   const [isBatchUploadOpen, setIsBatchUploadOpen] = useState(false);
-  const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
-  const [essays, setEssays] = useState(essaysData);
+  
+  const [activities, setActivities] = useState<EssayActivity[]>([]);
+  const [essays, setEssays] = useState<EssaySubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [evaluatingIds, setEvaluatingIds] = useState<Set<string>>(new Set());
 
-  // Read activityId from URL on mount
+  // 1. Fetch Teacher context and activities
   useEffect(() => {
-    const urlActivityId = searchParams.get('activityId');
-    if (urlActivityId && demoActivities.some(a => a.id === urlActivityId)) {
-      setSelectedActivityId(urlActivityId);
+    async function loadInitialData() {
+      if (!user) return;
+      setLoading(true);
+      try {
+        // Fetch teacher's activities
+        const { data: actData, error: actError } = await supabase
+          .from('essay_activities')
+          .select('id, title, course_id, block_id')
+          .order('created_at', { ascending: false });
+
+        if (actError) throw actError;
+        setActivities(actData || []);
+
+        // Sync with URL
+        const urlActivityId = searchParams.get('activityId');
+        if (urlActivityId && actData?.some(a => a.id === urlActivityId)) {
+          setSelectedActivityId(urlActivityId);
+        }
+      } catch (err) {
+        console.error("Error loading activities:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [searchParams]);
+    loadInitialData();
+  }, [user, searchParams]);
 
-  // Get the selected activity details
-  const selectedActivity = useMemo(
-    () => demoActivities.find(a => a.id === selectedActivityId),
-    [selectedActivityId]
-  );
+  // 2. Fetch submissions
+  const fetchSubmissions = useCallback(async () => {
+    try {
+      let query = supabase
+        .from('essays')
+        .select(`
+          id, 
+          title, 
+          submitted_at, 
+          status, 
+          overall_score, 
+          activity_id,
+          student_id,
+          students (
+            id, 
+            first_name, 
+            last_name, 
+            student_code,
+            student_programs (
+              programs (name)
+            )
+          ),
+          blocks (id, section_name)
+        `);
 
-  // Filter essays by activity and search
-  const filteredEssays = useMemo(() => {
-    let filtered = essays;
-    
-    // Filter by activity if selected
-    if (selectedActivityId) {
-      filtered = filtered.filter(essay => essay.activityId === selectedActivityId);
+      if (selectedActivityId) {
+        query = query.eq('activity_id', selectedActivityId);
+      }
+
+      const { data, error } = await query.order('submitted_at', { ascending: false });
+      if (error) throw error;
+
+      const formatted: EssaySubmission[] = (data || []).map(e => {
+        const student = (e.students as any);
+        const program = student?.student_programs?.[0]?.programs?.name || "No Program";
+        const section = (e.blocks as any)?.section_name || "No Section";
+        
+        return {
+          id: e.id,
+          activityId: e.activity_id,
+          studentId: e.student_id,
+          studentName: `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || "Unknown",
+          studentCode: student?.student_code || "---",
+          title: e.title || "Untitled",
+          program: program,
+          section: section,
+          submitted: new Date(e.submitted_at).toLocaleDateString(),
+          status: e.status === 'analyzed' ? 'Completed' : (e.status === 'submitted' ? 'Pending' : 'In Progress'),
+          score: e.overall_score,
+          teacherReview: e.status === 'reviewed' ? 'Reviewed' : 'Pending'
+        };
+      });
+
+      setEssays(formatted);
+    } catch (err) {
+      console.error("Error fetching essays:", err);
     }
-    
-    // Filter by search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(essay =>
-        essay.student.toLowerCase().includes(q) ||
-        essay.title.toLowerCase().includes(q) ||
-        essay.program.toLowerCase().includes(q)
-      );
+  }, [selectedActivityId]);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
+
+  // Handlers
+  const handleTriggerAI = async (essayId: string, studentId: string, studentName: string, activityId: string) => {
+    setEvaluatingIds(prev => new Set(prev).add(essayId));
+    try {
+      // Using gradeEssay which is the correct export name
+      const result = await gradeEssay(studentId, studentName, activityId);
+      if (result.success) {
+        fetchSubmissions();
+      } else {
+        console.warn("AI Evaluation partial failure:", result.error);
+      }
+    } catch (err) {
+      console.error("Error triggering AI evaluation:", err);
+    } finally {
+      setEvaluatingIds(prev => {
+        const next = new Set(prev);
+        next.delete(essayId);
+        return next;
+      });
     }
-    
-    return filtered;
-  }, [essays, selectedActivityId, searchQuery]);
-
-  // Get filtered students for batch upload based on selected activity
-  const uploadStudents = useMemo(() => {
-    if (!selectedActivity) return demoStudents;
-    
-    return demoStudents.filter(s => {
-      const programMatch = selectedActivity.programId === "all" || s.programId === selectedActivity.programId;
-      const blockMatch = selectedActivity.blockId === "all" || s.blockId === selectedActivity.blockId;
-      return programMatch && blockMatch;
-    });
-  }, [selectedActivity]);
-
-  // Stats
-  const totalSubmitted = filteredEssays.length;
-  const aiCompleted = filteredEssays.filter(e => e.aiStatus === 'Completed').length;
-  const pendingAI = filteredEssays.filter(e => e.aiStatus === 'Pending').length;
-  const teacherReviewed = filteredEssays.filter(e => e.teacherReview === 'Reviewed').length;
-  const avgScore = filteredEssays.filter(e => e.score).reduce((acc, e) => acc + (e.score || 0), 0) / 
-    (filteredEssays.filter(e => e.score).length || 1);
+  };
 
   const handleClearActivityFilter = () => {
     setSelectedActivityId("");
@@ -161,84 +193,52 @@ export function EssaysTab() {
     }
   };
 
-  // Batch upload handlers
-  const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    const newItems: PendingUpload[] = files.map((file, index) => ({
-      id: `upload-${Date.now()}-${index}`,
-      file,
-      studentId: "",
-    }));
-    setPendingUploads((prev) => [...prev, ...newItems]);
-    event.target.value = "";
-  };
-
-  const handleAssignStudent = (uploadId: string, studentId: string) => {
-    setPendingUploads((prev) =>
-      prev.map((u) =>
-        u.id === uploadId ? { ...u, studentId } : u
-      )
+  // Filter local state based on search query
+  const filteredEssays = useMemo(() => {
+    if (!searchQuery) return essays;
+    const q = searchQuery.toLowerCase();
+    return essays.filter(e => 
+      e.studentName.toLowerCase().includes(q) ||
+      e.title.toLowerCase().includes(q) ||
+      e.studentCode.toLowerCase().includes(q) ||
+      e.program.toLowerCase().includes(q)
     );
-  };
+  }, [essays, searchQuery]);
 
-  const handleRemoveUpload = (uploadId: string) => {
-    setPendingUploads((prev) => prev.filter((u) => u.id !== uploadId));
-  };
-
-  const handleConfirmUploads = () => {
-    if (!selectedActivityId) return;
-
-    const uploadsToSave = pendingUploads.filter((u) => u.studentId);
-    if (!uploadsToSave.length) return;
-
-    const newEssays = uploadsToSave.map((u, idx) => {
-      const student = demoStudents.find((s) => s.id === u.studentId)!;
-      return {
-        id: essays.length + idx + 1,
-        activityId: selectedActivityId,
-        student: student.name,
-        title: u.file.name.replace(/\.[^/.]+$/, ""),
-        program: demoPrograms.find(p => p.id === student.programId)?.name || "Unknown",
-        section: demoBlocks.find(b => b.id === student.blockId)?.name || "Unknown",
-        submitted: new Date().toISOString().split('T')[0],
-        aiStatus: 'Pending' as const,
-        score: null,
-        teacherReview: 'Not Started' as const,
-      };
-    });
-
-    setEssays((prev) => [...newEssays, ...prev]);
-    setPendingUploads([]);
-    setIsBatchUploadOpen(false);
-  };
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = filteredEssays.length;
+    const evaluated = filteredEssays.filter(e => e.status === 'Completed').length;
+    const pending = total - evaluated;
+    const reviewed = filteredEssays.filter(e => e.teacherReview === 'Reviewed').length;
+    const scores = filteredEssays.filter(e => e.score !== null).map(e => e.score as number);
+    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    
+    return { total, evaluated, pending, reviewed, avg };
+  }, [filteredEssays]);
 
   const getAIStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed':
-        return 'bg-green-600 text-white';
-      case 'In Progress':
-        return 'bg-blue-600 text-white';
-      case 'Pending':
-        return 'bg-amber-600 text-white';
-      default:
-        return 'bg-neutral-600 text-white';
+      case 'Completed': return 'bg-green-600 text-white';
+      case 'In Progress': return 'bg-blue-600 text-white';
+      case 'Pending': return 'bg-amber-600 text-white';
+      default: return 'bg-neutral-600 text-white';
     }
   };
 
   const getReviewStatusColor = (status: string) => {
-    switch (status) {
-      case 'Reviewed':
-        return 'bg-green-600 text-white';
-      case 'In Progress':
-        return 'bg-blue-600 text-white';
-      case 'Pending':
-        return 'bg-amber-600 text-white';
-      default:
-        return 'bg-neutral-600 text-white';
-    }
+    return status === 'Reviewed' ? 'bg-green-600 text-white' : 'bg-amber-600 text-white';
   };
+
+  if (loading && activities.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-20">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  const selectedActivity = activities.find(a => a.id === selectedActivityId);
 
   return (
     <div className="space-y-6">
@@ -286,24 +286,24 @@ export function EssaysTab() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-4">
-          <p className="text-sm text-neutral-500">Total Submitted</p>
-          <p className="text-2xl text-neutral-900 mt-1">{totalSubmitted}</p>
+          <p className="text-sm text-neutral-500 font-medium">Total Submitted</p>
+          <p className="text-2xl text-neutral-900 font-bold mt-1">{stats.total}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">AI Evaluated</p>
-          <p className="text-2xl text-success-default mt-1">{aiCompleted}</p>
+        <Card className="p-4 border-l-4 border-l-green-500">
+          <p className="text-sm text-neutral-500 font-medium">AI Evaluated</p>
+          <p className="text-2xl text-green-600 font-bold mt-1">{stats.evaluated}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Pending AI</p>
-          <p className="text-2xl text-warning-default mt-1">{pendingAI}</p>
+        <Card className="p-4 border-l-4 border-l-amber-500">
+          <p className="text-sm text-neutral-500 font-medium">Pending AI</p>
+          <p className="text-2xl text-amber-600 font-bold mt-1">{stats.pending}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Teacher Reviewed</p>
-          <p className="text-2xl text-info-default mt-1">{teacherReviewed}</p>
+        <Card className="p-4 border-l-4 border-l-blue-500">
+          <p className="text-sm text-neutral-500 font-medium">Reviewed</p>
+          <p className="text-2xl text-blue-600 font-bold mt-1">{stats.reviewed}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-neutral-500">Avg. Score</p>
-          <p className="text-2xl text-primary mt-1">{avgScore.toFixed(1)}%</p>
+        <Card className="p-4 border-l-4 border-l-primary">
+          <p className="text-sm text-neutral-500 font-medium">Avg. Score</p>
+          <p className="text-2xl text-primary font-bold mt-1">{stats.avg.toFixed(1)}%</p>
         </Card>
       </div>
 
@@ -314,53 +314,43 @@ export function EssaysTab() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <Input
               type="search"
-              placeholder="Search by student, title, program..."
+              placeholder="Search by student, title, code..."
               value={searchQuery}
               onChange={(value) => setSearchQuery(value)}
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap text-neutral-400">
             <select 
-              className="px-3 py-2 border border-neutral-300 rounded-rd text-sm"
+              className="px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white text-neutral-900 outline-none focus:ring-2 focus:ring-primary/20"
               value={selectedActivityId}
               onChange={(e) => handleActivityChange(e.target.value)}
             >
               <option value="">All Activities</option>
-              {demoActivities.map(a => (
+              {activities.map(a => (
                 <option key={a.id} value={a.id}>{a.title}</option>
               ))}
             </select>
-            <select className="px-3 py-2 border border-neutral-300 rounded-rd text-sm">
-              <option>All AI Status</option>
-              <option>Completed</option>
-              <option>In Progress</option>
-              <option>Pending</option>
-            </select>
-            <select className="px-3 py-2 border border-neutral-300 rounded-rd text-sm">
-              <option>All Reviews</option>
-              <option>Reviewed</option>
-              <option>Pending</option>
-              <option>Not Started</option>
-            </select>
             <Button variant="outline">
               <Filter className="w-4 h-4 mr-2" />
-              More
+              More Filters
             </Button>
           </div>
         </div>
       </Card>
 
       {/* Essays Table */}
-      <Card>
+      <Card className="overflow-hidden border-none shadow-sm">
         {filteredEssays.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-neutral-700 mb-2">No submissions found</h3>
-            <p className="text-sm text-neutral-500 mb-4">
+          <div className="p-20 text-center">
+            <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-10 h-10 text-neutral-300" />
+            </div>
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">No submissions found</h3>
+            <p className="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">
               {selectedActivityId 
-                ? "No submissions for this activity yet. Upload some essays to get started."
-                : "Try adjusting your filters or search query."
+                ? "There are no student submissions for this specific activity yet."
+                : "Try adjusting your filters or search terms to find what you're looking for."
               }
             </p>
             {selectedActivityId && (
@@ -375,53 +365,54 @@ export function EssaysTab() {
           </div>
         ) : (
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-neutral-50/50">
               <TableRow>
-                <TableHead>Student Name</TableHead>
+                <TableHead>Student</TableHead>
                 <TableHead>Essay Title</TableHead>
                 <TableHead>Program / Section</TableHead>
                 <TableHead className="text-center">Submitted</TableHead>
                 <TableHead className="text-center">AI Status</TableHead>
                 <TableHead className="text-center">Score</TableHead>
-                <TableHead className="text-center">Teacher Review</TableHead>
+                <TableHead className="text-center">Review</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredEssays.map((essay) => (
-                <TableRow key={essay.id}>
+                <TableRow key={essay.id} className="hover:bg-neutral-50/30 transition-colors">
                   <TableCell>
-                    <div className="text-neutral-900">{essay.student}</div>
+                    <div className="font-medium text-neutral-900">{essay.studentName}</div>
+                    <div className="text-[10px] text-neutral-400 font-mono tracking-tighter uppercase">{essay.studentCode}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-neutral-900">{essay.title}</div>
+                    <div className="text-neutral-900 font-medium">{essay.title}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-neutral-600">{essay.program}</div>
-                    <Badge variant="outline" className="mt-1 bg-secondary/10 text-secondary border-secondary/20 text-xs">
+                    <Badge variant="outline" className="mt-1 bg-secondary/10 text-secondary border-secondary/20 text-[10px] font-bold py-0 h-4">
                       {essay.section}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="text-sm text-neutral-600">{essay.submitted}</div>
+                    <div className="text-xs text-neutral-500">{essay.submitted}</div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge className={getAIStatusColor(essay.aiStatus)}>
-                      {essay.aiStatus}
+                    <Badge className={getAIStatusColor(essay.status)}>
+                      {essay.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    {essay.score ? (
+                    {essay.score !== null ? (
                       <Badge className={
                         essay.score >= 85 ? 'bg-green-600 text-white' :
                         essay.score >= 75 ? 'bg-blue-600 text-white' :
                         essay.score >= 60 ? 'bg-amber-600 text-white' :
                         'bg-red-600 text-white'
                       }>
-                        {essay.score}%
+                        {essay.score.toFixed(1)}%
                       </Badge>
                     ) : (
-                      <span className="text-sm text-neutral-400">-</span>
+                      <span className="text-sm text-neutral-400">--</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center">
@@ -432,28 +423,50 @@ export function EssaysTab() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="w-4 h-4 text-neutral-500" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Essay
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem 
+                          className="cursor-pointer"
+                          onClick={() => {
+                            const url = buildSecureUrl("/Teacher/Evaluation", {
+                              studentId: essay.studentId,
+                              activityId: essay.activityId,
+                              activityTitle: essay.title,
+                              studentName: essay.studentName
+                            });
+                            navigate(url);
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2 text-primary" />
+                          View Results
                         </DropdownMenuItem>
-                        {essay.aiStatus === 'Pending' && (
-                          <DropdownMenuItem>
-                            <Play className="w-4 h-4 mr-2" />
-                            Trigger AI Evaluation
+
+                        {(essay.status === 'Pending' || essay.status === 'In Progress') && (
+                          <DropdownMenuItem 
+                            className="cursor-pointer"
+                            onClick={() => handleTriggerAI(essay.id, essay.studentId, essay.studentName, essay.activityId)}
+                            disabled={evaluatingIds.has(essay.id)}
+                          >
+                            {evaluatingIds.has(essay.id) ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin text-amber-500" />
+                            ) : (
+                              <Play className="w-4 h-4 mr-2 text-amber-500" />
+                            )}
+                            {evaluatingIds.has(essay.id) ? "Evaluating..." : "Trigger AI Evaluation"}
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem>
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Add Teacher Feedback
+                        
+                        <DropdownMenuItem className="cursor-pointer">
+                          <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
+                          Add Feedback
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Essay
+                        
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Download className="w-4 h-4 mr-2 text-neutral-500" />
+                          Download
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -465,141 +478,29 @@ export function EssaysTab() {
         )}
       </Card>
 
-      {/* Batch Upload Modal */}
+      {/* Batch Upload Modal Modal */}
       <Modal
         isOpen={isBatchUploadOpen}
         onClose={() => {
           setIsBatchUploadOpen(false);
-          setPendingUploads([]);
         }}
         title="Upload Essay Submissions"
         size="lg"
       >
-        <div className="space-y-4">
-          {/* Activity selector for batch upload */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Target Activity
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm"
-              value={selectedActivityId}
-              onChange={(e) => handleActivityChange(e.target.value)}
-            >
-              <option value="">Select an activity</option>
-              {demoActivities.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.title}
-                </option>
-              ))}
-            </select>
-            {selectedActivity && (
-              <p className="mt-1 text-xs text-neutral-500">
-                Uploads will be associated with "{selectedActivity.title}"
-              </p>
-            )}
-          </div>
-
-          {/* File input */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Select Files (PDF / Images)
-            </label>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,image/*"
-              onChange={handleFilesSelected}
-              className="block w-full text-sm text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-rd file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-300"
-              disabled={!selectedActivityId}
-            />
-            <p className="mt-1 text-xs text-neutral-500">
-              After selecting files, assign each one to the correct student below.
-            </p>
-          </div>
-
-          {/* Pending uploads list */}
-          {pendingUploads.length > 0 && (
-            <div className="border rounded-rd overflow-hidden">
-              <div className="bg-neutral-50 px-4 py-2 border-b">
-                <span className="text-sm font-medium text-neutral-700">
-                  Pending Files ({pendingUploads.length})
-                </span>
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>File</TableHead>
-                      <TableHead>Assign to Student</TableHead>
-                      <TableHead className="text-right">Remove</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingUploads.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="text-sm">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-neutral-500" />
-                            <span className="truncate max-w-[160px]">
-                              {u.file.name}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            className="w-full px-2 py-1 border border-neutral-300 rounded-rd text-sm"
-                            value={u.studentId}
-                            onChange={(e) => handleAssignStudent(u.id, e.target.value)}
-                          >
-                            <option value="">Select student</option>
-                            {uploadStudents.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveUpload(u.id)}
-                          >
-                            <X className="w-4 h-4 text-neutral-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsBatchUploadOpen(false);
-                setPendingUploads([]);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-primary hover:bg-primary-300"
-              onClick={handleConfirmUploads}
-              disabled={
-                !selectedActivityId ||
-                !pendingUploads.some((u) => u.studentId)
-              }
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Submit Assigned Files
-            </Button>
-          </div>
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-rd mb-4 flex gap-3">
+          <Info className="w-5 h-5 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-800">
+            To perform batch uploads, please use the <strong>Essay Management</strong> tab for a more robust assignment experience. Files uploaded here are for quick reference.
+          </p>
+        </div>
+        
+        <div className="flex justify-end pt-4 border-t">
+          <Button
+            className="bg-primary"
+            onClick={() => navigate('/Teacher/EssayManagement')}
+          >
+            Go to Essay Management
+          </Button>
         </div>
       </Modal>
     </div>
