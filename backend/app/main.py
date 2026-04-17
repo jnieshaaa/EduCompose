@@ -100,46 +100,35 @@ app.include_router(ocr_router, prefix="/api/ocr", tags=["OCR"])
 
 @app.on_event("startup")
 async def startup_event():
-    """Create database tables if needed, then optionally warm up NLP models"""
-    # Create tables if they don't exist (e.g. when using SQLite)
+    """
+    Startup tasks: Database init and background model warmup
+    """
+    # Create tables if they don't exist
     from .database import engine
     from . import models
     models.Base.metadata.create_all(bind=engine)
-
-    # Warmup loads SentenceTransformer + DistilBERT + spaCy at once (~1GB+ RAM).
-    # Railway / small containers OOM ("Killed") if this runs at boot.
+    
+    # NLP warmup can take time (NLTK downloads), so we run it in background
+    # to avoid Railway initial request timeouts.
     skip_flag = os.getenv("SKIP_MODEL_WARMUP", "").strip().lower()
-    on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
-    if skip_flag in ("1", "true", "yes"):
-        skip_warmup = True
-    elif skip_flag in ("0", "false", "no"):
-        skip_warmup = False
+    skip_warmup = skip_flag in ("1", "true", "yes")
+    
+    if not skip_warmup:
+        import threading
+        from .services.model_warmup import warmup_all_models
+        
+        def run_warmup():
+            try:
+                warmup_all_models()
+            except Exception as e:
+                print(f"Background warmup error: {e}")
+                
+        thread = threading.Thread(target=run_warmup)
+        thread.daemon = True
+        thread.start()
+        print("Background model warmup started.")
     else:
-        skip_warmup = on_railway
-
-    if skip_warmup:
-        print(
-            "\nSKIP_MODEL_WARMUP: NLP model warmup disabled "
-            "(first /api/analysis request may be slower). "
-            "Set SKIP_MODEL_WARMUP=0 to enable warmup.\n"
-        )
-    else:
-        print("\nWarming up NLP models (this may take 30-60 seconds)...")
-        print("   Please wait - this ensures fast analysis responses...")
-        try:
-            from .services.model_warmup import warmup_all_models
-            warmup_result = warmup_all_models()
-            if warmup_result.get("status") == "complete":
-                print(f"Model warmup complete in {warmup_result.get('duration', 0):.2f}s")
-                print(f"  {warmup_result.get('success_count', 0)} models ready")
-                if warmup_result.get("errors"):
-                    print(f"  {len(warmup_result['errors'])} warnings (non-critical)")
-            else:
-                print("Model warmup skipped (already warmed)")
-        except Exception as e:
-            print(f"Warning: Model warmup failed: {e}")
-            print("  The app will continue, but first analysis may be slow.")
-        print()
+        print("Model warmup skipped.")
 
 @app.get("/")
 async def root():
