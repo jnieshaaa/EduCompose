@@ -296,7 +296,7 @@ export function EssayTextDisplay({
                     <mark
                       id={`error-mark-${markKey}`}
                       onClick={() => handleMarkActivate(errorIndex)}
-                      className={`cursor-pointer transition-all duration-300 rounded-md px-1 font-semibold ${isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:brightness-95'}`}
+                      className={`cursor-pointer transition-all duration-300 rounded-md px-1 font-normal ${isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:brightness-95'}`}
                       style={{
                         background: color.bg,
                         color: color.text,

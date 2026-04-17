@@ -27,10 +27,9 @@ export const GradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Mark any 'grading' status as 'interrupted' on reload
-        return parsed.map((t: any) => 
-          t.status === 'grading' ? { ...t, status: 'error', message: 'Evaluation interrupted' } : t
-        );
+        // On reload, we keep the state. If it was 'grading', it stays 'grading' 
+        // (the server will still be processing it, and we can check for results)
+        return parsed;
       } catch (e) {
         return [];
       }
@@ -43,6 +42,37 @@ export const GradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   React.useEffect(() => {
     localStorage.setItem('grading_tasks', JSON.stringify(tasks));
   }, [tasks]);
+  
+  // Recovery: Check for orphaned 'grading' tasks on mount
+  React.useEffect(() => {
+    const orphanedTasks = tasks.filter(t => t.status === 'grading');
+    if (orphanedTasks.length === 0) return;
+    
+    orphanedTasks.forEach(async (task) => {
+      try {
+        const [activityId, studentId] = task.id.split('-');
+        // Wait a bit to avoid race conditions with standard flow
+        await new Promise(r => setTimeout(r, 2000));
+        
+        const { loadAIDetectionResult } = await import('../services/activityService');
+        const result = await loadAIDetectionResult(studentId, activityId);
+        
+        if (result) {
+          updateTask(task.id, { 
+            status: 'completed', 
+            progress: 100, 
+            message: 'Recovered: Evaluation found in database.' 
+          });
+          
+          setTimeout(() => {
+            setTasks(prev => prev.filter(t => t.id !== task.id));
+          }, 3000);
+        }
+      } catch (e) {
+        console.warn("Recovery failed for task:", task.id, e);
+      }
+    });
+  }, []); // Only on mount
 
   const updateTask = useCallback((id: string, updates: Partial<GradingTask>) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));

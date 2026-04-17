@@ -245,7 +245,7 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
       const title = escapeHtml(error.message || "Grammar issue");
       const errorType = error.type || "grammar";
       const color = getHighlightColor(errorType);
-      html += `<mark style="background: ${color.bg}; color: ${color.text}; padding: 0 2px; border-radius: 6px;" title="${title}">`;
+      html += `<mark style="background: ${color.bg}; color: ${color.text}; padding: 1px 2px; border-radius: 4px; font-weight: normal; cursor: help;" title="${title}">`;
       html += snippet || "\u200B";
       html += "</mark>";
       cursor = end;

@@ -305,23 +305,20 @@ class ArgumentMiner:
         return None
     
     def _extract_claims(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Extract claim statements using pattern matching or transformer classifier"""
+        """Extract claim statements using a hybrid of transformer classifier and pattern matching"""
         claims = []
+        found_indices = set()
         
-        # Try transformer-based classification first if available
+        # 1. Try transformer-based classification
         transformer_classifier = self._ensure_transformer_classifier_loaded()
         if transformer_classifier:
             try:
-                # Classify all sentences with transformer
                 classifications = transformer_classifier.classify_sentences(sentences)
-                
-                # Extract sentences classified as claims
                 for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
                     component = classification.get("component", "unknown")
                     confidence = classification.get("confidence", 0.0)
                     
-                    # Map transformer components to claims
-                    if component in ["claim", "premise"] and confidence > 0.5:
+                    if component in ["claim", "premise"] and confidence > 0.4: # Lowered threshold slightly for base model
                         claims.append({
                             "sentence_index": i,
                             "sentence": sentence,
@@ -330,21 +327,15 @@ class ArgumentMiner:
                             "confidence": confidence,
                             "classification_method": "transformer"
                         })
-                
-                # If transformer found claims, use them exclusively
-                if claims:
-                    logger.debug(f"Found {len(claims)} claims using transformer classifier")
-                    if self._transformer_available:
-                        return claims
+                        found_indices.add(i)
             except Exception as e:
-                logger.warning(f"Transformer classification failed: {e}. Falling back to pattern matching.")
+                logger.warning(f"Transformer classification failed: {e}")
         
-        # Fallback to pattern-based extraction
-        text_lower = text.lower()
-        found_indices = set()
-        
-        # Pattern-based extraction for explicit claims
+        # 2. Pattern-based extraction (supplemental)
         for i, sentence in enumerate(sentences):
+            if i in found_indices:
+                continue
+            
             sentence_lower = sentence.lower()
             for indicator in self.claim_indicators:
                 if indicator in sentence_lower:
@@ -357,7 +348,7 @@ class ArgumentMiner:
                     })
                     found_indices.add(i)
                     break
-        
+                    
         return claims
     
     def _extract_grounds(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:

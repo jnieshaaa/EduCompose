@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
+import { motion, AnimatePresence } from "framer-motion";
 import type { NodeObject, LinkObject, GraphData } from "react-force-graph-2d";
 import type {
   ArgumentGraphData,
@@ -327,39 +328,30 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
               </div>
             )}
 
-            {/* Tooltip for nodes - appears next to mouse cursor */}
+            {/* High-Visibility Tooltip for nodes */}
             {hoveredNode && (
               <div
-                className="fixed z-50 pointer-events-none transition-opacity duration-300"
+                className="fixed pointer-events-none bg-neutral-900/95 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl transition-opacity duration-150"
                 style={{
-                  left: `${mousePos.x + 10}px`,
-                  top: `${mousePos.y + 10}px`,
+                  left: `${mousePos.x + 15}px`,
+                  top: `${mousePos.y - 60}px`, 
+                  zIndex: 99999, // Extremely high z-index to clear modals
+                  width: '240px',
+                  opacity: hoveredNode ? 1 : 0
                 }}
               >
-                <div className="bg-black bg-opacity-75 text-white text-sm rounded-md p-2 max-w-xs border border-neutral-700 shadow-xl">
-                  <div className="font-semibold mb-1">
-                    {hoveredNode.type.charAt(0).toUpperCase() + hoveredNode.type.slice(1)}: 
-                  </div>
-                  <p className="text-white leading-relaxed">
-                    {hoveredNode.text || "No text available"}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Tooltip for links - appears next to mouse cursor */}
-            {hoveredLink && !hoveredNode && (
-              <div
-                className="fixed z-50 pointer-events-none transition-opacity duration-200"
-                style={{
-                  left: `${mousePos.x + 10}px`,
-                  top: `${mousePos.y + 10}px`,
-                }}
-              >
-                <div className="bg-neutral-800 text-white text-xs rounded-md shadow-xl px-3 py-2 border border-neutral-600">
-                  <span className="font-semibold uppercase text-[10px] text-neutral-300 tracking-wide whitespace-nowrap">
-                    {hoveredLink.type?.toUpperCase() || "CONNECTION"}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full shadow-[0_0_8px] shadow-current" style={{ color: NODE_COLORS[hoveredNode.type] || '#fff', backgroundColor: 'currentColor' }} />
+                  <span className="font-bold uppercase tracking-[0.2em] text-[10px] text-white/50">
+                    {hoveredNode.type}
                   </span>
+                </div>
+                <p className="text-white text-xs leading-relaxed font-medium line-clamp-4">
+                  "{hoveredNode.text || "Structural element"}"
+                </p>
+                <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
+                  <span className="text-[9px] text-white/30 truncate">Toulmin's Protocol Node</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-success-default animate-pulse" />
                 </div>
               </div>
             )}
