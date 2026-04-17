@@ -27,6 +27,10 @@ export function EditStudentDialog({
   if (!editingStudent) return null;
 
   const handleSubmit = () => {
+    if (!editingStudent.first_name || !editingStudent.last_name || !editingStudent.email || !editingStudent.student_code || !editingStudent.birthday) {
+      // Small simple validation since this component is simpler
+      return;
+    }
     onSubmit(editingStudent.id, editingStudent);
   };
 
@@ -39,36 +43,50 @@ export function EditStudentDialog({
         <div className="space-y-4 mt-4 text-sm">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label>Student ID / Code</Label>
+              <Label>Student ID / Code*</Label>
               <Input
+                required
                 className="mt-1"
                 value={editingStudent.student_code}
                 onChange={(val) => onStudentChange({ ...editingStudent, student_code: val })}
               />
             </div>
             <div>
-              <Label>First Name</Label>
+              <Label>First Name*</Label>
               <Input
+                required
                 className="mt-1"
                 value={editingStudent.first_name}
                 onChange={(val) => onStudentChange({ ...editingStudent, first_name: val })}
               />
             </div>
             <div>
-              <Label>Last Name</Label>
+              <Label>Last Name*</Label>
               <Input
+                required
                 className="mt-1"
                 value={editingStudent.last_name}
                 onChange={(val) => onStudentChange({ ...editingStudent, last_name: val })}
               />
             </div>
             <div className="col-span-2">
-              <Label>Email</Label>
+              <Label>Email*</Label>
               <Input
+                required
                 type="email"
                 className="mt-1"
                 value={editingStudent.email}
                 onChange={(val) => onStudentChange({ ...editingStudent, email: val })}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Birthday*</Label>
+              <Input
+                required
+                type="date"
+                className="mt-1"
+                value={editingStudent.birthday || ""}
+                onChange={(val) => onStudentChange({ ...editingStudent, birthday: val })}
               />
             </div>
             <div>

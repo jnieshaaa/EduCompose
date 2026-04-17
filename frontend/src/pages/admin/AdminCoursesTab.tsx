@@ -101,8 +101,8 @@ export const AdminCoursesTab: React.FC = () => {
         .select(`
           *,
           schools(name),
-          departments(name),
-          programs_lookup(id, name),
+          departments(name, code),
+          programs_lookup(id, name, abbr),
           users:user_id(first_name, last_name)
         `)
         .order("created_at", { ascending: false });
@@ -486,8 +486,8 @@ export const AdminCoursesTab: React.FC = () => {
                     <td className="px-4 py-4">
                       <div className="text-xs text-neutral-600 font-medium">{course.schools?.name}</div>
                       <div className="text-[10px] text-neutral-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                        {course.departments?.name} 
-                        {course.programs_lookup?.name && ` • ${course.programs_lookup.name}`}
+                        {course.departments?.code || course.departments?.name} 
+                        {course.programs_lookup && ` • ${course.programs_lookup.abbr || course.programs_lookup.name}`}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">

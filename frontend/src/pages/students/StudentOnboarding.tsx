@@ -36,6 +36,7 @@ interface StudentData {
     abbr: string;
     departments?: {
       name: string;
+      code?: string;
       schools?: {
         name: string;
       };
@@ -90,6 +91,7 @@ const StudentOnboarding: React.FC = () => {
               abbr,
               departments (
                 name,
+                code,
                 schools (
                   name
                 )
@@ -115,6 +117,7 @@ const StudentOnboarding: React.FC = () => {
                 abbr,
                 departments (
                   name,
+                  code,
                   schools (
                     name
                   )
@@ -513,7 +516,7 @@ const StudentOnboarding: React.FC = () => {
                           Department & School
                         </p>
                         <p className="text-sm font-semibold text-neutral-700">
-                          {studentData?.programs_lookup?.departments?.name ||
+                          {studentData?.programs_lookup?.departments?.code || studentData?.programs_lookup?.departments?.name ||
                             "---"}
                         </p>
                         <p className="text-xs text-neutral-500">

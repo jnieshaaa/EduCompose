@@ -84,7 +84,7 @@ export function ArchivePage() {
                 <span>{selectedCourse.term}</span>
               </div>
               <h1 className="text-3xl font-bold text-neutral-900">{selectedCourse.course_title}</h1>
-              <p className="text-neutral-500">{selectedCourse.course_code} | {selectedCourse.programs_lookup?.name}</p>
+              <p className="text-neutral-500">{selectedCourse.course_code} | {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
             </div>
             <div className="p-3 bg-primary-50 rounded-xl">
               <Layers className="w-8 h-8 text-primary" />
@@ -308,7 +308,7 @@ export function ArchivePage() {
                         <div className="pt-4 border-t border-neutral-100 flex items-center justify-between text-neutral-500">
                             <div className="flex items-center text-xs font-medium">
                                 <BookOpen className="w-4 h-4 mr-2" />
-                                <span>{course.departments?.name || "General"}</span>
+                                <span>{course.departments?.code || course.departments?.name || "General"}</span>
                             </div>
                             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform text-neutral-300" />
                         </div>

@@ -99,8 +99,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
           courses (
             *,
             schools(name),
-            departments(name),
-            programs_lookup(name)
+            departments(name, code),
+            programs_lookup(name, abbr)
           )
         `)
         .eq("teacher_id", info.auth_user_id);
@@ -134,8 +134,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .select(`
           *,
           schools(name),
-          departments(name),
-          programs_lookup(name)
+          departments(name, code),
+          programs_lookup(name, abbr)
         `)
         .eq("school_id", info.school_id)
         .or(`department_id.eq.${info.department_id},department_id.is.null`)
@@ -149,8 +149,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .select(`
           *,
           schools(name),
-          departments(name),
-          programs_lookup(name)
+          departments(name, code),
+          programs_lookup(name, abbr)
         `)
         .eq("school_id", info.school_id)
         .order("course_code", { ascending: true });
@@ -228,8 +228,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .select(`
             *,
             schools(name),
-            departments(name),
-            programs_lookup(name)
+            departments(name, code),
+            programs_lookup(name, abbr)
           `)
         .single();
 

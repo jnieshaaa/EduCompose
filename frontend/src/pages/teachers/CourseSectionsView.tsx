@@ -456,13 +456,14 @@ export function CourseSectionsView({
             {!selectedProgramLoad && (
               <div className="flex gap-2 items-center mt-1">
                 <span className="text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
-                  {course.departments?.name ||
+                  {course.departments?.code ||
+                    course.departments?.name ||
                     course.department ||
                     "General Subject"}
                 </span>
-                {course.programs_lookup?.name && (
+                {course.programs_lookup && (
                   <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                    {course.programs_lookup.name}
+                    {course.programs_lookup.abbr || course.programs_lookup.name}
                   </span>
                 )}
               </div>

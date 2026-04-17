@@ -287,7 +287,7 @@ export function CoursesTab() {
                   </div>
                   <h3 className="text-lg font-bold text-neutral-900 mb-1 leading-tight">{course.course_title}</h3>
                   <div className="flex items-center gap-2 mb-4">
-                    <p className="text-sm text-neutral-500">{course.department || course.departments?.name || "General Course"}</p>
+                    <p className="text-sm text-neutral-500">{course.departments?.code || course.department || course.departments?.name || "General Course"}</p>
                     {isAdded && activeTab !== "my" && (
                         <span className="text-[10px] font-bold text-success-default uppercase bg-success-default/10 px-2 py-0.5 rounded-full">
                             In My Loads

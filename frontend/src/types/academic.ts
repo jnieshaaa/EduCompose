@@ -43,8 +43,8 @@ export interface Course {
   semester?: string;
   // For joined data
   schools?: { name: string };
-  departments?: { name: string };
-  programs_lookup?: { name: string };
+  departments?: { name: string; code?: string };
+  programs_lookup?: { name: string; abbr?: string };
   users?: { first_name: string; last_name: string };
 }
 
@@ -59,6 +59,7 @@ export interface Student {
   block_name: string;
   program_id: string;
   teacher_id?: string;
+  birthday?: string;
   created_at?: string;
   block_students?: { 
     block_id: string;

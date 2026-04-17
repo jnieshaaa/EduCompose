@@ -7,13 +7,6 @@ import { supabase } from "../lib/supabaseClient";
 import { authApi } from "../api";
 import { sendCodeEmail, sendSignupCodeEmail } from "../services/emailService";
 
-interface UserMetadata {
-  full_name?: string;
-  name?: string;
-  role?: string;
-  [key: string]: unknown;
-}
-
 export type AuthView = "login" | "signup" | "forgot-password";
 
 export type SignupStep = "form" | "accountCreated" | "verifyCode";
@@ -105,15 +98,50 @@ export function useAuthModal(onClose: () => void) {
       }
 
       if (data.session && data.user) {
-        const userMeta = (data.user.user_metadata || {}) as UserMetadata;
-        const role = (userMeta.role as string) || "teacher";
+        console.log("Login successful. Checking roles for Auth ID:", data.user.id);
+
+        // Fetch role from the public 'users' table (source of truth)
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role, full_name")
+          .eq("auth_user_id", data.user.id)
+          .maybeSingle();
+
+        console.log("Database lookup (users table):", userData);
+
+        let role = "teacher"; // Default
+        let fullName = data.user.email?.split("@")[0] || "User";
+
+        if (userData) {
+          role = userData.role;
+          fullName = userData.full_name || fullName;
+        } else {
+          console.log("User not found in 'users' table. Checking 'students' table...");
+          // If not in users table, check if it's a student
+          const { data: studentData } = await supabase
+            .from("students")
+            .select("id, first_name, last_name")
+            .eq("auth_user_id", data.user.id)
+            .maybeSingle();
+          
+          console.log("Database lookup (students table):", studentData);
+          
+          if (studentData) {
+            role = "student";
+            fullName = `${studentData.first_name} ${studentData.last_name}`;
+          }
+        }
+
+        console.log("Final determined role:", role);
 
         // Block students from logging in via the Teacher/Admin portal
         if (role === "student") {
+          console.log("BLOCKING LOGIN: Student attempted to access teacher portal.");
           await supabase.auth.signOut();
           setLoginError(
             "Student accounts must use the Student Login page."
           );
+          setIsLoggingIn(false);
           return;
         }
 
@@ -123,12 +151,6 @@ export function useAuthModal(onClose: () => void) {
         } else {
           localStorage.removeItem("rememberedLoginEmail");
         }
-
-        const fullName =
-          (userMeta.full_name as string | undefined) ||
-          (userMeta.name as string | undefined) ||
-          data.user.email?.split("@")[0] ||
-          "Teacher";
 
         login(data.session.access_token, {
           id: data.user.id,
@@ -202,33 +224,95 @@ export function useAuthModal(onClose: () => void) {
     }
 
     setIsSigningUp(true);
+    const normalizedEmail = signupEmail.trim().toLowerCase();
 
     try {
+      // 1. Direct Database Checks (Fast fail)
+      const checkResult = await authApi.checkEmail(normalizedEmail);
+      if (checkResult.exists) {
+        setSignupError(checkResult.message || "Email already registered.");
+        setIsSigningUp(false);
+        return;
+      }
+
+      // 2. ULTIMATE CHECK: Try to sign up via Supabase Auth immediately
+      // This is the only way to check if the email exists in Supabase's internal auth table
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            display_name: normalizedEmail.split("@")[0],
+            role: "teacher",
+          },
+        },
+      });
+
+      if (signUpError) {
+        if (signUpError.message?.toLowerCase().includes("already registered") || signUpError.status === 422) {
+          setSignupError("Email already registered.");
+          setIsSigningUp(false);
+          return;
+        }
+        throw signUpError;
+      }
+
+      // If identities is empty, it also means it's already registered in some cases
+      if (signUpData.user?.identities?.length === 0) {
+        setSignupError("Email already registered.");
+        setIsSigningUp(false);
+        return;
+      }
+
       const code = generateSignupCode();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
       const { error: insertError } = await supabase
         .from("signup_verification_codes")
         .insert({
-          email: signupEmail.trim().toLowerCase(),
+          email: normalizedEmail,
           code,
           expires_at: expiresAt,
         });
 
       if (insertError) throw insertError;
 
+      console.log("Sending verification email...");
       await sendSignupCodeEmail({
         toEmail: signupEmail.trim(),
         code,
       });
 
+      console.log("Signup initialization successful. Moving to confirmation step.");
       setSignupStep("accountCreated");
+      startResendTimer();
     } catch (err: unknown) {
+      console.error("Signup error:", err);
       const message = err instanceof Error ? err.message : String(err);
       setSignupError(message || "Registration failed. Please try again.");
     } finally {
       setIsSigningUp(false);
     }
+  };
+
+  // Signup countdown timer
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // Handle countdown logic
+  useEffect(() => {
+    let interval: any;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resendTimer]);
+
+  const startResendTimer = () => {
+    setResendTimer(60);
   };
 
   const handleSignupGotIt = () => {
@@ -260,66 +344,52 @@ export function useAuthModal(onClose: () => void) {
         return;
       }
 
-      const { data: signUpData, error: signUpError } =
-        await supabase.auth.signUp({
-          email: signupEmail.trim(),
-          password: signupPassword,
-          options: {
-            data: {
-              display_name: signupEmail.trim().split("@")[0],
-              role: "teacher",
-            },
-          },
-        });
-
-      if (signUpError) {
-        if (signUpError.message?.includes("already registered")) {
-          setSignupError("Email already registered.");
-          return;
-        }
-        throw signUpError;
-      }
-
-      if (signUpData.user?.identities?.length === 0) {
-        setSignupError("Email already registered.");
-        return;
-      }
+      // Step 2 no longer needs to call supabase.auth.signUp because we did it in Step 1
+      // We just need to check if we have a session or if we need to log in
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
 
       // Upsert the user into the users table with role='teacher'
-      if (signUpData.user) {
-        await supabase.from("users").upsert(
+      if (user) {
+        const { error: upsertError } = await supabase.from("users").upsert(
           {
-            auth_user_id: signUpData.user.id,
+            auth_user_id: user.id,
             email: signupEmail.trim().toLowerCase(),
             role: "teacher",
-            full_name: signupEmail.trim().split("@")[0],
+            first_name: signupEmail.trim().split("@")[0],
             is_active: true,
           },
           { onConflict: "auth_user_id" }
         );
+
+        if (upsertError) {
+          console.error("Failed to create user record in public.users:", upsertError);
+          setSignupError("Account verified but failed to set up profile. Please contact support.");
+          setIsVerifyingSignup(false);
+          return;
+        }
       }
 
-      if (signUpData.session && signUpData.user) {
-        const userMeta = (signUpData.user.user_metadata || {}) as UserMetadata;
-        login(signUpData.session.access_token, {
-          id: signUpData.user.id,
-          auth_id: signUpData.user.id,
-          email: signUpData.user.email ?? "",
-          username: signUpData.user.email ?? "",
-          full_name:
-            (userMeta.full_name as string) ||
-            (userMeta.name as string) ||
-            signUpData.user.email?.split("@")[0] ||
-            "Teacher",
+      if (session && user) {
+        login(session.access_token, {
+          id: user.id,
+          auth_id: user.id,
+          email: user.email ?? "",
+          username: user.email ?? "",
+          full_name: user.email?.split("@")[0] || "Teacher",
           role: "teacher",
           is_active: true,
           email_verified: true,
         });
-        navigate("/Teacher/Dashboard");
-        onClose();
+        
+        // Use window.location.href for a hard redirect as a last resort if navigate fails
+        setTimeout(() => {
+          navigate("/Teacher/Dashboard");
+          onClose();
+        }, 100);
       } else {
         setSignupSuccess(
-          "Account created! Please log in with your email and password.",
+          "Verification successful! Please log in with your email and password.",
         );
         setView("login");
         setLoginEmail(signupEmail.trim());
@@ -355,6 +425,7 @@ export function useAuthModal(onClose: () => void) {
       });
 
       setSignupSuccess("Verification code sent again to your email.");
+      startResendTimer();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setSignupError(message || "Failed to resend code.");
@@ -592,6 +663,7 @@ export function useAuthModal(onClose: () => void) {
     handleResendSignupCode,
     isVerifyingSignup,
     isResendingSignupCode,
+    resendTimer,
     // Forgot password state
     forgotEmail,
     setForgotEmail,

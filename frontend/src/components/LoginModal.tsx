@@ -51,6 +51,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     handleResendSignupCode,
     isVerifyingSignup,
     isResendingSignupCode,
+    resendTimer,
     // Forgot password
     forgotEmail,
     setForgotEmail,
@@ -146,10 +147,10 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 <button
                   type="button"
                   onClick={handleResendSignupCode}
-                  disabled={isResendingSignupCode}
-                  className="text-primary-500 font-medium hover:underline disabled:opacity-50"
+                  disabled={isResendingSignupCode || resendTimer > 0}
+                  className="text-primary-500 font-medium hover:underline disabled:opacity-50 disabled:no-underline"
                 >
-                  Resend Code
+                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
                 </button>
               </p>
             </div>

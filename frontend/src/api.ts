@@ -78,17 +78,31 @@ const apiRequest = async <T>(
 export const authApi = {
   checkEmail: async (email: string) => {
     try {
-      const { data, error } = await supabase
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      // 1. Check users table (Teachers/Admins)
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("email")
-        .eq("email", email.trim().toLowerCase())
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
-      if (error) throw error;
+      if (userError) throw userError;
+      if (userData) return { exists: true, message: "Email already registered." };
+
+      // 2. Check students table
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (studentError) throw studentError;
+      if (studentData) return { exists: true, message: "Email already registered as a student account." };
       
       return {
-        exists: !!data,
-        message: data ? "Email exists." : "No account found with this email address.",
+        exists: false,
+        message: "Email is available.",
       };
     } catch (err: unknown) {
       console.error("Check email error:", err);

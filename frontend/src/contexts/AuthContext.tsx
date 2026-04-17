@@ -127,22 +127,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch { return null; }
   };
 
-  const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
+  const mapSupabaseUser = async (supabaseUser: any): Promise<User | null> => {
     const su = supabaseUser;
     const userFromTable = await fetchUserFromTable(su.id);
-    if (userFromTable) return userFromTable;
+    
+    // If the account was deleted from the database but still exists in Auth (stale session)
+    // we should treat it as null so the app forces a logout
+    if (!userFromTable) {
+      console.warn("User still has auth session but no database record found. Forcing logout check.");
+      return null; 
+    }
 
-    const metadata = su.user_metadata || {};
-    return {
-      id: su.id,
-      auth_id: su.id,
-      email: su.email || "",
-      username: metadata.username || su.email || "User",
-      full_name: metadata.full_name || metadata.display_name || su.email?.split("@")[0] || "Teacher",
-      role: metadata.role || "teacher",
-      is_active: true,
-      email_verified: !!su.email_confirmed_at,
-    };
+    return userFromTable;
   };
 
   const checkAuth = async () => {
@@ -150,15 +146,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (sessionError || !session || !session.user) {
-        if (sessionError && isNetworkDisconnectError(sessionError.message)) return;
+      if (sessionError) {
+        if (isNetworkDisconnectError(sessionError.message)) return;
+        
+        // If 403 or 401, clear session
+        if ((sessionError as any).status === 403 || (sessionError as any).status === 401) {
+          console.error("Auth session invalid (403/401). Clearing session...");
+          await logout();
+          return;
+        }
+        
         setUser(null);
         return;
       }
 
-      // Single Session Safety - Removed to prevent false positives during token refreshes
+      if (!session || !session.user) {
+        setUser(null);
+        return;
+      }
 
       const mappedUser = await mapSupabaseUser(session.user);
+      if (!mappedUser) {
+        // If we have a session but no database record, sign the user out
+        console.error("Authenticated but record not found in database. Signing out...");
+        await logout("Account record no longer exists. Please sign up again.");
+        return;
+      }
+      
       setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);

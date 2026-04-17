@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, UserPlus, Loader2, Mail, Hash, User } from "lucide-react";
+import { X, UserPlus, Loader2, Mail, Hash, User, Calendar } from "lucide-react";
 import { useStudents } from "../../hooks/useStudents";
 import Button from "../../components/ui/Button";
 
@@ -25,6 +25,7 @@ export function AddStudentDialog({
     middle_name: "",
     last_name: "",
     email: "",
+    birthday: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +33,7 @@ export function AddStudentDialog({
     if (isSubmitting) return;
     setError(null);
 
-    if (!formData.student_code || !formData.first_name || !formData.last_name) {
+    if (!formData.student_code || !formData.first_name || !formData.last_name || !formData.email || !formData.birthday) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -46,6 +47,7 @@ export function AddStudentDialog({
         middle_name: "",
         last_name: "",
         email: "",
+        birthday: "",
       });
       if (onSuccess) onSuccess();
       onClose();
@@ -154,15 +156,30 @@ export function AddStudentDialog({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Email (Optional)</label>
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Email*</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
                 <input
+                  required
                   type="email"
                   placeholder="juan.cruz@email.com"
                   className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Birthday*</label>
+              <div className="relative group">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
+                <input
+                  required
+                  type="date"
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
+                  value={formData.birthday}
+                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                 />
               </div>
             </div>
