@@ -18,8 +18,8 @@ import {
 } from "../ui/dropdown-menu";
 import { 
   MoreVertical, 
-  Eye, 
-  Edit, 
+  // Eye, 
+  // Edit, 
   Trash2, 
   ChevronLeft, 
   ChevronRight, 
@@ -41,9 +41,9 @@ interface StudentsTableViewProps {
 export function StudentsTableView({
   students,
   urlSectionFilter,
-  onEditStudent,
+  // onEditStudent,
   onDeleteStudent,
-  onViewEssayHistory,
+  // onViewEssayHistory,
   isLoading = false,
 }: StudentsTableViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,7 +190,7 @@ export function StudentsTableView({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align='end' className="w-48 p-2 rounded-xl shadow-xl border border-neutral-100 animate-in fade-in zoom-in duration-200">
-                      <DropdownMenuItem
+                      {/* <DropdownMenuItem
                         className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -199,8 +199,8 @@ export function StudentsTableView({
                       >
                         <Eye className='w-4 h-4 text-primary' />
                         View History
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
+                      </DropdownMenuItem> */}
+                      {/* <DropdownMenuItem
                         className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -209,8 +209,8 @@ export function StudentsTableView({
                       >
                         <Edit className='w-4 h-4 text-amber-500' />
                         Edit Student
-                      </DropdownMenuItem>
-                      <div className="my-1 border-t border-neutral-100" />
+                      </DropdownMenuItem> */}
+                      {/* <div className="my-1 border-t border-neutral-100" /> */}
                       <DropdownMenuItem
                         className='flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg cursor-pointer font-medium'
                         onClick={(e) => {

@@ -14,11 +14,10 @@ import Button from "../ui/Button";
 import Input from "../ui/Input";
 import {
   DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuContent,
 } from "../ui/dropdown-menu";
-import { useNotification } from "../../context/NotificationContext";
 import type { RubricTemplate, PlatformRubric } from "../../types/rubricTypes";
 import { platformRubrics } from "./types";
 import { EmptyRubricState } from "./EmptyRubricState";
@@ -59,7 +58,6 @@ export function RubricsListView({
   onEditRubric,
   onDeleteRubric,
 }: RubricsListViewProps) {
-  const { showNotification } = useNotification();
   const filteredPlatformRubrics = (platformRubrics || []).filter(
     (rubric) =>
       rubric.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -212,7 +210,7 @@ export function RubricsListView({
                                     "Error exporting to PDF:",
                                     error
                                   );
-                                  showNotification('error', "Failed to export rubric to PDF");
+                                  alert("Failed to export rubric to PDF");
                                 }
                               }}
                             >
@@ -240,7 +238,7 @@ export function RubricsListView({
                                     "Error exporting to Excel:",
                                     error
                                   );
-                                  showNotification('error', "Failed to export rubric to Excel");
+                                  alert("Failed to export rubric to Excel");
                                 }
                               }}
                             >

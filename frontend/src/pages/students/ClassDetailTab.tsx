@@ -115,7 +115,7 @@ export function ClassDetailTab() {
           }
         }
 
-        console.log("Context - Course:", tcl.course_id, "Block:", currentBlockId, "Program:", programId);
+        // console.log("Context - Course:", tcl.course_id, "Block:", currentBlockId, "Program:", programId);
         setBlockId(currentBlockId);
 
         const instructors = Array.isArray(tcl.users) ? tcl.users : (tcl.users ? [tcl.users] : []);
