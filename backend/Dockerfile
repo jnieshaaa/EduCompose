@@ -40,8 +40,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     fi && \
     pip install --no-cache-dir -r requirements.txt
 
-# Download spaCy model
-RUN python -m spacy download en_core_web_sm
+# Download spaCy models
+RUN python -m spacy download en_core_web_sm && \
+    python -m spacy download en_core_web_md
 
 # Pre-download NLTK into NLTK_DATA (runtime must match this path)
 RUN mkdir -p /opt/nltk_data && python -c "import nltk; nltk.download('punkt', download_dir='/opt/nltk_data'); nltk.download('averaged_perceptron_tagger', download_dir='/opt/nltk_data')"

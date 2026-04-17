@@ -71,7 +71,7 @@ class TransformerClaimClassifier:
             os.getenv("HF_API_TOKEN") or 
             os.getenv("HUGGINGFACE_API_TOKEN")
         )
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "przvl/persuasive_essays_distilbert_uncased")
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "distilbert-base-uncased")
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
