@@ -39,6 +39,7 @@ import { NotificationsTab } from "./pages/students/NotificationsTab.tsx"; // Cre
 import { StudentSettingsTab } from "./pages/students/StudentSettingsTab.tsx"; // Create this file
 import { MyClassesTab } from "./pages/students/MyClassesTab.tsx"; // Create this file
 import { ClassDetailTab } from "./pages/students/ClassDetailTab.tsx"; // Create this file
+import { EssayResultTranscript } from "./pages/students/EssayResultTranscript.tsx";
 import HelpPage from "./pages/general/HelpPage.tsx";
 
 // General/Legacy Imports (kept for reference or removal later)
@@ -202,6 +203,7 @@ const AppContent: React.FC = () => {
           <Route path="Classes/:classId" element={<ClassDetailTab />} />
           <Route path="Submit" element={<SubmitEssayTab />} />
           <Route path="Essays" element={<MyEssaysTab />} />
+          <Route path="Essays/Result" element={<EssayResultTranscript />} />
           <Route path="Feedback" element={<AIFeedbackTab />} />
           <Route path="Progress" element={<ProgressTab />} />
           <Route path="Rubric" element={<RubricTab />} />

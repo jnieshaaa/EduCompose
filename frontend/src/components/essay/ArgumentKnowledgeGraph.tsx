@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ForceGraph2D from "react-force-graph-2d";
-import { motion, AnimatePresence } from "framer-motion";
-import type { NodeObject, LinkObject, GraphData } from "react-force-graph-2d";
+import ForceGraph2D, { type NodeObject, type LinkObject, type GraphData } from "react-force-graph-2d";
 import type {
   ArgumentGraphData,
   ArgumentMetrics,
@@ -41,7 +39,6 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 320 });
   const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
-  const [hoveredLink, setHoveredLink] = useState<ForceLink | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -225,15 +222,12 @@ const ArgumentKnowledgeGraph: React.FC<ArgumentKnowledgeGraphProps> = ({
                 }}
                 onNodeHover={(node: ForceNode | null) => {
                   setHoveredNode(node);
-                  setHoveredLink(null);
                 }}
-                onLinkHover={(link: ForceLink | null) => {
-                  setHoveredLink(link);
+                onLinkHover={() => {
                   setHoveredNode(null);
                 }}
                 onBackgroundClick={() => {
                   setHoveredNode(null);
-                  setHoveredLink(null);
                 }}
                 nodeCanvasObject={(node: ForceNode, ctx) => {
                   const color = NODE_COLORS[node.type] || "#0f172a";

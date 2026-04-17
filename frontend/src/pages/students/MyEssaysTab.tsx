@@ -231,7 +231,7 @@ export function MyEssaysTab() {
                         <DropdownMenuItem 
                           className="cursor-pointer font-medium" 
                           onClick={() => {
-                            const url = buildSecureUrl("/Student/Feedback", {
+                            const url = buildSecureUrl("/Student/Essays/Result", {
                               essayId: essay.id,
                               activityId: essay.activityId,
                               activityTitle: essay.title,
