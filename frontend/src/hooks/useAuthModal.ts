@@ -105,6 +105,18 @@ export function useAuthModal(onClose: () => void) {
       }
 
       if (data.session && data.user) {
+        const userMeta = (data.user.user_metadata || {}) as UserMetadata;
+        const role = (userMeta.role as string) || "teacher";
+
+        // Block students from logging in via the Teacher/Admin portal
+        if (role === "student") {
+          await supabase.auth.signOut();
+          setLoginError(
+            "Student accounts must use the Student Login page."
+          );
+          return;
+        }
+
         // Handle Remember Me
         if (loginRememberMe) {
           localStorage.setItem("rememberedLoginEmail", loginEmail.trim());
@@ -112,7 +124,6 @@ export function useAuthModal(onClose: () => void) {
           localStorage.removeItem("rememberedLoginEmail");
         }
 
-        const userMeta = (data.user.user_metadata || {}) as UserMetadata;
         const fullName =
           (userMeta.full_name as string | undefined) ||
           (userMeta.name as string | undefined) ||
@@ -125,16 +136,13 @@ export function useAuthModal(onClose: () => void) {
           email: data.user.email ?? "",
           username: data.user.email ?? "",
           full_name: fullName,
-          role: (userMeta.role as string) || "teacher",
+          role,
           is_active: true,
           email_verified: !!data.user.email_confirmed_at,
         });
 
-        const role = (userMeta.role as string) || "teacher";
         if (role === "admin") {
           navigate("/Admin/Dashboard");
-        } else if (role === "student") {
-          navigate("/Student/Dashboard");
         } else {
           navigate("/Teacher/Dashboard");
         }
@@ -277,6 +285,20 @@ export function useAuthModal(onClose: () => void) {
         return;
       }
 
+      // Upsert the user into the users table with role='teacher'
+      if (signUpData.user) {
+        await supabase.from("users").upsert(
+          {
+            auth_user_id: signUpData.user.id,
+            email: signupEmail.trim().toLowerCase(),
+            role: "teacher",
+            full_name: signupEmail.trim().split("@")[0],
+            is_active: true,
+          },
+          { onConflict: "auth_user_id" }
+        );
+      }
+
       if (signUpData.session && signUpData.user) {
         const userMeta = (signUpData.user.user_metadata || {}) as UserMetadata;
         login(signUpData.session.access_token, {
@@ -289,14 +311,11 @@ export function useAuthModal(onClose: () => void) {
             (userMeta.name as string) ||
             signUpData.user.email?.split("@")[0] ||
             "Teacher",
-          role: (userMeta.role as string) || "teacher",
+          role: "teacher",
           is_active: true,
           email_verified: true,
         });
-        const role = (userMeta.role as string) || "teacher";
-        if (role === "admin") navigate("/Admin/Dashboard");
-        else if (role === "student") navigate("/Student/Dashboard");
-        else navigate("/Teacher/Dashboard");
+        navigate("/Teacher/Dashboard");
         onClose();
       } else {
         setSignupSuccess(

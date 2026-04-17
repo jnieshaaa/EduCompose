@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-import { AlertCircle, Calendar, ArrowLeft, BookOpen, ChevronRight } from 'lucide-react';
+import { AlertCircle, Calendar, BookOpen, ChevronRight, BarChart2, Clock, CheckCircle, FileText } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -224,124 +224,158 @@ export function ClassDetailTab() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      {/* Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/Student/Classes')}
-        className="mb-4"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to My Classes
-      </Button>
-
+    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
       {/* Course Header Banner */}
-      <div className="mb-6 bg-success-default rounded-lg p-6 text-white shadow-md">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="mb-8 bg-success-default rounded-2xl p-8 text-white shadow-xl shadow-primary/20 relative overflow-hidden group">
+        {/* Subtle decorative circle */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/15 transition-colors duration-500"></div>
+        
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="px-2.5 py-0.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-md text-[10px] font-bold uppercase tracking-wider">
                 {classData.code}
               </span>
-              <span className="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-md text-[10px] font-bold uppercase tracking-wider">
                 Block {classData.section}
               </span>
             </div>
-            <h1 className="text-2xl font-bold mb-1">
+            <h1 className="text-3xl font-extrabold mb-2 tracking-tight">
               {classData.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 opacity-90 text-sm">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-white/90 text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <div className="p-1 bg-white/10 rounded-full">
+                  <BookOpen className="w-3.5 h-3.5" />
+                </div>
                 {classData.instructor}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
+              <span className="flex items-center gap-2">
+                <div className="p-1 bg-white/10 rounded-full">
+                  <Calendar className="w-3.5 h-3.5" />
+                </div>
                 {classData.term}
               </span>
             </div>
           </div>
-          <Button className="bg-white text-success-default hover:bg-neutral-100 shadow-sm font-bold">
+          
+          <Button 
+            className="bg-white !text-[#0791B2] hover:bg-white hover:shadow-2xl hover:shadow-black/30 shadow-lg shadow-black/20 font-bold px-6 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
+            onClick={() => navigate('/Student/Progress')}
+          >
+            <BarChart2 className="w-4 h-4 !text-[#0791B2]" />
             My Performance
           </Button>
         </div>
       </div>
 
+      {/* Activities Section Header */}
+      <div className="flex items-center gap-2 mb-6 ml-1">
+        <div className="w-1.5 h-5 bg-primary rounded-full"></div>
+        <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Essay Activities</h2>
+        <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-primary/20">
+          {activities.length} Available
+        </Badge>
+      </div>
+
       {/* Activities List */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-5">
         {activities.length > 0 ? (
           activities.map((activity) => (
             <Card
               key={activity.id}
-              className={`p-6 cursor-pointer hover:shadow-lg transition-all group overflow-hidden ${
-                activity.status === 'DONE' 
-                  ? 'border-l-4 border-success-default bg-success-default/5' 
-                  : 'border-l-4 border-primary bg-white'
-              }`}
+              className={`
+                group relative border-none shadow-sm hover:shadow-md transition-all duration-300 p-5 cursor-pointer rounded-2xl overflow-hidden
+                ${activity.status === 'DONE' 
+                  ? 'bg-neutral-50/50' 
+                  : 'bg-white'
+                }
+              `}
               onClick={() => handleActivityClick(activity.activityId)}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        activity.status === 'DONE' 
-                          ? 'bg-success-default/10 text-success-default' 
-                          : 'bg-primary/10 text-primary'
-                      }`}>
-                        <BookOpen className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-0.5">
+              {/* Status Indicator Bar */}
+              <div className={`absolute top-0 left-0 bottom-0 w-1.5 transition-all duration-300 ${
+                activity.status === 'DONE' 
+                  ? 'bg-success-default/60 group-hover:bg-success-default' 
+                  : 'bg-primary/40 group-hover:bg-primary'
+              }`}></div>
+
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 ml-2">
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-start justify-between sm:justify-start gap-4">
+                    <div className={`p-3 rounded-2xl flex-shrink-0 transition-colors ${
+                      activity.status === 'DONE' 
+                        ? 'bg-success-default/10 text-success-default' 
+                        : 'bg-primary/10 text-primary'
+                    }`}>
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                           {activity.type}
                         </span>
-                        <h3 className="text-lg font-bold text-neutral-900 leading-tight">
-                          {activity.title}
-                        </h3>
+                        {activity.status === 'DONE' && (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-success-default bg-success-default/10 px-1.5 py-0.5 rounded uppercase">
+                            <CheckCircle className="w-2.5 h-2.5" />
+                            Completed
+                          </div>
+                        )}
                       </div>
+                      <h3 className="text-xl font-bold text-neutral-900 tracking-tight group-hover:text-primary transition-colors">
+                        {activity.title}
+                      </h3>
                     </div>
-                    <Badge className={
-                      activity.status === 'DONE'
-                        ? 'bg-success-default/10 text-success-default border-success-default/20'
-                        : 'bg-primary/10 text-primary border-primary/20'
-                    }>
-                      {activity.status}
-                    </Badge>
                   </div>
 
                   {activity.instructions && (
-                    <p className="text-sm text-neutral-600 mb-4 line-clamp-2 italic">
+                    <p className="text-sm text-neutral-500 leading-relaxed line-clamp-2 max-w-3xl">
                       {activity.instructions}
                     </p>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-neutral-100">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Posted {activity.postedDate}</span>
+                    </div>
                     {activity.deadline && (
-                      <div className="flex items-center gap-2 text-xs font-semibold text-warning-default">
+                      <div className={`flex items-center gap-2 text-xs font-bold ${
+                        activity.status === 'DONE' ? 'text-neutral-400' : 'text-primary'
+                      }`}>
                         <AlertCircle className="w-3.5 h-3.5" />
-                        <span>Deadline: {activity.deadline}</span>
+                        <span>Ends {activity.deadline}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-xs font-medium text-neutral-400">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Posted on {activity.postedDate}</span>
-                    </div>
                   </div>
                 </div>
-                <div className="hidden sm:flex items-center self-center opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                  <Button variant="ghost" size="sm" className="text-primary font-bold">
-                    Open
-                    <ChevronRight className="w-4 h-4 ml-1" />
+
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center self-stretch gap-4 w-full sm:w-auto">
+                  <div className="sm:hidden w-px h-10 bg-neutral-100"></div>
+                  <Button 
+                    variant="ghost" 
+                    className={`
+                      font-bold gap-2 px-4 py-2 rounded-xl transition-all
+                      ${activity.status === 'DONE' 
+                        ? 'text-neutral-400 hover:text-primary hover:bg-primary/5' 
+                        : 'text-primary bg-primary/5 hover:bg-primary hover:text-white'
+                      }
+                    `}
+                  >
+                    {activity.status === 'DONE' ? 'Review Submission' : 'Start Essay'}
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             </Card>
           ))
         ) : (
-          <div className="py-20 text-center bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200">
-            <BookOpen className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-neutral-900">No activities found</h3>
-            <p className="text-neutral-500">Your instructor hasn't posted any essay activities for this block yet.</p>
+          <div className="py-24 text-center bg-white rounded-3xl border-2 border-dashed border-neutral-100 shadow-sm">
+            <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-neutral-100">
+              <BookOpen className="w-8 h-8 text-neutral-300" />
+            </div>
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">Activities coming soon</h3>
+            <p className="text-neutral-500 max-w-sm mx-auto">Your instructor hasn't posted any essay activities for this block yet. Stay tuned!</p>
           </div>
         )}
       </div>

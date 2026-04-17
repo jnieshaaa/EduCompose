@@ -307,7 +307,7 @@ export function ProgressTab() {
     <div className="space-y-6">
 
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      {/* <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
             Progress &amp; Analytics
@@ -329,7 +329,7 @@ export function ProgressTab() {
             <span>{isImproving ? 'Improving' : 'Needs Work'}</span>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

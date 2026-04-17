@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
-import { Search, Eye, MessageSquare, Download, FileText, AlertCircle, MoreVertical } from 'lucide-react';
+import { Search, Eye, Download, FileText, AlertCircle, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { buildSecureUrl } from '../../utils/secureUrl';
 import {
@@ -138,14 +138,6 @@ export function MyEssaysTab() {
 
   return (
     <div className="space-y-6 px-1 sm:px-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">My Essays</h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 sm:mt-1">View and manage all your submissions</p>
-        </div>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card className="p-3 sm:p-4 border-none shadow-sm bg-white">
@@ -250,12 +242,12 @@ export function MyEssaysTab() {
                           View Results
                         </DropdownMenuItem>
                         
-                        {essay.hasAiFeedback && (
+                        {/* {essay.hasAiFeedback && (
                           <DropdownMenuItem className="cursor-pointer" onClick={() => {}}>
                             <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
                             AI Feedback
                           </DropdownMenuItem>
-                        )}
+                        )} */}
                         <DropdownMenuItem className="cursor-pointer">
                           <Download className="w-4 h-4 mr-2 text-neutral-500" />
                           Download Essay
