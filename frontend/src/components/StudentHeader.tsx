@@ -96,6 +96,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     "/Student/Dashboard": "Dashboard",
     "/Student/Submit": "Submit Essay",
     "/Student/Essays": "My Essays",
+    "/Student/Essays/Result": "Essay Transcript",
     "/Student/Feedback": "AI Feedback",
     "/Student/Progress": "Progress & Analytics",
     "/Student/Rubric": "Rubric / Criteria",

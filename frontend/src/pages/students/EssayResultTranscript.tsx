@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { readSecureParams } from "../../utils/secureUrl";
 import { 
   FileText, 
   Download, 
   ArrowLeft, 
-  ShieldCheck, 
   AlertCircle, 
   CheckCircle2,
-  Table as TableIcon
 } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -16,6 +15,7 @@ import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import ArgumentKnowledgeGraph from "../../components/essay/ArgumentKnowledgeGraph";
 
 // --- Types ---
 interface AnalysisData {
@@ -36,8 +36,19 @@ interface AnalysisData {
             total_claims: number;
             total_grounds: number;
             total_warrants: number;
-        }
-    }
+            total_rebuttals: number;
+            total_qualifiers?: number;
+        };
+        graph: any;
+        metrics: any;
+    };
+    readability?: {
+        flesch_reading_ease: number;
+        flesch_kincaid_grade: number;
+        issues: any[];
+    };
+    knowledge_graph?: any;
+    coherence?: any;
   };
   plagiarism?: {
     is_plagiarized: boolean;
@@ -47,51 +58,119 @@ interface AnalysisData {
     is_ai_generated: boolean;
     score: number;
   };
+  original_text?: string;
+  recommendations?: any[];
+  diagnostic_summary?: any;
 }
 
+// --- Configuration ---
 const HIGHLIGHT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  grammar: { bg: "rgba(239, 68, 68, 0.2)", text: "#991b1b", label: "Grammar" },
-  spelling: { bg: "rgba(249, 115, 22, 0.2)", text: "#9a3412", label: "Spelling" },
-  punctuation: { bg: "rgba(234, 179, 8, 0.2)", text: "#854d0e", label: "Punctuation" },
-  capitalization: { bg: "rgba(59, 130, 246, 0.2)", text: "#1e40af", label: "Capitalization" },
-  word_choice: { bg: "rgba(168, 85, 247, 0.2)", text: "#6b21a8", label: "Diction" },
+  grammar: { bg: "#fee2e2", text: "#b91c1c", label: "Grammar" },
+  spelling: { bg: "#fef3c7", text: "#92400e", label: "Spelling" },
+  punctuation: { bg: "#dbeafe", text: "#1e40af", label: "Punctuation" },
+  capitalization: { bg: "#dbeafe", text: "#1e40af", label: "Capitalization" },
+  word_choice: { bg: "#f3e8ff", text: "#6b21a8", label: "Diction" },
 };
 
 // --- Main Page Component ---
 export function EssayResultTranscript() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  const secureParams = useMemo(() => readSecureParams(location.search), [location.search]);
-  const essayId = secureParams?.essayId;
+  const essayId = useMemo(() => readSecureParams(location.search)?.essayId, [location.search]);
   
   const [essay, setEssay] = useState<any>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchData() {
-      if (!essayId) return;
+      if (!essayId || !user?.auth_id) return;
       try {
+        setLoading(true);
         const { data: essayData, error: essayError } = await supabase
           .from("essays")
-          .select("*, essay_activities(title, rubrics(id, name, criteria))")
+          .select("*, essay_activities(id, title, rubrics(id, name, criteria))")
           .eq("id", essayId)
           .single();
 
         if (essayError) throw essayError;
         setEssay(essayData);
 
-        const { data: analysisData } = await supabase
-          .from("analysis_results")
-          .select("*")
-          .eq("essay_id", essayId)
-          .single();
+        const { data: student } = await supabase
+          .from("students")
+          .select("id")
+          .eq("auth_user_id", user.auth_id)
+          .maybeSingle();
 
-        if (analysisData) {
-          setAnalysis(analysisData.analysis_data as AnalysisData);
+        if (!student) {
+          console.warn("[EssayResultTranscript] Student profile not found for auth_id:", user.auth_id);
+          setLoading(false);
+          return;
         }
+
+        const { data: analysisData } = await supabase
+          .from("essay_analysis_results")
+          .select("*, essays(content)")
+          .eq("essay_id", essayId)
+          .eq("student_id", student.id)
+          .maybeSingle();
+ 
+        if (analysisData) {
+          const baseData = analysisData.analysis_data as any || {};
+          const fallbackText = analysisData.original_text || baseData?.original_text || baseData?.text || essayData?.content || "";
+          setAnalysis({
+            ...baseData,
+            scores: {
+                overall: analysisData.overall_score || baseData?.scores?.overall || 0,
+                grammar: analysisData.grammar_score || baseData?.scores?.grammar || 0,
+                readability: analysisData.readability_score || baseData?.scores?.readability || 0,
+                coherence: analysisData.coherence_score || baseData?.scores?.coherence || 0,
+                argument_strength: analysisData.argument_strength_score || baseData?.scores?.argument_strength || 0
+            },
+            detailed_analysis: analysisData.detailed_analysis || baseData?.detailed_analysis || {},
+            recommendations: analysisData.recommendations || baseData?.recommendations || [],
+            diagnostic_summary: analysisData.diagnostic_summary || baseData?.diagnostic_summary || {},
+            original_text: fallbackText
+          });
+        } else {
+          const fallbackPayload = essayData?.analysis_payload as any || {};
+          setAnalysis({
+            ...fallbackPayload,
+            scores: {
+              overall: Number(essayData.overall_score) || fallbackPayload?.scores?.overall || 0,
+              grammar: Number(essayData.grammar_score) || fallbackPayload?.scores?.grammar || 0,
+              readability: Number(essayData.readability_score) || fallbackPayload?.scores?.readability || 0,
+              coherence: Number(essayData.coherence_score) || fallbackPayload?.scores?.coherence || 0,
+              argument_strength: Number(essayData.argument_score) || fallbackPayload?.scores?.argument_strength || 0
+            },
+            detailed_analysis: {
+                grammar: {
+                    errors: essayData.grammar_errors || fallbackPayload?.detailed_analysis?.grammar?.errors || []
+                },
+                readability: {
+                    flesch_reading_ease: Number(essayData.readability_score) || fallbackPayload?.detailed_analysis?.readability?.flesch_reading_ease || 0,
+                    flesch_kincaid_grade: Number(essayData.readability_score / 10) || fallbackPayload?.detailed_analysis?.readability?.flesch_kincaid_grade || 0,
+                    issues: essayData.style_issues || []
+                },
+                argumentation: essayData.argument_analysis?.argumentation || fallbackPayload?.detailed_analysis?.argumentation || null,
+                knowledge_graph: essayData.argument_analysis?.knowledge_graph || fallbackPayload?.detailed_analysis?.knowledge_graph || null,
+                coherence: essayData.argument_analysis?.coherence || fallbackPayload?.detailed_analysis?.coherence || null
+            },
+            original_text: essayData.content || fallbackPayload?.original_text || ""
+          } as any);
+        }
+
+        const { fetchDuplicateEssays } = await import("../../services/activityService");
+        const dupeGroups = await fetchDuplicateEssays(String(essayData.activity_id));
+        const myDupeGroup = dupeGroups.find(g => g.essays.some(e => e.essayId === essayId));
+        if (myDupeGroup && myDupeGroup.essays.length > 1) {
+            setDuplicates(myDupeGroup.essays.filter(e => e.essayId !== essayId));
+        }
+
       } catch (err) {
         console.error("Error fetching report data:", err);
       } finally {
@@ -99,7 +178,7 @@ export function EssayResultTranscript() {
       }
     }
     fetchData();
-  }, [essayId]);
+  }, [essayId, user?.auth_id]);
 
   const handleDownload = async () => {
     if (!reportRef.current) return;
@@ -113,18 +192,24 @@ export function EssayResultTranscript() {
     pdf.save(`EduCompose_Report_${essay?.title || "Essay"}.pdf`);
   };
 
+  const scores = useMemo(() => ({
+    overall: Number(analysis?.scores?.overall) || 0,
+    grammar: Number(analysis?.scores?.grammar) || 0,
+    readability: Number(analysis?.scores?.readability) || 0,
+    coherence: Number(analysis?.scores?.coherence) || 0,
+    argument_strength: Number(analysis?.scores?.argument_strength) || 0,
+  }), [analysis]);
+
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-neutral-50">
+    <div className="flex items-center justify-center h-full">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
     </div>
   );
 
-  const scores = analysis?.scores || { overall: 0, grammar: 0, readability: 0, coherence: 0, argument_strength: 0 };
   const grammarErrors = analysis?.detailed_analysis?.grammar?.errors || [];
 
   return (
-    <div className="min-h-screen bg-neutral-50 px-4 py-8 md:px-8 lg:px-12">
-      {/* Navigation & Actions */}
+    <>
       <div className="max-w-6xl mx-auto flex items-center justify-between mb-8 print:hidden">
         <Button variant="ghost" onClick={() => navigate(-1)} className="text-neutral-500 hover:text-neutral-900">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -138,270 +223,223 @@ export function EssayResultTranscript() {
 
       <div ref={reportRef} className="max-w-6xl mx-auto space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl border border-neutral-100">
         
-        {/* --- SECTION 1: HEADER & PROFICIENCY HUD --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center border-b border-neutral-100 pb-12">
           <div>
             <Badge variant="outline" className="mb-4 uppercase tracking-widest font-bold text-[10px] py-1 px-3 border-primary/20 text-primary bg-primary/5">Official Diagnostic Transcript</Badge>
             <h1 className="text-4xl font-bold text-neutral-900 tracking-tight leading-none mb-4">
               {essay?.title || "Untitled Essay"}
             </h1>
-            <div className="flex items-center gap-6 text-sm text-neutral-500 font-medium">
-              <span className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Submitted: {essay?.submitted_at ? new Date(essay.submitted_at).toLocaleDateString() : "N/A"}
-              </span>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-neutral-400 font-medium">
+              <span>Submitted: {essay?.submitted_at ? new Date(essay.submitted_at).toLocaleDateString() : "N/A"}</span>
               <span>Activity: {essay?.essay_activities?.title}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-center lg:justify-end gap-12">
-             {/* Pizza Chart Score Display */}
-             <div className="relative w-48 h-48">
+             <div className="relative w-48 h-48 drop-shadow-2xl">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                  {/* Background Circle */}
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="#f3f4f6" strokeWidth="10" />
-                  
-                  {/* Coherence Sector */}
-                  <circle 
-                    cx="50" cy="50" r="45" fill="none" stroke="#0ea5e9" strokeWidth="10" 
-                    strokeDasharray={`${(scores.coherence / 100) * 282.7} 282.7`}
-                    className="transition-all duration-1000 ease-out"
-                  />
-                  {/* Grammar Sector */}
-                  <circle 
-                    cx="50" cy="50" r="45" fill="none" stroke="#f59e0b" strokeWidth="8" 
-                    strokeDasharray={`${(scores.grammar / 100) * 282.7} 282.7`}
-                    strokeDashoffset="0"
-                    className="opacity-20"
-                  />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f4f6" strokeWidth="10" />
+                  {/* Each arc is roughly 25% of the 263.8 circumference (2 * pi * 42) */}
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" strokeWidth="10" strokeDasharray={`${(scores.grammar / 100) * 65} 263.8`} strokeDashoffset="0" strokeLinecap="round" className="transition-all duration-1000" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#10b981" strokeWidth="10" strokeDasharray={`${(scores.readability / 100) * 65} 263.8`} strokeDashoffset="-66" strokeLinecap="round" className="transition-all duration-1000" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#0ea5e9" strokeWidth="10" strokeDasharray={`${(scores.coherence / 100) * 65} 263.8`} strokeDashoffset="-132" strokeLinecap="round" className="transition-all duration-1000" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#8b5cf6" strokeWidth="10" strokeDasharray={`${(scores.argument_strength / 100) * 65} 263.8`} strokeDashoffset="-198" strokeLinecap="round" className="transition-all duration-1000" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-4xl font-black text-neutral-900 leading-none">
-                        {Math.round(scores.overall)}<span className="text-lg text-neutral-400 font-bold">%</span>
-                    </span>
-                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-1">Global Proficiency</span>
+                  <span className="text-4xl font-black text-neutral-900 leading-none">{Math.round(scores.overall)}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Grade</span>
                 </div>
              </div>
-
-             <div className="space-y-3">
-                {[
-                  { label: "Grammar", val: scores.grammar, color: "bg-amber-400" },
-                  { label: "Readability", val: scores.readability, color: "bg-emerald-500" },
-                  { label: "Coherence", val: scores.coherence, color: "bg-primary" },
-                  { label: "Argument", val: scores.argument_strength, color: "bg-purple-500" },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${s.color}`} />
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest w-20">{s.label}</span>
-                    <span className="text-sm font-bold text-neutral-900">{Math.round(s.val)}%</span>
-                  </div>
-                ))}
+             
+             <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+               <div className="min-w-[100px]">
+                 <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Grammar</p>
+                 <p className="text-2xl font-bold text-neutral-900">{Math.round(scores.grammar)}%</p>
+               </div>
+               <div className="min-w-[100px]">
+                 <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Readability</p>
+                 <p className="text-2xl font-bold text-neutral-900">{Math.round(scores.readability)}%</p>
+               </div>
+               <div className="min-w-[100px]">
+                 <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mb-1">Coherence</p>
+                 <p className="text-2xl font-bold text-neutral-900">{Math.round(scores.coherence)}%</p>
+               </div>
+               <div className="min-w-[100px]">
+                 <p className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-1">Argument</p>
+                 <p className="text-2xl font-bold text-neutral-900">{Math.round(scores.argument_strength)}%</p>
+               </div>
              </div>
           </div>
         </div>
 
-        {/* --- SECTION 2: ESSAY MANUSCRIPT & LEGEND --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             <div className="lg:col-span-2">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                    <div className="w-1 h-4 bg-primary" />
-                    Essay Manuscript
-                </h3>
-                <Card variant="glass" className="p-8 border-neutral-100 bg-neutral-50/30 leading-relaxed text-neutral-800 font-serif text-lg min-h-[400px]">
-                    <StaticHighlighter text={essay?.content || ""} errors={grammarErrors} />
+                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><div className="w-1 h-4 bg-primary" />Essay Manuscript</h3>
+                <Card variant="glass" className="p-8 border-neutral-100 bg-neutral-50/30 min-h-[500px]">
+                    <StaticHighlighter text={analysis?.original_text || ""} errors={grammarErrors} />
                 </Card>
             </div>
 
-            <div className="space-y-6">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">Grammar Diagnostics</h3>
-                <div className="space-y-4">
-                  {Object.entries(HIGHLIGHT_COLORS).map(([type, color]) => {
-                    const errorsOfType = grammarErrors.filter(e => (e.type || 'grammar').toLowerCase() === type);
-                    if (errorsOfType.length === 0) return null;
-                    return (
-                      <div key={type} className="group transition-all">
-                        <div className="flex items-center gap-2 mb-2">
-                           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color.text }} />
-                           <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: color.text }}>{color.label}</span>
-                           <span className="text-[10px] font-bold text-neutral-300">({errorsOfType.length})</span>
-                        </div>
-                        <ul className="space-y-2 border-l border-neutral-100 pl-4 py-1">
-                          {errorsOfType.slice(0, 5).map((e, i) => (
-                            <li key={i} className="text-xs text-neutral-600 leading-snug">
-                                {e.message}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })}
-                  {grammarErrors.length === 0 && (
-                    <p className="text-xs text-neutral-400 italic">No diagnostic anomalies detected.</p>
-                  )}
+            <div className="space-y-8">
+                <div>
+                   <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">Grammar Diagnostics</h3>
+                   <div className="space-y-4">
+                     {Object.entries(HIGHLIGHT_COLORS).map(([type, color]) => {
+                       const errorsOfType = grammarErrors.filter(e => (e.type || 'grammar').toLowerCase() === type);
+                       if (errorsOfType.length === 0) return null;
+                       return (
+                         <div key={type} className="group transition-all">
+                           <div className="flex items-center gap-2 mb-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color.text }} />
+                              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: color.text }}>{color.label}</span>
+                              <span className="text-[10px] font-bold text-neutral-300">({errorsOfType.length})</span>
+                           </div>
+                           <ul className="space-y-1 block pl-4 border-l border-neutral-100">
+                             {errorsOfType.slice(0, 3).map((e, i) => (
+                               <li key={i} className="text-[11px] text-neutral-500 leading-tight py-1">{e.message}</li>
+                             ))}
+                           </ul>
+                         </div>
+                       );
+                     })}
+                     {grammarErrors.length === 0 && <p className="text-xs text-neutral-400 italic">No diagnostic anomalies detected.</p>}
+                   </div>
+                </div>
+
+                <div className="pt-8 border-t border-neutral-100">
+                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><div className="w-1 h-4 bg-emerald-500" />Feedback Summary</h3>
+                    <div className="space-y-4">
+                         <div className="bg-emerald-50/50 p-4 rounded-2xl">
+                             <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2">Key Strength</h4>
+                             <p className="text-xs text-neutral-600 leading-relaxed font-medium">
+                                 {analysis?.diagnostic_summary?.strengths?.[0] || analysis?.recommendations?.find(r => r.type === 'strength')?.message || "Strong linguistic execution detected."}
+                             </p>
+                         </div>
+                         <div className="bg-amber-50/50 p-4 rounded-2xl">
+                             <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2">Opportunity</h4>
+                             <p className="text-xs text-neutral-600 leading-relaxed font-medium">
+                                 {analysis?.diagnostic_summary?.weaknesses?.[0] || analysis?.recommendations?.find(r => r.type === 'suggestion')?.message || "Consider expanding on evidentiary grounds."}
+                             </p>
+                         </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {/* --- SECTION 3: DIAGNOSTIC REPORT --- */}
-        <div className="pt-8 border-t border-neutral-100">
-           <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8">Diagnostic Feedback Report</h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <Card className="p-6 border-none bg-neutral-50/50 rounded-2xl">
-               <h4 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
-                 <ShieldCheck className="w-4 h-4 text-primary" />
-                 Linguistic Strengths
-               </h4>
-               <ul className="space-y-3">
-                 <li className="text-xs text-neutral-600 flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1" />
-                    Effective use of academic terminology and complex sentence structures.
-                 </li>
-                 <li className="text-xs text-neutral-600 flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1" />
-                    Strong logical flow between introductory and supporting paragraphs.
-                 </li>
-               </ul>
-             </Card>
-             <Card className="p-6 border-none bg-neutral-50/50 rounded-2xl">
-               <h4 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
-                 <AlertCircle className="w-4 h-4 text-warning-default" />
-                 Development Areas
-               </h4>
-               <p className="text-xs text-neutral-600 leading-relaxed italic">
-                 "Focus on unifying the evidence presentation within the second paragraph to strengthen the correlation between ground and warrant."
-               </p>
-             </Card>
-           </div>
+        <div className="pt-12 border-t border-neutral-100">
+             <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500" />Argument Architecture</h3>
+             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                 <div className="lg:col-span-3 bg-neutral-50/50 border border-neutral-100 rounded-[2.5rem] min-h-[450px] shadow-inner relative group p-6">
+                    <ArgumentKnowledgeGraph 
+                       graph={analysis?.detailed_analysis?.argumentation?.graph || analysis?.detailed_analysis?.knowledge_graph} 
+                       metrics={analysis?.detailed_analysis?.argumentation?.metrics}
+                    />
+                 </div>
+                 <div className="space-y-4">
+                      {[
+                        { label: 'Claims', val: analysis?.detailed_analysis?.argumentation?.argument_structure?.total_claims || 0, color: 'text-sky-600' },
+                        { label: 'Grounds', val: analysis?.detailed_analysis?.argumentation?.argument_structure?.total_grounds || 0, color: 'text-emerald-600' },
+                        { label: 'Rebuttals', val: analysis?.detailed_analysis?.argumentation?.argument_structure?.total_rebuttals || 0, color: 'text-red-500' },
+                      ].map(stat => (
+                        <div key={stat.label} className="bg-white border border-neutral-100 p-4 rounded-2xl shadow-sm">
+                           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">{stat.label}</p>
+                           <p className={`text-2xl font-black ${stat.color}`}>{stat.val}</p>
+                        </div>
+                      ))}
+                 </div>
+             </div>
         </div>
 
-        {/* --- SECTION 4: RUBRIC ALIGNMENT --- */}
-        <div className="pt-8 border-t border-neutral-100">
-           <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8 flex items-center justify-between">
-              Rubric Assessment Index
-              {!essay?.essay_activities?.rubrics && <span className="text-neutral-300 normal-case italic">Status: None Attached</span>}
-           </h3>
-           {essay?.essay_activities?.rubrics ? (
-             <div className="overflow-hidden rounded-2xl border border-neutral-100">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-900 text-white">
-                    <tr>
-                      <th className="px-6 py-4 font-bold uppercase tracking-widest">Criterion</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-widest text-center">Score</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-widest">Alignment Feedback</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {(essay.essay_activities.rubrics.criteria || []).map((c: any, i: number) => (
-                      <tr key={i} className="hover:bg-neutral-50/30 transition-colors">
-                        <td className="px-6 py-4 font-bold text-neutral-900">{c.name || 'Standard Criterion'}</td>
-                        <td className="px-6 py-4 text-center">
-                            <span className="font-bold text-primary">{Math.round(scores.overall / 20 * (c.weight / 100) * 10) / 2} / {c.weight / 20}</span>
-                        </td>
-                        <td className="px-6 py-4 text-neutral-500">{c.description}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-             </div>
-           ) : (
-             <div className="p-12 text-center bg-neutral-50/30 rounded-3xl border border-dashed border-neutral-200">
-                <TableIcon className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
-                <p className="text-sm text-neutral-400 font-medium">No formal rubric was mapped to this activity.</p>
-             </div>
-           )}
-        </div>
-
-        {/* --- SECTION 5: INTEGRITY SCAN HUD --- */}
-        <div className="pt-8 border-t border-neutral-100">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8">Academic Integrity Protocol</h3>
+        <div className="pt-12 border-t border-neutral-100">
+            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8">Academic Integrity & Protocols</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <IntegrityCard 
-                    label="Plagiarism Index" 
-                    value={analysis?.plagiarism?.percentage || 0} 
-                    isFlagged={analysis?.plagiarism?.is_plagiarized} 
-                />
-                <IntegrityCard 
-                    label="AI Generation" 
-                    value={analysis?.ai_detection?.score || 0} 
-                    isFlagged={analysis?.ai_detection?.is_ai_generated} 
-                />
-                <IntegrityCard 
-                    label="Cross-Class" 
-                    value={0} 
-                    isFlagged={false} 
-                    desc="Duplicate records: None"
-                />
+                 <IntegrityCard label="AI Detection Score" value={analysis?.ai_detection?.score || 0} isFlagged={analysis?.ai_detection?.is_ai_generated} />
+                 <IntegrityCard label="Plagiarism Index" value={analysis?.plagiarism?.percentage || 0} isFlagged={analysis?.plagiarism?.is_plagiarized} />
+                 <IntegrityCard label="Class Similarity" value={duplicates.length > 0 ? 100 : 0} isFlagged={duplicates.length > 0} desc={duplicates.length > 0 ? `Matches with ${duplicates.length} records` : "No identical submissions found."} />
             </div>
         </div>
 
-        <div className="pt-12 text-center border-t border-neutral-100">
-            <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-[0.5em]">This transcript was generated by EduCompose AI Diagnostics © 2026</p>
+        <div className="pt-12 text-center border-t border-neutral-100 opacity-20">
+            <p className="text-[10px] font-black uppercase tracking-[1em]">Official EduCompose Diagnostic Certificate 2026</p>
         </div>
       </div>
+    </>
+  );
+}
+
+function IntegrityCard({ label, value, isFlagged, desc }: any) {
+  return (
+    <div className="bg-neutral-50/50 border border-neutral-100 p-6 rounded-[2rem] shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{label}</p>
+            {isFlagged ? <AlertCircle className="w-5 h-5 text-amber-500" /> : <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        </div>
+        <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-3xl font-black text-neutral-900">{value}%</span>
+            <span className="text-[10px] font-bold text-neutral-400">Index</span>
+        </div>
+        <p className="text-[11px] font-medium text-neutral-500 leading-relaxed">{desc || (isFlagged ? "Elevated markers detected. Manual review suggested." : "No significant risk markers detected.")}</p>
     </div>
   );
 }
 
-// --- Subcomponents ---
-
-function IntegrityCard({ label, value, isFlagged, desc }: any) {
-    return (
-        <Card className="p-5 border-none bg-neutral-900 text-white rounded-2xl relative overflow-hidden group">
-            <div className="relative z-10 flex items-center justify-between">
-                <div>
-                   <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
-                   <p className="text-2xl font-black">{Math.round(value)}%</p>
-                </div>
-                {isFlagged ? (
-                    <AlertCircle className="w-8 h-8 text-red-500" />
-                ) : (
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                )}
-            </div>
-            {desc && <p className="text-[10px] text-white/30 mt-2 font-medium">{desc}</p>}
-            <div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${isFlagged ? 'from-red-500 to-red-400' : 'from-emerald-500 to-emerald-400'}`} style={{ width: `${value}%` }} />
-        </Card>
-    );
-}
-
 function StaticHighlighter({ text, errors }: { text: string, errors: any[] }) {
-    if (!text) return null;
-    
-    // Sort errors by offset to process sequentially
-    const sortedErrors = [...errors].sort((a, b) => a.offset - b.offset);
-    const segments = [];
-    let cursor = 0;
+  const normalizedText = useMemo(() => {
+    if (!text) return "";
+    return text.replace(/\n/g, " ").replace(/\r/g, " ").replace(/\t/g, " ");
+  }, [text]);
 
-    sortedErrors.forEach((error, i) => {
-        if (error.offset < cursor) return;
+  if (!normalizedText) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-12 opacity-30">
+        <FileText className="w-12 h-12 mb-2" />
+        <p className="text-sm font-medium">Draft text unavailable</p>
+      </div>
+    );
+  }
 
-        // Gap text
-        if (error.offset > cursor) {
-            segments.push(text.slice(cursor, error.offset));
-        }
+  const sortedErrors = [...errors].sort((a, b) => a.offset - b.offset);
+  const segments = [];
+  let cursor = 0;
 
-        // Highlight text
-        const type = (error.type || 'grammar').toLowerCase();
-        const color = HIGHLIGHT_COLORS[type] || HIGHLIGHT_COLORS.grammar;
-        const end = error.offset + error.errorLength;
+  sortedErrors.forEach((error, i) => {
+    if (error.offset < cursor) return;
+    if (error.offset > normalizedText.length) return;
 
-        segments.push(
-            <mark 
-                key={i} 
-                className="font-normal"
-                style={{ backgroundColor: color.bg, color: color.text, borderRadius: '4px', padding: '0 2px' }}
-            >
-                {text.slice(error.offset, end)}
-            </mark>
-        );
-        cursor = end;
-    });
-
-    if (cursor < text.length) {
-        segments.push(text.slice(cursor));
+    if (error.offset > cursor) {
+      segments.push(normalizedText.slice(cursor, error.offset));
     }
 
-    return <div className="whitespace-pre-wrap">{segments}</div>;
-}
+    const type = (error.type || "grammar").toLowerCase();
+    const color = HIGHLIGHT_COLORS[type] || HIGHLIGHT_COLORS.grammar;
+    const end = Math.min(error.offset + error.errorLength, normalizedText.length);
 
-export default EssayResultTranscript;
+    segments.push(
+      <mark
+        key={i}
+        className="font-medium cursor-default transition-all"
+        style={{
+          backgroundColor: color.bg,
+          color: color.text,
+          borderRadius: "4px",
+          padding: "1px 2px",
+          margin: "0 1px",
+        }}
+        title={error.message}
+      >
+        {normalizedText.slice(error.offset, end)}
+      </mark>
+    );
+    cursor = end;
+  });
+
+  if (cursor < normalizedText.length) {
+    segments.push(normalizedText.slice(cursor));
+  }
+
+  return (
+    <div className="whitespace-pre-line leading-relaxed tracking-normal text-neutral-800 font-serif">
+      {segments}
+    </div>
+  );
+}

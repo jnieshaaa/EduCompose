@@ -160,6 +160,14 @@ export function EssayTextDisplay({
       return { segments: [{ type: "text", text: originalText }], errors: [] };
     }
 
+    // INDEX-SAFE NORMALIZATION:
+    // We replace all layout-breaking characters with a single space.
+    // This keeps the string length EXACTLY same as original, so highlights don't shift.
+    const normalizedText = originalText
+      .replace(/\n/g, " ")
+      .replace(/\r/g, " ")
+      .replace(/\t/g, " ");
+
     // Create segments array with text and highlight segments
     const segments: Array<{
       type: "text" | "highlight";
@@ -172,7 +180,7 @@ export function EssayTextDisplay({
       const start = Math.max(error.offset, cursor);
       const end = Math.min(
         error.offset + error.errorLength,
-        originalText.length,
+        normalizedText.length,
       );
 
       if (start < cursor) return;
@@ -181,12 +189,12 @@ export function EssayTextDisplay({
       if (start > cursor) {
         segments.push({
           type: "text",
-          text: originalText.slice(cursor, start),
+          text: normalizedText.slice(cursor, start),
         });
       }
 
       // Add highlight segment
-      const snippet = originalText.slice(start, end);
+      const snippet = normalizedText.slice(start, end);
       // IMPORTANT: Some grammar errors intentionally target whitespace (e.g. excessive spaces/newlines
       // or structure transitions). Those ranges can be whitespace-only, and we still need to render
       // a <mark> so the user sees highlights and can click the issue details.
@@ -198,8 +206,8 @@ export function EssayTextDisplay({
     });
 
     // Add remaining text
-    if (cursor < originalText.length) {
-      segments.push({ type: "text", text: originalText.slice(cursor) });
+    if (cursor < normalizedText.length) {
+      segments.push({ type: "text", text: normalizedText.slice(cursor) });
     }
 
     return { segments, errors: validErrors };
@@ -234,12 +242,12 @@ export function EssayTextDisplay({
       {/* Header - Institutional Transcript Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-bold text-neutral-900 tracking-tight uppercase tracking-widest text-xs flex items-center gap-2">
-             <div className="w-1.5 h-6 bg-primary rounded-full" />
-             Essay <span className="text-primary">Transcript</span>
-          </h3>
+          <h1 className="text-xl font-black text-neutral-900 tracking-tight uppercase tracking-widest text-[10px] flex items-center gap-2">
+             <div className="w-1 h-5 bg-primary" />
+             Evaluation <span className="text-primary/50">Manuscript</span>
+          </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Legend - Premium glass pills */}
           <div className="hidden lg:flex items-center gap-2 p-1 bg-white/40 border border-white/60 rounded-2xl shadow-sm backdrop-blur-md">
             {[

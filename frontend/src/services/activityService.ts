@@ -2173,27 +2173,28 @@ export const gradeEssay = async (
 
     // Step 3: Save analysis results to Supabase
     // First, update the essay record with basic scores
-    const { error: updateError } = await supabase
-      .from("essays")
-      .update({
-        grammar_score: analysisResult.scores?.grammar || null,
-        readability_score: analysisResult.scores?.readability || null,
-        coherence_score: analysisResult.scores?.coherence || null,
-        argument_strength_score:
-          analysisResult.scores?.argument_strength || null,
-        overall_score: analysisResult.scores?.overall || null,
-        grammar_errors:
-          analysisResult.detailed_analysis?.grammar?.errors || null,
-        style_issues:
-          analysisResult.detailed_analysis?.readability?.issues || null,
-        argument_analysis: {
-          argumentation: analysisResult.detailed_analysis?.argumentation,
-          knowledge_graph: analysisResult.detailed_analysis?.knowledge_graph,
-          coherence: analysisResult.detailed_analysis?.coherence,
-        },
-        status: "analyzed",
-      })
-      .eq("id", essayData.id);
+      const { error: updateError } = await supabase
+        .from("essays")
+        .update({
+          content: extractedText, // Save the OCR/Extracted text back to the essay content column for easy retrieval
+          grammar_score: analysisResult.scores?.grammar || null,
+          readability_score: analysisResult.scores?.readability || null,
+          coherence_score: analysisResult.scores?.coherence || null,
+          argument_strength_score:
+            analysisResult.scores?.argument_strength || null,
+          overall_score: analysisResult.scores?.overall || null,
+          grammar_errors:
+            analysisResult.detailed_analysis?.grammar?.errors || null,
+          style_issues:
+            analysisResult.detailed_analysis?.readability?.issues || null,
+          argument_analysis: {
+            argumentation: analysisResult.detailed_analysis?.argumentation,
+            knowledge_graph: analysisResult.detailed_analysis?.knowledge_graph,
+            coherence: analysisResult.detailed_analysis?.coherence,
+          },
+          status: "analyzed",
+        })
+        .eq("id", essayData.id);
 
     if (updateError) {
       console.error("Error updating essay:", updateError);

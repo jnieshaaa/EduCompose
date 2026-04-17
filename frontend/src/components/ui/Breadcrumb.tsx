@@ -43,6 +43,7 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Student/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   "/Student/Submit": { label: "Submit Essay", icon: <FileText className="w-4 h-4" /> },
   "/Student/Feedback": { label: "AI Feedback", icon: <ClipboardCheck className="w-4 h-4" /> },
+  "/Student/Essays/Result": { label: "Essay Transcript", parent: "My Essays", icon: <FileText className="w-4 h-4" /> },
   
   // Admin section
   "/Admin/Dashboard": { label: "Dashboard", icon: <Home className="w-4 h-4" /> },
@@ -345,6 +346,18 @@ const Breadcrumb: React.FC = () => {
 
       items.push({
         label: "AI Feedback",
+        path: location.search ? `${pathname}${location.search}` : pathname,
+        icon: config?.icon,
+      });
+    } else if (pathname === "/Student/Essays/Result") {
+      const activityTitle = getParam("activityTitle") || "Essay";
+      items.push({
+        label: "My Essays",
+        path: "/Student/Essays",
+        icon: <FileText className="w-4 h-4" />,
+      });
+      items.push({
+        label: `${activityTitle} Result`,
         path: location.search ? `${pathname}${location.search}` : pathname,
         icon: config?.icon,
       });

@@ -54,7 +54,8 @@ export function MyEssaysTab() {
 
         const formattedData = (data || []).map(e => ({
           id: e.id,
-          title: e.title || (e.essay_activities as any)?.title || 'Untitled Essay',
+          title: (e.essay_activities as any)?.title || 'Untitled Assignment',
+          filename: e.title || 'No filename available',
           submitted: new Date(e.submitted_at).toLocaleDateString(),
           status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'Graded' : 'Submitted'),
           aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
@@ -209,7 +210,11 @@ export function MyEssaysTab() {
               {filteredEssays.map((essay) => (
                 <TableRow key={essay.id} className="hover:bg-neutral-50/50 transition-colors">
                   <TableCell>
-                    <div className="font-semibold text-neutral-900">{essay.title}</div>
+                    <div className="font-semibold text-neutral-900 leading-tight">{essay.title}</div>
+                    <div className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      <span className="truncate max-w-[150px]">{essay.filename}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="text-sm text-neutral-600">{essay.submitted}</div>
