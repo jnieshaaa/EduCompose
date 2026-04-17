@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { readSecureParams } from "../../utils/secureUrl";
 import { 
   FileText, 
   Download, 
@@ -58,9 +59,11 @@ const HIGHLIGHT_COLORS: Record<string, { bg: string; text: string; label: string
 
 // --- Main Page Component ---
 export function EssayResultTranscript() {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const essayId = searchParams.get("essayId");
+  
+  const secureParams = useMemo(() => readSecureParams(location.search), [location.search]);
+  const essayId = secureParams?.essayId;
   
   const [essay, setEssay] = useState<any>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
