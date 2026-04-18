@@ -75,10 +75,12 @@ export function EssaysTab() {
         const { data: actData, error: actError } = await supabase
           .from('essay_activities')
           .select('id, title, course_id, block_id')
+          .eq('teacher_id', (user as any).auth_id || user.id)
           .order('created_at', { ascending: false });
 
         if (actError) throw actError;
         setActivities(actData || []);
+        const teacherActivityIds = (actData || []).map(a => a.id);
 
         // Sync with URL
         const urlActivityId = searchParams.get('activityId');
@@ -96,7 +98,10 @@ export function EssaysTab() {
 
   // 2. Fetch submissions
   const fetchSubmissions = useCallback(async () => {
+    if (!user) return;
     try {
+      const teacherActivityIds = activities.map(a => a.id);
+      
       let query = supabase
         .from('essays')
         .select(`
@@ -122,6 +127,12 @@ export function EssaysTab() {
 
       if (selectedActivityId) {
         query = query.eq('activity_id', selectedActivityId);
+      } else if (teacherActivityIds.length > 0) {
+        query = query.in('activity_id', teacherActivityIds);
+      } else {
+        // No activities, no essays should be shown
+        setEssays([]);
+        return;
       }
 
       const { data, error } = await query.order('submitted_at', { ascending: false });

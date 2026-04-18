@@ -103,7 +103,7 @@ export function useAuthModal(onClose: () => void) {
         // Fetch role from the public 'users' table (source of truth)
         const { data: userData } = await supabase
           .from("users")
-          .select("role, full_name")
+          .select("role, first_name, last_name")
           .eq("auth_user_id", data.user.id)
           .maybeSingle();
 
@@ -114,7 +114,8 @@ export function useAuthModal(onClose: () => void) {
 
         if (userData) {
           role = userData.role;
-          fullName = userData.full_name || fullName;
+          const name = [userData.first_name, userData.last_name].filter(Boolean).join(" ");
+          fullName = name || fullName;
         } else {
           console.log("User not found in 'users' table. Checking 'students' table...");
           // If not in users table, check if it's a student

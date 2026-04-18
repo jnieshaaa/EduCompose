@@ -167,27 +167,7 @@ export const updateTeacherProfile = async (
       return { success: false, error: fetchError?.message || "User profiling record not found" };
     }
 
-    const firstName =
-      profile.firstName !== undefined
-        ? profile.firstName
-        : currentData.first_name || "";
-    const lastName =
-      profile.lastName !== undefined
-        ? profile.lastName
-        : currentData.last_name || "";
-    const middleName =
-      profile.middleName !== undefined
-        ? profile.middleName
-        : currentData.middle_name || "";
-
-    // Construct full name
-    const fullName = `${firstName} ${middleName} ${lastName}`
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const updateData: Record<string, unknown> = {
-      full_name: fullName,
-    };
+    const updateData: Record<string, unknown> = {};
 
     if (profile.firstName !== undefined)
       updateData.first_name = profile.firstName;

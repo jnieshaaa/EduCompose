@@ -540,7 +540,7 @@ export function DashboardTab() {
           throw new Error("Teacher ID not available");
         }
 
-        // Activities define essay scope; course_id / block_id are array fields in DB
+        // 1. Fetch Teacher's Activities first to define scope
         const { data: teacherActivities, error: activitiesError } =
           await supabase
             .from("essay_activities")
@@ -549,15 +549,8 @@ export function DashboardTab() {
 
         if (activitiesError) throw activitiesError;
 
-        type ActivityScopeRow = {
-          id: string | number;
-          course_id: unknown;
-          block_id: unknown;
-          title?: string | null;
-        };
-
         const typedTeacherActivities =
-          (teacherActivities as ActivityScopeRow[] | null) || [];
+          (teacherActivities as any[] | null) || [];
 
         const activityMetaById = new Map<
           string,
@@ -576,59 +569,9 @@ export function DashboardTab() {
           typedTeacherActivities.map((a) => String(a.id)),
         );
 
-        const [
-          allCourses,
-          allSections,
-          essaysData,
-          analysisResults,
-          teacherProgramLoads,
-        ] = await Promise.all([
-          fetchCourses(),
-          fetchSections(),
-          supabase
-            .from("essays")
-            .select(
-              "id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score",
-            )
-            .then(({ data, error: essaysError }) => {
-              if (essaysError) throw essaysError;
-              return (data as EssayRow[] | null) || [];
-            }),
-          (async (): Promise<AnalysisResultRow[]> => {
-            const { data, error } = await supabase
-              .from("essay_analysis_results")
-              .select(
-                "essay_id, grammar_score, coherence_score, detailed_analysis",
-              );
+        const activityIdsArray = Array.from(activityIdSet);
 
-            if (error) {
-              if (
-                error.code === "PGRST116" ||
-                error.code === "42703" ||
-                error.code === "PGRST100"
-              ) {
-                return [];
-              }
-              throw error;
-            }
-
-            return (data as AnalysisResultRow[] | null) || [];
-          })(),
-          fetchTeacherProgramLoads(),
-        ]);
-
-        const loadIdToProgramId = new Map(
-          teacherProgramLoads.map((l) => [l.id, l.program_id]),
-        );
-        const performanceFilterPrograms = [
-          ...new Map(
-            teacherProgramLoads.map((l) => [
-              l.program_id,
-              { id: l.program_id, label: l.program_name },
-            ]),
-          ).values(),
-        ].sort((a, b) => a.label.localeCompare(b.label));
-
+        // Define course and section IDs for further filtering
         let courseIds = [
           ...new Set(
             typedTeacherActivities.flatMap((a) =>
@@ -643,7 +586,32 @@ export function DashboardTab() {
             ),
           ),
         ];
-        // Activities missing course/block arrays still need counts from the teacher's load
+
+        // 2. Fetch Dependent Data in Parallel (Filtered by scope)
+        const [
+          allCourses,
+          allSections,
+          essaysData,
+          teacherProgramLoads,
+        ] = await Promise.all([
+          fetchCourses(),
+          fetchSections(),
+          activityIdsArray.length > 0 
+            ? supabase
+                .from("essays")
+                .select(
+                  "id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score",
+                )
+                .in("activity_id", activityIdsArray)
+                .then(({ data, error: essaysError }) => {
+                  if (essaysError) throw essaysError;
+                  return (data as EssayRow[] | null) || [];
+                })
+            : Promise.resolve([] as EssayRow[]),
+          fetchTeacherProgramLoads(),
+        ]);
+
+        // 3. Resolve Sections/Courses if Activity Arrays are empty (all-access fallback)
         if (courseIds.length === 0) {
           courseIds = allCourses.map((c) => c.id);
         }
@@ -651,27 +619,46 @@ export function DashboardTab() {
           sectionIds = allSections.map((s) => s.id);
         }
 
-        const { data: blockStudentsRows, error: blockStudentsError } =
-          await supabase.from("block_students").select("student_id, block_id");
-        if (blockStudentsError) throw blockStudentsError;
-        const enrollments =
-          (blockStudentsRows as
-            | { student_id: string | number; block_id: string | number }[]
-            | null) || [];
-        const studentsData =
+        // 4. Fetch Analysis Results and Enrollments for THIS teacher's scope only
+        const teacherEssays = essaysData; // Already filtered by activity_id in query
+        const teacherEssayIds = teacherEssays.map(e => String(e.id));
+
+        const [analysisResults, blockStudentsRows] = await Promise.all([
+          teacherEssayIds.length > 0
+            ? supabase
+                .from("essay_analysis_results")
+                .select("essay_id, grammar_score, coherence_score, detailed_analysis")
+                .in("essay_id", teacherEssayIds)
+                .then(({ data, error }) => {
+                  if (error && error.code !== "PGRST116") throw error;
+                  return (data as AnalysisResultRow[] | null) || [];
+                })
+            : Promise.resolve([] as AnalysisResultRow[]),
           sectionIds.length > 0
-            ? enrollments.filter((e) =>
-                sectionIds.includes(String(e.block_id)),
-              )
-            : [];
+            ? supabase
+                .from("block_students")
+                .select("student_id, block_id")
+                .in("block_id", sectionIds)
+                .then(({ data, error }) => {
+                  if (error) throw error;
+                  return data || [];
+                })
+            : Promise.resolve([]),
+        ]);
 
-        // Filter essays linked to this teacher's activities (string-safe IDs)
-        const teacherEssays = (essaysData as EssayRow[]).filter(
-          (essay) =>
-            essay.activity_id != null &&
-            activityIdSet.has(String(essay.activity_id)),
+        const loadIdToProgramId = new Map(
+          teacherProgramLoads.map((l) => [l.id, l.program_id]),
         );
+        const performanceFilterPrograms = [
+          ...new Map(
+            teacherProgramLoads.map((l) => [
+              l.program_id,
+              { id: l.program_id, label: l.program_name },
+            ]),
+          ).values(),
+        ].sort((a, b) => a.label.localeCompare(b.label));
 
+        // Activities missing course/block arrays still need counts from the teacher's load
         const teacherCourses = allCourses.filter((c) =>
           courseIds.includes(c.id),
         );
@@ -684,10 +671,8 @@ export function DashboardTab() {
           programId: loadIdToProgramId.get(s.programLoadId) ?? "",
         }));
 
-        // Count unique students from enrollments
         const uniqueStudentIds = new Set(
-          studentsData?.map((enrollment) => String(enrollment.student_id)) ||
-            [],
+          (blockStudentsRows || []).map((enrollment) => String(enrollment.student_id)),
         );
         const totalStudents = uniqueStudentIds.size;
 
@@ -899,7 +884,7 @@ export function DashboardTab() {
         const studentsWithoutSubmissions =
           totalStudents - studentsWithRecentSubmissions.size;
 
-        if (studentsWithoutSubmissions > 0) {
+        if (studentsWithoutSubmissions > 0 && teacherActivities && teacherActivities.length > 0) {
           alerts.push({
             type: "warning",
             message: `${studentsWithoutSubmissions} student${studentsWithoutSubmissions !== 1 ? "s" : ""} have not submitted essays this week`,

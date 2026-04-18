@@ -103,49 +103,57 @@ export function EssayManagementTab() {
       try {
         setLoading(true);
         
-        // Fetch Programs
-        const { data: progData, error: pErr } = await supabase
-          .from('programs')
-          .select('id, program_name, program_code')
-          .order('program_name');
+        // Fetch Programs and Blocks via teacher_program_loads
+        const { data: tplData, error: tplErr } = await supabase
+          .from('teacher_program_loads')
+          .select(`
+            id,
+            program_id,
+            programs_lookup (id, program_name, program_code),
+            blocks (id, block_name),
+            teacher_course_loads!inner (teacher_id)
+          `)
+          .eq('teacher_course_loads.teacher_id', user.auth_id);
         
-        if (pErr) throw pErr;
-        if (progData) {
-          setPrograms(progData.map(p => ({
-            id: p.id,
-            name: p.program_name,
-            code: p.program_code
-          })));
+        if (tplErr) throw tplErr;
+
+        if (tplData) {
+          const progMap = new Map<string, Program>();
+          const blockList: Block[] = [];
+
+          tplData.forEach((row: any) => {
+            if (row.programs_lookup) {
+              progMap.set(row.programs_lookup.id, {
+                id: row.programs_lookup.id,
+                name: row.programs_lookup.program_name,
+                code: row.programs_lookup.program_code
+              });
+            }
+            if (row.blocks) {
+              blockList.push({
+                id: row.blocks.id,
+                name: row.blocks.block_name,
+                programId: row.program_id
+              });
+            }
+          });
+
+          setPrograms(Array.from(progMap.values()));
+          setBlocks(blockList);
         }
 
-        // Fetch Blocks
-        const { data: blockData, error: bErr } = await supabase
-          .from('blocks')
-          .select('id, block_name, program_id')
-          .order('block_name');
+        // Fetch Rubrics (Public + Teacher's own)
+        const [pubRubrics, userRubrics] = await Promise.all([
+          supabase.from('rubrics').select('id, title').eq('is_public', true),
+          supabase.from('rubrics').select('id, title').eq('user_id', user.auth_id)
+        ]);
         
-        if (bErr) throw bErr;
-        if (blockData) {
-          setBlocks(blockData.map(b => ({
-            id: b.id,
-            name: b.block_name,
-            programId: b.program_id
-          })));
-        }
-
-        // Fetch Rubrics
-        const { data: rubricData, error: rErr } = await supabase
-          .from('rubrics')
-          .select('id, title')
-          .order('title');
+        const combinedRubrics = [
+          ...(pubRubrics.data || []),
+          ...(userRubrics.data || [])
+        ].map(r => ({ id: String(r.id), title: r.title }));
         
-        if (rErr) throw rErr;
-        if (rubricData) {
-          setRubrics(rubricData.map(r => ({
-            id: r.id,
-            title: r.title
-          })));
-        }
+        setRubrics(combinedRubrics);
 
         // Fetch Teacher Activities
         const { data: actData, error: aErr } = await supabase
@@ -185,7 +193,7 @@ export function EssayManagementTab() {
   // 2. Fetch Students when program/block changes
   const fetchStudents = useCallback(async (targetProgramId: string, targetBlockId: string) => {
     try {
-      let query = supabase.from('students').select('*');
+      let query = supabase.from('students').select('*').eq('teacher_id', user?.auth_id);
       
       if (targetBlockId !== 'all') {
         const { data: enrollmentData } = await supabase
@@ -193,7 +201,7 @@ export function EssayManagementTab() {
           .select('student_id')
           .eq('block_id', targetBlockId);
         
-        const studentIds = enrollmentData?.map(e => e.student_id) || [];
+        const studentIds = enrollmentData?.map(e => String(e.student_id)) || [];
         if (studentIds.length > 0) {
           query = query.in('id', studentIds);
         } else {

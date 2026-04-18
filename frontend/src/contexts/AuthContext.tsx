@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
@@ -135,13 +135,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // we should treat it as null so the app forces a logout
     if (!userFromTable) {
       console.warn("User still has auth session but no database record found. Forcing logout check.");
-      return null; 
+      return null;
     }
 
     return userFromTable;
   };
 
-  const checkAuth = async () => {
+  const logout = useCallback(async (reason?: string) => {
+    try { 
+      await supabase.auth.signOut(); 
+    } finally {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      setUser(null);
+      
+      if (reason) {
+        showNotification('warning', reason);
+      } else {
+        showNotification('info', "Signed out successfully.");
+      }
+    }
+  }, [showNotification]);
+
+  const checkAuth = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -179,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [logout, mapSupabaseUser]);
 
   useEffect(() => {
     checkAuth();
@@ -205,7 +221,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [user?.auth_id]);
+  }, []);
 
   // USE INACTIVITY LOGOUT HOOK
   useInactivityLogout({
@@ -229,21 +245,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   };
 
-  const logout = async (reason?: string) => {
-    try { 
-      await supabase.auth.signOut(); 
-    } finally {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
-      setUser(null);
-      
-      if (reason) {
-        showNotification('warning', reason);
-      } else {
-        showNotification('info', "Signed out successfully.");
-      }
-    }
-  };
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
