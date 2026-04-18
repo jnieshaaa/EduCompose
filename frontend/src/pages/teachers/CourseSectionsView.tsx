@@ -8,13 +8,9 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Layers,
-  X,
-  ChevronDown
+  X
 } from "lucide-react";
 import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
 import { supabase } from "../../lib/supabaseClient";
 import { useAlert } from "../../hooks/useAlert";
 import { useAcademicContext } from "../../hooks/useAcademicContext";

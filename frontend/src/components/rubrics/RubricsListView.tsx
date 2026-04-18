@@ -9,8 +9,6 @@ import {
   Loader2,
   BookOpen,
 } from "lucide-react";
-import Badge from "../ui/Badge";
-import Button from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
