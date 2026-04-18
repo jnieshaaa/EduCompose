@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
-import { Label } from "../ui/label";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Save, ChevronRight, Loader2, Eye, Pencil } from "lucide-react";
 import { RubricPreviewTable } from "./RubricPreviewTable";
 import type { RubricFormData, CriteriaRow, ScoreLevel } from "./types";
 import { supabase } from "../../lib/supabaseClient";
@@ -76,113 +74,110 @@ export function RubricDetailsForm({
 
   return (
     <div className="space-y-6">
-      <p className="text-lg font-medium">
-        Configure basic settings before building your criteria.
-      </p>
+      {/* ─── Header ─── */}
+      <div>
+        <h4 className="text-lg font-bold text-neutral-900">Rubric Details</h4>
+        <p className="text-xs text-neutral-400 mt-0.5">
+          Configure basic settings before building your criteria
+        </p>
+      </div>
 
-      <div className="space-y-6 border p-4 rounded-lg">
-        <h4 className="text-lg font-semibold">Rubric Details</h4>
-
+      {/* ─── Form Fields ─── */}
+      <div className="space-y-5">
         {/* Rubric Name */}
         <div>
-          <Label htmlFor="rubric-name" className="font-medium">
-            Rubric Name *
-          </Label>
-          <p className="text-sm text-neutral-500 mb-2">
-            Give your rubric a descriptive name
-          </p>
-          <Input
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+            Rubric Name <span className="text-tertiary">*</span>
+          </label>
+          <input
             id="rubric-name"
+            type="text"
             placeholder="e.g., Argumentative Essay Rubric"
             value={formData.name}
-            onChange={(value) => onFormChange({ name: value })}
+            onChange={(e) => onFormChange({ name: e.target.value })}
+            className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300"
           />
         </div>
 
         {/* Grading Intensity */}
         <div>
-          <Label className="font-medium">Grading Intensity *</Label>
-          <p className="text-sm text-neutral-500 mb-2">
-            Control how strict or lenient the AI grading should be.
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+            Grading Intensity <span className="text-tertiary">*</span>
+          </label>
+          <p className="text-[11px] text-neutral-400 mb-2.5">
+            Controls how strict or lenient the AI grading will be
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {gradingIntensities.map((intensity) => (
-              <Button
+              <button
                 key={intensity}
-                size="sm"
-                variant={
+                className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                   formData.gradingIntensity === intensity
-                    ? "primary"
-                    : "outline"
-                }
-                className={
-                  formData.gradingIntensity === intensity
-                    ? "bg-primary text-white"
-                    : ""
-                }
+                    ? "bg-primary text-white shadow-sm shadow-primary/20"
+                    : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
+                }`}
                 onClick={() => onFormChange({ gradingIntensity: intensity })}
               >
                 {intensity}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
 
         {/* Program Selection */}
         <div>
-          <Label className="font-medium">Programs *</Label>
-          <p className="text-sm text-neutral-500 mb-2">
-            This rubric will be available for courses within the selected
-            program(s). You can select multiple programs.
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+            Programs <span className="text-tertiary">*</span>
+          </label>
+          <p className="text-[11px] text-neutral-400 mb-2.5">
+            This rubric will be available for courses within the selected program(s)
           </p>
           {isLoadingPrograms ? (
-            <p className="text-sm text-neutral-500">Loading programs...</p>
+            <div className="flex items-center gap-2 py-3">
+              <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+              <span className="text-xs text-neutral-400">Loading programs…</span>
+            </div>
           ) : programs.length === 0 ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-xs text-neutral-400 py-3 italic">
               No programs available. Please create a program first.
             </p>
           ) : (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {programs.map((program) => (
-                <Button
+                <button
                   key={program.id}
-                  size="sm"
-                  variant={
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     formData.programs.includes(program.name)
-                      ? "primary"
-                      : "outline"
-                  }
-                  className={
-                    formData.programs.includes(program.name)
-                      ? "bg-primary text-white hover:bg-primary-300"
-                      : ""
-                  }
+                      ? "bg-primary text-white shadow-sm shadow-primary/20"
+                      : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
+                  }`}
                   onClick={() => toggleProgram(program.name)}
                 >
                   {program.name}
-                </Button>
+                </button>
               ))}
             </div>
           )}
           {formData.programs.length > 0 && (
-            <p className="text-sm text-primary mt-2">
-              Selected: {formData.programs.join(", ")}
+            <p className="text-[10px] text-primary font-semibold mt-2">
+              {formData.programs.length} selected: {formData.programs.join(", ")}
             </p>
           )}
         </div>
       </div>
 
-      {/* Footer Buttons */}
-      <div className="flex justify-end gap-2 pt-6 border-t">
-        <Button variant="outline" onClick={onCancel}>
+      {/* ─── Footer ─── */}
+      <div className="flex items-center justify-end gap-2.5 pt-5 border-t border-neutral-100">
+        <Button variant="ghost" onClick={onCancel} className="text-sm">
           Cancel
         </Button>
         <Button
-          className="bg-primary hover:bg-primary-300"
+          className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-10 px-5 shadow-md shadow-primary/15"
           onClick={onContinue}
           disabled={!isFormValid}
         >
           Continue
+          <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
     </div>
@@ -298,169 +293,165 @@ export function RubricCriteriaEditor({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Details Summary */}
-      <div className="space-y-2 border-b pb-4">
-        <h4 className="text-xl font-semibold">Build from Scratch</h4>
-        <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
+    <div className="space-y-5">
+      {/* ─── Summary Bar ─── */}
+      <div className="flex items-center justify-between bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-4 text-xs text-neutral-500">
           <span>
-            <strong>Name:</strong> {formData.name || "Untitled"}
+            <span className="font-bold text-neutral-700">{formData.name || "Untitled"}</span>
           </span>
+          <span className="text-neutral-200">|</span>
+          <span className="text-[10px] font-semibold text-primary bg-primary/5 px-2 py-0.5 rounded-md">
+            {formData.gradingIntensity}
+          </span>
+          <span className="text-neutral-200">|</span>
           <span>
-            <strong>Programs:</strong>{" "}
             {formData.programs.length > 0
               ? formData.programs.join(", ")
-              : "Not set"}
+              : "No programs"}
           </span>
-          <span>
-            <strong>Intensity:</strong> {formData.gradingIntensity}
-          </span>
+        </div>
+
+        {/* Create / Preview Toggle */}
+        <div className="flex items-center bg-white border border-neutral-200 rounded-lg p-0.5">
+          <button
+            className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+              activeSubTab === "create"
+                ? "bg-primary text-white shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
+            }`}
+            onClick={() => setActiveSubTab("create")}
+          >
+            <Pencil className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            Build
+          </button>
+          <button
+            className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+              activeSubTab === "preview"
+                ? "bg-primary text-white shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
+            }`}
+            onClick={() => setActiveSubTab("preview")}
+          >
+            <Eye className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            Preview
+          </button>
         </div>
       </div>
 
-      {/* Create/Preview Toggle */}
-      <div className="flex items-center gap-4">
-        <Button
-          size="sm"
-          variant={activeSubTab === "create" ? "primary" : "outline"}
-          className={
-            activeSubTab === "create" ? "bg-primary hover:bg-primary-300" : ""
-          }
-          onClick={() => setActiveSubTab("create")}
-        >
-          Create
-        </Button>
-        <Button
-          size="sm"
-          variant={activeSubTab === "preview" ? "primary" : "outline"}
-          className={
-            activeSubTab === "preview" ? "bg-primary hover:bg-primary-300" : ""
-          }
-          onClick={() => setActiveSubTab("preview")}
-        >
-          Preview
-        </Button>
-      </div>
-
-      {/* Conditional View Rendering */}
+      {/* ─── Criteria Builder ─── */}
       {activeSubTab === "create" ? (
-        <div className="space-y-4">
-          {criteriaList.map((criteria) => (
-            <div key={criteria.id} className="border p-4 rounded-lg space-y-4">
-              {/* Criteria Title and Delete Button */}
-              <div className="flex items-center gap-2 border-b pb-2">
-                <Input
-                  placeholder="Criteria Title - for example, Evidence"
+        <div className="space-y-3">
+          {criteriaList.map((criteria, idx) => (
+            <div key={criteria.id} className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+              {/* Criteria Header */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50/50 border-b border-neutral-100">
+                <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-wider w-5 flex-shrink-0">
+                  C{idx + 1}
+                </span>
+                <input
+                  type="text"
+                  placeholder="Criteria title, e.g. Evidence & Analysis"
                   value={criteria.title}
-                  onChange={(value) =>
-                    handleCriteriaTitleChange(criteria.id, value)
+                  onChange={(e) =>
+                    handleCriteriaTitleChange(criteria.id, e.target.value)
                   }
-                  className="flex-grow font-medium"
+                  className="flex-1 text-sm font-semibold text-neutral-800 bg-transparent outline-none placeholder:text-neutral-300"
                 />
-                <Button
-                  variant="ghost"
-                  className="shrink-0"
+                <button
                   onClick={() => handleDeleteCriteria(criteria.id)}
+                  className="p-1 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-md transition-all flex-shrink-0"
                 >
-                  <Trash2 className="w-4 h-4 text-neutral-500" />
-                </Button>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {/* Score Levels Container */}
-              <div className="flex gap-4 overflow-x-auto pb-2">
+              {/* Score Levels */}
+              <div className="flex gap-0 overflow-x-auto">
                 {criteria.scores.map((score) => (
-                  <div key={score.id} className="w-64 flex-shrink-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Input
+                  <div key={score.id} className="w-56 flex-shrink-0 border-r border-neutral-100 last:border-r-0 p-3 space-y-2">
+                    {/* Score Title + Points + Delete */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
                         value={score.title}
-                        onChange={(value) =>
-                          handleScoreChange(
-                            criteria.id,
-                            score.id,
-                            "title",
-                            value,
-                          )
+                        onChange={(e) =>
+                          handleScoreChange(criteria.id, score.id, "title", e.target.value)
                         }
-                        className="font-medium p-2 text-center flex-grow"
+                        className="flex-1 text-xs font-semibold text-neutral-700 bg-transparent outline-none border-b border-transparent focus:border-primary/30 transition-colors placeholder:text-neutral-300 min-w-0"
                       />
-                      <Input
+                      <input
                         type="number"
-                        value={String(score.points)}
-                        onChange={(value) =>
-                          handleScoreChange(
-                            criteria.id,
-                            score.id,
-                            "points",
-                            parseInt(value) || 0,
-                          )
+                        value={score.points}
+                        onChange={(e) =>
+                          handleScoreChange(criteria.id, score.id, "points", parseInt(e.target.value) || 0)
                         }
-                        className="w-12 text-center p-2"
+                        className="w-10 text-center text-[10px] font-bold text-primary bg-primary/5 border border-primary/10 rounded-md py-1 outline-none focus:ring-1 focus:ring-primary/20"
                       />
-                      <Button
-                        variant="ghost"
-                        className="p-0 h-auto w-auto shrink-0"
-                        onClick={() =>
-                          handleDeleteScoreLevel(criteria.id, score.id)
-                        }
+                      <button
+                        onClick={() => handleDeleteScoreLevel(criteria.id, score.id)}
+                        className="p-0.5 text-neutral-300 hover:text-error-default transition-colors flex-shrink-0"
                       >
-                        <Trash2 className="w-4 h-4 text-neutral-500" />
-                      </Button>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
+                    {/* Description */}
                     <textarea
-                      className="w-full p-2 border rounded-md text-sm h-32 resize-none"
-                      placeholder="Enter the requirements the student needs to demonstrate to get this grade."
+                      className="w-full px-2.5 py-2 border border-neutral-100 rounded-lg text-[11px] text-neutral-600 h-24 resize-none outline-none focus:ring-1 focus:ring-primary/15 focus:border-primary/20 transition-all placeholder:text-neutral-300 leading-relaxed bg-neutral-50/50"
+                      placeholder="Describe what the student must demonstrate…"
                       value={score.description}
                       onChange={(e) =>
-                        handleScoreChange(
-                          criteria.id,
-                          score.id,
-                          "description",
-                          e.target.value,
-                        )
+                        handleScoreChange(criteria.id, score.id, "description", e.target.value)
                       }
                     />
                   </div>
                 ))}
 
-                {/* Add Score Level Column Button */}
-                <div className="flex flex-col justify-end">
-                  <Button
-                    variant="ghost"
-                    className="p-2 h-auto w-auto self-end mb-2 border border-dashed border-neutral-300 hover:bg-neutral-100"
+                {/* Add Score Level */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 border-l border-dashed border-neutral-100">
+                  <button
+                    className="p-1.5 text-neutral-300 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
                     onClick={() => handleAddScoreLevel(criteria.id)}
+                    title="Add score level"
                   >
-                    <Plus className="w-4 h-4 text-neutral-500" />
-                  </Button>
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Add Criteria Button */}
-          <Button
-            variant="ghost"
-            className="text-primary hover:text-primary-300"
+          {/* Add Criteria */}
+          <button
+            className="w-full py-3 border-2 border-dashed border-neutral-200 rounded-xl text-xs font-semibold text-neutral-400 hover:text-primary hover:border-primary/30 hover:bg-primary/[0.02] transition-all flex items-center justify-center gap-1.5"
             onClick={handleAddCriteria}
           >
-            <Plus className="w-4 h-4 mr-1" /> Add Criteria
-          </Button>
+            <Plus className="w-3.5 h-3.5" />
+            Add Criteria
+          </button>
         </div>
       ) : (
         <RubricPreviewTable criteriaList={criteriaList} />
       )}
 
-      {/* Footer Buttons */}
-      <div className="flex justify-end gap-2 pt-6 border-t">
-        <Button variant="outline" onClick={onBack}>
-          Back
-        </Button>
-        <Button
-          className="bg-primary hover:bg-primary-300"
-          onClick={onSave}
-          disabled={criteriaList.length === 0}
-        >
-          Save Rubric
-        </Button>
+      {/* ─── Footer ─── */}
+      <div className="flex items-center justify-between pt-5 border-t border-neutral-100">
+        <span className="text-[10px] text-neutral-400">
+          <span className="font-bold text-neutral-600">{criteriaList.length}</span> criteria
+        </span>
+        <div className="flex items-center gap-2.5">
+          <Button variant="ghost" onClick={onBack} className="text-sm">
+            Back
+          </Button>
+          <Button
+            className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-10 px-5 shadow-md shadow-primary/15"
+            onClick={onSave}
+            disabled={criteriaList.length === 0}
+          >
+            <Save className="w-4 h-4 mr-1.5" />
+            Save Rubric
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@
 import React from "react";
 import { Settings, Save, Loader2 } from "lucide-react";
 import { ScrollableSection } from "./ScrollableSection";
-import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import Button from "../ui/Button";
 import type { AIAssessmentSettings } from "../../types/settingsTypes";
@@ -17,6 +16,19 @@ interface AIAssessmentSettingsProps {
   onSaveSettings: () => void;
 }
 
+const toggleItems: {
+  key: keyof AIAssessmentSettings;
+  label: string;
+  desc: string;
+}[] = [
+  { key: "enableGrammar", label: "Grammar Analysis", desc: "Check grammar and mechanics automatically" },
+  { key: "enableCoherence", label: "Coherence Analysis", desc: "Analyze logical flow and organization" },
+  { key: "enablePlagiarism", label: "Plagiarism Detection", desc: "Check for originality and proper citations" },
+  { key: "enableVocabulary", label: "Vocabulary Analysis", desc: "Assess vocabulary complexity and usage" },
+  { key: "enableStructure", label: "Structure Analysis", desc: "Evaluate essay organization and structure" },
+  { key: "autoEvaluate", label: "Auto-Evaluate on Submit", desc: "Run AI evaluation immediately after submission" },
+];
+
 export const AIAssessmentSettingsComponent: React.FC<
   AIAssessmentSettingsProps
 > = ({
@@ -28,131 +40,49 @@ export const AIAssessmentSettingsComponent: React.FC<
   onSaveSettings,
 }) => {
   return (
-    <ScrollableSection id={id} title="AI Evaluation Settings" icon={Settings}>
+    <ScrollableSection id={id} title="AI Evaluation" icon={Settings}>
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+        <div className="flex items-center justify-center gap-2 py-8">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs text-neutral-400">Loading…</span>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="enable-grammar">Enable Grammar Analysis</Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Automatically check grammar and mechanics
-              </p>
+        <div className="space-y-0">
+          {toggleItems.map((item, idx) => (
+            <div
+              key={item.key}
+              className={`flex items-center justify-between py-3 ${
+                idx < toggleItems.length - 1 ? "border-b border-neutral-50" : ""
+              }`}
+            >
+              <div className="min-w-0">
+                <span className="text-xs font-semibold text-neutral-700">{item.label}</span>
+                <p className="text-[10px] text-neutral-400 mt-0.5">{item.desc}</p>
+              </div>
+              <Switch
+                checked={settings[item.key] as boolean}
+                onCheckedChange={(checked) =>
+                  onSettingsChange({ [item.key]: checked })
+                }
+                disabled={isSaving}
+              />
             </div>
-            <Switch
-              id="enable-grammar"
-              checked={settings.enableGrammar}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ enableGrammar: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="enable-coherence">
-                Enable Coherence Analysis
-              </Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Analyze logical flow and organization
-              </p>
-            </div>
-            <Switch
-              id="enable-coherence"
-              checked={settings.enableCoherence}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ enableCoherence: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="enable-plagiarism">
-                Enable Plagiarism Detection
-              </Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Check for originality and proper citations
-              </p>
-            </div>
-            <Switch
-              id="enable-plagiarism"
-              checked={settings.enablePlagiarism}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ enablePlagiarism: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="enable-vocabulary">
-                Enable Vocabulary Analysis
-              </Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Assess vocabulary complexity and usage
-              </p>
-            </div>
-            <Switch
-              id="enable-vocabulary"
-              checked={settings.enableVocabulary}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ enableVocabulary: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="enable-structure">
-                Enable Structure Analysis
-              </Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Evaluate essay organization and structure
-              </p>
-            </div>
-            <Switch
-              id="enable-structure"
-              checked={settings.enableStructure}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ enableStructure: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="auto-evaluate">Auto-Evaluate on Submission</Label>
-              <p className="text-sm text-neutral-500 mt-1">
-                Run AI evaluation immediately after essay submission
-              </p>
-            </div>
-            <Switch
-              id="auto-evaluate"
-              checked={settings.autoEvaluate}
-              onCheckedChange={(checked) =>
-                onSettingsChange({ autoEvaluate: checked })
-              }
-              disabled={isSaving}
-            />
-          </div>
-          <div className="flex justify-end pt-4 border-t">
+          ))}
+
+          <div className="flex justify-end pt-4 border-t border-neutral-100 mt-1">
             <Button
-              className="bg-primary hover:bg-primary-300"
+              className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15"
               onClick={onSaveSettings}
               disabled={isSaving}
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Saving…
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="w-4 h-4 mr-1.5" />
                   Save Settings
                 </>
               )}
@@ -163,4 +93,3 @@ export const AIAssessmentSettingsComponent: React.FC<
     </ScrollableSection>
   );
 };
-

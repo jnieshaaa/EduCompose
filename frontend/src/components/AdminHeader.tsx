@@ -197,22 +197,23 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       <AnimatePresence>
         {showLogoutConfirm && (
-          <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4'>
+          <div className='fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4'>
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className='bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-5'
+              exit={{ opacity: 0, scale: 0.95 }}
+              className='bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs space-y-4 border border-neutral-100'
             >
-              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-600">
-                <Shield size={24} />
+              <div className="w-10 h-10 bg-error-default/10 rounded-xl flex items-center justify-center">
+                <Shield className="w-5 h-5 text-error-default" />
               </div>
               <div>
-                <h3 className='text-lg font-bold'>Sign Out</h3>
-                <p className='text-sm text-neutral-500 mt-1'>Logout from Admin portal?</p>
+                <h3 className='text-sm font-bold text-neutral-900'>Sign Out</h3>
+                <p className='text-xs text-neutral-400 mt-1'>Logout from Admin portal?</p>
               </div>
-              <div className='flex gap-3 pt-2'>
-                <button className="flex-1 px-4 py-2 rounded-xl border border-neutral-200" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-                <button className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white font-bold" onClick={confirmLogout}>Logout</button>
+              <div className='flex gap-2 pt-1'>
+                <button className="flex-1 px-3 py-2 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                <button className="flex-1 px-3 py-2 rounded-lg bg-error-default text-white text-xs font-semibold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15" onClick={confirmLogout}>Log Out</button>
               </div>
             </motion.div>
           </div>

@@ -8,15 +8,13 @@ import {
   XCircle,
   Trash2,
   Loader2,
+  ArrowLeft,
+  Search,
+  AlertCircle,
+  Users
 } from "lucide-react";
-import Tooltip from "../ui/Tooltip";
 import { ViewEssayModal } from "./ViewEssayModal";
 import { GradingProgressIndicator } from "./GradingProgressIndicator";
-import Card from "../../components/ui/Card";
-import Badge from "../../components/ui/Badge";
-import Button from "../../components/ui/Button";
-import Modal from "../../components/ui/Modal";
-import { useNotification } from "../../context/NotificationContext";
 import {
   Table,
   TableBody,
@@ -41,6 +39,8 @@ import {
   allowResubmission,
 } from "../../services/activityService";
 import { buildSecureUrl } from "../../utils/secureUrl";
+import { useNotification } from "../../context/NotificationContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface StudentsViewProps {
   activity: EssayActivity;
@@ -57,6 +57,7 @@ export function StudentsView({
   students,
   courseName,
   courseSection,
+  onBack,
   isLoading = false,
   onRefresh,
 }: StudentsViewProps) {
@@ -79,10 +80,9 @@ export function StudentsView({
     string | null
   >(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { showNotification } = useNotification();
   const navigate = useNavigate();
-
-  // showAlert is now handled by NotificationContext
 
   // Check which students have been graded
   useEffect(() => {
@@ -93,20 +93,14 @@ export function StudentsView({
         .map(async (student) => {
           try {
             const isGraded = await checkEssayGraded(student.id, activity.id);
-            if (isGraded) {
-              return student.id;
-            }
-          } catch {
-            // Silently handle errors
-          }
+            if (isGraded) return student.id;
+          } catch { /* ignore */ }
           return null;
         });
 
       const results = await Promise.all(checkPromises);
       results.forEach((studentId) => {
-        if (studentId) {
-          gradedSet.add(studentId);
-        }
+        if (studentId) gradedSet.add(studentId);
       });
       setGradedStudents(gradedSet);
     };
@@ -117,28 +111,20 @@ export function StudentsView({
   }, [students, activity.id]);
 
   const handleDeleteEssay = async () => {
-    if (!selectedStudentForDelete) {
-      return;
-    }
-
+    if (!selectedStudentForDelete) return;
     setIsDeleting(true);
     try {
-      const result = await deleteEssay(
-        selectedStudentForDelete.id,
-        activity.id,
-      );
-
+      const result = await deleteEssay(selectedStudentForDelete.id, activity.id);
       if (result.success) {
         showNotification('success', "Essay deleted successfully.");
         setIsDeleteModalOpen(false);
         setSelectedStudentForDelete(null);
         if (onRefresh) await onRefresh();
       } else {
-        showNotification('error', `Failed to delete essay: ${result.error || "Unknown error"}`);
+        showNotification('error', `Deletion failed: ${result.error}`);
       }
     } catch (error) {
-      console.error("Delete error:", error);
-      showNotification('error', "Failed to delete essay. Please try again.");
+      showNotification('error', "System error during deletion.");
     } finally {
       setIsDeleting(false);
     }
@@ -147,29 +133,21 @@ export function StudentsView({
   const handleAllowResubmission = async (studentId: string) => {
     setIsAllowingResubmission(studentId);
     try {
-      const result = await allowResubmission(
-        studentId,
-        activity.id,
-        activity.title,
-      );
+      const result = await allowResubmission(studentId, activity.id, activity.title);
       if (result.success) {
-        showNotification('success', "Notification sent to student allowing resubmission or reupload.");
-        if (onRefresh) {
-          await onRefresh();
-        }
+        showNotification('success', "Student notified for resubmission.");
+        if (onRefresh) await onRefresh();
       } else {
-        showNotification('error', `Failed to send notification: ${result.error}`);
+        showNotification('error', "Failed to send notification.");
       }
     } catch (error) {
-      console.error("Allow resubmission error:", error);
-      showNotification('error', "An error occurred while sending the notification.");
+      showNotification('error', "System error occurred.");
     } finally {
       setIsAllowingResubmission(null);
     }
   };
 
   const handleGradeAll = async () => {
-    // Find all submitted students who are not yet graded and not disqualified by word count
     const toGrade = students.filter(
       (s) =>
         s.status === "submitted" &&
@@ -179,58 +157,24 @@ export function StudentsView({
     );
 
     if (toGrade.length === 0) {
-      const allSubmitted = students.filter(
-        (s) => s.status === "submitted" && !gradedStudents.has(s.id),
-      );
-      if (allSubmitted.length > 0) {
-        showNotification('warning', `No valid essays to grade. Some may be below the ${activity.minWordCount || 150} word requirement.`);
-      } else {
-        showNotification('info', "No pending essays to grade.");
-      }
+      showNotification('info', "No valid pending essays found for batch grading.");
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to grade all ${toGrade.length} pending essays?`,
-      )
-    ) {
-      return;
-    }
+    if (!confirm(`Initialize grading for ${toGrade.length} essays?`)) return;
 
     setIsGradingAll(true);
-
-    // Grade them sequentially to avoid overwhelming the API
     for (const student of toGrade) {
-      setGradingStudents((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(student.id, { progress: 0, step: "Waiting..." });
-        return newMap;
-      });
-
+      setGradingStudents((prev) => new Map(prev).set(student.id, { progress: 0, step: "Waiting..." }));
       try {
-        const result = await gradeEssay(
-          student.id,
-          student.name,
-          activity.id,
-          (progress, step) => {
-            setGradingStudents((prev) => {
-              const newMap = new Map(prev);
-              newMap.set(student.id, { progress, step });
-              return newMap;
-            });
-          },
-        );
-
+        const result = await gradeEssay(student.id, student.name, activity.id, (progress, step) => {
+          setGradingStudents((prev) => new Map(prev).set(student.id, { progress, step }));
+        });
         if (result.success) {
-          setGradedStudents((prev) => {
-            const newSet = new Set(prev);
-            newSet.add(student.id);
-            return newSet;
-          });
+          setGradedStudents((prev) => new Set(prev).add(student.id));
         }
       } catch (err) {
-        console.error(`Error grading student ${student.id}:`, err);
+        console.error(err);
       } finally {
         setGradingStudents((prev) => {
           const newMap = new Map(prev);
@@ -239,466 +183,316 @@ export function StudentsView({
         });
       }
     }
-
     if (onRefresh) await onRefresh();
     setIsGradingAll(false);
-    showNotification('success', "Batch grading process completed.");
+    showNotification('success', "Batch grading cycle finished.");
   };
+
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Navigation Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            onClick={onBack}
+            className="w-9 h-9 flex items-center justify-center bg-white border border-neutral-100 hover:bg-neutral-50 text-neutral-400 rounded-xl transition-all shadow-sm active:scale-95"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-neutral-900 leading-tight truncate">
+              {activity.title}
+            </h1>
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest truncate">
+                {courseName}
+              </span>
+              <span className="text-neutral-200">/</span>
+              <span className="text-[10px] font-bold text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">
+                {courseSection}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
             onClick={handleGradeAll}
             disabled={isGradingAll || isLoading}
-            className="flex items-center gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary font-semibold"
+            className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            {isGradingAll ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Grading All...
-              </>
-            ) : (
-              <>
-                <Edit className="w-4 h-4" />
-                Grade All Pending
-              </>
-            )}
-          </Button>
+            {isGradingAll ? <Loader2 size={16} className="animate-spin" /> : <Edit size={14} />}
+            {isGradingAll ? "Grading Cycle..." : "Grade All Pending"}
+          </button>
         </div>
       </div>
 
-      {/* Activity Header */}
-      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-        <h1 className="text-2xl font-bold text-neutral-900 mb-2">
-          {activity.title}
-        </h1>
-        <p className="text-neutral-600 mb-2">
-          {courseName} - {courseSection}
-        </p>
-        {activity.description && (
-          <p className="text-sm text-neutral-500">{activity.description}</p>
-        )}
-      </Card>
-
-      {/* Students Table */}
-      <Card>
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-neutral-900">Students</h2>
-          <p className="text-sm text-neutral-500">
-            {isLoading
-              ? "Loading students..."
-              : `${students.length} students in this section`}
-          </p>
+      {/* Main Content Board */}
+      <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
+        <div className="p-5 border-b border-neutral-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-50/20">
+          <div>
+            <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Student Roster</h2>
+            <p className="text-xs text-neutral-500 font-medium ml-1 mt-0.5">
+              {isLoading ? "Synchronizing roster..." : `${students.length} participants registered`}
+            </p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" size={14} />
+            <input
+              type="text"
+              placeholder="Search student..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-neutral-100 rounded-xl text-xs placeholder:text-neutral-300 focus:outline-none focus:border-primary/30 transition-all shadow-sm"
+            />
+          </div>
         </div>
+
         {isLoading ? (
-          <div className="p-8 text-center text-neutral-500">
-            Loading students...
+          <div className="p-20 text-center">
+            <Loader2 className="animate-spin text-primary/30 w-8 h-8 mx-auto mb-4" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Loading roster...</p>
           </div>
         ) : students.length === 0 ? (
-          <div className="p-8 text-center text-neutral-500">
-            <p className="text-lg font-medium text-neutral-700 mb-2">
-              No students found
-            </p>
-            <p className="text-sm text-neutral-500">
-              There are no students in {courseName} - {courseSection}. Please
-              check that the course and section names are correct.
-            </p>
+          <div className="p-20 text-center">
+            <Users className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Empty Section</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student Name</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Coherence</TableHead>
-                <TableHead className="text-center">Readability</TableHead>
-                <TableHead className="text-center">Argumentative</TableHead>
-                <TableHead className="text-center">Grammar</TableHead>
-                <TableHead className="text-center">Score</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow
-                  key={student.id}
-                  className={`transition-colors h-16 ${
-                    student.wordCount &&
-                    student.wordCount < (activity.minWordCount || 150)
-                      ? "border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
-                      : "hover:bg-neutral-50"
-                  }`}
-                >
-                  <TableCell className="font-medium whitespace-nowrap py-4">
-                    {student.wordCount &&
-                    student.wordCount < (activity.minWordCount || 150) ? (
-                      <Tooltip
-                        content={
-                          student.gradingError ||
-                          `Essay is too short (minimum ${activity.minWordCount || 150} words).`
-                        }
-                        position="right"
-                      >
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-neutral-50/50">
+                <TableRow>
+                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] pl-6">Student Name</TableHead>
+                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Metrics</TableHead>
+                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Total Score</TableHead>
+                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-neutral-50">
+                {filteredStudents.map((student) => {
+                  const isLowWordCount = student.wordCount && student.wordCount < (activity.minWordCount || 150);
+                  const isGrading = gradingStudents.has(student.id);
+                  const isSubmitted = student.status === "submitted";
+                  const isGraded = isSubmitted && (gradedStudents.has(student.id) || student.score !== undefined);
+
+                  return (
+                    <TableRow
+                      key={student.id}
+                      className={`transition-colors group ${isLowWordCount ? "bg-error-default/[0.02]" : "hover:bg-neutral-50/30"}`}
+                    >
+                      <TableCell className="pl-6 py-4">
                         <div className="flex flex-col">
-                          <span className="text-red-700 font-semibold">
+                          <span className={`text-[11px] font-bold ${isLowWordCount ? 'text-error-default' : 'text-neutral-800'}`}>
                             {student.name}
                           </span>
-                          <span className="text-xs text-red-500 italic flex items-center gap-1">
-                            <XCircle className="w-3 h-3" />
-                            Low Word Count ({student.wordCount} words)
-                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                             <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">
+                               {student.wordCount || 0} WORDS
+                             </span>
+                             {isLowWordCount && (
+                                <span className="flex items-center gap-1 text-[8px] font-bold text-error-default uppercase bg-error-default/5 px-1.5 py-0.5 rounded-md">
+                                  <AlertCircle size={8} /> Sub-minimum
+                                </span>
+                             )}
+                          </div>
                         </div>
-                      </Tooltip>
-                    ) : (
-                      <div className="flex flex-col">
-                        <span>{student.name}</span>
-                        {student.wordCount && (
-                          <span className="text-xs text-neutral-400">
-                            {student.wordCount} words
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isGrading ? (
+                          <div className="flex flex-col items-center gap-1.5">
+                            <GradingProgressIndicator
+                              progress={gradingStudents.get(student.id)?.progress || 0}
+                              currentStep={gradingStudents.get(student.id)?.step}
+                              size="sm"
+                            />
+                            <span className="text-[9px] font-bold text-primary uppercase animate-pulse">Processing</span>
+                          </div>
+                        ) : isSubmitted ? (
+                          <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                            isGraded 
+                            ? 'bg-success-default text-white border-success-default shadow-sm' 
+                            : 'bg-primary/5 text-primary border-primary/20'
+                          }`}>
+                            {isGraded ? <CheckCircle2 size={10} /> : <FileText size={10} />}
+                            {isGraded ? "Graded" : "Submitted"}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-300 border border-neutral-100">
+                            <XCircle size={10} /> Pending
                           </span>
                         )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {gradingStudents.has(student.id) ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <GradingProgressIndicator
-                          progress={
-                            gradingStudents.get(student.id)?.progress || 0
-                          }
-                          currentStep={gradingStudents.get(student.id)?.step}
-                          size="sm"
-                        />
-                        <span className="text-xs text-neutral-500">
-                          Grading...
-                        </span>
-                      </div>
-                    ) : student.status === "submitted" ? (
-                      student.coherence !== undefined ||
-                      student.readability !== undefined ||
-                      student.argumentative !== undefined ||
-                      student.grammar !== undefined ||
-                      student.score !== undefined ? (
-                        <Badge className="bg-emerald-800 text-white border-emerald-900/20 shadow-sm">
-                          <CheckCircle2 className="w-3 h-3 mr-1 inline" />
-                          Graded
-                        </Badge>
-                      ) : (
-                        <Badge variant="info" className="shadow-sm">
-                          <CheckCircle2 className="w-3 h-3 mr-1 inline" />
-                          Submitted
-                        </Badge>
-                      )
-                    ) : (
-                      <Badge variant="error" className="shadow-sm">
-                        <XCircle className="w-3 h-3 mr-1 inline" />
-                        Not Submitted
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.coherence !== undefined ? (
-                      <span className="font-medium">{Number(student.coherence).toFixed(2)}%</span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.readability !== undefined ? (
-                      <span className="font-medium">
-                        {Number(student.readability).toFixed(2)}%
-                      </span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.argumentative !== undefined ? (
-                      <span className="font-medium">
-                        {Number(student.argumentative).toFixed(2)}%
-                      </span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.grammar !== undefined ? (
-                      <span className="font-medium">{Number(student.grammar).toFixed(2)}%</span>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {student.score !== undefined ? (
-                      <Badge
-                        className={
-                          student.score >= 90
-                            ? "bg-green-600 text-white"
-                            : student.score >= 80
-                              ? "bg-blue-600 text-white"
-                              : "bg-amber-600 text-white"
-                        }
-                      >
-                        {Number(student.score).toFixed(2)}%
-                      </Badge>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAllowResubmission(student.id);
-                          }}
-                          disabled={isAllowingResubmission === student.id}
-                        >
-                          <Loader2
-                            className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "animate-spin" : "hidden"}`}
-                          />
-                          <CheckCircle2
-                            className={`w-4 h-4 mr-2 ${isAllowingResubmission === student.id ? "hidden" : ""}`}
-                          />
-                          Allow Resubmission
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (student.status === "submitted") {
-                              setSelectedStudentForView({
-                                id: student.id,
-                                name: student.name,
-                              });
-                              setIsViewEssayModalOpen(true);
-                            } else {
-                              showNotification('info', "This student has not submitted an essay yet.");
-                            }
-                          }}
-                          disabled={student.status !== "submitted"}
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          View Essay
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (student.status === "submitted") {
-                              if (gradingStudents.has(student.id)) {
-                                return;
-                              }
-
-                              const isGraded = await checkEssayGraded(
-                                student.id,
-                                activity.id,
-                              );
-                              if (isGraded) {
-                                const analysisData = await fetchEssayAnalysis(
-                                  student.id,
-                                  activity.id,
-                                );
-                                if (analysisData) {
-                                  navigate(buildSecureUrl('/Teacher/AnalysisResults', {
-                                    s: student.id,
-                                    a: activity.id,
-                                    activityId: activity.id,
-                                    activityTitle: activity.title,
-                                    programSection: courseSection,
-                                    programName: courseName,
-                                    studentName: student.name,
-                                  }), {
-                                    state: {
-                                      analysis: analysisData.analysis,
-                                      text: analysisData.text,
-                                      title: analysisData.title,
-                                      studentId: student.id,
-                                      studentName: student.name,
-                                      activityId: activity.id,
-                                    },
-                                  });
-                                } else {
-                                  showNotification('error', "Failed to load analysis results.");
-                                }
-                              } else {
-                                setGradingStudents((prev) => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(student.id, {
-                                    progress: 0,
-                                    step: "Starting...",
-                                  });
-                                  return newMap;
-                                });
-
-                                const result = await gradeEssay(
-                                  student.id,
-                                  student.name,
-                                  activity.id,
-                                  (progress, step) => {
-                                    setGradingStudents((prev) => {
-                                      const newMap = new Map(prev);
-                                      newMap.set(student.id, {
-                                        progress,
-                                        step,
-                                      });
-                                      return newMap;
-                                    });
-                                  },
-                                );
-
-                                setGradingStudents((prev) => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(student.id);
-                                  return newMap;
-                                });
-
-                                if (result.success) {
-                                  setGradedStudents((prev) => {
-                                    const newSet = new Set(prev);
-                                    newSet.add(student.id);
-                                    return newSet;
-                                  });
-                                  if (onRefresh) await onRefresh();
-                                } else {
-                                  showNotification('error', `Failed to grade essay: ${result.error}`);
-                                  if (onRefresh) await onRefresh();
-                                }
-                              }
-                            } else {
-                            showNotification(
-                              "info",
-                              "This student has not submitted an essay yet.",
-                            );
-                          }
-                        }}
-                        disabled={
-                          student.status !== "submitted" ||
-                          gradingStudents.has(student.id)
-                        }
-                      >
-                        {gradingStudents.has(student.id) ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Grading...
-                          </>
-                        ) : gradedStudents.has(student.id) ? (
-                          <>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Show Result
-                          </>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-3">
+                            {[
+                              { label: 'COH', val: student.coherence },
+                              { label: 'READ', val: student.readability },
+                              { label: 'ARG', val: student.argumentative },
+                              { label: 'GRM', val: student.grammar }
+                            ].map((m, i) => (
+                              <div key={i} className="flex flex-col items-center min-w-[36px]">
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">{m.label}</span>
+                                <span className={`text-[11px] font-bold ${m.val !== undefined ? 'text-neutral-800' : 'text-neutral-300'}`}>
+                                  {m.val !== undefined ? Math.round(Number(m.val)) : '—'}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {student.score !== undefined ? (
+                          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl text-xs font-bold shadow-sm border ${
+                            student.score >= 85 ? 'bg-success-default text-white border-success-default' :
+                            student.score >= 75 ? 'bg-blue-500 text-white border-blue-500' : 'bg-amber-500 text-white border-amber-500'
+                          }`}>
+                            {Math.round(Number(student.score))}%
+                          </div>
                         ) : (
-                          <>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Grade Essay
-                          </>
+                          <span className="text-xs text-neutral-200 font-bold tracking-widest">—</span>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (student.status === "submitted") {
-                            setSelectedStudentForDelete({
-                              id: student.id,
-                              name: student.name,
-                            });
-                            setIsDeleteModalOpen(true);
-                          } else {
-                            showNotification(
-                              "info",
-                              "This student has not submitted an essay yet.",
-                            );
-                          }
-                          }}
-                          disabled={student.status !== "submitted"}
-                          className="text-error-default focus:text-error-default focus:bg-error-default/10"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Essay
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-2 text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50 rounded-xl transition-all">
+                              <MoreVertical size={15} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl border-neutral-100 shadow-xl">
+                            <DropdownMenuItem
+                              className="text-xs font-medium cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAllowResubmission(student.id);
+                              }}
+                              disabled={isAllowingResubmission === student.id}
+                            >
+                              {isAllowingResubmission === student.id ? <Loader2 size={13} className="mr-2 animate-spin" /> : <CheckCircle2 size={13} className="mr-2" />}
+                              Allow Resubmission
+                            </DropdownMenuItem>
 
-      {/* View Essay Modal */}
+                            <DropdownMenuItem
+                              className="text-xs font-medium cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (student.status === "submitted") {
+                                  setSelectedStudentForView({ id: student.id, name: student.name });
+                                  setIsViewEssayModalOpen(true);
+                                }
+                              }}
+                              disabled={student.status !== "submitted"}
+                            >
+                              <FileText size={13} className="mr-2" /> View Essay
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              className="text-xs font-medium cursor-pointer"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (student.status === "submitted") {
+                                  if (isGrading) return;
+                                  if (isGraded) {
+                                    const analysisData = await fetchEssayAnalysis(student.id, activity.id);
+                                    if (analysisData) {
+                                      navigate(buildSecureUrl('/Teacher/AnalysisResults', {
+                                        s: student.id,
+                                        a: activity.id,
+                                        activityId: activity.id,
+                                        activityTitle: activity.title,
+                                        programSection: courseSection,
+                                        programName: courseName,
+                                        studentName: student.name,
+                                      }), { state: { ...analysisData, studentId: student.id, studentName: student.name, activityId: activity.id } });
+                                    }
+                                  } else {
+                                    setGradingStudents((prev) => new Map(prev).set(student.id, { progress: 0, step: "Starting..." }));
+                                    const result = await gradeEssay(student.id, student.name, activity.id, (progress, step) => {
+                                      setGradingStudents((prev) => new Map(prev).set(student.id, { progress, step }));
+                                    });
+                                    setGradingStudents((prev) => {
+                                      const n = new Map(prev); n.delete(student.id); return n;
+                                    });
+                                    if (result.success) {
+                                      setGradedStudents((prev) => new Set(prev).add(student.id));
+                                      if (onRefresh) await onRefresh();
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={student.status !== "submitted" || isGrading}
+                            >
+                               {isGrading ? <Loader2 size={13} className="mr-2 animate-spin" /> : isGraded ? <Eye size={13} className="mr-2" /> : <Edit size={13} className="mr-2" />}
+                               {isGraded ? "Show Result" : "Grade Essay"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                               className="text-xs font-medium text-error-default cursor-pointer"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 setSelectedStudentForDelete({ id: student.id, name: student.name });
+                                 setIsDeleteModalOpen(true);
+                               }}
+                               disabled={student.status !== "submitted"}
+                            >
+                              <Trash2 size={13} className="mr-2" /> Delete Submission
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+
+      {/* Modals integrated with design system */}
       {selectedStudentForView && (
         <ViewEssayModal
           isOpen={isViewEssayModalOpen}
-          onClose={() => {
-            setIsViewEssayModalOpen(false);
-            setSelectedStudentForView(null);
-          }}
+          onClose={() => { setIsViewEssayModalOpen(false); setSelectedStudentForView(null); }}
           studentId={selectedStudentForView.id}
           studentName={selectedStudentForView.name}
           activityId={activity.id}
         />
       )}
 
-      {/* Delete Essay Confirmation Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedStudentForDelete(null);
-        }}
-        title="Delete Essay Submission"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-neutral-600">
-            Are you sure you want to delete the essay submission for{" "}
-            <span className="font-semibold text-neutral-900">
-              {selectedStudentForDelete?.name}
-            </span>
-            ? This action cannot be undone and will permanently remove the file
-            and all associated analysis data.
-          </p>
-
-          <div className="bg-warning-default/10 border border-warning-default/20 rounded-md p-3">
-            <p className="text-sm text-warning-default font-medium">
-              ⚠️ Warning: This will delete the essay file and all analysis
-              results permanently.
-            </p>
+      {/* Standardized Delete Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsDeleteModalOpen(false)} className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 bg-error-default/10 text-error-default rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Trash2 size={24} />
+                </div>
+                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Confirm Deletion</h3>
+                <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                  Are you sure you want to delete <span className="text-neutral-700 font-bold">{selectedStudentForDelete?.name}'s</span> essay? All analysis and scoring data will be permanently removed.
+                </p>
+              </div>
+              <div className="p-4 bg-neutral-50 flex gap-2">
+                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600">Cancel</button>
+                <button onClick={handleDeleteEssay} disabled={isDeleting} className="flex-1 px-4 py-2 bg-error-default text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-error-default/20 disabled:opacity-50">
+                  {isDeleting ? "Deleting..." : "Confirm"}
+                </button>
+              </div>
+            </motion.div>
           </div>
+        )}
+      </AnimatePresence>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteModalOpen(false);
-                setSelectedStudentForDelete(null);
-              }}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteEssay}
-              disabled={isDeleting}
-              className="bg-error-default hover:bg-error-dark text-white"
-            >
-              {isDeleting ? "Deleting..." : "Delete Essay"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <div className="text-center">
+         <button onClick={onBack} className="text-[10px] font-bold text-neutral-300 uppercase tracking-[0.2em] hover:text-primary transition-all">Close Viewer</button>
+      </div>
     </div>
   );
 }

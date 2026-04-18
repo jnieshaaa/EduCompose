@@ -8,9 +8,8 @@ import {
   BookOpen,
   Upload,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
 import { useAlert } from "../../hooks/useAlert";
 import {
   fetchTeacherSettings,
@@ -314,37 +313,18 @@ export function SettingsTab() {
   };
 
   const settingsNavigation = [
-    {
-      id: "profile",
-      name: "Profile Information",
-      icon: User,
-    },
-    {
-      id: "ai-assessment",
-      name: "AI Assessment",
-      icon: Settings,
-    },
-    {
-      id: "thresholds",
-      name: "Warning Thresholds",
-      icon: AlertTriangle,
-    },
-    {
-      id: "rubric",
-      name: "Rubric Defaults",
-      icon: BookOpen,
-    },
-    {
-      id: "data",
-      name: "Data Management",
-      icon: Upload,
-    },
+    { id: "profile", name: "Profile", icon: User },
+    { id: "ai-assessment", name: "AI Assessment", icon: Settings },
+    { id: "thresholds", name: "Thresholds", icon: AlertTriangle },
+    { id: "rubric", name: "Rubric Defaults", icon: BookOpen },
+    { id: "data", name: "Data", icon: Upload },
   ];
 
   if (!settings && isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+      <div className="flex flex-col items-center justify-center gap-2 min-h-[400px]">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        <span className="text-xs text-neutral-400">Loading settings…</span>
       </div>
     );
   }
@@ -352,11 +332,11 @@ export function SettingsTab() {
   if (!settings) {
     return (
       <div className="p-6">
-        <Card className="p-6">
-          <p className="text-neutral-600">
+        <div className="bg-error-default/5 border border-error-default/15 rounded-xl p-6 text-center">
+          <p className="text-sm text-error-dark">
             Failed to load settings. Please refresh the page.
           </p>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -364,46 +344,44 @@ export function SettingsTab() {
   return (
     <>
       <AlertComponent />
-      <div className="space-y-6 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Manage your profile, AI evaluation preferences, and system settings
+      <div className="p-6 space-y-0">
+        {/* ─── Header ─── */}
+        <div className="mb-6">
+          <h1 className="text-lg font-bold text-neutral-900">Settings</h1>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Manage your profile, AI preferences, and system configuration
           </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Side Navigation */}
-          <div className="lg:w-1/4">
-            <Card className="p-4 sticky top-6">
-              <nav className="space-y-1">
-                {settingsNavigation.map((item) => {
-                  const isActive = item.id === activeTab;
-                  const activeClasses =
-                    "bg-neutral-100 text-primary-600 font-semibold";
-                  const inactiveClasses =
-                    "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900";
+          {/* ─── Side Navigation ─── */}
+          <div className="lg:w-48 flex-shrink-0">
+            <nav className="sticky top-6 space-y-0.5">
+              {settingsNavigation.map((item) => {
+                const isActive = item.id === activeTab;
 
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center px-3 py-2 rounded-md transition-colors duration-150 ${
-                        isActive ? activeClasses : inactiveClasses
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5 mr-3" />
-                      <span className="text-sm text-left">{item.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </Card>
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-left ${
+                      isActive
+                        ? "bg-primary/5 text-primary font-semibold"
+                        : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+                    }`}
+                  >
+                    <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${
+                      isActive ? "text-primary" : "text-neutral-400"
+                    }`} />
+                    <span className="text-xs">{item.name}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Content Area */}
-          <div className="lg:w-3/4 space-y-8">
+          {/* ─── Content Area ─── */}
+          <div className="flex-1 min-w-0 space-y-8">
             <ProfileInformation
               id="profile"
               profile={settings.profile}
@@ -443,15 +421,16 @@ export function SettingsTab() {
 
             <DataManagement id="data" />
 
-            {/* Global Reset Button */}
-            <div className="flex justify-end gap-2 pb-6 pt-4 border-t">
-              <Button
-                variant="outline"
+            {/* Global Reset */}
+            <div className="flex items-center justify-end pt-5 border-t border-neutral-100 pb-4">
+              <button
                 onClick={handleResetToDefaults}
                 disabled={isSaving}
+                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-error-default transition-colors disabled:opacity-40"
               >
-                Reset to Defaults
-              </Button>
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset All to Defaults
+              </button>
             </div>
           </div>
         </div>

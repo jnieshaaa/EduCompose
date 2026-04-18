@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, X } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useAlert } from "../../hooks/useAlert";
 import { RubricsListView } from "../../components/rubrics/RubricsListView";
@@ -316,37 +316,48 @@ export function RubricsTab() {
   };
 
   return (
-    <div className='space-y-6 p-6'>
-      {/* HEADER */}
-      <div className='flex items-center justify-between mb-6'>
-        <h1 className='text-2xl text-neutral-900 font-semibold'>
-          {currentView === "options" ? "New Rubric" : "Rubrics"}
-        </h1>
-        <div className='flex gap-2'>
-          {currentView === "list" && (
-            <Button
-              className='bg-primary hover:bg-primary-300'
-              onClick={handleCreateClick}
-            >
-              <Plus className='w-4 h-4 mr-2' />
-              Create New Rubric
-            </Button>
-          )}
-
+    <div className="p-6 space-y-0">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
           {currentView === "options" && (
-            <Button variant='outline' onClick={handleBackToList}>
-              <X className='w-4 h-4 mr-2' />
-              Close
-            </Button>
+            <button
+              onClick={handleBackToList}
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
           )}
+          <div>
+            <h1 className="text-lg font-bold text-neutral-900">
+              {currentView === "options"
+                ? editingRubricId
+                  ? "Edit Rubric"
+                  : "New Rubric"
+                : "Rubrics"}
+            </h1>
+            {currentView === "list" && (
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Manage grading rubrics for your essay activities
+              </p>
+            )}
+          </div>
         </div>
+
+        {currentView === "list" && (
+          <Button
+            className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15"
+            onClick={handleCreateClick}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            New Rubric
+          </Button>
+        )}
       </div>
 
-      {/* MAIN CONTENT AREA */}
-
-      {/* View 2/3: Creation Options and Dynamic Builder */}
+      {/* ─── Creation Flow ─── */}
       {currentView === "options" && (
-        <div className='w-full space-y-6'>
+        <div className="space-y-0">
           <RubricCreationOptionsView
             selectedMode={selectedMode}
             onModeSelect={handleModeSelection}
@@ -383,7 +394,7 @@ export function RubricsTab() {
         </div>
       )}
 
-      {/* View 1: Main Rubric List Screen */}
+      {/* ─── Rubric List ─── */}
       {currentView === "list" && (
         <RubricsListView
           activeTab={activeTab}

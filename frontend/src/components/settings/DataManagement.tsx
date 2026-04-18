@@ -2,9 +2,6 @@
 
 import React from "react";
 import { Upload, FileText, Download } from "lucide-react";
-import Card from "../ui/Card";
-import { Label } from "../ui/label";
-import Input from "../ui/Input";
 import Button from "../ui/Button";
 
 interface DataManagementProps {
@@ -12,54 +9,53 @@ interface DataManagementProps {
 }
 
 export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
-  <div id={id} className="space-y-8 scroll-mt-20">
+  <div id={id} className="space-y-5 scroll-mt-20">
     {/* Batch Upload Formats */}
-    <Card className="p-6">
-      <h2 className="text-xl text-neutral-900 mb-4 flex items-center border-b pb-2">
-        <Upload className="w-5 h-5 mr-2" />
-        Batch Upload Formats
-      </h2>
-      <div className="space-y-4">
+    <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
+        <Upload className="w-4 h-4 text-neutral-400" />
+        <h2 className="text-sm font-bold text-neutral-800">Batch Upload Formats</h2>
+      </div>
+      <div className="p-5 space-y-4">
         <div>
-          <Label>Supported File Formats</Label>
-          <div className="flex gap-2 mt-2">
-            <span className="px-3 py-1 bg-neutral-100 rounded-rd text-sm text-neutral-600">
-              .csv
-            </span>
-            <span className="px-3 py-1 bg-neutral-100 rounded-rd text-sm text-neutral-600">
-              .xlsx
-            </span>
-            <span className="px-3 py-1 bg-neutral-100 rounded-rd text-sm text-neutral-600">
-              .xls
-            </span>
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
+            Supported Formats
+          </label>
+          <div className="flex gap-1.5">
+            {[".csv", ".xlsx", ".xls"].map((ext) => (
+              <span key={ext} className="px-2.5 py-1 bg-neutral-50 rounded-lg text-[10px] font-semibold text-neutral-500 border border-neutral-100">
+                {ext}
+              </span>
+            ))}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Download Template (Programs)
-          </Button>
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Download Template (Students)
-          </Button>
+          <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors">
+            <Download className="w-3.5 h-3.5" />
+            Programs Template
+          </button>
+          <span className="text-neutral-200">|</span>
+          <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors">
+            <Download className="w-3.5 h-3.5" />
+            Students Template
+          </button>
         </div>
       </div>
-    </Card>
+    </div>
 
     {/* Export Reports */}
-    <Card className="p-6">
-      <h2 className="text-xl text-neutral-900 mb-4 flex items-center border-b pb-2">
-        <FileText className="w-5 h-5 mr-2" />
-        Export Reports
-      </h2>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
+        <FileText className="w-4 h-4 text-neutral-400" />
+        <h2 className="text-sm font-bold text-neutral-800">Export Reports</h2>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="report-type">Report Type</Label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Report Type</label>
             <select
               id="report-type"
-              className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-rd"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
             >
               <option>Student Performance</option>
               <option>AI Metrics Summary</option>
@@ -68,10 +64,10 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
             </select>
           </div>
           <div>
-            <Label htmlFor="report-format">Format</Label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Format</label>
             <select
               id="report-format"
-              className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-rd"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
             >
               <option>PDF</option>
               <option>CSV</option>
@@ -79,13 +75,13 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="date-from">Date From</Label>
-            <Input
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Date From</label>
+            <input
               id="date-from"
               type="date"
-              className="mt-1"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
               defaultValue={
                 new Date(new Date().getFullYear(), 0, 1)
                   .toISOString()
@@ -94,21 +90,20 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
             />
           </div>
           <div>
-            <Label htmlFor="date-to">Date To</Label>
-            <Input
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Date To</label>
+            <input
               id="date-to"
               type="date"
-              className="mt-1"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
               defaultValue={new Date().toISOString().split("T")[0]}
             />
           </div>
         </div>
-        <Button className="bg-primary hover:bg-primary-300">
-          <Download className="w-4 h-4 mr-2" />
-          Generate & Export Report
+        <Button className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15">
+          <Download className="w-4 h-4 mr-1.5" />
+          Export Report
         </Button>
       </div>
-    </Card>
+    </div>
   </div>
 );
-

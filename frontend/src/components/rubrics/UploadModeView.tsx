@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, Download, FileCheck } from "lucide-react";
-import Badge from "../ui/Badge";
+import { Upload, Download, Loader2, AlertCircle, CheckCircle, FileSpreadsheet, Info } from "lucide-react";
 import Button from "../ui/Button";
 import type { RubricFormData } from "../../types/rubricTypes";
 import type { ImportResult } from "../../services/rubricImportService";
@@ -102,146 +101,164 @@ export function UploadModeView({
   };
 
   return (
-    <div className="w-full mt-6 p-6 border rounded-lg shadow-md bg-white">
-      <h3 className="text-2xl font-semibold text-neutral-900 mb-6">
-        Upload or Import
-      </h3>
-      <div className="space-y-6">
-        <p className="text-neutral-600">
-          Add your rubric file here and EduCompose will turn it into a digital,
-          ready-to-use rubric.
-        </p>
-        <div className="border-2 border-dashed border-purple-300 bg-purple-50 p-16 text-center min-h-96 flex flex-col items-center justify-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.json,.pdf"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+    <div className="w-full mt-4">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-lg font-bold text-neutral-900">
+            Import Rubric
+          </h3>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Upload a file and EduCompose will convert it to a digital rubric
+          </p>
+        </div>
+        <button
+          onClick={handleDownloadTemplate}
+          className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Excel Template
+        </button>
+      </div>
 
-          {selectedFile ? (
-            <div className="space-y-4 w-full max-w-md">
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-neutral-200">
-                <FileCheck className="w-6 h-6 text-primary" />
-                <div className="flex-1">
-                  <p className="font-medium text-neutral-900">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-sm text-neutral-500">
-                    {(selectedFile.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
-                {isUploading && (
-                  <div className="text-sm text-neutral-500">Processing...</div>
-                )}
-                {uploadSuccess && (
-                  <Badge className="bg-success-default text-white">
-                    Imported!
-                  </Badge>
-                )}
-                {uploadError && (
-                  <Badge className="bg-error-default text-white">Error</Badge>
-                )}
+      {/* ─── Drop Zone ─── */}
+      <div
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer group ${
+          selectedFile
+            ? "border-neutral-200 bg-white"
+            : "border-neutral-200 bg-neutral-50/50 hover:border-primary/40 hover:bg-primary/[0.02]"
+        }`}
+        onClick={!selectedFile ? handleMyDeviceClick : undefined}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.json,.pdf"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+
+        {selectedFile ? (
+          <div className="space-y-3 max-w-sm mx-auto">
+            {/* File Info */}
+            <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+              <div className="w-9 h-9 bg-white border border-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileSpreadsheet className="w-4 h-4 text-primary" />
               </div>
-              {uploadError && (
-                <div className="p-3 bg-error-default/10 border border-error-default/20 rounded-lg">
-                  <p className="text-sm text-error-default">{uploadError}</p>
-                </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-xs font-semibold text-neutral-800 truncate">
+                  {selectedFile.name}
+                </p>
+                <p className="text-[10px] text-neutral-400">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+              {isUploading && (
+                <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
               )}
               {uploadSuccess && (
-                <div className="p-3 bg-success-default/10 border border-success-default/20 rounded-lg">
-                  <p className="text-sm text-success-default">
-                    Rubric imported successfully! Redirecting to builder...
-                  </p>
-                </div>
+                <CheckCircle className="w-4 h-4 text-success-default flex-shrink-0" />
+              )}
+              {uploadError && (
+                <AlertCircle className="w-4 h-4 text-error-default flex-shrink-0" />
               )}
             </div>
-          ) : (
-            <>
-              <p className="text-neutral-500 mb-8 text-lg">
-                Drop files here.{" "}
-                <span
-                  className="text-primary font-medium cursor-pointer hover:text-primary-300"
-                  onClick={handleMyDeviceClick}
-                >
-                  browse files
-                </span>{" "}
-                or import from:
+
+            {/* Status Messages */}
+            {isUploading && (
+              <p className="text-[11px] text-neutral-400 font-medium">
+                Parsing rubric data…
               </p>
-              <div className="flex gap-10 justify-center">
-                <button
-                  type="button"
-                  onClick={handleMyDeviceClick}
-                  className="text-center cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  <Upload className="w-8 h-8 text-primary mx-auto" />
-                  <p className="text-sm mt-2">My Device</p>
-                </button>
+            )}
+            {uploadError && (
+              <div className="p-3 bg-error-default/5 border border-error-default/15 rounded-lg text-left">
+                <p className="text-[11px] text-error-dark leading-relaxed">{uploadError}</p>
               </div>
-              <div className="mt-8 pt-6 border-t border-neutral-200">
-                <p className="text-sm text-neutral-600 mb-3">
-                  Need a template? Download our Excel template (recommended):
+            )}
+            {uploadSuccess && (
+              <div className="p-3 bg-success-default/5 border border-success-default/15 rounded-lg">
+                <p className="text-[11px] text-success-dark font-medium">
+                  Rubric imported! Redirecting to builder…
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadTemplate}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Excel Template
-                </Button>
               </div>
-            </>
-          )}
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 bg-white border border-neutral-100 rounded-xl flex items-center justify-center group-hover:scale-105 group-hover:border-primary/20 transition-all">
+              <Upload className="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-700">
+                Drop your rubric file or{" "}
+                <span className="text-primary">browse</span>
+              </p>
+              <p className="text-[11px] text-neutral-400 mt-1">
+                Excel (.xlsx) &middot; JSON &middot; PDF
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Format Guide ─── */}
+      <div className="mt-4 bg-neutral-50 rounded-xl border border-neutral-100 overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-neutral-100 flex items-center gap-2">
+          <Info className="w-3.5 h-3.5 text-neutral-400" />
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+            Excel Format Guide
+          </span>
         </div>
-        <div className="mt-6 p-4 bg-neutral-50 rounded-lg">
-          <h4 className="font-semibold text-neutral-900 mb-2">
-            Supported File Formats:
-          </h4>
-          <ul className="text-sm text-neutral-600 space-y-2 list-disc list-inside mb-4">
-            <li>
-              <strong>Excel (.xlsx)</strong> - Recommended! Download the
-              template above
-            </li>
-          </ul>
-          <h4 className="font-semibold text-neutral-900 mb-2 mt-4">
-            Excel Format Instructions:
-          </h4>
-          <ul className="text-sm text-neutral-600 space-y-1 list-disc list-inside">
-            <li>Row 1: Rubric Name</li>
-            <li>Row 2: Description (optional)</li>
-            <li>
-              Row 3: Grading Intensity (Basic/Professional/Advanced/Technical)
-            </li>
-            <li>Row 4: Programs (comma-separated)</li>
-            <li>Row 5: Empty row</li>
-            <li>
-              Row 6: Headers (Criterion, Score Level 1, Points 1, Description 1,
-              Score Level 2, Points 2, Description 2, etc.)
-            </li>
-            <li>
-              Row 7+: Criteria rows with titles, score levels, points, and
-              descriptions
-            </li>
-            <li className="mt-2 font-medium text-neutral-800">
-              Note: Each score level should include a description explaining
-              what students need to demonstrate to achieve that score.
-            </li>
-          </ul>
+        <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1.5">
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R1</span>
+            <span className="text-[11px] text-neutral-500">Rubric Name</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R2</span>
+            <span className="text-[11px] text-neutral-500">Description <span className="text-neutral-300">(optional)</span></span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R3</span>
+            <span className="text-[11px] text-neutral-500">Grading Intensity</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R4</span>
+            <span className="text-[11px] text-neutral-500">Programs <span className="text-neutral-300">(comma-separated)</span></span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R6</span>
+            <span className="text-[11px] text-neutral-500">Column headers</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R7+</span>
+            <span className="text-[11px] text-neutral-500">Criteria data rows</span>
+          </div>
         </div>
       </div>
-      <div className="flex justify-end gap-2 pt-6 border-t mt-8">
-        <Button variant="outline" onClick={onCancel}>
+
+      {/* ─── Footer ─── */}
+      <div className="flex items-center justify-end gap-2.5 pt-5 mt-5 border-t border-neutral-100">
+        <Button variant="ghost" onClick={onCancel} className="text-sm">
           Cancel
         </Button>
         {selectedFile && !uploadSuccess && (
           <Button
-            className="bg-primary hover:bg-primary-300"
+            className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-10 px-5 shadow-md shadow-primary/15"
             onClick={handleMyDeviceClick}
             disabled={isUploading}
           >
-            {isUploading ? "Processing..." : "Re-upload File"}
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing…
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-1.5" />
+                Re-upload
+              </>
+            )}
           </Button>
         )}
       </div>

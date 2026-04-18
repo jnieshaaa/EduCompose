@@ -19,7 +19,7 @@ const TeacherLayout: React.FC = () => {
       />
 
       <div className="flex-1 flex flex-col">
-        <TeacherHeader onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} role="Teacher" />
+        <TeacherHeader onMenuClick={toggleSidebar} isBurgerActive={isSidebarOpen} />
         <Breadcrumb />
 
         <main className="flex-1 overflow-y-auto bg-neutral-300/10 px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">

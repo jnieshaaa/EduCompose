@@ -1,7 +1,4 @@
 import { Eye, Download, FileText, FileSpreadsheet } from "lucide-react";
-import Card from "../ui/Card";
-import Badge from "../ui/Badge";
-import Button from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +6,14 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import type { PlatformRubric } from "../../types/rubricTypes";
-import { getTypeBadgeColor } from "../../services/rubricService";
 import { useNotification } from "../../context/NotificationContext";
+
+const typeBadgeStyles: Record<string, string> = {
+  Basic: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  Professional: "bg-primary/5 text-primary border-primary/20",
+  Advanced: "bg-amber-50 text-amber-600 border-amber-200",
+  Technical: "bg-orange-50 text-orange-600 border-orange-200",
+};
 
 interface PlatformRubricCardProps {
   rubric: PlatformRubric;
@@ -27,50 +30,38 @@ export function PlatformRubricCard({
     0
   );
 
+  const badgeClass = typeBadgeStyles[rubric.type] || "bg-neutral-50 text-neutral-500 border-neutral-200";
+
   return (
-    <Card
-      className="p-5 hover:bg-neutral-50 cursor-pointer transition-all hover:shadow-md border-2 border-transparent hover:border-primary/20"
+    <div
+      className="bg-white border border-neutral-100 rounded-xl p-4 hover:border-neutral-200 hover:shadow-sm cursor-pointer transition-all group"
       onClick={onClick}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge className={`${getTypeBadgeColor(rubric.type)} border`}>
-              {rubric.type}
-            </Badge>
-          </div>
-          <h3 className="text-lg font-semibold text-neutral-900 mb-1">
-            {rubric.name}
-          </h3>
-          <p className="text-sm text-neutral-500 mb-3 line-clamp-2">
-            {rubric.description}
-          </p>
-          <div className="flex items-center gap-4 text-xs text-neutral-400">
-            <span>{rubric.criteria.length} Criteria</span>
-            <span>{totalPoints} Points</span>
-            <span>{rubric.programs} Programs</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
+      {/* Top: Type badge + actions */}
+      <div className="flex items-center justify-between mb-2.5">
+        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
+          {rubric.type}
+        </span>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
             onClick={(e) => {
-              e?.stopPropagation();
+              e.stopPropagation();
               onClick();
             }}
+            title="Preview"
           >
-            <Eye className="w-4 h-4 text-primary" />
-          </Button>
+            <Eye className="w-3.5 h-3.5 text-primary" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => e?.stopPropagation()}
+              <button
+                className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+                onClick={(e) => e.stopPropagation()}
+                title="Export"
               >
-                <Download className="w-4 h-4 text-neutral-500" />
-              </Button>
+                <Download className="w-3.5 h-3.5 text-neutral-400" />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
@@ -111,7 +102,29 @@ export function PlatformRubricCard({
           </DropdownMenu>
         </div>
       </div>
-    </Card>
+
+      {/* Title + Description */}
+      <h3 className="text-sm font-bold text-neutral-800 mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
+        {rubric.name}
+      </h3>
+      <p className="text-[11px] text-neutral-400 line-clamp-2 mb-3">
+        {rubric.description}
+      </p>
+
+      {/* Meta stats */}
+      <div className="pt-2.5 border-t border-neutral-50 flex items-center gap-3">
+        <span className="text-[10px] text-neutral-400">
+          <strong className="text-neutral-600">{rubric.criteria.length}</strong> criteria
+        </span>
+        <span className="text-neutral-200">·</span>
+        <span className="text-[10px] text-neutral-400">
+          <strong className="text-neutral-600">{totalPoints}</strong> pts
+        </span>
+        <span className="text-neutral-200">·</span>
+        <span className="text-[10px] text-neutral-400">
+          <strong className="text-neutral-600">{rubric.programs}</strong> programs
+        </span>
+      </div>
+    </div>
   );
 }
-

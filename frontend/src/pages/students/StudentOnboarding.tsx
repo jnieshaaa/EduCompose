@@ -214,7 +214,7 @@ const StudentOnboarding: React.FC = () => {
     {
       title: "Welcome to EduCompose",
       desc: "Your companion for improving essay writing through AI-powered feedback.",
-      icon: <Sparkles className="w-12 h-12 text-blue-500" />,
+      icon: <Sparkles className="w-12 h-12 text-primary" />,
       features: [
         "Real-time Grammar Analysis",
         "Argument Mining & Coherence",
@@ -224,7 +224,7 @@ const StudentOnboarding: React.FC = () => {
     {
       title: "Master the Art of Writing",
       desc: "Submit your essays and get detailed insights on how to strengthen your arguments.",
-      icon: <BookOpen className="w-12 h-12 text-indigo-500" />,
+      icon: <BookOpen className="w-12 h-12 text-secondary" />,
       features: [
         "Submit via Text or File",
         "Visual Knowledge Graphs",
@@ -234,7 +234,7 @@ const StudentOnboarding: React.FC = () => {
     {
       title: "Verify Your Information",
       desc: "We've pre-filled your academic record. Please check if everything is correct.",
-      icon: <GraduationCap className="w-12 h-12 text-violet-500" />,
+      icon: <GraduationCap className="w-12 h-12 text-primary-300" />,
       features: [
         "Personal Details",
         "Course & Program",
@@ -251,12 +251,12 @@ const StudentOnboarding: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl"
         >
-          <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-tertiary-50/20 text-tertiary rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">Access Restricted</h2>
           <p className="text-neutral-600 mb-8">
-            Your account status is currently set to <span className="font-bold uppercase text-red-600">{studentData.enrollment_status}</span>. 
+            Your account status is currently set to <span className="font-bold uppercase text-tertiary">{studentData.enrollment_status}</span>. 
             Only active students can proceed to the system.
           </p>
           <button 
@@ -277,9 +277,17 @@ const StudentOnboarding: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-white overflow-hidden">
       <div className="flex flex-1 relative">
         {/* Left Side: Illustration & Progress */}
-        <div className="hidden lg:flex w-1/2 bg-neutral-900 text-white relative flex-col justify-center p-20 overflow-hidden">
-          <div className="absolute inset-0 opacity-40">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-neutral-900 to-indigo-900/40" />
+        <div className="hidden lg:flex w-[45%] bg-neutral-900 text-white relative flex-col justify-center p-16 xl:p-20 overflow-hidden">
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/40 via-neutral-900 to-secondary-500/40" />
+          </div>
+
+          {/* Step counter pill */}
+          <div className="relative z-10 mb-8">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
+              <span className="w-1.5 h-1.5 rounded-full bg-support animate-pulse" />
+              Step {currentStep} of 4
+            </span>
           </div>
 
           <div className="relative z-10 max-w-lg">
@@ -313,7 +321,7 @@ const StudentOnboarding: React.FC = () => {
                             transition={{ delay: 0.2 + idx * 0.1 }}
                             className="flex items-center gap-3 text-neutral-300"
                           >
-                            <CheckCircle2 className="w-5 h-5 text-blue-400" />
+                            <CheckCircle2 className="w-5 h-5 text-support" />
                             <span className="font-medium">{feature}</span>
                           </motion.li>
                         ),
@@ -323,7 +331,7 @@ const StudentOnboarding: React.FC = () => {
                 ) : (
                   <>
                     <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl inline-block border border-white/20">
-                      <Lock className="w-12 h-12 text-emerald-500" />
+                      <Lock className="w-12 h-12 text-success-default" />
                     </div>
                     <h1 className="text-5xl font-bold leading-tight">
                       Secure Your Account
@@ -340,8 +348,8 @@ const StudentOnboarding: React.FC = () => {
         </div>
 
         {/* Right Side: Step Content */}
-        <div className="flex-1 bg-neutral-50 flex flex-col items-center justify-center p-8 lg:p-24 relative overflow-y-auto">
-          <div className="w-full max-w-xl">
+        <div className="flex-1 bg-neutral-50 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-16 xl:p-20 relative overflow-y-auto">
+          <div className="w-full max-w-lg">
             <AnimatePresence mode="wait">
               {currentStep === 1 && (
                 <motion.div
@@ -360,9 +368,9 @@ const StudentOnboarding: React.FC = () => {
                       structure.
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="p-6 bg-white rounded-2xl border border-neutral-200 flex gap-4">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl h-fit">
+                  <div className="grid grid-cols-1 gap-5">
+                    <div className="p-5 bg-white rounded-2xl border border-neutral-200 flex gap-4 hover:shadow-md transition-shadow">
+                      <div className="p-3 bg-primary/10 text-primary rounded-xl h-fit">
                         <FileText size={24} />
                       </div>
                       <div>
@@ -375,8 +383,8 @@ const StudentOnboarding: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="p-6 bg-white rounded-2xl border border-neutral-200 flex gap-4">
-                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl h-fit">
+                    <div className="p-5 bg-white rounded-2xl border border-neutral-200 flex gap-4 hover:shadow-md transition-shadow">
+                      <div className="p-3 bg-secondary/10 text-secondary-500 rounded-xl h-fit">
                         <Users size={24} />
                       </div>
                       <div>
@@ -457,13 +465,13 @@ const StudentOnboarding: React.FC = () => {
                     </div>
 
                     {!studentData && !isLoading && (
-                      <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="text-red-500 w-5 h-5 mt-0.5" />
+                      <div className="p-4 bg-error-default/5 border border-error-default/20 rounded-xl flex items-start gap-3">
+                        <AlertCircle className="text-error-default w-5 h-5 mt-0.5" />
                         <div>
-                          <p className="text-sm font-bold text-red-700">
+                          <p className="text-sm font-bold text-error-dark">
                             Student Record Not Found
                           </p>
-                          <p className="text-xs text-red-600">
+                          <p className="text-xs text-error-default">
                             Your account exists but isn't linked to your
                             academic record. Please contact your teacher or
                             administrator.
@@ -492,10 +500,10 @@ const StudentOnboarding: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="bg-white p-8 rounded-3xl border border-neutral-200 shadow-xl space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-                        <GraduationCap className="text-blue-600 w-6 h-6" />
+                  <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-lg space-y-0 divide-y divide-neutral-100">
+                    <div className="flex items-center gap-4 pb-5">
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <GraduationCap className="text-primary w-6 h-6" />
                       </div>
                       <div>
                         <p className="text-xs text-neutral-400 font-bold uppercase">
@@ -507,9 +515,9 @@ const StudentOnboarding: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
-                        <Building2 className="text-indigo-600 w-6 h-6" />
+                    <div className="flex items-center gap-4 py-5">
+                      <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
+                        <Building2 className="text-secondary-500 w-6 h-6" />
                       </div>
                       <div>
                         <p className="text-xs text-neutral-400 font-bold uppercase">
@@ -525,9 +533,9 @@ const StudentOnboarding: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
-                        <Users className="text-emerald-600 w-6 h-6" />
+                    <div className="flex items-center gap-4 pt-5">
+                      <div className="w-12 h-12 bg-success-default/10 rounded-full flex items-center justify-center">
+                        <Users className="text-success-default w-6 h-6" />
                       </div>
                       <div>
                         <p className="text-xs text-neutral-400 font-bold uppercase">
@@ -563,7 +571,7 @@ const StudentOnboarding: React.FC = () => {
 
                   <div className="p-6 bg-white rounded-2xl border border-neutral-200">
                     <div className="flex items-start gap-4 mb-6">
-                      <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                      <div className="p-3 bg-warning-light/20 text-warning-dark rounded-xl">
                         <AlertCircle size={24} />
                       </div>
                       <div>
@@ -626,7 +634,7 @@ const StudentOnboarding: React.FC = () => {
                                     <div
                                       className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                                         hasMinLength
-                                          ? "bg-emerald-500 text-white"
+                                          ? "bg-success-default text-white"
                                           : "bg-neutral-100 text-neutral-300"
                                       }`}
                                     >
@@ -635,7 +643,7 @@ const StudentOnboarding: React.FC = () => {
                                     <span
                                       className={`text-xs font-bold ${
                                         hasMinLength
-                                          ? "text-emerald-600"
+                                          ? "text-success-dark"
                                           : "text-neutral-400"
                                       }`}
                                     >
@@ -646,7 +654,7 @@ const StudentOnboarding: React.FC = () => {
                                     <div
                                       className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                                         hasUppercase
-                                          ? "bg-emerald-500 text-white"
+                                          ? "bg-success-default text-white"
                                           : "bg-neutral-100 text-neutral-300"
                                       }`}
                                     >
@@ -655,7 +663,7 @@ const StudentOnboarding: React.FC = () => {
                                     <span
                                       className={`text-xs font-bold ${
                                         hasUppercase
-                                          ? "text-emerald-600"
+                                          ? "text-success-dark"
                                           : "text-neutral-400"
                                       }`}
                                     >
@@ -666,7 +674,7 @@ const StudentOnboarding: React.FC = () => {
                                     <div
                                       className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                                         hasNumber
-                                          ? "bg-emerald-500 text-white"
+                                          ? "bg-success-default text-white"
                                           : "bg-neutral-100 text-neutral-300"
                                       }`}
                                     >
@@ -675,7 +683,7 @@ const StudentOnboarding: React.FC = () => {
                                     <span
                                       className={`text-xs font-bold ${
                                         hasNumber
-                                          ? "text-emerald-600"
+                                          ? "text-success-dark"
                                           : "text-neutral-400"
                                       }`}
                                     >
@@ -709,7 +717,7 @@ const StudentOnboarding: React.FC = () => {
                       </div>
 
                       {passwordError && (
-                        <div className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
+                        <div className="text-xs text-error-default font-bold ml-1 flex items-center gap-1">
                           <AlertCircle size={12} /> {passwordError}
                         </div>
                       )}
@@ -732,7 +740,7 @@ const StudentOnboarding: React.FC = () => {
                     <div className="absolute top-0 right-0 p-4 opacity-5">
                       <ShieldCheck size={120} />
                     </div>
-                    <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <div className="w-20 h-20 bg-success-default/10 text-success-default rounded-full flex items-center justify-center mx-auto mb-6">
                       <Lock size={32} />
                     </div>
                     <h3 className="text-2xl font-bold text-neutral-900 mb-3">
@@ -754,7 +762,7 @@ const StudentOnboarding: React.FC = () => {
               )}
             </AnimatePresence>
 
-            <div className="h-32" />
+            <div className="h-20" />
           </div>
         </div>
       </div>
@@ -773,12 +781,16 @@ const StudentOnboarding: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  currentStep === s ? "bg-primary w-8" : "bg-neutral-200"
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  currentStep === s
+                    ? "bg-primary w-8"
+                    : currentStep > s
+                    ? "bg-primary/40 w-3"
+                    : "bg-neutral-200 w-3"
                 }`}
               />
             ))}
@@ -789,7 +801,7 @@ const StudentOnboarding: React.FC = () => {
               onClick={currentStep === 4 ? handleComplete : handleNext}
               className={`
                 px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all duration-300 shadow-lg active:scale-95
-                ${currentStep === 4 ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary hover:bg-primary-600 shadow-primary/20"}
+                ${currentStep === 4 ? "bg-success-default hover:bg-success-dark shadow-success-default/20" : "bg-primary hover:bg-primary-300 shadow-primary/20"}
                 text-white
               `}
               disabled={isLoading}
@@ -808,9 +820,9 @@ const StudentOnboarding: React.FC = () => {
           </div>
         </div>
 
-        <footer className="bg-neutral-900 py-4">
-          <p className="text-center text-white/40 text-[10px] uppercase font-bold tracking-[0.2em]">
-            &copy; 2025 EDUCOMPOSE | STUDENT ONBOARDING
+        <footer className="bg-neutral-900 py-3">
+          <p className="text-center text-white/30 text-[9px] uppercase font-bold tracking-[0.25em]">
+            &copy; 2025 EduCompose | Student Onboarding
           </p>
         </footer>
       </div>

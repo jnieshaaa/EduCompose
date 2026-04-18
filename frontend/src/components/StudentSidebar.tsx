@@ -1,25 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   FileText,
-  // Layers,
-  // BarChart3,
-  // Users,
-  // GraduationCap,
-  // ClipboardList,
-  // Award,
   HelpCircle,
-  // BookOpen,
-  // Target,
-  // Zap,
-  // Shield,
-  // LayoutDashboard,
-  // Users,
-  // BarChart3,
-  Settings,
-  // X,
-  LayoutDashboard, // New icon for student dashboard
-  BookOpen, // Icon for My Classes
+  LayoutDashboard,
+  BookOpen,
   TrendingUp,
+  Settings,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
@@ -75,14 +61,11 @@ interface BlockJoin {
   teacher_program_loads?: TeacherProgramLoadJoin | TeacherProgramLoadJoin[] | null;
 }
 
-// Renamed component from ClientSidebar to StudentSidebar
 const StudentSidebar: React.FC<StudentSidebarProps> = ({
   isSidebarOpen,
   setIsSidebarOpen,
 }) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
-  const [logoShine, setLogoShine] = useState(false);
   const [isClassesOpen, setIsClassesOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -92,14 +75,12 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   const [enrolledClasses, setEnrolledClasses] = useState<EnrolledClass[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
 
-  // Fetch real classes data
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Get student record (prefer auth_user_id, fallback to email)
         let { data: student } = await supabase
           .from("students")
           .select("id, email, auth_user_id")
@@ -116,12 +97,10 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         }
 
         if (!student) {
-          console.warn("StudentSidebar: No student record found for user", user.id);
           setIsLoadingClasses(false);
           return;
         }
 
-        // 2. Get enrolled blocks and their associated courses/teachers
         const { data: enrollments, error } = await supabase
           .from("block_students")
           .select(`
@@ -148,18 +127,13 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
           `)
           .eq("student_id", student.id);
 
-        if (error) {
-          console.error("StudentSidebar: Query error", error);
-          throw error;
-        }
+        if (error) throw error;
 
-        // Flatten the data with array support for joins
         const flattenedClasses: EnrolledClass[] = [];
         enrollments?.forEach(enrollment => {
           const block = enrollment.blocks as BlockJoin | null;
           if (!block) return;
 
-          // Supabase might return single object or array depending on relationship
           const tplData = block.teacher_program_loads;
           const tpls = Array.isArray(tplData) ? tplData : (tplData ? [tplData] : []);
 
@@ -195,7 +169,6 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
     fetchClasses();
   }, []);
 
-  // Updated menu items for the student role
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
@@ -208,21 +181,11 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         label: "My Essays",
         path: "/Student/Essays",
       },
-      // {
-      //   icon: <MessageSquare className='w-5 h-5' />,
-      //   label: "AI Feedback",
-      //   path: "/Student/Feedback",
-      // },
       {
         icon: <TrendingUp className='w-5 h-5' />,
         label: "Progress & Analytics",
         path: "/Student/Progress",
       },
-      // {
-      //   icon: <ClipboardCheck className='w-5 h-5' />,
-      //   label: "Rubric / Criteria",
-      //   path: "/Student/Rubric",
-      // },
       {
         icon: <Settings className='w-5 h-5' />,
         label: "Settings",
@@ -235,23 +198,18 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   const [activePath, setActivePath] = useState(location.pathname);
   useEffect(() => {
     setActivePath(location.pathname);
-    // Auto-expand classes dropdown if on a class detail page
     if (location.pathname.startsWith('/Student/Classes/')) {
       setIsClassesOpen(true);
     } else {
-      // On /Student/Submit the class id is stored in the secure ref token.
-      // Auto-expand so the highlighted class is visible.
       if (secureParams?.classId) setIsClassesOpen(true);
     }
   }, [location.pathname, secureParams?.classId]);
 
   const activeClassId = (() => {
-    // Prefer class id in the URL path: /Student/Classes/<id>
     if (location.pathname.startsWith("/Student/Classes/")) {
       const parts = location.pathname.split("/").filter(Boolean);
       return parts[parts.length - 1] || null;
     }
-    // Otherwise, fall back to the secure ref token (e.g., /Student/Submit?ref=...)
     return secureParams?.classId ?? null;
   })();
 
@@ -261,19 +219,9 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   };
 
   useEffect(() => {
-    const currentItem = menuItems.find(
-      (item) => item.path.toLowerCase() === location.pathname.toLowerCase()
-    );
-    // Title updated to reflect Student context
-    document.title = currentItem ? currentItem.label : "EduCompose Student";
-  }, [location.pathname, menuItems]);
-
-  useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
-      setIsTablet(width >= 768 && width < 1024);
-      // Auto-close sidebar on mobile when resizing to mobile size
       if (width < 768 && isSidebarOpen) {
         setIsSidebarOpen(false);
       }
@@ -282,114 +230,83 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, [isSidebarOpen]);
 
-  useEffect(() => {
-    setLogoShine(true);
-    const timeout = setTimeout(() => setLogoShine(false), 1000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const textVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-  };
-
   return (
     <>
-      {/* Mobile Backdrop */}
       <AnimatePresence>
         {!isDesktop && isSidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className='fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden'
+            className='fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] lg:hidden'
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      <motion.aside
-        initial={false}
-        animate={{
-          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : (isDesktop ? "80px" : "0px"),
-          x: (!isDesktop && !isSidebarOpen) ? -280 : 0,
+      <aside
+        className={`fixed lg:relative h-full z-[70] flex flex-col bg-primary border-r border-white/5 shadow-2xl transition-transform duration-300 ease-in-out
+          ${!isDesktop ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"}
+        `}
+        style={{
+          width: isDesktop ? (isSidebarOpen ? "260px" : "72px") : "260px",
         }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`fixed lg:relative h-full z-50 flex flex-col border-r border-white/10 bg-primary shadow-2xl lg:shadow-none`}
       >
-        {/* Header */}
-        <div className='flex items-center h-16 border-b border-white/10 p-2.5 relative flex-shrink-0'>
-          <div className='relative w-10 h-10 flex-shrink-0 rounded overflow-hidden flex items-center justify-center group ml-1.5'>
-            <img
-              src={eduComposeLogo}
-              alt='EduCompose Logo'
-              className='w-full h-full object-cover'
-            />
-            <div className='absolute inset-0 pointer-events-none overflow-hidden'>
-              <div
-                className={`absolute top-0 left-0 w-1/3 h-full bg-shine-gradient transform -translate-x-full z-20
-                  ${logoShine ? "animate-shine" : ""} group-hover:animate-shine`}
-                onAnimationEnd={() => setLogoShine(false)}
-              ></div>
-            </div>
+        {/* Header / Logo */}
+        <div className="h-14 flex items-center px-4 border-b border-white/5">
+          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+            <img src={eduComposeLogo} alt="Logo" className="w-6 h-6 object-contain" />
           </div>
-
-          <AnimatePresence>
-            {isSidebarOpen && (
-              <motion.div
-                initial='hidden'
-                animate='visible'
-                exit='hidden'
-                variants={textVariants}
-                className='ml-3 flex flex-col overflow-hidden flex-1 min-w-0'
-              >
-                <h1 className='font-bold text-lg text-white whitespace-nowrap truncate'>
-                  EduCompose
-                </h1>
-                <p className='text-[10px] font-md text-white/70 whitespace-nowrap truncate uppercase tracking-wider'>
-                  Student Portal
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="ml-3 overflow-hidden"
+            >
+              <h1 className="text-white font-bold text-sm tracking-tight truncate">EduCompose</h1>
+              <p className="text-white/40 text-[9px] uppercase tracking-[0.15em] font-bold truncate">Student Portal</p>
+            </motion.div>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className='flex-1 p-4 overflow-y-auto scrollbar-hide'>
-          <ul
-            className='space-y-2'
-          >
+        <nav className="flex-1 py-4 px-2.5 overflow-y-auto scrollbar-hide">
+          <ul className="space-y-1">
             {/* Dashboard (always first) */}
             {menuItems.slice(0, 1).map((item) => {
-              const isActive = activePath.toLowerCase() === item.path.toLowerCase() ||
-                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + "/");
+              const active = activePath.toLowerCase() === item.path.toLowerCase() ||
+                             activePath.toLowerCase().startsWith(item.path.toLowerCase() + "/");
               return (
-                <li key={item.label} className='w-full'>
-                  <Tooltip
-                    content={item.label}
-                    position='right'
-                    delay={200}
-                    disabled={isSidebarOpen}
-                    className="block w-full"
-                  >
+                <li key={item.label}>
+                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen} className="block w-full">
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
-                        isActive
-                          ? "bg-white text-primary shadow-md"
-                          : "text-white/70 hover:text-white hover:bg-white/10"
+                      className={`w-full flex items-center h-10 rounded-xl transition-all duration-200 group relative ${
+                        isSidebarOpen ? "px-0" : "justify-center"
+                      } ${
+                        active 
+                        ? "bg-white text-primary shadow-sm" 
+                        : "text-white/60 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <div className='flex items-center w-full flex-1'>
-                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                          {item.icon}
-                        </span>
-                        {isSidebarOpen && (
-                          <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
-                            {item.label}
-                          </span>
-                        )}
+                      <div className={`${isSidebarOpen ? "w-11" : "w-10"} h-10 flex items-center justify-center flex-shrink-0`}>
+                        <LayoutDashboard className="w-4.5 h-4.5" />
                       </div>
+                      <AnimatePresence initial={false}>
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -4 }}
+                            className="text-xs font-bold whitespace-nowrap overflow-hidden"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                      {active && !isSidebarOpen && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-white rounded-full" />
+                      )}
                     </button>
                   </Tooltip>
                 </li>
@@ -398,13 +315,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
             {/* My Classes Dropdown */}
             <li className='w-full'>
-              <Tooltip
-                content="My Classes"
-                position='right'
-                delay={200}
-                disabled={isSidebarOpen}
-                className="block w-full"
-              >
+              <Tooltip content="My Classes" position='right' disabled={isSidebarOpen} className="block w-full">
                 <button
                   onClick={() => {
                     if (!isSidebarOpen) {
@@ -414,29 +325,25 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                       setIsClassesOpen((prev) => !prev);
                     }
                   }}
-                  className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
-                    activePath.toLowerCase().startsWith("/student/classes")
-                      ? "bg-white/10 text-white"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  className={`w-full flex items-center h-10 rounded-xl transition-all duration-200 group ${
+                    isSidebarOpen ? "px-0" : "justify-center"
+                  } ${
+                    activePath.toLowerCase().startsWith("/student/classes") && !isClassesOpen
+                      ? "bg-white text-primary shadow-sm"
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <div className='flex items-center w-full flex-1'>
-                    <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                      <BookOpen className='w-5 h-5' />
-                    </span>
-                    {isSidebarOpen && (
-                      <div className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm flex items-center justify-between'>
-                        <span>My Classes</span>
-                        <span className='ml-auto'>
-                          {isClassesOpen ? (
-                            <ChevronDown className='w-4 h-4' />
-                          ) : (
-                            <ChevronRight className='w-4 h-4' />
-                          )}
-                        </span>
-                      </div>
-                    )}
+                  <div className={`${isSidebarOpen ? "w-11" : "w-10"} h-10 flex items-center justify-center flex-shrink-0`}>
+                    <BookOpen className='w-4.5 h-4.5' />
                   </div>
+                  {isSidebarOpen && (
+                    <div className='flex-1 flex items-center justify-between pr-3 overflow-hidden'>
+                      <span className='text-xs font-bold whitespace-nowrap overflow-hidden'>My Classes</span>
+                      <span className={`transition-transform duration-200 text-white/40 ${isClassesOpen ? 'rotate-180' : ''}`}>
+                         <ChevronDown className='w-3.5 h-3.5' />
+                      </span>
+                    </div>
+                  )}
                 </button>
               </Tooltip>
 
@@ -446,37 +353,32 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className='ml-12 mt-2 space-y-1 overflow-hidden'
+                    className='ml-5 mt-1 border-l border-white/10 overflow-hidden'
                   >
                     {enrolledClasses.length > 0 ? (
-                      enrolledClasses.map((classItem) => {
-                        const classPath = `/Student/Classes/${classItem.id}`;
-                        const isClassActive =
-                          (activeClassId && classItem.id === activeClassId) ||
-                          activePath === classPath;
+                      enrolledClasses.map((cl) => {
+                        const active = (activeClassId && cl.id === activeClassId);
                         return (
-                          <li key={classItem.id}>
+                          <li key={cl.id}>
                             <button
                               onClick={() => {
-                                navigate(classPath);
+                                navigate(`/Student/Classes/${cl.id}`);
                                 if (!isDesktop) setIsSidebarOpen(false);
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                isClassActive
-                                  ? "bg-white text-primary font-semibold"
-                                  : "text-white/60 hover:text-white hover:bg-white/5"
+                              className={`w-full text-left pl-6 pr-3 py-1.5 transition-colors group ${
+                                active ? "text-white" : "text-white/40 hover:text-white/80"
                               }`}
                             >
                               <div className='flex flex-col'>
-                                <span className='text-xs font-bold'>{classItem.code}</span>
-                                <span className='text-[10px] opacity-80 truncate'>{classItem.name}</span>
+                                <span className={`text-[11px] font-bold ${active ? 'text-white' : ''}`}>{cl.code}</span>
+                                <span className='text-[9px] opacity-60 truncate'>{cl.name}</span>
                               </div>
                             </button>
                           </li>
                         );
                       })
                     ) : (
-                      <li className="px-3 py-2 text-white/40 text-xs italic">
+                      <li className="pl-6 py-2 text-white/20 text-[10px] italic">
                         {isLoadingClasses ? "Loading..." : "No classes"}
                       </li>
                     )}
@@ -487,36 +389,40 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
             {/* Remaining menu items */}
             {menuItems.slice(1).map((item) => {
-              const isActive = activePath.toLowerCase() === item.path.toLowerCase() || 
-                               activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/') ||
-                               (item.path.toLowerCase() === "/student/essays" && activePath.toLowerCase() === "/student/feedback");
+              const active = activePath.toLowerCase() === item.path.toLowerCase() || 
+                             activePath.toLowerCase().startsWith(item.path.toLowerCase() + '/') ||
+                             (item.path.toLowerCase() === "/student/essays" && activePath.toLowerCase() === "/student/feedback");
               return (
-                <li key={item.label} className='w-full'>
-                  <Tooltip
-                    content={item.label}
-                    position='right'
-                    delay={200}
-                    disabled={isSidebarOpen}
-                    className="block w-full"
-                  >
+                <li key={item.label}>
+                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen} className="block w-full">
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
-                        isActive
-                          ? "bg-white text-primary shadow-md"
-                          : "text-white/70 hover:text-white hover:bg-white/10"
+                      className={`w-full flex items-center h-10 rounded-xl transition-all duration-200 group relative ${
+                        isSidebarOpen ? "px-0" : "justify-center"
+                      } ${
+                        active 
+                        ? "bg-white text-primary shadow-sm" 
+                        : "text-white/60 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <div className='flex items-center w-full flex-1'>
-                        <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                          {item.icon}
-                        </span>
-                        {isSidebarOpen && (
-                          <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
-                            {item.label}
-                          </span>
-                        )}
+                      <div className={`${isSidebarOpen ? "w-11" : "w-10"} h-10 flex items-center justify-center flex-shrink-0`}>
+                        {React.cloneElement(item.icon as React.ReactElement<any>, { className: "w-4.5 h-4.5" })}
                       </div>
+                      <AnimatePresence initial={false}>
+                        {isSidebarOpen && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -4 }}
+                            className="text-xs font-bold whitespace-nowrap overflow-hidden"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                      {active && !isSidebarOpen && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-white rounded-full" />
+                      )}
                     </button>
                   </Tooltip>
                 </li>
@@ -526,52 +432,40 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         </nav>
 
         {/* Help at Bottom */}
-        <div className='p-4 border-t border-white/10'>
-          <Tooltip
-            content='Help & Support'
-            position='right'
-            delay={200}
-            disabled={isSidebarOpen}
-            className="block w-full"
-          >
+        <div className="p-3 border-t border-white/5">
+          <Tooltip content="Help & Support" position="right" disabled={isSidebarOpen} className="block w-full">
             <button
-              onClick={() => handleItemClick('/Student/Help')}
-              className={`group w-full flex items-center rounded-xl transition-all duration-200 ${
+              onClick={() => handleItemClick("/Student/Help")}
+              className={`w-full flex items-center h-10 rounded-xl transition-all duration-200 group ${
+                isSidebarOpen ? "px-0" : "justify-center"
+              } ${
                 activePath.toLowerCase() === "/student/help"
-                  ? "bg-white text-primary shadow-md"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
+                ? "bg-white text-primary shadow-sm"
+                : "text-white/60 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <div className='flex items-center w-full flex-1'>
-                <span className='flex-shrink-0 flex items-center justify-center w-12 h-12'>
-                  <HelpCircle className='w-5 h-5' />
-                </span>
-                {isSidebarOpen && (
-                  <span className='font-medium whitespace-nowrap flex-1 pr-4 text-left text-sm'>
-                    Help
-                  </span>
-                )}
+              <div className={`${isSidebarOpen ? "w-11" : "w-10"} h-10 flex items-center justify-center flex-shrink-0`}>
+                <HelpCircle className="w-4.5 h-4.5" />
               </div>
+              {isSidebarOpen && (
+                <span className="text-xs font-bold whitespace-nowrap overflow-hidden">
+                  Help Center
+                </span>
+              )}
             </button>
           </Tooltip>
         </div>
 
-        {/* Expand/Collapse Toggle Overlay Button (Desktop/Tablet) */}
-        {(isDesktop || isTablet) && (
+        {/* Desktop Toggle Button */}
+        {isDesktop && (
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 hover:text-primary-600 transition-colors focus:outline-none rounded-full cursor-pointer"
-            aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            className="absolute top-1/2 -right-4 -translate-y-1/2 w-8 h-8 bg-white text-primary border border-neutral-100 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[80] group"
           >
-            {isSidebarOpen ? (
-              <ChevronLeft className="w-5 h-5" />
-            ) : (
-              <ChevronRight className="w-5 h-5" />
-            )}
+            {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
         )}
-      </motion.aside>
-
+      </aside>
     </>
   );
 };

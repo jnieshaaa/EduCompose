@@ -4,8 +4,7 @@ import { useCourses } from "../../hooks/useCourses";
 import { useSections } from "../../hooks/useSections";
 import { useActivities } from "../../hooks/useActivities";
 import { useStudents } from "../../hooks/useStudents";
-import { Archive, BookOpen, Layers, GitCompare, ChevronRight, Users, Mail, ArrowLeft } from "lucide-react";
-import Card from "../../components/ui/Card";
+import { Archive, BookOpen, Layers, GitCompare, ChevronRight, Users, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { ActivitiesListView } from "../../components/activities/ActivitiesListView";
 
 export function ArchivePage() {
@@ -64,71 +63,66 @@ export function ArchivePage() {
     student.block_students?.some((bs: any) => courseBlockIds.has(bs.block_id))
   );
 
+  // ─── Course Detail View ───
   if (selectedCourseId && selectedCourse) {
+    const detailTabs = [
+      { key: "activities" as const, label: "Activities", icon: BookOpen, count: courseActivities.length },
+      { key: "blocks" as const, label: "Blocks", icon: GitCompare, count: courseSections.length },
+      { key: "students" as const, label: "Students", icon: Users, count: courseStudents.length },
+    ];
+
     return (
-      <div className="p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <div className="flex flex-col space-y-4">
-          <button 
-            onClick={() => setSelectedCourseId(null)}
-            className="flex items-center text-sm text-neutral-500 hover:text-primary transition-colors w-fit"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Archive List
-          </button>
-          
-          <div className="flex items-center justify-between">
+      <div className="p-6 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSelectedCourseId(null)}
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <div>
-              <div className="flex items-center space-x-2 text-sm text-neutral-500 mb-1">
-                <span>{selectedCourse.academic_year}</span>
-                <span>•</span>
-                <span>{selectedCourse.term}</span>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{selectedCourse.academic_year}</span>
+                <span className="text-neutral-200">&middot;</span>
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{selectedCourse.term}</span>
               </div>
-              <h1 className="text-3xl font-bold text-neutral-900">{selectedCourse.course_title}</h1>
-              <p className="text-neutral-500">{selectedCourse.course_code} | {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
-            </div>
-            <div className="p-3 bg-primary-50 rounded-xl">
-              <Layers className="w-8 h-8 text-primary" />
+              <h1 className="text-lg font-bold text-neutral-900">{selectedCourse.course_title}</h1>
+              <p className="text-xs text-neutral-400 mt-0.5">{selectedCourse.course_code} &middot; {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
             </div>
           </div>
         </div>
 
         {/* Detail Tabs */}
-        <div className="flex flex-wrap gap-1 bg-neutral-100 p-1 rounded-rd w-fit">
-          <button
-            onClick={() => setActiveDetailTab("activities")}
-            className={`px-4 py-2 text-sm font-medium rounded-rd transition-all flex items-center space-x-2 ${
-              activeDetailTab === "activities" ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Activities ({courseActivities.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveDetailTab("blocks")}
-            className={`px-4 py-2 text-sm font-medium rounded-rd transition-all flex items-center space-x-2 ${
-              activeDetailTab === "blocks" ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200"
-            }`}
-          >
-            <GitCompare className="w-4 h-4" />
-            <span>Blocks ({courseSections.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveDetailTab("students")}
-            className={`px-4 py-2 text-sm font-medium rounded-rd transition-all flex items-center space-x-2 ${
-              activeDetailTab === "students" ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Students ({courseStudents.length})</span>
-          </button>
+        <div className="flex items-center border-b border-neutral-100">
+          {detailTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveDetailTab(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors relative ${
+                activeDetailTab === tab.key
+                  ? "text-primary"
+                  : "text-neutral-400 hover:text-neutral-600"
+              }`}
+            >
+              <tab.icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+              <span className="text-[10px] font-semibold text-neutral-300 ml-0.5">{tab.count}</span>
+              {activeDetailTab === tab.key && (
+                <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
+              )}
+            </button>
+          ))}
         </div>
 
-        <div className="mt-6 border-t pt-6">
+        {/* Tab Content */}
+        <div>
           {activeDetailTab === "activities" && (
-            <div className="space-y-4">
+            <div>
               {courseActivities.length === 0 ? (
-                <div className="bg-white border rounded-rd p-12 text-center text-neutral-500">
-                  No archived activities for this course.
+                <div className="py-12 text-center">
+                  <p className="text-xs text-neutral-400">No archived activities for this course</p>
                 </div>
               ) : (
                 <ActivitiesListView
@@ -154,76 +148,72 @@ export function ArchivePage() {
           )}
 
           {activeDetailTab === "blocks" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {courseSections.length === 0 ? (
-                <div className="col-span-full bg-white border rounded-rd p-12 text-center text-neutral-500">
-                  No blocks assigned to this course load.
+                <div className="col-span-full py-12 text-center">
+                  <p className="text-xs text-neutral-400">No blocks assigned to this course load</p>
                 </div>
               ) : (
                 courseSections.map((section: any) => (
-                    <Card key={section.id} className="hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                                <GitCompare className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <span className="text-xs font-medium px-2 py-1 bg-neutral-100 text-neutral-600 rounded-full">
-                                {section.year} Year
-                            </span>
-                        </div>
-                        <h3 className="text-lg font-bold text-neutral-900 mb-1">Block {section.name}</h3>
-                        <p className="text-sm text-neutral-500 mb-4">{section.program_abbr}</p>
-                    </Card>
+                  <div key={section.id} className="bg-white border border-neutral-100 rounded-xl p-4 hover:border-neutral-200 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-8 h-8 bg-neutral-50 rounded-lg flex items-center justify-center">
+                        <GitCompare className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-50 px-2 py-0.5 rounded-md">
+                        {section.year} Year
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-neutral-800">Block {section.name}</h3>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">{section.program_abbr}</p>
+                  </div>
                 ))
               )}
             </div>
           )}
 
           {activeDetailTab === "students" && (
-            <div className="space-y-4">
+            <div>
               {courseStudents.length === 0 ? (
-                <div className="bg-white border rounded-rd p-12 text-center text-neutral-500">
-                  No students were enrolled in this course context.
+                <div className="py-12 text-center">
+                  <p className="text-xs text-neutral-400">No students were enrolled in this course context</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <table className="w-full text-left">
-                        <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wider">
-                            <tr>
-                                <th className="px-6 py-4 font-semibold">Student Name</th>
-                                <th className="px-6 py-4 font-semibold">Program & Section</th>
-                                <th className="px-6 py-4 font-semibold">Contact</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100">
-                            {courseStudents.map((student) => (
-                                <tr key={student.id} className="hover:bg-neutral-50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-neutral-900">
-                                              {student.last_name}, {student.first_name}
-                                            </span>
-                                            <span className="text-xs text-neutral-400">{student.student_code}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium">{student.program_id}</span>
-                                            <span className="text-xs text-neutral-500">
-                                              {/* Show the block name related to THIS course */}
-                                              {student.block_students?.find((bs: any) => courseBlockIds.has(bs.block_id))?.blocks?.name || student.block_name}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center text-sm text-neutral-600">
-                                            <Mail className="w-3 h-3 mr-2" />
-                                            {student.email}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-neutral-50/50 border-b border-neutral-100">
+                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Student</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Program & Block</th>
+                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Contact</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-50">
+                      {courseStudents.map((student) => (
+                        <tr key={student.id} className="hover:bg-neutral-50/50 transition-colors">
+                          <td className="px-5 py-3">
+                            <span className="text-sm font-semibold text-neutral-800">
+                              {student.last_name}, {student.first_name}
+                            </span>
+                            <span className="block text-[10px] text-neutral-400 mt-0.5">{student.student_code}</span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className="text-xs font-medium text-neutral-600">{student.program_id}</span>
+                            <span className="block text-[10px] text-neutral-400 mt-0.5">
+                              {/* Show the block name related to THIS course */}
+                              {student.block_students?.find((bs: any) => courseBlockIds.has(bs.block_id))?.blocks?.name || student.block_name}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center text-xs text-neutral-500">
+                              <Mail className="w-3 h-3 mr-1.5 text-neutral-300" />
+                              {student.email}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -233,90 +223,92 @@ export function ArchivePage() {
     );
   }
 
+  // ─── Archive List View ───
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-neutral-900 rounded-xl">
-            <Archive className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Academic Archive</h1>
-            <p className="text-neutral-500 text-sm">Select a previous course to view its historical content.</p>
-          </div>
+    <div className="p-6 space-y-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-lg font-bold text-neutral-900">Academic Archive</h1>
+          <p className="text-xs text-neutral-400 mt-0.5">Browse previous courses and their historical content</p>
         </div>
         
-        <div className="flex items-center gap-3">
-            <select
-                value={ayFilter}
-                onChange={(e) => setAyFilter(e.target.value)}
-                className="px-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none hover:border-neutral-300 transition-all shadow-sm"
-            >
-                <option value="all">All Years</option>
-                <option value="2024-2025">2024-2025</option>
-                <option value="2025-2026">2025-2026</option>
-            </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={ayFilter}
+            onChange={(e) => setAyFilter(e.target.value)}
+            className="px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+          >
+            <option value="all">All Years</option>
+            <option value="2024-2025">2024-2025</option>
+            <option value="2025-2026">2025-2026</option>
+          </select>
 
-            <select
-                value={termFilter}
-                onChange={(e) => setTermFilter(e.target.value)}
-                className="px-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none hover:border-neutral-300 transition-all shadow-sm"
-            >
-                <option value="all">All Terms</option>
-                <option value="1st Semester">1st Semester</option>
-                <option value="2nd Semester">2nd Semester</option>
-                <option value="Summer">Summer</option>
-            </select>
+          <select
+            value={termFilter}
+            onChange={(e) => setTermFilter(e.target.value)}
+            className="px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+          >
+            <option value="all">All Terms</option>
+            <option value="1st Semester">1st Semester</option>
+            <option value="2nd Semester">2nd Semester</option>
+            <option value="Summer">Summer</option>
+          </select>
         </div>
       </div>
 
-      <div className="mt-6">
-         {loadingCourses ? (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-             {[1, 2, 3].map(i => <div key={i} className="h-48 bg-neutral-100 rounded-2xl" />)}
-           </div>
-         ) : archivedCourses.length === 0 ? (
-           <div className="bg-white border-2 border-dashed border-neutral-200 rounded-2xl p-20 text-center">
-             <div className="mx-auto w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
-               <Archive className="w-8 h-8 text-neutral-300" />
-             </div>
-             <h3 className="text-lg font-bold text-neutral-900 mb-1">No archived courses found</h3>
-             <p className="text-neutral-500 max-w-xs mx-auto">Courses from previous semesters will appear here once they are concluded.</p>
-           </div>
-         ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {archivedCourses.map((course: any) => (
-                    <Card 
-                      key={course.id} 
-                      className="group hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border-neutral-200"
-                      onClick={() => setSelectedCourseId(course.id)}
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2.5 bg-neutral-50 group-hover:bg-primary/10 rounded-xl transition-colors">
-                                <Layers className="w-6 h-6 text-neutral-400 group-hover:text-primary transition-colors" />
-                            </div>
-                            <div className="text-right flex flex-col items-end">
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-neutral-100 text-neutral-500 rounded-full mb-1">
-                                    {course.academic_year}
-                                </span>
-                                <p className="text-xs font-medium text-neutral-400">{course.term}</p>
-                            </div>
-                        </div>
-                        <h3 className="text-xl font-bold text-neutral-900 mb-1 line-clamp-2">{course.course_title}</h3>
-                        <p className="text-sm font-medium text-neutral-400 mb-6">{course.course_code}</p>
-                        
-                        <div className="pt-4 border-t border-neutral-100 flex items-center justify-between text-neutral-500">
-                            <div className="flex items-center text-xs font-medium">
-                                <BookOpen className="w-4 h-4 mr-2" />
-                                <span>{course.departments?.code || course.departments?.name || "General"}</span>
-                            </div>
-                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform text-neutral-300" />
-                        </div>
-                    </Card>
-                ))}
+      {/* Grid */}
+      {loadingCourses ? (
+        <div className="flex flex-col items-center gap-2 py-16">
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          <span className="text-xs text-neutral-400">Loading archive…</span>
+        </div>
+      ) : archivedCourses.length === 0 ? (
+        <div className="py-16 text-center">
+          <div className="w-12 h-12 bg-neutral-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <Archive className="w-5 h-5 text-neutral-300" />
+          </div>
+          <h3 className="text-sm font-bold text-neutral-700 mb-1">No archived courses</h3>
+          <p className="text-xs text-neutral-400 max-w-xs mx-auto">
+            Courses from previous semesters will appear here once they are concluded.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {archivedCourses.map((course: any) => (
+            <div 
+              key={course.id} 
+              className="bg-white border border-neutral-100 rounded-xl p-4 hover:border-neutral-200 hover:shadow-sm cursor-pointer transition-all group"
+              onClick={() => setSelectedCourseId(course.id)}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-9 h-9 bg-neutral-50 rounded-lg flex items-center justify-center group-hover:bg-primary/5 transition-colors">
+                  <Layers className="w-4 h-4 text-neutral-400 group-hover:text-primary transition-colors" />
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-50 px-2 py-0.5 rounded-md">
+                    {course.academic_year}
+                  </span>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">{course.term}</p>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-neutral-800 mb-0.5 line-clamp-2 group-hover:text-primary transition-colors">
+                {course.course_title}
+              </h3>
+              <p className="text-[11px] text-neutral-400 mb-4">{course.course_code}</p>
+              
+              <div className="pt-3 border-t border-neutral-50 flex items-center justify-between">
+                <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                  <BookOpen className="w-3 h-3" />
+                  {course.departments?.code || course.departments?.name || "General"}
+                </span>
+                <ChevronRight className="w-4 h-4 text-neutral-200 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              </div>
             </div>
-         )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

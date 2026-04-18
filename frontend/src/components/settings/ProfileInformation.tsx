@@ -3,8 +3,6 @@
 import React from "react";
 import { User, Save, Loader2 } from "lucide-react";
 import { ScrollableSection } from "./ScrollableSection";
-import { Label } from "../ui/label";
-import Input from "../ui/Input";
 import Button from "../ui/Button";
 import type { TeacherProfile } from "../../types/settingsTypes";
 
@@ -25,137 +23,147 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
   onProfileChange,
   onSaveProfile,
 }) => {
+  const inputClass =
+    "w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed";
+
   return (
     <ScrollableSection id={id} title="Profile Information" icon={User}>
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+        <div className="flex items-center justify-center gap-2 py-8">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs text-neutral-400">Loading…</span>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Title</label>
+              <input
                 id="title"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.title || ""}
-                onChange={(value) => onProfileChange({ title: value })}
+                onChange={(e) => onProfileChange({ title: e.target.value })}
                 disabled={isSaving}
                 placeholder="Title"
               />
             </div>
             <div>
-              <Label htmlFor="nickname">Nickname</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Nickname</label>
+              <input
                 id="nickname"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.nickname || ""}
-                onChange={(value) => onProfileChange({ nickname: value })}
+                onChange={(e) => onProfileChange({ nickname: e.target.value })}
                 disabled={isSaving}
                 placeholder="Nickname"
               />
             </div>
             <div>
-              <Label htmlFor="first-name">First Name</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">First Name</label>
+              <input
                 id="first-name"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.firstName}
-                onChange={(value) => onProfileChange({ firstName: value })}
+                onChange={(e) => onProfileChange({ firstName: e.target.value })}
                 disabled={isSaving}
               />
             </div>
             <div>
-              <Label htmlFor="middle-name">Middle Name</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+                Middle Name
+                <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
+              </label>
+              <input
                 id="middle-name"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.middleName || ""}
-                onChange={(value) => onProfileChange({ middleName: value })}
+                onChange={(e) => onProfileChange({ middleName: e.target.value })}
                 disabled={isSaving}
                 placeholder="Optional"
               />
             </div>
             <div>
-              <Label htmlFor="last-name">Last Name</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Last Name</label>
+              <input
                 id="last-name"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.lastName}
-                onChange={(value) => onProfileChange({ lastName: value })}
+                onChange={(e) => onProfileChange({ lastName: e.target.value })}
                 disabled={isSaving}
               />
             </div>
             <div>
-              <Label htmlFor="suffix">Suffix</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+                Suffix
+                <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
+              </label>
+              <input
                 id="suffix"
                 type="text"
-                className="mt-1"
+                className={inputClass}
                 value={profile.suffix || ""}
-                onChange={(value) => onProfileChange({ suffix: value })}
+                onChange={(e) => onProfileChange({ suffix: e.target.value })}
                 disabled={isSaving}
-                placeholder="Optional (e.g., Jr.)"
+                placeholder="e.g., Jr."
               />
             </div>
             <div>
-              <Label htmlFor="school">School</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">School</label>
+              <input
                 id="school"
                 type="text"
-                className="mt-1"
+                className={`${inputClass} bg-neutral-100`}
                 value={profile.schoolName || ""}
                 disabled
                 placeholder="School"
               />
             </div>
             <div>
-              <Label htmlFor="department">Department</Label>
-              <Input
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Department</label>
+              <input
                 id="department"
                 type="text"
-                className="mt-1"
+                className={`${inputClass} bg-neutral-100`}
                 value={profile.departmentName || ""}
                 disabled
                 placeholder="Department"
               />
             </div>
           </div>
+
           <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Email</label>
+            <input
               id="email"
               type="email"
-              className="mt-1"
+              className={`${inputClass} bg-neutral-100`}
               value={profile.email}
               disabled
             />
-            <p className="text-sm text-neutral-500 mt-1">
-              Email address cannot be changed. Contact your administrator for
-              assistance.
+            <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
+              Email cannot be changed. Contact your administrator.
             </p>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-4 border-t border-neutral-100">
             <Button
-              className="bg-primary hover:bg-primary-300"
+              className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15"
               onClick={onSaveProfile}
               disabled={isSaving}
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Saving…
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="w-4 h-4 mr-1.5" />
                   Update Profile
                 </>
               )}

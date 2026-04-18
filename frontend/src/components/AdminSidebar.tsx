@@ -31,14 +31,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
-  const [logoShine, setLogoShine] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Close menu when clicking outside
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,14 +51,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     const handleResize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
-      setIsTablet(width >= 768 && width < 1024);
       if (width < 768 && isSidebarOpen) {
         setIsSidebarOpen(false);
       }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isSidebarOpen, setIsSidebarOpen]);
+  }, [isSidebarOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -127,11 +123,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     if (!isDesktop) setIsSidebarOpen(false);
   };
 
-  const textVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-  };
-
   return (
     <>
       <AnimatePresence>
@@ -140,81 +131,73 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className='fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden'
+            className='fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] lg:hidden'
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      <motion.aside
-        initial={false}
-        animate={{
-          width: isSidebarOpen ? (isTablet ? "240px" : "280px") : (isDesktop ? "80px" : "0px"),
-          x: (!isDesktop && !isSidebarOpen) ? -280 : 0,
+      <aside
+        className={`fixed lg:relative h-full z-[70] flex flex-col bg-primary border-r border-white/5 shadow-2xl transition-transform duration-300 ease-in-out
+          ${!isDesktop ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"}
+        `}
+        style={{
+          width: isDesktop ? (isSidebarOpen ? "260px" : "72px") : "260px",
         }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed lg:relative h-full flex flex-col bg-primary border-r border-white/10 text-white z-50 shadow-2xl lg:shadow-none overflow-visible"
       >
-        {/* Header */}
-        <div className="flex items-center h-16 border-b border-white/10 p-2.5 relative flex-shrink-0">
-          <div
-            className="relative w-10 h-10 rounded-lg overflow-hidden bg-white/5 p-1 cursor-pointer ml-1.5"
-            onMouseEnter={() => setLogoShine(true)}
-          >
-            <img
-              src={eduComposeLogo}
-              alt="Logo"
-              className="w-full h-full object-contain"
-            />
-            <div
-              className={`absolute top-0 left-0 w-full h-full bg-shine-gradient transform -translate-x-full ${logoShine ? "animate-shine" : ""}`}
-              onAnimationEnd={() => setLogoShine(false)}
-            />
+        {/* Header / Logo */}
+        <div className="h-14 flex items-center px-4 border-b border-white/5">
+          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+            <img src={eduComposeLogo} alt="Logo" className="w-6 h-6 object-contain" />
           </div>
           {isSidebarOpen && (
-            <AnimatePresence>
-              <motion.div 
-                initial="hidden" animate="visible" exit="hidden" variants={textVariants}
-                className="ml-3 min-w-0"
-              >
-                <h1 className="font-bold text-lg text-white truncate whitespace-nowrap">EduCompose</h1>
-                <p className="text-[10px] text-white/60 uppercase tracking-widest font-bold">Admin Portal</p>
-              </motion.div>
-            </AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="ml-3 overflow-hidden"
+            >
+              <h1 className="text-white font-bold text-sm tracking-tight truncate">EduCompose</h1>
+              <p className="text-white/40 text-[9px] uppercase tracking-[0.15em] font-bold truncate">Admin Portal</p>
+            </motion.div>
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-6 px-3 overflow-y-auto scrollbar-hide">
-          <ul className="space-y-1.5">
+        {/* Navigation */}
+        <nav className="flex-1 py-4 px-2.5 overflow-y-auto scrollbar-hide">
+          <ul className="space-y-1">
             {menuItems.map((item) => {
               const active = isItemActive(item.path);
               return (
                 <li key={item.path}>
-                  <Tooltip content={item.label} position="right" delay={200} disabled={isSidebarOpen} className="block w-full">
+                  <Tooltip content={item.label} position="right" disabled={isSidebarOpen} className="block w-full">
                     <button
                       onClick={() => handleItemClick(item.path)}
-                      className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group ${
-                        active
-                        ? "bg-white text-primary shadow-lg shadow-black/10"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      className={`w-full flex items-center h-10 rounded-xl transition-all duration-200 group relative ${
+                        isSidebarOpen ? "px-0" : "justify-center"
+                      } ${
+                        active 
+                        ? "bg-white text-primary shadow-sm" 
+                        : "text-white/60 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
-                        {item.icon}
+                      <div className={`${isSidebarOpen ? "w-11" : "w-10"} h-10 flex items-center justify-center flex-shrink-0`}>
+                        {React.cloneElement(item.icon as React.ReactElement<any>, { className: "w-4.5 h-4.5" })}
                       </div>
-                      <AnimatePresence>
+                      <AnimatePresence initial={false}>
                         {isSidebarOpen && (
                           <motion.span
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: "auto" }}
-                            exit={{ opacity: 0, width: 0 }}
-                            className="font-medium whitespace-nowrap overflow-hidden text-sm"
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -4 }}
+                            className="text-xs font-bold whitespace-nowrap overflow-hidden"
                           >
                             {item.label}
                           </motion.span>
                         )}
                       </AnimatePresence>
+                      {active && !isSidebarOpen && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-white rounded-full" />
+                      )}
                     </button>
                   </Tooltip>
                 </li>
@@ -224,37 +207,50 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-white/10 relative" ref={menuRef}>
-          {isUserMenuOpen && (
-            <div className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 z-50">
-              <button onClick={() => { handleItemClick("/Admin/Help"); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-neutral-600 hover:bg-neutral-50"><HelpCircle size={16} /> Help & Support</button>
-              <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50"><LogOut size={16} /> Sign Out</button>
-            </div>
-          )}
-          <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className={`w-full flex items-center ${isSidebarOpen ? "gap-3 px-3" : "justify-center"} py-2 rounded-xl hover:bg-white/5`}>
-            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm shrink-0">
-              {user?.full_name.charAt(0) || "A"}
+        <div className="p-3 border-t border-white/5 relative" ref={menuRef}>
+          <AnimatePresence>
+            {isUserMenuOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 z-50 shadow-black/10"
+              >
+                <button onClick={() => { handleItemClick("/Admin/Help"); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+                  <HelpCircle size={14} className="text-neutral-400" /> Help Center
+                </button>
+                <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-error-default hover:bg-error-default/5 transition-colors">
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <button 
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} 
+            className={`w-full flex items-center ${isSidebarOpen ? "gap-2.5 px-2" : "justify-center"} py-2 rounded-xl hover:bg-white/5 transition-all transition-duration-200`}
+          >
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-xs shrink-0 text-white">
+              {user?.full_name?.charAt(0) || "A"}
             </div>
             {isSidebarOpen && (
               <div className="flex-1 text-left min-w-0">
-                <p className="text-xs font-bold truncate">{user?.full_name || "Admin"}</p>
-                <p className="text-[9px] text-white/50 truncate uppercase tracking-widest">Administrator</p>
+                <p className="text-[11px] font-bold text-white truncate">{user?.full_name || "Admin"}</p>
+                <p className="text-[9px] text-white/40 truncate uppercase tracking-[0.12em] font-bold">Administrator</p>
               </div>
             )}
           </button>
         </div>
 
-        {/* Toggle Button */}
-        {(isDesktop || isTablet) && (
+        {/* Desktop Toggle Button */}
+        {isDesktop && (
           <button
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className="absolute top-1/2 -right-4 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 bg-white text-primary border border-neutral-200 shadow-md hover:bg-neutral-50 transition-colors rounded-full"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-1/2 -right-4 -translate-y-1/2 w-8 h-8 bg-white text-primary border border-neutral-100 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[80] group"
           >
             {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
         )}
-      </motion.aside>
-
+      </aside>
     </>
   );
 };

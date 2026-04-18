@@ -48,6 +48,8 @@ export function NotificationDropdown({
     setIsOpen(false);
     if (role === "Teacher") {
       navigate("/Teacher/Notifications");
+    } else if (role === "Admin") {
+      // Assuming admins might have notification page later or use teacher's
     } else {
       navigate("/Student/Notifications");
     }
@@ -59,7 +61,6 @@ export function NotificationDropdown({
     }
     setIsOpen(false);
     
-    // 2. Extract ID (handle both plain and JSON strings)
     let rawRelatedId = notification.relatedId;
     let activityId = "";
     let essayId = "";
@@ -75,7 +76,6 @@ export function NotificationDropdown({
             activityId = parsed.id || rawRelatedId;
          }
        } catch (e) {
-         console.error("Failed to parse JSON relatedId:", e);
          activityId = rawRelatedId;
        }
     } else {
@@ -83,11 +83,9 @@ export function NotificationDropdown({
       essayId = rawRelatedId || "";
     }
 
-    // 3. Navigate based on role and type
     if (role === 'Teacher') {
       const idToUse = activityId || essayId;
       if (idToUse) {
-        // Fetch Metadata for Breadcrumbs and Deep Linking
         const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
         const info = await fetchActivityBreadcrumbInfo(
           activityId || "", 
@@ -105,25 +103,10 @@ export function NotificationDropdown({
           if (info.courseSection) params.courseSection = info.courseSection;
         }
 
-        switch (notification.type) {
-          case "student_submitted":
-          case "resubmission_requested":
-          case "resubmission_request":
-          case "submission_received":
-          case "essay_graded":
-          case "activity_missed":
-            navigate(buildSecureUrl('/Teacher/Activities', params));
-            break;
-          default:
-            if (idToUse) {
-               navigate(buildSecureUrl('/Teacher/Activities', params));
-            }
-            break;
-        }
+        navigate(buildSecureUrl('/Teacher/Activities', params));
       }
     } else if (role === 'Student') {
       if (activityId || essayId) {
-        // Fetch Breadcrumb Info for better header experience
         const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
         const info = await fetchActivityBreadcrumbInfo(activityId || essayId);
 
@@ -137,23 +120,12 @@ export function NotificationDropdown({
         }
 
         switch (notification.type) {
-          case "new_activity":
-          case "resubmission_open":
-          case "resubmission_allowed":
-          case "upcoming_deadline":
-          case "revision_requested":
-            // Lead to the Submit Essay page
-            navigate(buildSecureUrl('/Student/Submit', params));
-            break;
           case "essay_graded":
-            // Lead to Feedback page
             if (essayId) params.essayId = essayId;
             navigate(buildSecureUrl('/Student/Feedback', params));
             break;
           default:
-            if (activityId) {
-              navigate(buildSecureUrl('/Student/Submit', params));
-            }
+            navigate(buildSecureUrl('/Student/Submit', params));
             break;
         }
       }
@@ -161,81 +133,73 @@ export function NotificationDropdown({
   };
 
   const formatTime = (timestamp: string) => {
-    return timestamp; // Already formatted in mock data
+    return timestamp; 
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Notification Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-full hover:bg-neutral-300/30 transition-colors relative"
+        className="p-1.5 rounded-lg hover:bg-neutral-50 transition-colors relative text-neutral-500 hover:text-neutral-800"
       >
-        <Bell className="w-6 h-6 text-neutral-900" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-error-default text-white text-xs font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-error-default text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            initial={{ opacity: 0, scale: 0.95, y: -5 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="absolute right-0 top-full mt-2 w-96 bg-white shadow-lg rounded-rd border border-neutral-200 z-50 max-h-[500px] flex flex-col"
+            exit={{ opacity: 0, scale: 0.95, y: -5 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="absolute right-0 top-full mt-1.5 w-80 bg-white shadow-xl rounded-xl border border-neutral-100 z-50 max-h-[480px] flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
-              <h3 className="font-semibold text-neutral-900">Notifications</h3>
+            <div className="px-4 py-3 border-b border-neutral-50 flex items-center justify-between bg-neutral-50/30">
+              <h3 className="text-sm font-bold text-neutral-800">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="text-sm text-neutral-500">
-                  {unreadCount} unread
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                  {unreadCount} UNREAD
                 </span>
               )}
             </div>
 
-            {/* Notifications List */}
-            <div className="overflow-y-auto flex-1">
+            {/* List */}
+            <div className="overflow-y-auto flex-1 scrollbar-hide">
               {notifications.length === 0 ? (
-                <div className="px-4 py-8 text-center text-neutral-500">
-                  <Bell className="w-12 h-12 mx-auto mb-2 text-neutral-300" />
-                  <p>No notifications</p>
+                <div className="px-5 py-10 text-center">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-neutral-100" />
+                  <p className="text-xs text-neutral-300">Quiet for now.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-neutral-100">
+                <div className="divide-y divide-neutral-50">
                   {notifications.slice(0, 5).map((notification) => (
                     <div
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`px-4 py-3 hover:bg-neutral-50 cursor-pointer transition-colors ${
+                      className={`px-4 py-3 hover:bg-neutral-50/50 cursor-pointer transition-colors relative group ${
                         !notification.read ? "bg-primary/5" : ""
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4
-                              className={`text-sm font-medium ${
-                                !notification.read
-                                  ? "text-neutral-900"
-                                  : "text-neutral-700"
-                              }`}
-                            >
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <h4 className={`text-[12px] font-bold truncate ${!notification.read ? "text-neutral-900" : "text-neutral-700"}`}>
                               {notification.title}
                             </h4>
                             {!notification.read && (
-                              <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />
                             )}
                           </div>
-                          <p className="text-sm text-neutral-600 mb-1">
+                          <p className={`text-[11px] leading-relaxed line-clamp-2 ${!notification.read ? "text-neutral-600" : "text-neutral-400"}`}>
                             {notification.message}
                           </p>
-                          <p className="text-xs text-neutral-400">
+                          <p className="text-[10px] text-neutral-300 mt-1 uppercase font-semibold">
                             {formatTime(notification.timestamp)}
                           </p>
                         </div>
@@ -246,33 +210,19 @@ export function NotificationDropdown({
               )}
             </div>
 
-            {/* Footer - Show More Link */}
-            {notifications.length > 5 && (
-              <div className="px-4 py-3 border-t border-neutral-200">
-                <button
-                  onClick={handleShowMore}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary-300 font-medium transition-colors"
-                >
-                  Show more notifications
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            {notifications.length > 0 && notifications.length <= 5 && (
-              <div className="px-4 py-3 border-t border-neutral-200">
-                <button
-                  onClick={handleShowMore}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary-300 font-medium transition-colors"
-                >
-                  View all notifications
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            {/* Footer */}
+            <div className="px-3 py-2 border-t border-neutral-50 bg-neutral-50/30">
+              <button
+                onClick={handleShowMore}
+                className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary hover:text-primary-600 transition-colors py-1"
+              >
+                {notifications.length > 5 ? "Show More" : "View All"}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-

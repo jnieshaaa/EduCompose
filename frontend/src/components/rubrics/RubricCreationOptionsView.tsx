@@ -1,5 +1,4 @@
 import { Upload, FileCheck, Edit } from "lucide-react";
-import Card from "../ui/Card";
 import type { BuilderMode } from "../../types/rubricTypes";
 
 interface RubricCreationOptionsViewProps {
@@ -14,38 +13,39 @@ export function RubricCreationOptionsView({
   const options: {
     icon: React.ElementType;
     title: string;
+    desc: string;
     mode: BuilderMode;
   }[] = [
-    { icon: Upload, title: "Upload or import", mode: "upload" },
-    {
-      icon: FileCheck,
-      title: "Build from an existing template",
-      mode: "template",
-    },
-    { icon: Edit, title: "Build from scratch", mode: "scratch" },
+    { icon: Upload, title: "Import File", desc: "Upload Excel or JSON", mode: "upload" },
+    { icon: FileCheck, title: "Use Template", desc: "Start from a preset", mode: "template" },
+    { icon: Edit, title: "From Scratch", desc: "Build your own rubric", mode: "scratch" },
   ];
 
   return (
-    <Card className="p-6">
-      <div className="grid grid-cols-3 gap-4 pb-4 border-b border-neutral-200 mb-6">
-        {options.map((option) => (
-          <Card
-            key={option.mode}
-            className={`p-4 flex flex-col items-center text-center cursor-pointer transition-colors border shadow-sm h-32 justify-center ${
-              option.mode === selectedMode
-                ? "border-primary bg-purple-50 ring-2 ring-primary/50"
-                : "hover:bg-neutral-50"
-            }`}
-            onClick={() => onModeSelect(option.mode)}
-          >
-            <option.icon className="w-6 h-6 text-primary mb-2" />
-            <h3 className="text-sm font-medium text-neutral-900 whitespace-nowrap">
-              {option.title}
-            </h3>
-          </Card>
-        ))}
-      </div>
-    </Card>
+    <div className="grid grid-cols-3 gap-2 mb-1">
+      {options.map((option) => (
+        <button
+          key={option.mode}
+          className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border transition-all text-center ${
+            option.mode === selectedMode
+              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+              : "border-neutral-100 bg-neutral-50 hover:border-neutral-200 hover:bg-white"
+          }`}
+          onClick={() => onModeSelect(option.mode)}
+        >
+          <option.icon className={`w-5 h-5 ${
+            option.mode === selectedMode ? "text-primary" : "text-neutral-400"
+          }`} />
+          <span className={`text-xs font-semibold ${
+            option.mode === selectedMode ? "text-primary" : "text-neutral-700"
+          }`}>
+            {option.title}
+          </span>
+          <span className="text-[10px] text-neutral-400">
+            {option.desc}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
-

@@ -9,6 +9,8 @@ import {
   Trash2,
   Loader2,
   Layers,
+  X,
+  ChevronDown
 } from "lucide-react";
 import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 import Card from "../../components/ui/Card";
@@ -16,6 +18,7 @@ import Button from "../../components/ui/Button";
 import { supabase } from "../../lib/supabaseClient";
 import { useAlert } from "../../hooks/useAlert";
 import { useAcademicContext } from "../../hooks/useAcademicContext";
+import { motion, AnimatePresence } from "framer-motion";
 import type {
   Course,
   Section,
@@ -90,7 +93,6 @@ export function CourseSectionsView({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      // 1. Get the local user ID
       const { data: dbUser } = await supabase
         .from("users")
         .select("id")
@@ -99,7 +101,6 @@ export function CourseSectionsView({
 
       if (!dbUser) return;
 
-      // 2. Get course load for CURRENT academic year and term
       const { data: loadData } = await supabase
         .from("teacher_course_loads")
         .select("id")
@@ -117,17 +118,14 @@ export function CourseSectionsView({
 
       const courseLoadId = loadData.id;
 
-      // 3. Fetch program loads
       const { data: pLoads, error } = await supabase
         .from("teacher_program_loads")
-        .select(
-          `
+        .select(`
           id,
           course_load_id,
           program_id,
           programs_lookup (id, name, abbr)
-        `,
-        )
+        `)
         .eq("course_load_id", courseLoadId);
 
       if (error) throw error;
@@ -152,7 +150,6 @@ export function CourseSectionsView({
 
       setProgramLoads(mappedLoads);
 
-      // Handle URL deep link
       if (urlProgramLoadId) {
         const found = mappedLoads.find((l) => l.id === urlProgramLoadId);
         if (found) setSelectedProgramLoad(found);
@@ -171,15 +168,13 @@ export function CourseSectionsView({
     try {
       const { data, error } = await supabase
         .from("blocks")
-        .select(
-          `
+        .select(`
           id,
           name,
           year,
           program_load_id,
           block_students (count)
-        `,
-        )
+        `)
         .eq("program_load_id", selectedProgramLoad.id);
 
       if (error) throw error;
@@ -198,15 +193,12 @@ export function CourseSectionsView({
 
       setBlocks(mapped);
 
-      // Also fetch ALL blocks for this program regardless of course/teacher
-      // to show in the "Existing Blocks" list in the modal
       const { data: blocks } = await supabase
         .from("blocks")
         .select("year, name, teacher_program_loads!fk_block_program_load!inner(program_id)")
         .eq("teacher_program_loads.program_id", selectedProgramLoad.program_id);
       
       if (blocks) {
-        // Unique names and years
         const uniqueBlocks = blocks.reduce((acc: any[], current: any) => {
           const exists = acc.find(item => item.name === current.name && item.year === current.year);
           if (!exists) acc.push({ name: current.name, year: current.year });
@@ -268,7 +260,6 @@ export function CourseSectionsView({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      // 1. Get/Create course load for CURRENT term
       let courseLoadId: string;
       const { data: existingLoad } = await supabase
         .from("teacher_course_loads")
@@ -297,7 +288,6 @@ export function CourseSectionsView({
         courseLoadId = newLoad.id;
       }
 
-      // 2. Bulk Create program loads
       const insertData = selectedProgramIds.map((pid) => ({
         course_load_id: courseLoadId,
         program_id: pid,
@@ -336,7 +326,6 @@ export function CourseSectionsView({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // 1. Create the block
       const { data: block, error } = await supabase
         .from("blocks")
         .insert({
@@ -355,7 +344,6 @@ export function CourseSectionsView({
       }
 
       let enrollmentCount = 0;
-      // 2. Automatically link existing students
       if (block) {
         const { data: matchingStudents } = await supabase
           .from("students")
@@ -379,7 +367,7 @@ export function CourseSectionsView({
         }
       }
 
-      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found for auto-enroll."}`);
+      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found."}`);
       setIsAddBlockOpen(false);
       setNewBlock({ year: 1, name: "" });
       fetchBlocks();
@@ -393,7 +381,7 @@ export function CourseSectionsView({
 
   const handleDeleteBlock = (id: string) => {
     showWarning(
-      "Delete this block? All student enrollments for this block will be removed.",
+      "Delete this block? Student enrollments will be removed.",
       {
         onConfirm: async () => {
           const { error } = await supabase.from("blocks").delete().eq("id", id);
@@ -410,7 +398,7 @@ export function CourseSectionsView({
 
   const handleRemoveProgramLoad = (load: TeacherProgramLoad) => {
     showWarning(
-      `Remove ${load.programs_lookup?.abbr} from this course? This will also delete all created blocks/sections for this program.`,
+      `Remove ${load.programs_lookup?.abbr}? This will also remove all blocks for this program.`,
       {
         onConfirm: async () => {
           try {
@@ -420,10 +408,10 @@ export function CourseSectionsView({
               .eq("id", load.id);
 
             if (error) throw error;
-            showSuccess("Program removed successfully.");
+            showSuccess("Program removed.");
             fetchProgramLoads();
           } catch (err: any) {
-            showError(err.message || "Failed to remove program.");
+            showError(err.message || "Failed to remove.");
           }
         },
       },
@@ -432,59 +420,52 @@ export function CourseSectionsView({
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      {/* Header & Breadcrumbs */}
-      {/* Header - Simplified as main Breadcrumbs handle the path */}
-      <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
-        <div className="flex items-center gap-4">
+      {/* Header & Navigation */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
+        <div className="flex items-center gap-3">
           <button
             onClick={selectedProgramLoad ? handleBackToPrograms : onBack}
-            className="p-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg transition-colors shadow-sm"
+            className="w-9 h-9 flex items-center justify-center bg-white border border-neutral-100 hover:bg-neutral-50 text-neutral-400 rounded-xl transition-all shadow-sm active:scale-95"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900 leading-tight">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-neutral-900 leading-tight truncate">
               {selectedProgramLoad
                 ? `${selectedProgramLoad.programs_lookup?.abbr}`
                 : course.course_title}
             </h1>
-            {selectedProgramLoad && (
-              <p className="text-xs text-neutral-500 mt-1 font-medium">
-                {selectedProgramLoad.programs_lookup?.name}
-              </p>
-            )}
-            {!selectedProgramLoad && (
-              <div className="flex gap-2 items-center mt-1">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
-                  {course.departments?.code ||
-                    course.departments?.name ||
-                    course.department ||
-                    "General Subject"}
-                </span>
-                {course.programs_lookup && (
-                  <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                    {course.programs_lookup.abbr || course.programs_lookup.name}
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest truncate">
+                {selectedProgramLoad ? selectedProgramLoad.programs_lookup?.name : (course.course_code)}
+              </span>
+              {!selectedProgramLoad && (
+                 <>
+                  <span className="text-neutral-200">/</span>
+                  <span className="text-[10px] font-bold text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">
+                    {course.departments?.code || "GENERAL"}
                   </span>
-                )}
-              </div>
-            )}
+                 </>
+              )}
+            </div>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           {!selectedProgramLoad ? (
-            <Button
+            <button
               onClick={() => setIsAddProgramOpen(true)}
-              className="bg-primary text-white flex items-center gap-2"
+              className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
             >
-              <Plus size={18} /> Add Program
-            </Button>
+              <Plus size={14} /> Add Program
+            </button>
           ) : (
-            <Button
+            <button
               onClick={() => setIsAddBlockOpen(true)}
-              className="bg-primary text-white flex items-center gap-2"
+              className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
             >
-              <Plus size={18} /> Add Block
-            </Button>
+              <Plus size={14} /> Add Block
+            </button>
           )}
           <UnifiedStudentBatchUploadDialog 
             courseId={course.id} 
@@ -497,85 +478,85 @@ export function CourseSectionsView({
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-primary w-8 h-8" />
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-neutral-50 shadow-sm">
+          <Loader2 className="animate-spin text-primary/30 w-8 h-8 mb-4" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing loads...</p>
         </div>
       ) : !selectedProgramLoad ? (
         // PROGRAM SELECTION VIEW
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {programLoads.length === 0 ? (
-            <div className="col-span-full py-20 text-center">
-              <Folder className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-              <p className="text-neutral-500">
-                No programs added to this course yet.
+            <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-neutral-50 shadow-sm">
+              <Folder className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                Course Catalog Empty
               </p>
+              <p className="text-xs text-neutral-400 mt-2">Start by adding a target program.</p>
             </div>
           ) : (
             programLoads.map((load) => (
-              <Card
+              <div
                 key={load.id}
                 onClick={() => handleProgramClick(load)}
-                className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group bg-white border-neutral-200 relative"
+                className="p-5 cursor-pointer rounded-2xl border border-neutral-100 bg-white hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 transition-all group relative"
               >
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-primary/5 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className="w-12 h-12 bg-neutral-50 rounded-xl flex items-center justify-center text-neutral-400 group-hover:bg-primary/5 group-hover:text-primary transition-all">
                     <Folder size={24} />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-neutral-900">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm text-neutral-800 line-clamp-1">
                       {load.programs_lookup?.abbr}
                     </h3>
-                    <p className="text-xs text-neutral-500 truncate max-w-[150px]">
-                      {load.programs_lookup?.name}
+                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider truncate">
+                      {load.programs_lookup?.name?.split(' ')[0]} ...
                     </p>
                   </div>
                 </div>
                 
-                {/* Remove button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemoveProgramLoad(load);
                   }}
-                  className="absolute top-2 right-2 p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-3 right-3 p-1.5 text-neutral-200 hover:text-error-default hover:bg-error-default/5 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
-              </Card>
+              </div>
             ))
           )}
         </div>
       ) : (
         // BLOCKS VIEW
-        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
           {blocks.length === 0 ? (
             <div className="p-20 text-center">
-              <Users className="w-12 h-12 text-neutral-200 mx-auto mb-4" />
-              <p className="text-neutral-500">
-                No blocks found in this program.
+              <Users className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
+               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                No active blocks
               </p>
-              <Button
+              <button
                 onClick={() => setIsAddBlockOpen(true)}
-                variant="outline"
-                className="mt-4"
+                 className="mt-6 text-[11px] font-bold uppercase tracking-widest text-primary border border-primary/20 px-6 py-2 rounded-full hover:bg-primary/5 transition-all"
               >
-                Create First Block
-              </Button>
+                Create Section
+              </button>
             </div>
           ) : (
             <table className="w-full text-left">
-              <thead className="bg-neutral-50 text-[10px] font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-200">
-                <tr>
-                  <th className="px-6 py-4">BLOCK</th>
-                  <th className="px-6 py-4 text-center">STUDENTS</th>
-                  <th className="px-6 py-4 text-right">ACTIONS</th>
+              <thead>
+                <tr className="bg-neutral-50/50">
+                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/2">Section Block</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-50">
                 {blocks.map((block) => (
                   <tr
                     key={block.id}
-                    className="hover:bg-neutral-50/50 transition-colors cursor-pointer group"
+                    className="hover:bg-neutral-50/30 transition-colors cursor-pointer group"
                     onClick={() => {
                       navigate(
                         buildSecureUrl('/Teacher/Students', {
@@ -590,17 +571,16 @@ export function CourseSectionsView({
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                          {block.year}
-                          {block.name}
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-primary/20">
+                          {block.year}{block.name}
                         </div>
-                        {/* <span className="text-sm font-medium text-neutral-600">{block.year}{block.name}</span> */}
+                        <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Year {block.year} • Section {block.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-xs px-2 py-1 bg-neutral-100 rounded-full font-bold text-neutral-600">
-                        {block.students_estimated}
+                      <span className="text-[10px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
+                        {block.students_estimated} Students
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -609,9 +589,9 @@ export function CourseSectionsView({
                           e.stopPropagation();
                           handleDeleteBlock(block.id);
                         }}
-                        className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-xl transition-all"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>
@@ -623,292 +603,213 @@ export function CourseSectionsView({
       )}
 
       {/* Add Program Modal */}
-      {isAddProgramOpen && (
-        <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-              <h2 className="text-lg font-bold">Add Program to Course</h2>
-              <button
-                onClick={() => setIsAddProgramOpen(false)}
-                className="text-neutral-400 hover:text-neutral-600"
-              >
-                <Plus size={20} className="rotate-45" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5">
-              {/* Department Selection - Only shown/enabled if course doesn't have a fixed program or department */}
-              {!course.program_id && (
+      <AnimatePresence>
+        {isAddProgramOpen && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+             <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddProgramOpen(false)}
+              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/30">
                 <div>
-                  <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest block mb-1.5 ml-1">
-                    {course.department_id
-                      ? "Department (Fixed)"
-                      : "Filter by Department"}
-                  </label>
-                  {departments.length > 0 ? (
+                  <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Add Program</h2>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Link a degree program to this course</p>
+                </div>
+                <button
+                  onClick={() => setIsAddProgramOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {!course.program_id && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">
+                      {course.department_id ? "Fixed Department" : "Organization Dept"}
+                    </label>
                     <select
                       disabled={!!course.department_id}
-                      className={`w-full border rounded-xl p-3 text-sm outline-none transition-all ${
-                        course.department_id
-                          ? "bg-neutral-50 text-neutral-500 border-neutral-200"
-                          : "bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary border-neutral-200"
-                      }`}
+                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all"
                       value={selectedDept}
                       onChange={(e) => setSelectedDept(e.target.value)}
                     >
-                      {!course.department_id && (
-                        <option value="">All Departments</option>
-                      )}
+                      {!course.department_id && <option value="">Select Department...</option>}
                       {departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.code})
-                        </option>
+                        <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
-                  ) : (
-                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-amber-700 text-xs flex items-center gap-2">
-                      <Layers size={14} />
-                      No departments available in this school.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest block mb-1.5 ml-1">
-                  {course.program_id ? "Target Program" : "Available Programs"}
-                </label>
-                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                  {(() => {
-                    const alreadyAddedIds = new Set(
-                      programLoads.map((p) => p.program_id),
-                    );
-
-                    const filtered = availablePrograms.filter((p) => {
-                      if (course.program_id) return p.id === course.program_id;
-                      return !selectedDept || p.department_id === selectedDept;
-                    });
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="py-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                          <p className="text-xs text-neutral-400 px-4">
-                            No programs found for this selection.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return filtered.map((p) => {
-                      const isAlreadyAdded = alreadyAddedIds.has(p.id);
-                      const isSelected = selectedProgramIds.includes(p.id);
-
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() =>
-                            !isAlreadyAdded && toggleProgramSelection(p.id)
-                          }
-                          disabled={isCreating || isAlreadyAdded}
-                          className={`text-left p-4 border rounded-xl transition-all flex items-center justify-between group shadow-sm active:scale-[0.98] ${
-                            isAlreadyAdded
-                              ? "bg-neutral-50 border-neutral-100 opacity-60 cursor-not-allowed"
-                              : isSelected
-                                ? "bg-primary/5 border-primary ring-1 ring-primary"
-                                : "bg-white border-neutral-200 hover:bg-primary/5 hover:border-primary/20"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                                isAlreadyAdded
-                                  ? "bg-success-default border-success-default"
-                                  : isSelected
-                                    ? "bg-primary border-primary"
-                                    : "bg-white border-neutral-300 group-hover:border-primary"
-                              }`}
-                            >
-                              {(isAlreadyAdded || isSelected) && (
-                                <svg
-                                  className="w-3.5 h-3.5 text-white"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <div>
-                              <p
-                                className={`text-sm font-bold transition-colors ${
-                                  isAlreadyAdded
-                                    ? "text-success-default"
-                                    : isSelected
-                                      ? "text-primary"
-                                      : "text-neutral-900"
-                                }`}
-                              >
-                                {p.abbr}
-                              </p>
-                              <p className="text-[10px] text-neutral-500 font-medium">
-                                {p.name}
-                              </p>
-                            </div>
-                          </div>
-                          {isAlreadyAdded && (
-                            <span className="text-[9px] font-bold text-success-default uppercase bg-success-default/10 px-2 py-0.5 rounded-full">
-                              Already Added
-                            </span>
-                          )}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-              {course.program_id && (
-                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-[10px] font-medium leading-relaxed">
-                  This is a Major Course of specific program. Only that program
-                  is allowed to be added.
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3 items-center">
-              {selectedProgramIds.length > 0 && (
-                <span className="text-xs font-bold text-primary mr-auto">
-                  {selectedProgramIds.length} programs selected
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setSelectedProgramIds([]);
-                  setIsAddProgramOpen(false);
-                }}
-                className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <Button
-                onClick={handleAddProgramsBatch}
-                disabled={isCreating || selectedProgramIds.length === 0}
-                className="bg-primary text-white px-6 font-bold shadow-lg shadow-primary/20"
-              >
-                {isCreating ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  "Save Selected"
+                  </div>
                 )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Add Block Modal */}
-      {isAddBlockOpen && (
-        <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
-              <h2 className="text-lg font-bold">Create New Block</h2>
-              <p className="text-xs text-neutral-500 mt-1">
-                Adding block to {selectedProgramLoad?.programs_lookup?.abbr}
-              </p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">
-                  Year Level
-                </label>
-                <select
-                  className="w-full border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  value={newBlock.year}
-                  onChange={(e) =>
-                    setNewBlock({ ...newBlock, year: parseInt(e.target.value) })
-                  }
-                >
-                  {[1, 2, 3, 4, 5].map((y) => (
-                    <option key={y} value={y}>
-                      Year {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase block mb-1">
-                  Block Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. A, B, C"
-                  className="w-full border rounded-lg p-2.5 text-sm uppercase outline-none focus:ring-2 focus:ring-primary/20"
-                  value={newBlock.name}
-                  onChange={(e) =>
-                    setNewBlock({ ...newBlock, name: e.target.value })
-                  }
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Academic Tracks</label>
+                  <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1 pb-2">
+                    {(() => {
+                      const alreadyAddedIds = new Set(programLoads.map((p) => p.program_id));
+                      const filtered = availablePrograms.filter((p) => {
+                        if (course.program_id) return p.id === course.program_id;
+                        return !selectedDept || p.department_id === selectedDept;
+                      });
 
-              {selectedProgramLoad && programWideBlocks.length > 0 && (
-                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                    Select Existing Block
-                  </span>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
-                      const isActive = newBlock.year === b.year && newBlock.name === b.name;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setNewBlock({ ...newBlock, year: b.year, name: b.name })}
-                          className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all ${
-                            isActive
-                              ? "bg-primary/10 border-primary text-primary shadow-sm"
-                              : "bg-white border-neutral-200 text-neutral-600 hover:border-primary/50 hover:bg-primary/5"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isActive ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
-                              {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      if (filtered.length === 0) return <p className="text-[10px] text-neutral-300 text-center py-4">No tracks found</p>;
+
+                      return filtered.map((p) => {
+                        const isAlready = alreadyAddedIds.has(p.id);
+                        const isSelected = selectedProgramIds.includes(p.id);
+
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => !isAlready && toggleProgramSelection(p.id)}
+                            disabled={isAlready}
+                            className={`flex items-center justify-between p-3 rounded-2xl border transition-all text-left ${
+                              isAlready ? 'bg-neutral-50 border-neutral-50 opacity-40' :
+                              isSelected ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-neutral-100 hover:border-primary/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-primary' : 'bg-white border-neutral-200'}`}>
+                                {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-xs font-bold leading-none ${isSelected ? 'text-primary' : 'text-neutral-700'}`}>{p.abbr}</p>
+                                <p className="text-[9px] text-neutral-400 truncate mt-1">{p.name}</p>
+                              </div>
                             </div>
-                            <span className="text-xs font-bold uppercase">{b.year}{b.name}</span>
-                          </div>
-                          <span className={`${isActive ? 'text-primary/70' : 'text-neutral-400'} text-[10px] font-medium`}>
-                            {b.student_count} Students
-                          </span>
-                        </button>
-                      );
-                    })}
+                            {isAlready && <span className="text-[8px] font-bold text-success-default uppercase tracking-tighter">Existing</span>}
+                          </button>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="px-6 py-4 bg-neutral-50 flex justify-end gap-2">
-              <Button onClick={() => setIsAddBlockOpen(false)} variant="ghost">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateBlock}
-                disabled={isCreating}
-                className="bg-primary text-white"
-              >
-                {isCreating ? (
-                  <Loader2 className="animate-spin w-4 h-4" />
-                ) : (
-                  "Create Block"
-                )}
-              </Button>
-            </div>
+              </div>
+
+              <div className="px-6 py-4 bg-neutral-50/50 border-t border-neutral-50 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">
+                  {selectedProgramIds.length} Picked
+                </span>
+                <div className="flex gap-2">
+                  <button onClick={() => setIsAddProgramOpen(false)} className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Discard</button>
+                  <button
+                    onClick={handleAddProgramsBatch}
+                    disabled={isCreating || selectedProgramIds.length === 0}
+                    className="bg-primary text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                     {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Link Program"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* Add Block Modal */}
+      <AnimatePresence>
+        {isAddBlockOpen && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+             <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddBlockOpen(false)}
+              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95, y: 10 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.95, y: 10 }}
+               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/30">
+                <div>
+                  <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">New Block</h2>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Creating section for {selectedProgramLoad?.programs_lookup?.abbr}</p>
+                </div>
+                <button
+                  onClick={() => setIsAddBlockOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Year Level</label>
+                    <select
+                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all font-bold"
+                      value={newBlock.year}
+                      onChange={(e) => setNewBlock({ ...newBlock, year: parseInt(e.target.value) })}
+                    >
+                       {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y}>Year {y}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Block Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. A"
+                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all uppercase font-bold"
+                      value={newBlock.name}
+                      onChange={(e) => setNewBlock({ ...newBlock, name: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {selectedProgramLoad && programWideBlocks.length > 0 && (
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-3">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pl-1">Inherit Existing</span>
+                    <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                      {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
+                        const active = newBlock.year === b.year && newBlock.name === b.name;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setNewBlock({ ...newBlock, year: b.year, name: b.name })}
+                            className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                              active ? 'bg-white border-primary shadow-sm' : 'bg-white/50 border-neutral-100 hover:border-primary/20'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                               <div className={`w-3 h-3 rounded-full border transition-all ${active ? 'bg-primary border-primary' : 'bg-neutral-200 border-neutral-200'}`} />
+                               <span className={`text-[11px] font-bold uppercase ${active ? 'text-primary' : 'text-neutral-500'}`}>{b.year}{b.name}</span>
+                            </div>
+                            <span className="text-[9px] font-bold text-neutral-300 uppercase">{b.student_count} Students</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 bg-neutral-50/50 border-t border-neutral-50 flex justify-end gap-2">
+                 <button onClick={() => setIsAddBlockOpen(false)} className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Abort</button>
+                 <button
+                    onClick={handleCreateBlock}
+                     className="bg-primary text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                 >
+                    {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Seal & Create"}
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AlertComponent />
     </div>

@@ -157,14 +157,22 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
 
       if (schoolError) throw schoolError;
 
+      const normalizeCourse = (c: any): Course => ({
+        ...c,
+        schools: Array.isArray(c.schools) ? c.schools[0] : c.schools,
+        departments: Array.isArray(c.departments) ? c.departments[0] : c.departments,
+        programs_lookup: Array.isArray(c.programs_lookup) ? c.programs_lookup[0] : c.programs_lookup
+      });
+
       const userLoads = (loadsData || []).map(l => ({
-        ...(l.courses as any),
+        ...normalizeCourse(l.courses),
         academic_year: l.academic_year,
         term: l.term
       })) as unknown as Course[];
-      setMyCourses(userLoads.filter(c => c !== null));
-      setDepartmentCourses((deptData as unknown as Course[]) || []);
-      setSchoolCourses((schoolData as unknown as Course[]) || []);
+
+      setMyCourses(userLoads.filter(c => c && c.id));
+      setDepartmentCourses(((deptData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
+      setSchoolCourses(((schoolData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
     } catch (err) {
       console.error("Error loading courses:", err);
       setLoadError("Unable to load courses.");

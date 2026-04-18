@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Eye } from "lucide-react";
-import Card from "../ui/Card";
+import { Eye, Search, BookOpen } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
 import type { PlatformRubric } from "../../types/rubricTypes";
 import { getTypeBadgeColor } from "../../services/rubricService";
 import { platformRubrics } from "../../components/rubrics/types";
@@ -24,60 +22,85 @@ export function TemplateModeView({
   );
 
   return (
-    <div className="w-full mt-6 p-6 border rounded-lg shadow-md bg-white">
-      <h3 className="text-2xl font-semibold text-neutral-900 mb-6">
-        Select Template
-      </h3>
-      <div className="space-y-6">
-        <p className="text-neutral-600">
-          Select an existing template from the library. Click to preview and
-          use.
-        </p>
-        <div className="border p-4 rounded-lg">
-          <Input
-            type="search"
-            placeholder="Search rubrics..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            className="mb-4"
-          />
-          <div className="space-y-3">
-            {filteredRubrics.map((rubric) => (
-              <Card
-                key={rubric.id}
-                className="p-4 flex justify-between items-center bg-neutral-50 hover:bg-neutral-100 cursor-pointer transition-colors"
-                onClick={() => onPreviewRubric(rubric)}
-              >
-                <div className="flex-1">
-                  <h4 className="text-base font-medium text-neutral-900">
-                    {rubric.name}
-                  </h4>
-                  <p className="text-sm text-neutral-500 mt-1">
-                    {rubric.criteria.length} Criteria • {rubric.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={`${getTypeBadgeColor(rubric.type)} border`}>
-                    {rubric.type}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e?.stopPropagation();
-                      onPreviewRubric(rubric);
-                    }}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+    <div className="w-full mt-4">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-lg font-bold text-neutral-900">
+            Platform Templates
+          </h3>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Select a rubric template to preview and customize
+          </p>
         </div>
+        <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2.5 py-1 rounded-md">
+          {platformRubrics.length} available
+        </span>
       </div>
-      <div className="flex justify-end gap-2 pt-6 border-t mt-8">
-        <Button variant="outline" onClick={onCancel}>
+
+      {/* ─── Search ─── */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300" />
+        <input
+          type="text"
+          placeholder="Search rubrics…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-3 py-2.5 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300"
+        />
+      </div>
+
+      {/* ─── Rubric List ─── */}
+      <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+        {filteredRubrics.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-xs text-neutral-400">No rubrics match your search</p>
+          </div>
+        ) : (
+          filteredRubrics.map((rubric) => (
+            <div
+              key={rubric.id}
+              className="flex items-center gap-3 p-3.5 bg-neutral-50 border border-neutral-100 rounded-xl hover:border-primary/20 hover:bg-primary/[0.02] cursor-pointer transition-all group"
+              onClick={() => onPreviewRubric(rubric)}
+            >
+              {/* Icon */}
+              <div className="w-9 h-9 bg-white border border-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-primary/20 transition-colors">
+                <BookOpen className="w-4 h-4 text-neutral-400 group-hover:text-primary transition-colors" />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-neutral-800 group-hover:text-primary transition-colors truncate">
+                  {rubric.name}
+                </h4>
+                <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                  {rubric.criteria.length} criteria &middot; {rubric.description}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Badge className={`${getTypeBadgeColor(rubric.type)} border text-[10px] font-semibold`}>
+                  {rubric.type}
+                </Badge>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPreviewRubric(rubric);
+                  }}
+                  className="p-1.5 text-neutral-300 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ─── Footer ─── */}
+      <div className="flex items-center justify-end pt-5 mt-5 border-t border-neutral-100">
+        <Button variant="ghost" onClick={onCancel} className="text-sm">
           Cancel
         </Button>
       </div>

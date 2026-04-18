@@ -1,7 +1,6 @@
 // Reusable Scrollable Section Component
 
 import React from "react";
-import Card from "../ui/Card";
 
 interface ScrollableSectionProps {
   id: string;
@@ -16,11 +15,11 @@ export const ScrollableSection: React.FC<ScrollableSectionProps> = ({
   icon: Icon,
   children,
 }) => (
-  <Card id={id} className="p-6 scroll-mt-20">
-    <h2 className="text-xl text-neutral-900 mb-4 flex items-center border-b pb-2">
-      <Icon className="w-5 h-5 mr-2" />
-      {title}
-    </h2>
-    {children}
-  </Card>
+  <div id={id} className="bg-white border border-neutral-100 rounded-xl scroll-mt-20 overflow-hidden">
+    <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
+      <Icon className="w-4 h-4 text-neutral-400" />
+      <h2 className="text-sm font-bold text-neutral-800">{title}</h2>
+    </div>
+    <div className="p-5">{children}</div>
+  </div>
 );

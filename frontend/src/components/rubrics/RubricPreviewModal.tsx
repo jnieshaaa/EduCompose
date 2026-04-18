@@ -7,7 +7,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import Button from "../ui/Button";
-import Badge from "../ui/Badge";
 import type { PlatformRubric } from "./types";
 import {
   DropdownMenu,
@@ -65,182 +64,176 @@ export function RubricPreviewModal({
   );
   const pointHeaders = Array.from(allPoints).sort((a, b) => b - a);
 
-  const getTypeBadgeColor = (type: string) => {
-    switch (type) {
-      case "Basic":
-        return "bg-green-400/20 text-green-700/90 border-green-500";
-      case "Professional":
-        return "bg-blue-400/20 text-blue-700/90 border-blue-500";
-      case "Advanced":
-        return "bg-yellow-400/20 text-yellow-700/90 border-yellow-500";
-      case "Technical":
-        return "bg-orange-500/20 text-orange-700/90 border-orange-500";
-      default:
-        return "bg-neutral-100 text-neutral-700 border-neutral-300";
-    }
+  const typeBadgeStyles: Record<string, string> = {
+    Basic: "bg-emerald-50 text-emerald-600 border-emerald-200",
+    Professional: "bg-primary/5 text-primary border-primary/20",
+    Advanced: "bg-amber-50 text-amber-600 border-amber-200",
+    Technical: "bg-orange-50 text-orange-600 border-orange-200",
   };
 
+  const badgeClass = typeBadgeStyles[rubric.type] || "bg-neutral-50 text-neutral-500 border-neutral-200";
+
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+    <div className='fixed inset-0 z-[90] flex items-center justify-center p-4'>
       {/* Backdrop */}
       <div
-        className='absolute inset-0 bg-black/50 backdrop-blur-sm'
+        className='absolute inset-0 bg-black/40 backdrop-blur-sm'
         onClick={onClose}
       />
 
-      {/* Modal - Extra Large */}
-      <div className='relative bg-white rounded-xl shadow-2xl w-[95vw] max-w-7xl max-h-[90vh] overflow-hidden flex flex-col'>
-        {/* Header */}
-        <div className='flex items-start justify-between p-6 border-b bg-gradient-to-r from-primary/5 to-purple-50'>
-          <div className='flex-1'>
-            <div className='flex items-center gap-3 mb-2'>
-              <div className='p-2 bg-primary/10 rounded-lg'>
-                <BookOpen className='w-6 h-6 text-primary' />
-              </div>
-              <Badge className={`${getTypeBadgeColor(rubric.type)} border`}>
-                {rubric.type}
-              </Badge>
+      {/* Modal */}
+      <div className='relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col border border-neutral-100'>
+        {/* ─── Header ─── */}
+        <div className='flex items-start justify-between px-5 py-4 border-b border-neutral-100'>
+          <div className='flex items-start gap-3 min-w-0'>
+            <div className='w-9 h-9 bg-primary/5 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5'>
+              <BookOpen className='w-4 h-4 text-primary' />
             </div>
-            <h2 className='text-2xl font-bold text-neutral-900'>
-              {rubric.name}
-            </h2>
-            <p className='text-neutral-600 mt-1'>{rubric.description}</p>
-            <div className='flex items-center gap-4 mt-3 text-sm text-neutral-500'>
-              <span>
-                <strong>{rubric.criteria.length}</strong> Criteria
-              </span>
-              <span>
-                <strong>{totalPossiblePoints}</strong> Total Points
-              </span>
-              <span>
-                Used in <strong>{rubric.programs}</strong> programs
-              </span>
-              <span>Updated: {rubric.lastUpdated}</span>
+            <div className='min-w-0'>
+              <div className='flex items-center gap-2 mb-1'>
+                <h2 className='text-sm font-bold text-neutral-900 truncate'>
+                  {rubric.name}
+                </h2>
+                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
+                  {rubric.type}
+                </span>
+              </div>
+              <p className='text-xs text-neutral-400 line-clamp-1'>{rubric.description}</p>
+              <div className='flex items-center gap-3 mt-1.5'>
+                <span className='text-[10px] text-neutral-400'>
+                  <strong className='text-neutral-600'>{rubric.criteria.length}</strong> criteria
+                </span>
+                <span className='text-neutral-200'>·</span>
+                <span className='text-[10px] text-neutral-400'>
+                  <strong className='text-neutral-600'>{totalPossiblePoints}</strong> pts
+                </span>
+                <span className='text-neutral-200'>·</span>
+                <span className='text-[10px] text-neutral-400'>
+                  <strong className='text-neutral-600'>{rubric.programs}</strong> programs
+                </span>
+                <span className='text-neutral-200'>·</span>
+                <span className='text-[10px] text-neutral-300'>
+                  {rubric.lastUpdated}
+                </span>
+              </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className='p-2 hover:bg-neutral-100 rounded-lg transition-colors'
+            className='p-1.5 hover:bg-neutral-100 rounded-lg transition-colors flex-shrink-0'
           >
-            <X className='w-6 h-6 text-neutral-500' />
+            <X className='w-4 h-4 text-neutral-400' />
           </button>
         </div>
 
-        {/* Body - Scrollable */}
-        <div className='flex-1 overflow-auto p-6'>
-          {/* Rubric Table */}
-          <div className='border border-neutral-200 rounded-xl overflow-hidden'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gradient-to-r from-primary/10 to-purple-100'>
-                  <th className='px-4 py-4 text-left text-sm font-bold text-neutral-800 w-48 border-r border-neutral-200'>
-                    Criteria
-                  </th>
-                  {pointHeaders.map((points) => (
-                    <th
-                      key={points}
-                      className='px-4 py-4 text-center text-sm font-bold text-neutral-800 border-r border-neutral-200 last:border-r-0'
-                    >
-                      <div className='flex flex-col items-center'>
-                        <span className='text-2xl text-primary'>{points}</span>
-                        <span className='text-xs text-neutral-500 mt-1'>
-                          points
-                        </span>
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-neutral-200'>
-                {rubric.criteria.map((criteria, idx) => (
-                  <tr
-                    key={criteria.id}
-                    className={idx % 2 === 0 ? "bg-white" : "bg-neutral-50/50"}
+        {/* ─── Table ─── */}
+        <div className='flex-1 overflow-auto'>
+          <table className='w-full text-left'>
+            <thead className='sticky top-0 z-10'>
+              <tr className='bg-neutral-50 border-b border-neutral-100'>
+                <th className='px-4 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider w-44 border-r border-neutral-100'>
+                  Criteria
+                </th>
+                {pointHeaders.map((points) => (
+                  <th
+                    key={points}
+                    className='px-4 py-3 text-center border-r border-neutral-100 last:border-r-0'
                   >
-                    <td className='px-4 py-4 border-r border-neutral-200'>
-                      <div className='font-semibold text-neutral-900'>
-                        {criteria.title}
-                      </div>
-                      <div className='text-xs text-neutral-500 mt-1'>
-                        Max: {Math.max(...criteria.scores.map((s) => s.points))}{" "}
-                        pts
-                      </div>
-                    </td>
-                    {pointHeaders.map((points) => {
-                      const score = criteria.scores.find(
-                        (s) => s.points === points
-                      );
-                      return (
-                        <td
-                          key={`${criteria.id}-${points}`}
-                          className='px-4 py-4 text-sm text-neutral-600 border-r border-neutral-200 last:border-r-0 align-top'
-                        >
-                          {score ? (
-                            <div>
-                              <div className='font-medium text-neutral-800 mb-1'>
-                                {score.title}
-                              </div>
-                              <div className='text-xs text-neutral-500 leading-relaxed'>
-                                {score.description}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className='text-neutral-300'>—</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                    <span className='text-lg font-bold text-primary'>{points}</span>
+                    <span className='block text-[9px] font-semibold text-neutral-400 uppercase tracking-wider mt-0.5'>
+                      points
+                    </span>
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody className='divide-y divide-neutral-50'>
+              {rubric.criteria.map((criteria) => (
+                <tr
+                  key={criteria.id}
+                  className='hover:bg-neutral-50/50 transition-colors'
+                >
+                  <td className='px-4 py-3 border-r border-neutral-100 align-top'>
+                    <span className='text-xs font-semibold text-neutral-800'>
+                      {criteria.title}
+                    </span>
+                    <span className='block text-[10px] text-neutral-400 mt-0.5'>
+                      Max {Math.max(...criteria.scores.map((s) => s.points))} pts
+                    </span>
+                  </td>
+                  {pointHeaders.map((points) => {
+                    const score = criteria.scores.find(
+                      (s) => s.points === points
+                    );
+                    return (
+                      <td
+                        key={`${criteria.id}-${points}`}
+                        className='px-4 py-3 border-r border-neutral-100 last:border-r-0 align-top'
+                      >
+                        {score ? (
+                          <div>
+                            <span className='text-[11px] font-semibold text-neutral-700'>
+                              {score.title}
+                            </span>
+                            <p className='text-[10px] text-neutral-400 leading-relaxed mt-0.5'>
+                              {score.description}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className='text-neutral-200'>—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Score Summary */}
-          <div className='mt-6 p-4 bg-neutral-50 rounded-xl'>
-            <h4 className='font-semibold text-neutral-800 mb-3'>
-              Scoring Guide
-            </h4>
-            <div className='grid grid-cols-4 gap-4'>
-              {pointHeaders.map((points) => {
-                // Find a sample title for this point level
-                const sampleScore = rubric.criteria[0]?.scores.find(
-                  (s) => s.points === points
-                );
-                return (
-                  <div key={points} className='flex items-center gap-2'>
-                    <span className='w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm'>
-                      {points}
-                    </span>
-                    <span className='text-sm text-neutral-600'>
-                      {sampleScore?.title || `${points} Points`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+        {/* ─── Score Legend ─── */}
+        <div className='px-5 py-3 border-t border-neutral-100 bg-neutral-50/50'>
+          <div className='flex items-center gap-5'>
+            <span className='text-[10px] font-bold text-neutral-400 uppercase tracking-wider'>Score Guide</span>
+            {pointHeaders.map((points) => {
+              const sampleScore = rubric.criteria[0]?.scores.find(
+                (s) => s.points === points
+              );
+              return (
+                <div key={points} className='flex items-center gap-1.5'>
+                  <span className='w-6 h-6 rounded-md bg-primary/10 text-primary font-bold flex items-center justify-center text-[10px]'>
+                    {points}
+                  </span>
+                  <span className='text-[10px] text-neutral-500'>
+                    {sampleScore?.title || `${points} pts`}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className='flex items-center justify-between p-6 border-t bg-neutral-50'>
+        {/* ─── Footer ─── */}
+        <div className='flex items-center justify-between px-5 py-3 border-t border-neutral-100'>
           <div className='flex gap-2'>
             {onUseTemplate && (
-              <Button
-                variant='outline'
-                size='sm'
+              <button
                 onClick={() => onUseTemplate(rubric as PlatformRubric)}
+                className='flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors'
               >
-                <Copy className='w-4 h-4 mr-2' />
+                <Copy className='w-3.5 h-3.5' />
                 Copy to My Rubrics
-              </Button>
+              </button>
+            )}
+            {onUseTemplate && (
+              <span className='text-neutral-200 mx-1'>|</span>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
+                <button className='flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-700 transition-colors'>
+                  <Download className='w-3.5 h-3.5' />
                   Export
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='start'>
                 <DropdownMenuItem
@@ -279,12 +272,15 @@ export function RubricPreviewModal({
             </DropdownMenu>
           </div>
           <div className='flex gap-2'>
-            <Button variant='outline' onClick={onClose}>
+            <button
+              onClick={onClose}
+              className='px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors'
+            >
               Close
-            </Button>
+            </button>
             {onUseTemplate && (
               <Button
-                className='bg-primary hover:bg-primary-300'
+                className='bg-primary hover:bg-primary-300 text-white font-bold text-xs h-8 px-4 shadow-md shadow-primary/15'
                 onClick={() => onUseTemplate(rubric as PlatformRubric)}
               >
                 Use This Template

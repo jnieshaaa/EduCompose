@@ -3,7 +3,6 @@
 import React from "react";
 import { BookOpen, Save, Loader2 } from "lucide-react";
 import { ScrollableSection } from "./ScrollableSection";
-import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import Button from "../ui/Button";
 import type { RubricDefaults } from "../../types/settingsTypes";
@@ -30,16 +29,19 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
   return (
     <ScrollableSection id={id} title="Rubric Defaults" icon={BookOpen}>
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+        <div className="flex items-center justify-center gap-2 py-8">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs text-neutral-400">Loading…</span>
         </div>
       ) : (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="default-rubric">Default Rubric Template</Label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+              Default Rubric Template
+            </label>
             <select
               id="default-rubric"
-              className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-rd"
+              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all disabled:opacity-50"
               value={defaults.defaultRubricId || ""}
               onChange={(e) =>
                 onDefaultsChange({
@@ -57,16 +59,16 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
               ))}
             </select>
             {rubrics.length === 0 && (
-              <p className="text-sm text-neutral-500 mt-1">
-                No rubrics available. Create a rubric first to set it as
-                default.
+              <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5 italic">
+                No rubrics available. Create one first.
               </p>
             )}
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <Label htmlFor="auto-apply">Auto-Apply to New Programs</Label>
-              <p className="text-sm text-neutral-500 mt-1">
+
+          <div className="flex items-center justify-between py-3 border-t border-b border-neutral-50">
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-neutral-700">Auto-Apply to New Programs</span>
+              <p className="text-[10px] text-neutral-400 mt-0.5">
                 Automatically assign default rubric to new programs
               </p>
             </div>
@@ -79,20 +81,21 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
               disabled={isSaving}
             />
           </div>
-          <div className="flex justify-end pt-4 border-t">
+
+          <div className="flex justify-end pt-3">
             <Button
-              className="bg-primary hover:bg-primary-300"
+              className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15"
               onClick={onSaveDefaults}
               disabled={isSaving}
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Saving…
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="w-4 h-4 mr-1.5" />
                   Save Defaults
                 </>
               )}
@@ -103,4 +106,3 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
     </ScrollableSection>
   );
 };
-

@@ -25,8 +25,6 @@ const StudentLayout: React.FC = () => {
         <StudentHeader 
           onMenuClick={toggleSidebar} 
           isBurgerActive={isSidebarOpen} 
-          // Explicitly set the role for the header component
-          role="Student" 
         />
         
         {/* Breadcrumb is a generic UI component, so it remains the same */}

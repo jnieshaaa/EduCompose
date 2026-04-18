@@ -24,7 +24,6 @@ import type { Notification } from "../types/notification";
 interface TeacherHeaderProps {
   onMenuClick: () => void;
   isBurgerActive: boolean;
-  role: "Admin" | "Teacher" | "Student"; // Added role prop
 }
 
 const TeacherHeader: React.FC<TeacherHeaderProps> = ({
@@ -201,23 +200,23 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     .toUpperCase();
 
   return (
-    <header className="relative bg-white border-b border-neutral-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-40">
+    <header className="relative bg-white border-b border-neutral-100 h-14 flex items-center justify-between px-4 sm:px-6 z-40">
       {/* Left Section: Burger Menu and Current Page Label */}
       <div className="flex items-center">
         <button
           onClick={onMenuClick}
-          className="text-neutral-500 hover:text-neutral-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden mr-4"
+          className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors lg:hidden mr-3"
           aria-label="Toggle menu"
         >
-          {isBurgerActive ? <X size={24} /> : <Menu size={24} />}
+          {isBurgerActive ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
-        <h1 className="text-lg sm:text-xl font-semibold text-neutral-900">
+        <h1 className="text-sm font-bold text-neutral-800">
           {currentLabel}
         </h1>
       </div>
 
       {/* Right Section: Notifications and User Profile */}
-      <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 relative">
+      <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 relative">
         {/* Notification Dropdown */}
         <NotificationDropdown
           notifications={notifications}
@@ -235,50 +234,50 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         >
           {/* User Avatar */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white text-lg font-bold flex-shrink-0 shadow-sm"
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-white text-sm font-bold flex-shrink-0"
             title={displayName}
           >
             {userInitial}
           </div>
 
-          <div className='hidden md:flex ml-3 flex-col text-left'>
-            <p className='font-semibold text-sm text-neutral-900 whitespace-nowrap truncate max-w-[150px]'>{displayName}</p>
-            <p className='text-[10px] uppercase tracking-wider font-bold text-neutral-400'>Teacher</p>
+          <div className='hidden md:flex ml-2 flex-col text-left'>
+            <p className='font-semibold text-xs text-neutral-800 whitespace-nowrap truncate max-w-[120px]'>{displayName}</p>
+            <p className='text-[9px] uppercase tracking-[0.12em] font-bold text-neutral-400'>Teacher</p>
           </div>
 
           <AnimatePresence>
             {isDropdownOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                initial={{ opacity: 0, scale: 0.95, y: -5 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute right-0 top-full pt-2 w-56 z-50"
+                exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute right-0 top-full pt-1.5 w-48 z-50"
               >
-                <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-neutral-100 p-1">
-                  <div className="px-4 py-3 border-b border-neutral-50 mb-1">
-                    <p className="font-bold text-neutral-900 truncate">
+                <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-neutral-100 p-1">
+                  <div className="px-3 py-2.5 border-b border-neutral-50 mb-0.5">
+                    <p className="text-xs font-bold text-neutral-800 truncate">
                       {displayName}
                     </p>
-                    <p className="text-xs text-neutral-500 truncate">
+                    <p className="text-[10px] text-neutral-400 truncate">
                       {teacherProfile?.email || user?.email || ""}
                     </p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <button
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-neutral-700 rounded-lg w-full text-left transition-colors text-sm font-medium"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-neutral-600 rounded-lg w-full text-left transition-colors text-xs font-medium"
                       onClick={() => {
                         navigate("/Teacher/Settings");
                         setIsDropdownOpen(false);
                       }}
                     >
-                      <Settings size={16} className="text-neutral-400" /> Settings
+                      <Settings className="w-3.5 h-3.5 text-neutral-400" /> Settings
                     </button>
                     <button
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-red-600 rounded-lg w-full text-left transition-colors text-sm font-medium"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-error-default/5 text-error-default rounded-lg w-full text-left transition-colors text-xs font-medium"
                       onClick={handleLogout}
                     >
-                      <LogOut size={16} /> Logout
+                      <LogOut className="w-3.5 h-3.5" /> Log Out
                     </button>
                   </div>
                 </div>
@@ -289,41 +288,53 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
       </div>
 
       {/* Top progress bar */}
-      <div className="absolute bottom-0 left-0 w-full h-[2px] rounded-full overflow-hidden">
+      <div className="absolute bottom-0 left-0 w-full h-[1.5px] overflow-hidden">
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-50"
+          className="h-full bg-primary"
           style={{ width: `${progress}%` }}
           transition={{ ease: "linear", duration: 0.1 }}
         />
       </div>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-rd shadow-xl p-4 sm:p-6 w-full max-w-sm space-y-4">
-            <h3 className="text-lg font-semibold text-neutral-900">
-              Confirm Logout
-            </h3>
-            <p className="text-sm text-neutral-600">
-              Are you sure you want to log out?
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                className="px-4 py-2 rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-100 transition-colors"
-                onClick={cancelLogout}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-md bg-error-default text-white hover:bg-error-dark transition-colors"
-                onClick={confirmLogout}
-              >
-                Yes, log out
-              </button>
-            </div>
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs space-y-4 border border-neutral-100"
+            >
+              <div className="w-10 h-10 bg-error-default/10 rounded-xl flex items-center justify-center">
+                <LogOut className="w-5 h-5 text-error-default" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">
+                  Sign Out
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Are you sure you want to log out?
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  className="flex-1 px-3 py-2 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors"
+                  onClick={cancelLogout}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-3 py-2 rounded-lg bg-error-default text-white text-xs font-semibold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15"
+                  onClick={confirmLogout}
+                >
+                  Log Out
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </header>
   );
 };

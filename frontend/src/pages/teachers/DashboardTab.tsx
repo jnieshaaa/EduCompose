@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import Card from "../../components/ui/Card";
 import {
   BookOpen,
   Layers,
@@ -10,6 +9,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Loader2,
+  Search,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -20,8 +20,6 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import Badge from "../../components/ui/Badge";
-import Input from "../../components/ui/Input";
 import { supabase } from "../../lib/supabaseClient";
 import { fetchTeacherUUID } from "../../services/rubricService";
 import {
@@ -982,10 +980,13 @@ export function DashboardTab() {
     loadDashboardData();
   }, []);
 
+  const selectClass = "w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-white text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors";
+  const labelClass = "block text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -994,11 +995,11 @@ export function DashboardTab() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-error-default mx-auto mb-4" />
-          <p className="text-lg text-neutral-900 mb-2">
+          <AlertTriangle className="w-8 h-8 text-error-default mx-auto mb-3" />
+          <p className="text-sm font-bold text-neutral-900 mb-1">
             Error loading dashboard
           </p>
-          <p className="text-sm text-neutral-500">{error}</p>
+          <p className="text-xs text-neutral-400">{error}</p>
         </div>
       </div>
     );
@@ -1063,12 +1064,12 @@ export function DashboardTab() {
   const teacherSalutation = formatTeacherSalutation(user);
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+    <div className="space-y-6">
+      <header className="space-y-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
           Dashboard · {todayLabel}
         </p>
-        <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 tracking-tight leading-tight">
+        <h1 className="text-xl font-bold text-neutral-900">
           {teacherSalutation ? (
             <>
               Welcome back, {teacherSalutation}
@@ -1080,70 +1081,59 @@ export function DashboardTab() {
         </h1>
       </header>
 
-      <section className="space-y-4" aria-labelledby="at-a-glance-heading">
+      <section className="space-y-5" aria-labelledby="at-a-glance-heading">
         <h2
           id="at-a-glance-heading"
-          className="text-lg font-semibold text-neutral-900"
+          className="text-sm font-bold text-neutral-800"
         >
           At a glance
         </h2>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {statsCards.map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <Card key={idx} className="p-4">
+            <div key={idx} className="bg-white border border-neutral-100 rounded-xl p-3.5">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-neutral-500 mb-1">{stat.label}</p>
-                  <p className="text-2xl text-neutral-900">{stat.value}</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1">{stat.label}</p>
+                  <p className="text-xl font-bold text-neutral-900">{stat.value}</p>
                 </div>
-                <div className={`${stat.bg} ${stat.color} p-2 rounded-rd`}>
-                  <Icon className="w-5 h-5" />
+                <div className={`${stat.bg} ${stat.color} p-1.5 rounded-lg`}>
+                  <Icon className="w-4 h-4" />
                 </div>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
 
       {/* Performance Overview */}
-      <Card className="p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="bg-white border border-neutral-100 rounded-xl">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-neutral-50">
           <div>
-            <h2 className="text-xl text-neutral-900">Performance Overview</h2>
-            <p className="text-sm text-neutral-500 mt-0.5">
-              <strong className="font-medium text-neutral-700">By block</strong>{" "}
-              / <strong className="font-medium text-neutral-700">By student</strong>{" "}
-              draws one colored line per block or per student. The horizontal
-              axis lists your activities; the vertical axis is score (%). Hover
-              a point to see who it is.{" "}
-              <strong className="font-medium text-neutral-700">Program</strong>{" "}
-              (e.g. BSCS-DS, BSIT) scopes data;{" "}
-              {perfChartMode === "blocks" ? (
-                <strong className="font-medium text-neutral-700">Block</strong>
-              ) : (
-                <strong className="font-medium text-neutral-700">Student</strong>
-              )}{" "}
-              narrows further.
+            <h2 className="text-sm font-bold text-neutral-800">Performance Overview</h2>
+            <p className="text-[10px] text-neutral-400 mt-0.5 max-w-lg">
+              Colored lines per {perfChartMode === "blocks" ? "block" : "student"}. X-axis = activities, Y-axis = score (%). Hover for details.
             </p>
           </div>
-          <Badge className="bg-primary/10 text-primary w-fit">AI-Powered</Badge>
+          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/5 text-primary border border-primary/10 w-fit">AI-Powered</span>
         </div>
 
+        <div className="px-5 pt-4">
         <div
-          className="flex flex-wrap gap-2 mb-4"
+          className="flex gap-1 mb-4"
           role="group"
           aria-label="Chart point type"
         >
           <button
             type="button"
             onClick={() => setPerfChartMode("blocks")}
-            className={`rounded-rd border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               perfChartMode === "blocks"
-                ? "border-red-600 bg-red-50 text-red-800"
-                : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+                ? "bg-primary text-white shadow-sm"
+                : "bg-transparent text-neutral-500 hover:bg-neutral-50"
             }`}
           >
             By block
@@ -1151,76 +1141,43 @@ export function DashboardTab() {
           <button
             type="button"
             onClick={() => setPerfChartMode("students")}
-            className={`rounded-rd border px-3 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               perfChartMode === "students"
-                ? "border-blue-600 bg-blue-50 text-blue-900"
-                : "border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+                ? "bg-primary text-white shadow-sm"
+                : "bg-transparent text-neutral-500 hover:bg-neutral-50"
             }`}
           >
             By student
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Program
-            </label>
-            <p className="text-xs text-neutral-500 mb-1.5">
-              Degree programs you teach (e.g. BSCS-DS, BSIT)—not course codes.
-            </p>
-            <select
-              className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-              value={perfProgramFilter}
-              onChange={(e) => setPerfProgramFilter(e.target.value)}
-            >
+            <label className={labelClass}>Program</label>
+            <select className={selectClass} value={perfProgramFilter} onChange={(e) => setPerfProgramFilter(e.target.value)}>
               <option value="all">All programs</option>
               {data.performanceFilterPrograms.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </div>
           {perfChartMode === "blocks" ? (
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Block
-              </label>
-              <p className="text-xs text-neutral-500 mb-1.5">
-                Sections for the program above (e.g. 1A, 1B)—or all.
-              </p>
-              <select
-                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-                value={perfBlockFilter}
-                onChange={(e) => setPerfBlockFilter(e.target.value)}
-              >
+              <label className={labelClass}>Block</label>
+              <select className={selectClass} value={perfBlockFilter} onChange={(e) => setPerfBlockFilter(e.target.value)}>
                 <option value="all">All blocks</option>
                 {perfBlockOptions.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
+                  <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Student
-              </label>
-              <p className="text-xs text-neutral-500 mb-1.5">
-                Optional: one learner only, or everyone in the program above.
-              </p>
-              <select
-                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-                value={perfStudentFilter}
-                onChange={(e) => setPerfStudentFilter(e.target.value)}
-              >
+              <label className={labelClass}>Student</label>
+              <select className={selectClass} value={perfStudentFilter} onChange={(e) => setPerfStudentFilter(e.target.value)}>
                 <option value="all">All students</option>
                 {perfStudentOptions.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
+                  <option key={id} value={id}>{name}</option>
                 ))}
               </select>
             </div>
@@ -1315,25 +1272,25 @@ export function DashboardTab() {
             account-wide.
           </p>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2 border-t border-neutral-100">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-5 pb-4 pt-3 border-t border-neutral-50">
           {displayPerformanceMetrics.map((metric, idx) => (
-            <div key={idx} className="space-y-2">
-              <p className="text-sm text-neutral-500">{metric.label}</p>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl text-neutral-900">{metric.value}</p>
+            <div key={idx}>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-0.5">{metric.label}</p>
+              <div className="flex items-end gap-1.5">
+                <p className="text-lg font-bold text-neutral-900">{metric.value}</p>
                 {metric.trend && (
                   <div
-                    className={`flex items-center text-sm ${
+                    className={`flex items-center text-[10px] font-semibold ${
                       metric.status === "up"
                         ? "text-success-default"
                         : metric.status === "down"
                           ? "text-error-default"
-                          : "text-neutral-500"
+                          : "text-neutral-400"
                     }`}
                   >
                     {metric.status !== "neutral" && (
                       <TrendingUp
-                        className={`w-4 h-4 mr-1 ${
+                        className={`w-3 h-3 mr-0.5 ${
                           metric.status === "down" ? "rotate-180" : ""
                         }`}
                       />
@@ -1345,127 +1302,109 @@ export function DashboardTab() {
             </div>
           ))}
         </div>
-      </Card>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent Activity */}
-        <Card className="p-6 lg:col-span-2">
-          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-start sm:justify-between">
-            <h2 className="text-xl text-neutral-900">Recent Activity</h2>
-            <p className="text-xs text-neutral-500 sm:max-w-[220px] sm:text-right">
-              Showing up to 80 recent submissions. Narrow by course, block, or
-              name.
-            </p>
+        <div className="bg-white border border-neutral-100 rounded-xl lg:col-span-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-neutral-50">
+            <h2 className="text-sm font-bold text-neutral-800">Recent Activity</h2>
+            <span className="text-[10px] text-neutral-400">Up to 80 submissions</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div className="px-5 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Course
-              </label>
-              <select
-                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-                value={activityCourseFilter}
-                onChange={(e) => setActivityCourseFilter(e.target.value)}
-              >
+              <label className={labelClass}>Course</label>
+              <select className={selectClass} value={activityCourseFilter} onChange={(e) => setActivityCourseFilter(e.target.value)}>
                 <option value="all">All courses</option>
                 {data.activityFilterCourses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
+                  <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Block
-              </label>
-              <select
-                className="w-full px-3 py-2 border border-neutral-300 rounded-rd text-sm bg-white"
-                value={activityBlockFilter}
-                onChange={(e) => setActivityBlockFilter(e.target.value)}
-              >
+              <label className={labelClass}>Block</label>
+              <select className={selectClass} value={activityBlockFilter} onChange={(e) => setActivityBlockFilter(e.target.value)}>
                 <option value="all">All blocks</option>
                 {activityBlockSelectOptions.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
+                  <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
             </div>
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Find student or essay
-              </label>
-              <Input
-                type="search"
-                placeholder="Search by name or title…"
-                value={activitySearchQuery}
-                onChange={(value) => setActivitySearchQuery(value)}
-                className="w-full"
-              />
+            <div>
+              <label className={labelClass}>Search</label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-neutral-300 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="search"
+                  placeholder="Name or title…"
+                  value={activitySearchQuery}
+                  onChange={(e) => setActivitySearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 border border-neutral-200 rounded-lg text-xs bg-white text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                />
+              </div>
             </div>
+          </div>
           </div>
 
           <div
-            className="max-h-[min(28rem,55vh)] overflow-y-auto overscroll-y-contain space-y-3 p-2 pr-1 rounded-rd border border-neutral-100 bg-neutral-50/50"
+            className="max-h-[min(28rem,55vh)] overflow-y-auto overscroll-y-contain divide-y divide-neutral-50"
             role="region"
             aria-label="Recent activity list"
           >
             {data.recentActivity.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500">
-                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No recent activity</p>
+              <div className="text-center py-10">
+                <FileText className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
+                <p className="text-xs text-neutral-400">No recent activity</p>
               </div>
             ) : filteredRecentActivity.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500">
-                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No activity matches these filters</p>
-                <p className="text-xs mt-2 text-neutral-400">
-                  Try another course, block, or clear the search.
-                </p>
+              <div className="text-center py-10">
+                <FileText className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
+                <p className="text-xs text-neutral-400">No activity matches these filters</p>
               </div>
             ) : (
               filteredRecentActivity.map((activity) => (
                 <div
                   key={activity.essayId}
-                  className="flex items-center justify-between p-3 bg-neutral-100 rounded-rd hover:bg-neutral-200 transition-colors gap-3"
+                  className="flex items-center justify-between px-5 py-3 hover:bg-neutral-50/50 transition-colors gap-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-neutral-900 font-medium">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-semibold text-neutral-800">
                         {activity.student}
                       </span>
-                      <span className="text-sm text-neutral-500">•</span>
-                      <span className="text-sm text-neutral-500">
+                      <span className="text-neutral-200">·</span>
+                      <span className="text-[10px] text-neutral-400">
                         {activity.action}
                       </span>
                     </div>
-                    <p className="text-sm text-neutral-600 truncate">
+                    <p className="text-[10px] text-neutral-400 truncate">
                       {activity.essay}
                     </p>
                     {(activity.courseLabel || activity.blockLabel) && (
-                      <p className="text-xs text-neutral-500 mt-1.5 truncate">
+                      <p className="text-[10px] text-neutral-300 mt-0.5 truncate">
                         {[activity.courseLabel, activity.blockLabel]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {activity.status === "new" && (
-                      <Badge className="bg-blue-600 text-white">New</Badge>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-info-default/10 text-info-default">New</span>
                     )}
                     {activity.status === "evaluated" &&
                       activity.score !== undefined && (
-                        <Badge className="bg-green-600 text-white">
+                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-success-default/10 text-success-default">
                           {activity.score}%
-                        </Badge>
+                        </span>
                       )}
                     {activity.status === "review" && (
-                      <Badge className="bg-amber-600 text-white">Review</Badge>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-warning-default/10 text-warning-default">Review</span>
                     )}
-                    <span className="text-xs text-neutral-400 whitespace-nowrap">
+                    <span className="text-[10px] text-neutral-300 whitespace-nowrap">
                       {activity.time}
                     </span>
                   </div>
@@ -1473,61 +1412,53 @@ export function DashboardTab() {
               ))
             )}
           </div>
-        </Card>
+        </div>
 
         {/* Alerts */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">Alerts</h2>
-          <div className="space-y-3">
+        <div className="bg-white border border-neutral-100 rounded-xl">
+          <div className="px-5 py-4 border-b border-neutral-50">
+            <h2 className="text-sm font-bold text-neutral-800">Alerts</h2>
+          </div>
+          <div className="divide-y divide-neutral-50">
             {data.alerts.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No alerts</p>
+              <div className="text-center py-10">
+                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
+                <p className="text-xs text-neutral-400">No alerts</p>
               </div>
             ) : (
               data.alerts.map((alert, idx) => (
                 <div
                   key={idx}
-                  className={`p-4 rounded-rd border-l-4 ${
-                    alert.type === "warning"
-                      ? "bg-warning-light/20 border-warning-default"
-                      : alert.type === "error"
-                        ? "bg-error-light/20 border-error-default"
-                        : "bg-info-light/20 border-info-default"
-                  }`}
+                  className="flex items-center gap-3 px-5 py-3"
                 >
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle
-                      className={`w-5 h-5 mt-0.5 ${
-                        alert.type === "warning"
-                          ? "text-warning-default"
-                          : alert.type === "error"
-                            ? "text-error-default"
-                            : "text-info-default"
-                      }`}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm text-neutral-900">
-                        {alert.message}
-                      </p>
-                    </div>
-                    <Badge
-                      className={`${
-                        alert.type === "warning"
-                          ? "bg-warning-default"
-                          : alert.type === "error"
-                            ? "bg-error-default"
-                            : "bg-info-default"
-                      } text-white`}
-                    >
-                      {alert.count}
-                    </Badge>
-                  </div>
+                  <AlertTriangle
+                    className={`w-4 h-4 flex-shrink-0 ${
+                      alert.type === "warning"
+                        ? "text-warning-default"
+                        : alert.type === "error"
+                          ? "text-error-default"
+                          : "text-info-default"
+                    }`}
+                  />
+                  <p className="text-xs text-neutral-600 flex-1">
+                    {alert.message}
+                  </p>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      alert.type === "warning"
+                        ? "bg-warning-default/10 text-warning-default"
+                        : alert.type === "error"
+                          ? "bg-error-default/10 text-error-default"
+                          : "bg-info-default/10 text-info-default"
+                    }`}
+                  >
+                    {alert.count}
+                  </span>
                 </div>
               ))
             )}
           </div>
-        </Card>
+        </div>
       </div>
       </section>
     </div>

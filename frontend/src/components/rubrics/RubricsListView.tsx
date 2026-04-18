@@ -1,17 +1,16 @@
 import {
-  // Plus,
-  // X,
   Eye,
   MoreVertical,
   Edit,
   Trash2,
   FileText,
   FileSpreadsheet,
+  Search,
+  Loader2,
+  BookOpen,
 } from "lucide-react";
-import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,38 +68,52 @@ export function RubricsListView({
   );
 
   return (
-    <Card className="p-4">
-      <div className="flex border-b border-neutral-200 mb-4">
-        <button
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === "platform"
-              ? "border-b-2 border-primary text-primary"
-              : "text-neutral-500 hover:text-neutral-700"
-          }`}
-          onClick={() => onTabChange("platform")}
-        >
-          Platform rubrics ({platformRubrics.length})
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === "my"
-              ? "border-b-2 border-primary text-primary"
-              : "text-neutral-500 hover:text-neutral-700"
-          }`}
-          onClick={() => onTabChange("my")}
-        >
-          My rubrics ({savedRubrics.length})
-        </button>
-      </div>
+    <div>
+      {/* Tab Bar + Search Row */}
+      <div className="flex items-center justify-between border-b border-neutral-100 mb-5">
+        <div className="flex items-center gap-0">
+          <button
+            className={`px-4 py-2.5 text-xs font-bold transition-colors relative ${
+              activeTab === "platform"
+                ? "text-primary"
+                : "text-neutral-400 hover:text-neutral-600"
+            }`}
+            onClick={() => onTabChange("platform")}
+          >
+            Platform
+            <span className="ml-1.5 text-[10px] font-semibold text-neutral-300">{platformRubrics.length}</span>
+            {activeTab === "platform" && (
+              <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
+            )}
+          </button>
+          <button
+            className={`px-4 py-2.5 text-xs font-bold transition-colors relative ${
+              activeTab === "my"
+                ? "text-primary"
+                : "text-neutral-400 hover:text-neutral-600"
+            }`}
+            onClick={() => onTabChange("my")}
+          >
+            My Rubrics
+            <span className="ml-1.5 text-[10px] font-semibold text-neutral-300">{savedRubrics.length}</span>
+            {activeTab === "my" && (
+              <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
+            )}
+          </button>
+        </div>
 
-      {/* Search Input */}
-      <Input
-        type="search"
-        placeholder="Search rubrics by name or type..."
-        value={searchQuery}
-        onChange={onSearchChange}
-        className="mb-6"
-      />
+        {/* Inline Search */}
+        <div className="relative mb-[-1px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-300" />
+          <input
+            type="text"
+            placeholder="Search…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-8 pr-3 py-1.5 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 w-48"
+          />
+        </div>
+      </div>
 
       {/* Tab Content */}
       <div>
@@ -108,14 +121,14 @@ export function RubricsListView({
           <>
             {filteredPlatformRubrics.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-neutral-500">
+                <p className="text-xs text-neutral-400">
                   {searchQuery
                     ? "No platform rubrics match your search."
                     : "No platform rubrics available."}
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filteredPlatformRubrics.map((rubric) => (
                   <PlatformRubricCard
                     key={rubric.id}
@@ -131,63 +144,73 @@ export function RubricsListView({
         {activeTab === "my" && (
           <>
             {isLoadingRubrics ? (
-              <div className="text-center py-8">
-                <p className="text-neutral-500">Loading rubrics...</p>
+              <div className="flex flex-col items-center gap-2 py-12">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                <span className="text-xs text-neutral-400">Loading rubrics…</span>
               </div>
             ) : filteredMyRubrics.length === 0 ? (
               <EmptyRubricState handleCreateClick={onCreateClick} />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredMyRubrics.map((rubric) => {
                   const rubricWithPrograms = rubric as RubricTemplate & {
                     programsList?: string[];
                   };
                   const programsList = rubricWithPrograms.programsList || [];
                   return (
-                    <Card
+                    <div
                       key={rubric.id}
-                      className="p-4 flex justify-between items-center hover:bg-neutral-50 cursor-pointer"
+                      className="flex items-center justify-between p-3.5 bg-neutral-50 border border-neutral-100 rounded-xl hover:border-neutral-200 transition-colors group"
                     >
-                      <div className="flex-1">
-                        <h3 className="text-base text-neutral-900">
-                          {rubric.name}
-                        </h3>
-                        <p className="text-sm text-neutral-500 mt-1">
-                          {rubric.criteria} Criteria | {rubric.programs} Program
-                          {rubric.programs !== 1 ? "s" : ""} | Last Used:{" "}
-                          {rubric.lastUsed}
-                        </p>
-                        {programsList.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {programsList.map((program, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="text-xs bg-neutral-50 text-neutral-700 border-neutral-300"
-                              >
-                                {program}
-                              </Badge>
-                            ))}
+                      {/* Info */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-9 h-9 bg-white border border-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:border-primary/20 transition-colors">
+                          <BookOpen className="w-4 h-4 text-neutral-400 group-hover:text-primary transition-colors" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-neutral-800 truncate">
+                            {rubric.name}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-neutral-400">
+                              {rubric.criteria} criteria
+                            </span>
+                            {programsList.length > 0 && (
+                              <>
+                                <span className="text-neutral-200">&middot;</span>
+                                <div className="flex gap-1">
+                                  {programsList.slice(0, 3).map((program, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[9px] font-semibold text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10"
+                                    >
+                                      {program}
+                                    </span>
+                                  ))}
+                                  {programsList.length > 3 && (
+                                    <span className="text-[9px] text-neutral-400">+{programsList.length - 3}</span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        {/* <Badge className="bg-primary/90 text-primary border border-primary/30">
-                          College
-                        </Badge> */}
-                        <Button
-                          variant="outline"
-                          size="sm"
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
                           onClick={() => onPreviewMyRubric(rubric)}
+                          className="p-1.5 text-neutral-300 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          title="Preview"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </Button>
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4 text-neutral-500" />
-                            </Button>
+                            <button className="p-1.5 text-neutral-300 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -259,7 +282,7 @@ export function RubricsListView({
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                    </Card>
+                    </div>
                   );
                 })}
               </div>
@@ -267,6 +290,6 @@ export function RubricsListView({
           </>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
