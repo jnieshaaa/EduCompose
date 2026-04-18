@@ -80,8 +80,6 @@ export function EssaysTab() {
 
         if (actError) throw actError;
         setActivities(actData || []);
-        const teacherActivityIds = (actData || []).map(a => a.id);
-
         // Sync with URL
         const urlActivityId = searchParams.get('activityId');
         if (urlActivityId && actData?.some(a => a.id === urlActivityId)) {
