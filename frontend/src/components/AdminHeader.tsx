@@ -128,7 +128,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         >
           {isBurgerActive ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h2 className="text-lg sm:text-xl font-bold text-neutral-900 truncate">
+        <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 truncate tracking-tight">
           {currentLabel}
         </h2>
       </div>
@@ -152,8 +152,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           </div>
 
           <div className='hidden md:flex ml-3 flex-col text-left'>
-            <p className='font-semibold text-sm text-neutral-900 truncate max-w-[120px]'>{userName}</p>
-            <p className='text-[10px] uppercase tracking-wider font-bold text-neutral-400'>Admin</p>
+            <p className='font-bold text-sm text-neutral-900 truncate max-w-[140px] tracking-tight'>{userName}</p>
+            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Administrative Access</p>
           </div>
 
           <AnimatePresence>
@@ -170,16 +170,16 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                     <p className='text-xs text-neutral-500 truncate'>{user?.email}</p>
                   </div>
                   <button
-                    className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-neutral-700 rounded-lg w-full text-left transition-colors text-sm font-medium'
+                    className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-neutral-700 rounded-lg w-full text-left transition-colors text-sm font-bold'
                     onClick={() => navigate("/Admin/Settings")}
                   >
-                    <Settings size={16} /> Settings
+                    <Settings size={18} className="text-neutral-400" /> Settings
                   </button>
                   <button
-                    className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-red-600 rounded-lg w-full text-left transition-colors text-sm font-medium'
+                    className='flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-red-600 rounded-lg w-full text-left transition-colors text-sm font-bold'
                     onClick={handleLogout}
                   >
-                    <LogOut size={16} /> Logout
+                    <LogOut size={18} /> Logout
                   </button>
                 </div>
               </motion.div>
@@ -208,12 +208,12 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <Shield className="w-5 h-5 text-error-default" />
               </div>
               <div>
-                <h3 className='text-sm font-bold text-neutral-900'>Sign Out</h3>
-                <p className='text-xs text-neutral-400 mt-1'>Logout from Admin portal?</p>
+                <h3 className='text-base font-bold text-neutral-900'>Sign Out</h3>
+                <p className='text-sm text-neutral-400 mt-1 font-medium'>Logout from Admin portal?</p>
               </div>
               <div className='flex gap-2 pt-1'>
-                <button className="flex-1 px-3 py-2 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-                <button className="flex-1 px-3 py-2 rounded-lg bg-error-default text-white text-xs font-semibold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15" onClick={confirmLogout}>Log Out</button>
+                <button className="flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                <button className="flex-1 px-4 py-2.5 rounded-lg bg-error-default text-white text-sm font-bold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15" onClick={confirmLogout}>Log Out</button>
               </div>
             </motion.div>
           </div>

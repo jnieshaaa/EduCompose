@@ -36,12 +36,12 @@ export function RubricCreationOptionsView({
           <option.icon className={`w-5 h-5 ${
             option.mode === selectedMode ? "text-primary" : "text-neutral-400"
           }`} />
-          <span className={`text-xs font-semibold ${
+          <span className={`text-sm font-bold ${
             option.mode === selectedMode ? "text-primary" : "text-neutral-700"
           }`}>
             {option.title}
           </span>
-          <span className="text-[10px] text-neutral-400">
+          <span className="text-[11px] font-bold text-neutral-400">
             {option.desc}
           </span>
         </button>

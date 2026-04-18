@@ -56,12 +56,12 @@ export const ThresholdSettingsComponent: React.FC<ThresholdSettingsProps> = ({
             const value = thresholds[item.key];
             return (
               <div key={item.key}>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-2">
                   <div>
-                    <span className="text-xs font-semibold text-neutral-700">{item.label}</span>
-                    <p className="text-[10px] text-neutral-400 mt-0.5">{item.desc}</p>
+                    <span className="text-sm font-bold text-neutral-800 tracking-tight">{item.label}</span>
+                    <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide leading-tight">{item.desc}</p>
                   </div>
-                  <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+                  <span className="text-[11px] font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/20 shadow-sm">
                     {value}{item.unit}
                   </span>
                 </div>
@@ -88,7 +88,7 @@ export const ThresholdSettingsComponent: React.FC<ThresholdSettingsProps> = ({
                         ),
                       })
                     }
-                    className="w-14 px-2 py-1.5 border border-neutral-200 rounded-lg text-xs text-center bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:bg-white transition-all"
+                    className="w-16 px-2 py-2 border border-neutral-200 rounded-xl text-xs font-bold text-center bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:bg-white transition-all shadow-sm"
                     disabled={isSaving}
                   />
                 </div>

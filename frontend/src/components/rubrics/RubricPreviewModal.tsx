@@ -91,28 +91,28 @@ export function RubricPreviewModal({
             </div>
             <div className='min-w-0'>
               <div className='flex items-center gap-2 mb-1'>
-                <h2 className='text-sm font-bold text-neutral-900 truncate'>
+                <h2 className='text-base font-bold text-neutral-900 truncate'>
                   {rubric.name}
                 </h2>
-                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
                   {rubric.type}
                 </span>
               </div>
-              <p className='text-xs text-neutral-400 line-clamp-1'>{rubric.description}</p>
-              <div className='flex items-center gap-3 mt-1.5'>
-                <span className='text-[10px] text-neutral-400'>
-                  <strong className='text-neutral-600'>{rubric.criteria.length}</strong> criteria
+              <p className='text-sm text-neutral-400 font-medium line-clamp-1'>{rubric.description}</p>
+              <div className='flex items-center gap-3 mt-2'>
+                <span className='text-[11px] text-neutral-400'>
+                  <strong className='text-neutral-600 font-bold'>{rubric.criteria.length}</strong> criteria
                 </span>
                 <span className='text-neutral-200'>·</span>
-                <span className='text-[10px] text-neutral-400'>
-                  <strong className='text-neutral-600'>{totalPossiblePoints}</strong> pts
+                <span className='text-[11px] text-neutral-400'>
+                  <strong className='text-neutral-600 font-bold'>{totalPossiblePoints}</strong> pts
                 </span>
                 <span className='text-neutral-200'>·</span>
-                <span className='text-[10px] text-neutral-400'>
-                  <strong className='text-neutral-600'>{rubric.programs}</strong> programs
+                <span className='text-[11px] text-neutral-400'>
+                  <strong className='text-neutral-600 font-bold'>{rubric.programs}</strong> programs
                 </span>
                 <span className='text-neutral-200'>·</span>
-                <span className='text-[10px] text-neutral-300'>
+                <span className='text-[11px] text-neutral-300'>
                   {rubric.lastUpdated}
                 </span>
               </div>
@@ -131,16 +131,16 @@ export function RubricPreviewModal({
           <table className='w-full text-left'>
             <thead className='sticky top-0 z-10'>
               <tr className='bg-neutral-50 border-b border-neutral-100'>
-                <th className='px-4 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider w-44 border-r border-neutral-100'>
+                <th className='px-4 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-widest w-44 border-r border-neutral-100'>
                   Criteria
                 </th>
                 {pointHeaders.map((points) => (
                   <th
                     key={points}
-                    className='px-4 py-3 text-center border-r border-neutral-100 last:border-r-0'
+                    className='px-4 py-4 text-center border-r border-neutral-100 last:border-r-0'
                   >
-                    <span className='text-lg font-bold text-primary'>{points}</span>
-                    <span className='block text-[9px] font-semibold text-neutral-400 uppercase tracking-wider mt-0.5'>
+                    <span className='text-xl font-bold text-primary font-serif'>{points}</span>
+                    <span className='block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5'>
                       points
                     </span>
                   </th>
@@ -153,11 +153,11 @@ export function RubricPreviewModal({
                   key={criteria.id}
                   className='hover:bg-neutral-50/50 transition-colors'
                 >
-                  <td className='px-4 py-3 border-r border-neutral-100 align-top'>
-                    <span className='text-xs font-semibold text-neutral-800'>
+                  <td className='px-5 py-4 border-r border-neutral-100 align-top'>
+                    <span className='text-sm font-bold text-neutral-800 leading-tight block'>
                       {criteria.title}
                     </span>
-                    <span className='block text-[10px] text-neutral-400 mt-0.5'>
+                    <span className='block text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wider'>
                       Max {Math.max(...criteria.scores.map((s) => s.points))} pts
                     </span>
                   </td>
@@ -172,10 +172,10 @@ export function RubricPreviewModal({
                       >
                         {score ? (
                           <div>
-                            <span className='text-[11px] font-semibold text-neutral-700'>
+                            <span className='text-[11px] font-bold text-neutral-800 uppercase tracking-wider'>
                               {score.title}
                             </span>
-                            <p className='text-[10px] text-neutral-400 leading-relaxed mt-0.5'>
+                            <p className='text-xs text-neutral-500 leading-relaxed mt-1'>
                               {score.description}
                             </p>
                           </div>
@@ -194,17 +194,17 @@ export function RubricPreviewModal({
         {/* ─── Score Legend ─── */}
         <div className='px-5 py-3 border-t border-neutral-100 bg-neutral-50/50'>
           <div className='flex items-center gap-5'>
-            <span className='text-[10px] font-bold text-neutral-400 uppercase tracking-wider'>Score Guide</span>
+            <span className='text-[11px] font-bold text-neutral-400 uppercase tracking-widest'>Score Guide</span>
             {pointHeaders.map((points) => {
               const sampleScore = rubric.criteria[0]?.scores.find(
                 (s) => s.points === points
               );
               return (
                 <div key={points} className='flex items-center gap-1.5'>
-                  <span className='w-6 h-6 rounded-md bg-primary/10 text-primary font-bold flex items-center justify-center text-[10px]'>
+                  <span className='w-7 h-7 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs'>
                     {points}
                   </span>
-                  <span className='text-[10px] text-neutral-500'>
+                  <span className='text-xs font-medium text-neutral-500'>
                     {sampleScore?.title || `${points} pts`}
                   </span>
                 </div>

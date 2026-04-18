@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, Lock, ShieldCheck, AlertTriangle, Key } from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ResetPasswordModalProps {
   user: {
@@ -33,12 +33,12 @@ export default function ResetPasswordModal({
     setSuccess("");
 
     if (!newPassword.trim() || newPassword.length < 6) {
-      setError("Password must be at least 6 characters long");
+      setError("Security requirement: Minimum 6 characters.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Validation mismatch: Passwords must be identical.");
       return;
     }
 
@@ -46,15 +46,15 @@ export default function ResetPasswordModal({
 
     try {
       await adminApi.resetUserPassword(user.id, newPassword.trim());
-      setSuccess("Password reset successfully!");
+      setSuccess("Credential synchronization complete!");
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Failed to reset password. Please try again.");
+      setError(message || "Security override failed. Verify administrative permissions.");
     } finally {
       setIsLoading(false);
     }
@@ -63,84 +63,102 @@ export default function ResetPasswordModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm z-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-2xl p-6">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 z-20 rounded-full bg-white/80 hover:bg-neutral-100 transition-colors shadow-md"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5 text-neutral-600" />
-        </button>
-
-        <h2 className="text-2xl font-bold text-neutral-900 mb-2">
-          Reset Password
-        </h2>
-        <p className="text-sm text-neutral-600 mb-6">
-          Reset password for <strong>{user.email}</strong>
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              New Password *
-            </label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(val) => setNewPassword(val)}
-              placeholder="Minimum 6 characters"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Confirm Password *
-            </label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(val) => setConfirmPassword(val)}
-              placeholder="Confirm password"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              {error}
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[60]">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-neutral-100"
+      >
+        <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-amber-500 rounded-2xl text-white shadow-lg shadow-amber-200">
+              <Key size={22} />
             </div>
-          )}
-
-          {success && (
-            <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-              {success}
+            <div>
+              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Secret Override</h2>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Credential Reset Flow</p>
             </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={isLoading}>
-              {isLoading ? "Resetting..." : "Reset Password"}
-            </Button>
           </div>
-        </form>
-      </div>
+          <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-8 space-y-6">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+             <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
+             <div>
+                <p className="text-[11px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Account Target</p>
+                <p className="text-xs font-bold text-amber-700 font-mono">{user.email}</p>
+             </div>
+          </div>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-black uppercase tracking-wider">
+                {error}
+              </motion.div>
+            )}
+            {success && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+                {success}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form id="reset-secret-form" onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">New Access Secret</label>
+              <div className="relative group/pass">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/pass:text-primary transition-colors" size={16} />
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Confirm Secret</label>
+              <div className="relative group/confirm">
+                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/confirm:text-primary transition-colors" size={16} />
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isLoading}
+                className="flex-1 rounded-2xl border-neutral-200 h-11"
+              >
+                Abondon
+              </Button>
+              <Button 
+                type="submit"
+                form="reset-secret-form"
+                disabled={isLoading}
+                className="flex-[2] rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200 h-11 font-black uppercase text-[11px] tracking-widest"
+              >
+                {isLoading ? "Overriding..." : "Reset Secret"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </motion.div>
     </div>
   );
 }

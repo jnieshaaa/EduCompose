@@ -156,7 +156,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
           )}
         </button>
 
-        <h1 className="text-sm font-bold text-neutral-800 truncate">
+        <h1 className="text-base font-bold text-neutral-800 truncate tracking-tight">
           {currentLabel}
         </h1>
       </div>
@@ -185,9 +185,9 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
             {userInitial}
           </div>
 
-          <div className='hidden md:flex ml-2 flex-col text-left'>
-            <p className='font-semibold text-xs text-neutral-800 whitespace-nowrap truncate max-w-[120px]'>{userName}</p>
-            <p className='text-[9px] uppercase tracking-[0.12em] font-bold text-neutral-400'>Student</p>
+          <div className='hidden md:flex ml-3 flex-col text-left'>
+            <p className='font-bold text-sm text-neutral-800 whitespace-nowrap truncate max-w-[140px] tracking-tight'>{userName}</p>
+            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Student Account</p>
           </div>
 
           <AnimatePresence>
@@ -200,29 +200,29 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                 className='absolute right-0 top-full pt-1.5 w-48 z-50'
               >
                 <div className='bg-white shadow-lg rounded-xl overflow-hidden border border-neutral-100 p-1'>
-                  <div className='px-3 py-2.5 border-b border-neutral-50 mb-0.5'>
-                    <p className='text-xs font-bold text-neutral-800 truncate'>
+                  <div className='px-3.5 py-3 border-b border-neutral-50 mb-0.5'>
+                    <p className='text-sm font-bold text-neutral-900 truncate tracking-tight'>
                       {userName}
                     </p>
-                    <p className='text-[10px] text-neutral-400 truncate'>
+                    <p className='text-[11px] font-bold text-neutral-400 truncate uppercase tracking-widest mt-0.5'>
                       {user?.email || ""}
                     </p>
                   </div>
                   <div className='space-y-0.5'>
                     <button
-                      className='flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-neutral-600 rounded-lg w-full text-left transition-colors text-xs font-medium'
+                      className='flex items-center gap-2.5 px-3 py-2.5 hover:bg-neutral-50 text-neutral-600 rounded-lg w-full text-left transition-colors text-sm font-bold'
                       onClick={() => {
                         navigate("/Student/Settings");
                         setIsDropdownOpen(false);
                       }}
                     >
-                      <Settings className="w-3.5 h-3.5 text-neutral-400" /> Settings
+                      <Settings className="w-4 h-4 text-neutral-400" /> Settings
                     </button>
                     <button
-                      className='flex items-center gap-2 px-3 py-2 hover:bg-error-default/5 text-error-default rounded-lg w-full text-left transition-colors text-xs font-medium'
+                      className='flex items-center gap-2.5 px-3 py-2.5 hover:bg-error-default/5 text-error-default rounded-lg w-full text-left transition-colors text-sm font-bold'
                       onClick={handleLogout}
                     >
-                      <LogOut className="w-3.5 h-3.5" /> Log Out
+                      <LogOut className="w-4 h-4" /> Log Out
                     </button>
                   </div>
                 </div>
@@ -255,22 +255,22 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                 <LogOut className="w-5 h-5 text-error-default" />
               </div>
               <div>
-                <h3 className='text-sm font-bold text-neutral-900'>
+                <h3 className='text-base font-bold text-neutral-900'>
                   Sign Out
                 </h3>
-                <p className='text-xs text-neutral-400 mt-1'>
+                <p className='text-sm text-neutral-400 mt-1 font-medium'>
                   Are you sure you want to log out of your student account?
                 </p>
               </div>
               <div className='flex gap-2 pt-1'>
                 <button
-                  className='flex-1 px-3 py-2 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors'
+                  className='flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors'
                   onClick={cancelLogout}
                 >
                   Cancel
                 </button>
                 <button
-                  className='flex-1 px-3 py-2 rounded-lg bg-error-default text-white text-xs font-semibold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15'
+                  className='flex-1 px-4 py-2.5 rounded-lg bg-error-default text-white text-sm font-bold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15'
                   onClick={confirmLogout}
                 >
                   Log Out

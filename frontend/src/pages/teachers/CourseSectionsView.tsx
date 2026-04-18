@@ -438,7 +438,7 @@ export function CourseSectionsView({
               {!selectedProgramLoad && (
                  <>
                   <span className="text-neutral-200">/</span>
-                  <span className="text-[10px] font-bold text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">
+                  <span className="text-[11px] font-bold text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">
                     {course.departments?.code || "GENERAL"}
                   </span>
                  </>
@@ -451,14 +451,14 @@ export function CourseSectionsView({
           {!selectedProgramLoad ? (
             <button
               onClick={() => setIsAddProgramOpen(true)}
-              className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
             >
               <Plus size={14} /> Add Program
             </button>
           ) : (
             <button
               onClick={() => setIsAddBlockOpen(true)}
-              className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
             >
               <Plus size={14} /> Add Block
             </button>
@@ -476,7 +476,7 @@ export function CourseSectionsView({
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-neutral-50 shadow-sm">
           <Loader2 className="animate-spin text-primary/30 w-8 h-8 mb-4" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing loads...</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing loads...</p>
         </div>
       ) : !selectedProgramLoad ? (
         // PROGRAM SELECTION VIEW
@@ -484,7 +484,7 @@ export function CourseSectionsView({
           {programLoads.length === 0 ? (
             <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-neutral-50 shadow-sm">
               <Folder className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                 Course Catalog Empty
               </p>
               <p className="text-xs text-neutral-400 mt-2">Start by adding a target program.</p>
@@ -504,7 +504,7 @@ export function CourseSectionsView({
                     <h3 className="font-bold text-sm text-neutral-800 line-clamp-1">
                       {load.programs_lookup?.abbr}
                     </h3>
-                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider truncate">
+                    <p className="text-[11px] text-neutral-400 font-bold uppercase tracking-wider truncate">
                       {load.programs_lookup?.name?.split(' ')[0]} ...
                     </p>
                   </div>
@@ -529,12 +529,12 @@ export function CourseSectionsView({
           {blocks.length === 0 ? (
             <div className="p-20 text-center">
               <Users className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
-               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+               <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                 No active blocks
               </p>
               <button
                 onClick={() => setIsAddBlockOpen(true)}
-                 className="mt-6 text-[11px] font-bold uppercase tracking-widest text-primary border border-primary/20 px-6 py-2 rounded-full hover:bg-primary/5 transition-all"
+                 className="mt-6 text-xs font-bold uppercase tracking-widest text-primary border border-primary/20 px-6 py-2 rounded-full hover:bg-primary/5 transition-all"
               >
                 Create Section
               </button>
@@ -543,9 +543,9 @@ export function CourseSectionsView({
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-neutral-50/50">
-                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/2">Section Block</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/2">Section Block</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
@@ -575,7 +575,7 @@ export function CourseSectionsView({
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-[10px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
+                      <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
                         {block.students_estimated} Students
                       </span>
                     </td>
@@ -618,7 +618,7 @@ export function CourseSectionsView({
               <div className="px-6 py-5 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/30">
                 <div>
                   <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Add Program</h2>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Link a degree program to this course</p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">Link a degree program to this course</p>
                 </div>
                 <button
                   onClick={() => setIsAddProgramOpen(false)}
@@ -631,7 +631,7 @@ export function CourseSectionsView({
               <div className="p-6 space-y-5">
                 {!course.program_id && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">
+                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">
                       {course.department_id ? "Fixed Department" : "Organization Dept"}
                     </label>
                     <select
@@ -649,7 +649,7 @@ export function CourseSectionsView({
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Academic Tracks</label>
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Academic Tracks</label>
                   <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1 pb-2">
                     {(() => {
                       const alreadyAddedIds = new Set(programLoads.map((p) => p.program_id));
@@ -693,15 +693,15 @@ export function CourseSectionsView({
               </div>
 
               <div className="px-6 py-4 bg-neutral-50/50 border-t border-neutral-50 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">
+                <span className="text-[11px] font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">
                   {selectedProgramIds.length} Picked
                 </span>
                 <div className="flex gap-2">
-                  <button onClick={() => setIsAddProgramOpen(false)} className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Discard</button>
+                  <button onClick={() => setIsAddProgramOpen(false)} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Discard</button>
                   <button
                     onClick={handleAddProgramsBatch}
                     disabled={isCreating || selectedProgramIds.length === 0}
-                    className="bg-primary text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="bg-primary text-white px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                   >
                      {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Link Program"}
                   </button>
@@ -732,7 +732,7 @@ export function CourseSectionsView({
               <div className="px-6 py-5 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/30">
                 <div>
                   <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">New Block</h2>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Creating section for {selectedProgramLoad?.programs_lookup?.abbr}</p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">Creating section for {selectedProgramLoad?.programs_lookup?.abbr}</p>
                 </div>
                 <button
                   onClick={() => setIsAddBlockOpen(false)}
@@ -745,7 +745,7 @@ export function CourseSectionsView({
               <div className="p-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Year Level</label>
+                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Year Level</label>
                     <select
                       className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all font-bold"
                       value={newBlock.year}
@@ -755,7 +755,7 @@ export function CourseSectionsView({
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Block Name</label>
+                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Block Name</label>
                     <input
                       type="text"
                       placeholder="e.g. A"
@@ -768,7 +768,7 @@ export function CourseSectionsView({
 
                 {selectedProgramLoad && programWideBlocks.length > 0 && (
                   <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-3">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pl-1">Inherit Existing</span>
+                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-1">Inherit Existing</span>
                     <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
                       {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
                         const active = newBlock.year === b.year && newBlock.name === b.name;

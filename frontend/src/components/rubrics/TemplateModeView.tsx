@@ -26,14 +26,14 @@ export function TemplateModeView({
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-lg font-bold text-neutral-900">
+          <h3 className="text-xl font-bold text-neutral-900">
             Platform Templates
           </h3>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-sm text-neutral-400 mt-1 font-medium">
             Select a rubric template to preview and customize
           </p>
         </div>
-        <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 px-2.5 py-1 rounded-md">
+        <span className="text-[11px] font-bold text-neutral-400 bg-neutral-100 px-3 py-1.5 rounded-lg uppercase tracking-wider">
           {platformRubrics.length} available
         </span>
       </div>
@@ -54,7 +54,7 @@ export function TemplateModeView({
       <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
         {filteredRubrics.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-xs text-neutral-400">No rubrics match your search</p>
+            <p className="text-sm text-neutral-400">No rubrics match your search</p>
           </div>
         ) : (
           filteredRubrics.map((rubric) => (
@@ -70,17 +70,17 @@ export function TemplateModeView({
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-neutral-800 group-hover:text-primary transition-colors truncate">
+                <h4 className="text-base font-bold text-neutral-800 group-hover:text-primary transition-colors truncate">
                   {rubric.name}
                 </h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+                <p className="text-xs text-neutral-400 mt-1 truncate font-medium">
                   {rubric.criteria.length} criteria &middot; {rubric.description}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Badge className={`${getTypeBadgeColor(rubric.type)} border text-[10px] font-semibold`}>
+                <Badge className={`${getTypeBadgeColor(rubric.type)} border text-[11px] font-bold px-2 py-0.5`}>
                   {rubric.type}
                 </Badge>
                 <button

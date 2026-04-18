@@ -71,7 +71,7 @@ export function RubricsListView({
       <div className="flex items-center justify-between border-b border-neutral-100 mb-5">
         <div className="flex items-center gap-0">
           <button
-            className={`px-4 py-2.5 text-xs font-bold transition-colors relative ${
+            className={`px-5 py-3 text-sm font-bold transition-colors relative ${
               activeTab === "platform"
                 ? "text-primary"
                 : "text-neutral-400 hover:text-neutral-600"
@@ -79,13 +79,13 @@ export function RubricsListView({
             onClick={() => onTabChange("platform")}
           >
             Platform
-            <span className="ml-1.5 text-[10px] font-semibold text-neutral-300">{platformRubrics.length}</span>
+            <span className="ml-2 text-[11px] font-semibold text-neutral-300">{platformRubrics.length}</span>
             {activeTab === "platform" && (
               <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
             )}
           </button>
           <button
-            className={`px-4 py-2.5 text-xs font-bold transition-colors relative ${
+            className={`px-5 py-3 text-sm font-bold transition-colors relative ${
               activeTab === "my"
                 ? "text-primary"
                 : "text-neutral-400 hover:text-neutral-600"
@@ -93,7 +93,7 @@ export function RubricsListView({
             onClick={() => onTabChange("my")}
           >
             My Rubrics
-            <span className="ml-1.5 text-[10px] font-semibold text-neutral-300">{savedRubrics.length}</span>
+            <span className="ml-2 text-[11px] font-semibold text-neutral-300">{savedRubrics.length}</span>
             {activeTab === "my" && (
               <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
             )}
@@ -102,13 +102,13 @@ export function RubricsListView({
 
         {/* Inline Search */}
         <div className="relative mb-[-1px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-300" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300" />
           <input
             type="text"
-            placeholder="Search…"
+            placeholder="Search rubrics..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 pr-3 py-1.5 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 w-48"
+            className="pl-9 pr-4 py-2 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 w-56"
           />
         </div>
       </div>
@@ -119,7 +119,7 @@ export function RubricsListView({
           <>
             {filteredPlatformRubrics.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-xs text-neutral-400">
+                <p className="text-sm text-neutral-400">
                   {searchQuery
                     ? "No platform rubrics match your search."
                     : "No platform rubrics available."}
@@ -143,8 +143,8 @@ export function RubricsListView({
           <>
             {isLoadingRubrics ? (
               <div className="flex flex-col items-center gap-2 py-12">
-                <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                <span className="text-xs text-neutral-400">Loading rubrics…</span>
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                <span className="text-sm text-neutral-400">Loading rubrics…</span>
               </div>
             ) : filteredMyRubrics.length === 0 ? (
               <EmptyRubricState handleCreateClick={onCreateClick} />
@@ -166,27 +166,27 @@ export function RubricsListView({
                           <BookOpen className="w-4 h-4 text-neutral-400 group-hover:text-primary transition-colors" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-neutral-800 truncate">
+                          <h3 className="text-base font-bold text-neutral-800 truncate">
                             {rubric.name}
                           </h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-neutral-400">
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs font-medium text-neutral-400">
                               {rubric.criteria} criteria
                             </span>
                             {programsList.length > 0 && (
                               <>
                                 <span className="text-neutral-200">&middot;</span>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1.5">
                                   {programsList.slice(0, 3).map((program, idx) => (
                                     <span
                                       key={idx}
-                                      className="text-[9px] font-semibold text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10"
+                                      className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10"
                                     >
                                       {program}
                                     </span>
                                   ))}
                                   {programsList.length > 3 && (
-                                    <span className="text-[9px] text-neutral-400">+{programsList.length - 3}</span>
+                                    <span className="text-[10px] text-neutral-400">+{programsList.length - 3}</span>
                                   )}
                                 </div>
                               </>

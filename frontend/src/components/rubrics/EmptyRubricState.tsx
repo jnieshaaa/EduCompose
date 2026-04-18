@@ -11,14 +11,14 @@ export function EmptyRubricState({ handleCreateClick }: EmptyRubricStateProps) {
         <ClipboardList className="w-16 h-16 text-purple-400" />
         <Check className="w-6 h-6 text-green-500 absolute bottom-6 right-6 bg-white rounded-full p-0.5 border border-white" />
       </div>
-      <p className="text-neutral-500 mb-2">
+      <p className="text-sm font-bold text-neutral-500 mb-2">
         You haven't created any rubrics yet.
       </p>
       <button
-        className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+        className="text-primary-600 hover:text-primary-700 text-base font-bold underline underline-offset-4"
         onClick={handleCreateClick}
       >
-        Create new rubric
+        Create your first rubric
       </button>
     </div>
   );

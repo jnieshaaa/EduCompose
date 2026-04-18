@@ -72,6 +72,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import OnboardingCheck from "./components/OnboardingCheck";
 import { PremiumLoader } from "./components/ui/PremiumLoader";
+import { HelpProvider } from "./contexts/HelpContext";
+import HelpModal from "./components/HelpModal";
 
 /** Preserves ?ref=… when moving analysis links behind teacher auth */
 const LegacyAnalysisResultsRedirect: React.FC = () => {
@@ -250,6 +252,9 @@ const AppContent: React.FC = () => {
         loading={loading} 
         message="EduCompose is preparing your workspace..." 
       />
+
+      {/* Global Help Modal */}
+      <HelpModal />
     </>
   );
 };
@@ -258,7 +263,9 @@ const App: React.FC = () => (
   <BrowserRouter>
     <AuthProvider>
       <LoaderProvider>
-        <AppContent />
+        <HelpProvider>
+          <AppContent />
+        </HelpProvider>
       </LoaderProvider>
     </AuthProvider>
   </BrowserRouter>

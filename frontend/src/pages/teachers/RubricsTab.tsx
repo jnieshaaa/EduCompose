@@ -329,7 +329,7 @@ export function RubricsTab() {
             </button>
           )}
           <div>
-            <h1 className="text-lg font-bold text-neutral-900">
+            <h1 className="text-xl font-bold text-neutral-900">
               {currentView === "options"
                 ? editingRubricId
                   ? "Edit Rubric"
@@ -337,7 +337,7 @@ export function RubricsTab() {
                 : "Rubrics"}
             </h1>
             {currentView === "list" && (
-              <p className="text-xs text-neutral-400 mt-0.5">
+              <p className="text-sm text-neutral-400 mt-1">
                 Manage grading rubrics for your essay activities
               </p>
             )}
@@ -346,10 +346,10 @@ export function RubricsTab() {
 
         {currentView === "list" && (
           <Button
-            className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-9 px-4 shadow-md shadow-primary/15"
+            className="bg-primary hover:bg-primary-300 text-white font-bold text-sm h-10 px-5 shadow-md shadow-primary/15 rounded-xl"
             onClick={handleCreateClick}
           >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            <Plus className="w-4 h-4 mr-2" />
             New Rubric
           </Button>
         )}

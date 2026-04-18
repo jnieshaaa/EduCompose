@@ -30,7 +30,7 @@ export function ScratchModeView({
 
   return (
     <div className="w-full mt-6 p-6 border rounded-lg shadow-md bg-white">
-      <h3 className="text-2xl font-semibold text-neutral-900 mb-6">
+      <h3 className="text-2xl font-bold text-neutral-900 mb-8 tracking-tight">
         {step === "details" ? "Rubric Details" : "Build Your Rubric"}
       </h3>
 

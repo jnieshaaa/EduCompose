@@ -76,8 +76,8 @@ export function RubricDetailsForm({
     <div className="space-y-6">
       {/* ─── Header ─── */}
       <div>
-        <h4 className="text-lg font-bold text-neutral-900">Rubric Details</h4>
-        <p className="text-xs text-neutral-400 mt-0.5">
+        <h4 className="text-xl font-bold text-neutral-900">Rubric Details</h4>
+        <p className="text-sm text-neutral-400 mt-1 font-medium">
           Configure basic settings before building your criteria
         </p>
       </div>
@@ -86,7 +86,7 @@ export function RubricDetailsForm({
       <div className="space-y-5">
         {/* Rubric Name */}
         <div>
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+          <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
             Rubric Name <span className="text-tertiary">*</span>
           </label>
           <input
@@ -101,17 +101,17 @@ export function RubricDetailsForm({
 
         {/* Grading Intensity */}
         <div>
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+          <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
             Grading Intensity <span className="text-tertiary">*</span>
           </label>
-          <p className="text-[11px] text-neutral-400 mb-2.5">
+          <p className="text-xs text-neutral-400 mb-3 font-medium">
             Controls how strict or lenient the AI grading will be
           </p>
           <div className="flex gap-1.5">
             {gradingIntensities.map((intensity) => (
               <button
                 key={intensity}
-                className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
                   formData.gradingIntensity === intensity
                     ? "bg-primary text-white shadow-sm shadow-primary/20"
                     : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
@@ -126,10 +126,10 @@ export function RubricDetailsForm({
 
         {/* Program Selection */}
         <div>
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+          <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
             Programs <span className="text-tertiary">*</span>
           </label>
-          <p className="text-[11px] text-neutral-400 mb-2.5">
+          <p className="text-xs text-neutral-400 mb-3 font-medium">
             This rubric will be available for courses within the selected program(s)
           </p>
           {isLoadingPrograms ? (
@@ -146,7 +146,7 @@ export function RubricDetailsForm({
               {programs.map((program) => (
                 <button
                   key={program.id}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     formData.programs.includes(program.name)
                       ? "bg-primary text-white shadow-sm shadow-primary/20"
                       : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
@@ -159,7 +159,7 @@ export function RubricDetailsForm({
             </div>
           )}
           {formData.programs.length > 0 && (
-            <p className="text-[10px] text-primary font-semibold mt-2">
+            <p className="text-[11px] text-primary font-bold mt-2">
               {formData.programs.length} selected: {formData.programs.join(", ")}
             </p>
           )}
@@ -295,13 +295,13 @@ export function RubricCriteriaEditor({
   return (
     <div className="space-y-5">
       {/* ─── Summary Bar ─── */}
-      <div className="flex items-center justify-between bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-4 text-xs text-neutral-500">
+      <div className="flex items-center justify-between bg-neutral-50 border border-neutral-100 rounded-xl px-5 py-3.5">
+        <div className="flex items-center gap-4 text-xs text-neutral-500 font-medium">
           <span>
             <span className="font-bold text-neutral-700">{formData.name || "Untitled"}</span>
           </span>
           <span className="text-neutral-200">|</span>
-          <span className="text-[10px] font-semibold text-primary bg-primary/5 px-2 py-0.5 rounded-md">
+          <span className="text-[11px] font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-md">
             {formData.gradingIntensity}
           </span>
           <span className="text-neutral-200">|</span>
@@ -315,25 +315,25 @@ export function RubricCriteriaEditor({
         {/* Create / Preview Toggle */}
         <div className="flex items-center bg-white border border-neutral-200 rounded-lg p-0.5">
           <button
-            className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
               activeSubTab === "create"
                 ? "bg-primary text-white shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
             }`}
             onClick={() => setActiveSubTab("create")}
           >
-            <Pencil className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            <Pencil className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
             Build
           </button>
           <button
-            className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+            className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
               activeSubTab === "preview"
                 ? "bg-primary text-white shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
             }`}
             onClick={() => setActiveSubTab("preview")}
           >
-            <Eye className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            <Eye className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
             Preview
           </button>
         </div>
@@ -356,7 +356,7 @@ export function RubricCriteriaEditor({
                   onChange={(e) =>
                     handleCriteriaTitleChange(criteria.id, e.target.value)
                   }
-                  className="flex-1 text-sm font-semibold text-neutral-800 bg-transparent outline-none placeholder:text-neutral-300"
+                  className="flex-1 text-base font-bold text-neutral-800 bg-transparent outline-none placeholder:text-neutral-300"
                 />
                 <button
                   onClick={() => handleDeleteCriteria(criteria.id)}
@@ -378,7 +378,7 @@ export function RubricCriteriaEditor({
                         onChange={(e) =>
                           handleScoreChange(criteria.id, score.id, "title", e.target.value)
                         }
-                        className="flex-1 text-xs font-semibold text-neutral-700 bg-transparent outline-none border-b border-transparent focus:border-primary/30 transition-colors placeholder:text-neutral-300 min-w-0"
+                        className="flex-1 text-sm font-bold text-neutral-700 bg-transparent outline-none border-b border-transparent focus:border-primary/30 transition-colors placeholder:text-neutral-300 min-w-0"
                       />
                       <input
                         type="number"
@@ -386,7 +386,7 @@ export function RubricCriteriaEditor({
                         onChange={(e) =>
                           handleScoreChange(criteria.id, score.id, "points", parseInt(e.target.value) || 0)
                         }
-                        className="w-10 text-center text-[10px] font-bold text-primary bg-primary/5 border border-primary/10 rounded-md py-1 outline-none focus:ring-1 focus:ring-primary/20"
+                        className="w-11 text-center text-xs font-bold text-primary bg-primary/5 border border-primary/10 rounded-md py-1.5 outline-none focus:ring-1 focus:ring-primary/20"
                       />
                       <button
                         onClick={() => handleDeleteScoreLevel(criteria.id, score.id)}
@@ -397,7 +397,7 @@ export function RubricCriteriaEditor({
                     </div>
                     {/* Description */}
                     <textarea
-                      className="w-full px-2.5 py-2 border border-neutral-100 rounded-lg text-[11px] text-neutral-600 h-24 resize-none outline-none focus:ring-1 focus:ring-primary/15 focus:border-primary/20 transition-all placeholder:text-neutral-300 leading-relaxed bg-neutral-50/50"
+                      className="w-full px-3 py-2.5 border border-neutral-100 rounded-lg text-xs text-neutral-600 h-28 resize-none outline-none focus:ring-1 focus:ring-primary/15 focus:border-primary/20 transition-all placeholder:text-neutral-300 leading-relaxed bg-neutral-50/50 font-medium"
                       placeholder="Describe what the student must demonstrate…"
                       value={score.description}
                       onChange={(e) =>

@@ -36,12 +36,12 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
               Default Rubric Template
             </label>
             <select
               id="default-rubric"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all disabled:opacity-50"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all disabled:opacity-50 font-medium"
               value={defaults.defaultRubricId || ""}
               onChange={(e) =>
                 onDefaultsChange({
@@ -66,9 +66,9 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
           </div>
 
           <div className="flex items-center justify-between py-3 border-t border-b border-neutral-50">
-            <div className="min-w-0">
-              <span className="text-xs font-semibold text-neutral-700">Auto-Apply to New Programs</span>
-              <p className="text-[10px] text-neutral-400 mt-0.5">
+            <div className="min-w-0 pr-4">
+              <span className="text-sm font-bold text-neutral-800 tracking-tight">Auto-Apply to New Programs</span>
+              <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide leading-tight">
                 Automatically assign default rubric to new programs
               </p>
             </div>

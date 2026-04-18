@@ -223,7 +223,7 @@ export function StudentsView({
           <button
             onClick={handleGradeAll}
             disabled={isGradingAll || isLoading}
-            className="px-4 py-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {isGradingAll ? <Loader2 size={16} className="animate-spin" /> : <Edit size={14} />}
             {isGradingAll ? "Grading Cycle..." : "Grade All Pending"}
@@ -255,23 +255,23 @@ export function StudentsView({
         {isLoading ? (
           <div className="p-20 text-center">
             <Loader2 className="animate-spin text-primary/30 w-8 h-8 mx-auto mb-4" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Loading roster...</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading roster...</p>
           </div>
         ) : students.length === 0 ? (
           <div className="p-20 text-center">
             <Users className="w-12 h-12 text-neutral-100 mx-auto mb-4" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Empty Section</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400">Empty Section</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-neutral-50/50">
                 <TableRow>
-                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] pl-6">Student Name</TableHead>
-                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</TableHead>
-                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Metrics</TableHead>
-                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Total Score</TableHead>
-                  <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right pr-6">Actions</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] pl-6">Student Name</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Metrics</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Total Score</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-neutral-50">
@@ -288,11 +288,11 @@ export function StudentsView({
                     >
                       <TableCell className="pl-6 py-4">
                         <div className="flex flex-col">
-                          <span className={`text-[11px] font-bold ${isLowWordCount ? 'text-error-default' : 'text-neutral-800'}`}>
+                          <span className={`text-xs font-bold ${isLowWordCount ? 'text-error-default' : 'text-neutral-800'}`}>
                             {student.name}
                           </span>
                           <div className="flex items-center gap-2 mt-1">
-                             <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">
+                             <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">
                                {student.wordCount || 0} WORDS
                              </span>
                              {isLowWordCount && (
@@ -314,7 +314,7 @@ export function StudentsView({
                             <span className="text-[9px] font-bold text-primary uppercase animate-pulse">Processing</span>
                           </div>
                         ) : isSubmitted ? (
-                          <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                             isGraded 
                             ? 'bg-success-default text-white border-success-default shadow-sm' 
                             : 'bg-primary/5 text-primary border-primary/20'
@@ -323,7 +323,7 @@ export function StudentsView({
                             {isGraded ? "Graded" : "Submitted"}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-300 border border-neutral-100">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-300 border border-neutral-100">
                             <XCircle size={10} /> Pending
                           </span>
                         )}
@@ -337,8 +337,8 @@ export function StudentsView({
                               { label: 'GRM', val: student.grammar }
                             ].map((m, i) => (
                               <div key={i} className="flex flex-col items-center min-w-[36px]">
-                                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">{m.label}</span>
-                                <span className={`text-[11px] font-bold ${m.val !== undefined ? 'text-neutral-800' : 'text-neutral-300'}`}>
+                                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-tighter">{m.label}</span>
+                                <span className={`text-xs font-bold ${m.val !== undefined ? 'text-neutral-800' : 'text-neutral-300'}`}>
                                   {m.val !== undefined ? Math.round(Number(m.val)) : '—'}
                                 </span>
                               </div>
@@ -480,8 +480,8 @@ export function StudentsView({
                 </p>
               </div>
               <div className="p-4 bg-neutral-50 flex gap-2">
-                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600">Cancel</button>
-                <button onClick={handleDeleteEssay} disabled={isDeleting} className="flex-1 px-4 py-2 bg-error-default text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-error-default/20 disabled:opacity-50">
+                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600">Cancel</button>
+                <button onClick={handleDeleteEssay} disabled={isDeleting} className="flex-1 px-4 py-2 bg-error-default text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-error-default/20 disabled:opacity-50">
                   {isDeleting ? "Deleting..." : "Confirm"}
                 </button>
               </div>
@@ -491,7 +491,7 @@ export function StudentsView({
       </AnimatePresence>
 
       <div className="text-center">
-         <button onClick={onBack} className="text-[10px] font-bold text-neutral-300 uppercase tracking-[0.2em] hover:text-primary transition-all">Close Viewer</button>
+         <button onClick={onBack} className="text-[11px] font-bold text-neutral-300 uppercase tracking-[0.2em] hover:text-primary transition-all">Close Viewer</button>
       </div>
     </div>
   );

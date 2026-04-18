@@ -83,13 +83,13 @@ export function ArchivePage() {
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{selectedCourse.academic_year}</span>
-                <span className="text-neutral-200">&middot;</span>
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{selectedCourse.term}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">{selectedCourse.academic_year}</span>
+                <span className="text-neutral-200 font-bold">&middot;</span>
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">{selectedCourse.term}</span>
               </div>
-              <h1 className="text-lg font-bold text-neutral-900">{selectedCourse.course_title}</h1>
-              <p className="text-xs text-neutral-400 mt-0.5">{selectedCourse.course_code} &middot; {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
+              <h1 className="text-xl font-bold text-neutral-900 tracking-tight">{selectedCourse.course_title}</h1>
+              <p className="text-sm font-medium text-neutral-400 mt-1 uppercase tracking-wide">{selectedCourse.course_code} &middot; {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
             </div>
           </div>
         </div>
@@ -100,17 +100,17 @@ export function ArchivePage() {
             <button
               key={tab.key}
               onClick={() => setActiveDetailTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors relative ${
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-bold transition-colors relative ${
                 activeDetailTab === tab.key
                   ? "text-primary"
                   : "text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" />
+              <tab.icon className="w-4 h-4" />
               <span>{tab.label}</span>
-              <span className="text-[10px] font-semibold text-neutral-300 ml-0.5">{tab.count}</span>
+              <span className="text-[11px] font-bold text-neutral-300 ml-1 uppercase">{tab.count}</span>
               {activeDetailTab === tab.key && (
-                <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-primary rounded-full" />
+                <span className="absolute bottom-0 left-5 right-5 h-[2px] bg-primary rounded-full" />
               )}
             </button>
           ))}
@@ -156,16 +156,16 @@ export function ArchivePage() {
               ) : (
                 courseSections.map((section: any) => (
                   <div key={section.id} className="bg-white border border-neutral-100 rounded-xl p-4 hover:border-neutral-200 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-8 h-8 bg-neutral-50 rounded-lg flex items-center justify-center">
-                        <GitCompare className="w-4 h-4 text-neutral-400" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 bg-neutral-50 rounded-xl flex items-center justify-center">
+                        <GitCompare className="w-5 h-5 text-neutral-400" />
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-50 px-2 py-0.5 rounded-md">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-50 px-2.5 py-1 rounded-lg border border-neutral-100 shadow-sm">
                         {section.year} Year
                       </span>
                     </div>
-                    <h3 className="text-sm font-bold text-neutral-800">Block {section.name}</h3>
-                    <p className="text-[11px] text-neutral-400 mt-0.5">{section.program_abbr}</p>
+                    <h3 className="text-base font-bold text-neutral-800 tracking-tight">Block {section.name}</h3>
+                    <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide leading-tight">{section.program_abbr}</p>
                   </div>
                 ))
               )}
@@ -183,23 +183,23 @@ export function ArchivePage() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Student</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Program & Block</th>
-                        <th className="px-5 py-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Contact</th>
+                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Student</th>
+                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Program & Block</th>
+                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Contact</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50">
                       {courseStudents.map((student) => (
                         <tr key={student.id} className="hover:bg-neutral-50/50 transition-colors">
-                          <td className="px-5 py-3">
-                            <span className="text-sm font-semibold text-neutral-800">
+                          <td className="px-5 py-4">
+                            <span className="text-sm font-bold text-neutral-800 block tracking-tight">
                               {student.last_name}, {student.first_name}
                             </span>
-                            <span className="block text-[10px] text-neutral-400 mt-0.5">{student.student_code}</span>
+                            <span className="block text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wider">{student.student_code}</span>
                           </td>
-                          <td className="px-5 py-3">
-                            <span className="text-xs font-medium text-neutral-600">{student.program_id}</span>
-                            <span className="block text-[10px] text-neutral-400 mt-0.5">
+                          <td className="px-5 py-4">
+                            <span className="text-sm font-bold text-neutral-600 block tracking-tight">{student.program_id}</span>
+                            <span className="block text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wider">
                               {/* Show the block name related to THIS course */}
                               {student.block_students?.find((bs: any) => courseBlockIds.has(bs.block_id))?.blocks?.name || student.block_name}
                             </span>
@@ -227,29 +227,29 @@ export function ArchivePage() {
   return (
     <div className="p-6 space-y-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-lg font-bold text-neutral-900">Academic Archive</h1>
-          <p className="text-xs text-neutral-400 mt-0.5">Browse previous courses and their historical content</p>
+          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Academic Archive</h1>
+          <p className="text-sm font-medium text-neutral-400 mt-1 uppercase tracking-widest">Browse previous courses and their historical content</p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <select
             value={ayFilter}
             onChange={(e) => setAyFilter(e.target.value)}
-            className="px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+            className="px-4 py-3 border border-neutral-200 rounded-xl text-sm font-bold bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all shadow-sm"
           >
-            <option value="all">All Years</option>
+            <option value="all">All Academic Years</option>
             <option value="2024-2025">2024-2025</option>
             <option value="2025-2026">2025-2026</option>
           </select>
-
+ 
           <select
             value={termFilter}
             onChange={(e) => setTermFilter(e.target.value)}
-            className="px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+            className="px-4 py-3 border border-neutral-200 rounded-xl text-sm font-bold bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all shadow-sm"
           >
-            <option value="all">All Terms</option>
+            <option value="all">All Semesters</option>
             <option value="1st Semester">1st Semester</option>
             <option value="2nd Semester">2nd Semester</option>
             <option value="Summer">Summer</option>
@@ -281,29 +281,29 @@ export function ArchivePage() {
               className="bg-white border border-neutral-100 rounded-xl p-4 hover:border-neutral-200 hover:shadow-sm cursor-pointer transition-all group"
               onClick={() => setSelectedCourseId(course.id)}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-9 h-9 bg-neutral-50 rounded-lg flex items-center justify-center group-hover:bg-primary/5 transition-colors">
-                  <Layers className="w-4 h-4 text-neutral-400 group-hover:text-primary transition-colors" />
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-10 h-10 bg-neutral-50 rounded-xl flex items-center justify-center group-hover:bg-primary/5 transition-colors">
+                  <Layers className="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors" />
                 </div>
                 <div className="text-right">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-50 px-2 py-0.5 rounded-md">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 px-2.5 py-1 rounded-lg border border-neutral-100 shadow-sm">
                     {course.academic_year}
                   </span>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">{course.term}</p>
+                  <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide">{course.term}</p>
                 </div>
               </div>
 
-              <h3 className="text-sm font-bold text-neutral-800 mb-0.5 line-clamp-2 group-hover:text-primary transition-colors">
+              <h3 className="text-base font-bold text-neutral-800 mb-1 line-clamp-2 group-hover:text-primary transition-colors tracking-tight">
                 {course.course_title}
               </h3>
-              <p className="text-[11px] text-neutral-400 mb-4">{course.course_code}</p>
+              <p className="text-sm font-bold text-neutral-400 mb-5 uppercase tracking-wide">{course.course_code}</p>
               
-              <div className="pt-3 border-t border-neutral-50 flex items-center justify-between">
-                <span className="text-[10px] text-neutral-400 flex items-center gap-1">
-                  <BookOpen className="w-3 h-3" />
+              <div className="pt-4 border-t border-neutral-50 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-neutral-400 flex items-center gap-1.5 uppercase tracking-widest">
+                  <BookOpen className="w-3.5 h-3.5" />
                   {course.departments?.code || course.departments?.name || "General"}
                 </span>
-                <ChevronRight className="w-4 h-4 text-neutral-200 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-5 h-5 text-neutral-200 group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </div>
             </div>
           ))}

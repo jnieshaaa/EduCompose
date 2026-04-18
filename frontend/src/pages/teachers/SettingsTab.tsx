@@ -346,34 +346,34 @@ export function SettingsTab() {
       <AlertComponent />
       <div className="p-6 space-y-0">
         {/* ─── Header ─── */}
-        <div className="mb-6">
-          <h1 className="text-lg font-bold text-neutral-900">Settings</h1>
-          <p className="text-xs text-neutral-400 mt-0.5">
+        <div className="mb-8">
+          <h1 className="text-xl font-bold text-neutral-900">Settings</h1>
+          <p className="text-sm text-neutral-400 mt-1 font-medium">
             Manage your profile, AI preferences, and system configuration
           </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* ─── Side Navigation ─── */}
-          <div className="lg:w-48 flex-shrink-0">
-            <nav className="sticky top-6 space-y-0.5">
+          <div className="lg:w-56 flex-shrink-0">
+            <nav className="sticky top-6 space-y-1">
               {settingsNavigation.map((item) => {
                 const isActive = item.id === activeTab;
-
+ 
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-left ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-left ${
                       isActive
-                        ? "bg-primary/5 text-primary font-semibold"
+                        ? "bg-primary/5 text-primary font-bold shadow-sm ring-1 ring-primary/10"
                         : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
                     }`}
                   >
-                    <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${
                       isActive ? "text-primary" : "text-neutral-400"
                     }`} />
-                    <span className="text-xs">{item.name}</span>
+                    <span className="text-sm font-bold uppercase tracking-wider">{item.name}</span>
                   </button>
                 );
               })}
@@ -422,14 +422,14 @@ export function SettingsTab() {
             <DataManagement id="data" />
 
             {/* Global Reset */}
-            <div className="flex items-center justify-end pt-5 border-t border-neutral-100 pb-4">
+            <div className="flex items-center justify-end pt-5 border-t border-neutral-100 pb-10">
               <button
                 onClick={handleResetToDefaults}
                 disabled={isSaving}
-                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-error-default transition-colors disabled:opacity-40"
+                className="flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-error-default transition-colors disabled:opacity-40 uppercase tracking-widest"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset All to Defaults
+                <RotateCcw size={16} />
+                Reset All Settings
               </button>
             </div>
           </div>

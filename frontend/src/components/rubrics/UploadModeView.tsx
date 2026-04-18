@@ -105,10 +105,10 @@ export function UploadModeView({
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-lg font-bold text-neutral-900">
+          <h3 className="text-xl font-bold text-neutral-900">
             Import Rubric
           </h3>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-sm text-neutral-400 mt-1 font-medium">
             Upload a file and EduCompose will convert it to a digital rubric
           </p>
         </div>
@@ -146,10 +146,10 @@ export function UploadModeView({
                 <FileSpreadsheet className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-xs font-semibold text-neutral-800 truncate">
+                <p className="text-xs font-bold text-neutral-800 truncate">
                   {selectedFile.name}
                 </p>
-                <p className="text-[10px] text-neutral-400">
+                <p className="text-[11px] font-bold text-neutral-400">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </div>
@@ -177,7 +177,7 @@ export function UploadModeView({
             )}
             {uploadSuccess && (
               <div className="p-3 bg-success-default/5 border border-success-default/15 rounded-lg">
-                <p className="text-[11px] text-success-dark font-medium">
+                <p className="text-xs text-success-dark font-bold">
                   Rubric imported! Redirecting to builder…
                 </p>
               </div>
@@ -189,11 +189,11 @@ export function UploadModeView({
               <Upload className="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-neutral-700">
+              <p className="text-base font-bold text-neutral-700">
                 Drop your rubric file or{" "}
-                <span className="text-primary">browse</span>
+                <span className="text-primary underline">browse</span>
               </p>
-              <p className="text-[11px] text-neutral-400 mt-1">
+              <p className="text-xs text-neutral-400 mt-1 font-medium italic">
                 Excel (.xlsx) &middot; JSON &middot; PDF
               </p>
             </div>
@@ -205,34 +205,34 @@ export function UploadModeView({
       <div className="mt-4 bg-neutral-50 rounded-xl border border-neutral-100 overflow-hidden">
         <div className="px-4 py-2.5 border-b border-neutral-100 flex items-center gap-2">
           <Info className="w-3.5 h-3.5 text-neutral-400" />
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+          <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
             Excel Format Guide
           </span>
         </div>
         <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-1.5">
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R1</span>
-            <span className="text-[11px] text-neutral-500">Rubric Name</span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R1</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Rubric Name</span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R2</span>
-            <span className="text-[11px] text-neutral-500">Description <span className="text-neutral-300">(optional)</span></span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R2</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Description</span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R3</span>
-            <span className="text-[11px] text-neutral-500">Grading Intensity</span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R3</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Grading Intensity</span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R4</span>
-            <span className="text-[11px] text-neutral-500">Programs <span className="text-neutral-300">(comma-separated)</span></span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R4</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Programs</span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R6</span>
-            <span className="text-[11px] text-neutral-500">Column headers</span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R6</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Column headers</span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="text-[9px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R7+</span>
-            <span className="text-[11px] text-neutral-500">Criteria data rows</span>
+            <span className="text-[10px] font-bold text-neutral-300 mt-0.5 w-5 flex-shrink-0">R7+</span>
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Criteria data rows</span>
           </div>
         </div>
       </div>

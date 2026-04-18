@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Card from "../../components/ui/Card";
-import Badge from "../../components/ui/Badge";
 import {
   TrendingUp,
   TrendingDown,
@@ -68,90 +67,102 @@ export function MetricsTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl text-neutral-900">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 pb-2">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">
             AI Metrics & Performance
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <TrendingUp size={14} className="text-primary/50" />
             Visualize NLP-based essay evaluation metrics
           </p>
         </div>
-        <Badge className="bg-primary/10 text-primary">
-          AI-Powered Analytics
-        </Badge>
+        <div className="px-5 py-2.5 bg-primary/5 border border-primary/20 rounded-xl">
+           <span className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+              <Shield size={14} />
+              AI-Powered Analytics
+           </span>
+        </div>
       </div>
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4">
+        <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-neutral-500">Avg Grammar Score</p>
-              <p className="text-2xl text-neutral-900 mt-1">
-                {metrics.avgGrammarScore.toFixed(1)}%
-              </p>
-              <div className="flex items-center gap-1 mt-2 text-success-default text-sm">
-                <TrendingUp className="w-4 h-4" />
-                <span>+1.5%</span>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Avg Grammar Score</p>
+              <div className="flex items-end gap-2 mt-2">
+                <p className="text-3xl font-bold text-neutral-900 tracking-tight">
+                  {metrics.avgGrammarScore.toFixed(1)}%
+                </p>
+                <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>+1.5%</span>
+                </div>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-success-default/10 flex items-center justify-center text-success-default">
-              <CheckCircle className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-success-default/10 flex items-center justify-center text-success-default group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-5 h-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-neutral-500">Avg Coherence</p>
-              <p className="text-2xl text-neutral-900 mt-1">
-                {metrics.avgCoherenceScore.toFixed(1)}%
-              </p>
-              <div className="flex items-center gap-1 mt-2 text-error-default text-sm">
-                <TrendingDown className="w-4 h-4" />
-                <span>-0.8%</span>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Avg Coherence</p>
+              <div className="flex items-end gap-2 mt-2">
+                <p className="text-3xl font-bold text-neutral-900 tracking-tight">
+                  {metrics.avgCoherenceScore.toFixed(1)}%
+                </p>
+                <div className="flex items-center gap-1 mb-1.5 text-error-default text-xs font-bold">
+                  <TrendingDown className="w-3.5 h-3.5" />
+                  <span>-0.8%</span>
+                </div>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-info-default/10 flex items-center justify-center text-info-default">
-              <Link className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-info-default/10 flex items-center justify-center text-info-default group-hover:scale-110 transition-transform">
+              <Link className="w-5 h-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-neutral-500">Vocabulary Level</p>
-              <p className="text-2xl text-neutral-900 mt-1">
-                {metrics.avgVocabularyLevel.toFixed(1)}/10
-              </p>
-              <div className="flex items-center gap-1 mt-2 text-success-default text-sm">
-                <TrendingUp className="w-4 h-4" />
-                <span>+0.4</span>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Vocabulary Index</p>
+              <div className="flex items-end gap-2 mt-2">
+                <p className="text-3xl font-bold text-neutral-900 tracking-tight">
+                  {metrics.avgVocabularyLevel.toFixed(1)}<span className="text-sm text-neutral-300">/10</span>
+                </p>
+                <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>+0.4</span>
+                </div>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-warning-default/10 flex items-center justify-center text-warning-default">
-              <BookOpen className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-warning-default/10 flex items-center justify-center text-warning-default group-hover:scale-110 transition-transform">
+              <BookOpen className="w-5 h-5" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-neutral-500">Plagiarism Risk</p>
-              <p className="text-2xl text-neutral-900 mt-1">
-                {metrics.plagiarismRisk.toFixed(1)}%
-              </p>
-              <div className="flex items-center gap-1 mt-2 text-success-default text-sm">
-                <TrendingDown className="w-4 h-4 rotate-180" />
-                <span>-0.5%</span>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Plagiarism Risk</p>
+              <div className="flex items-end gap-2 mt-2">
+                <p className="text-3xl font-bold text-neutral-900 tracking-tight">
+                  {metrics.plagiarismRisk.toFixed(1)}%
+                </p>
+                <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
+                  <TrendingDown className="w-3.5 h-3.5 rotate-180" />
+                  <span>-0.5%</span>
+                </div>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-error-default/10 flex items-center justify-center text-error-default">
-              <Shield className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-error-default/10 flex items-center justify-center text-error-default group-hover:scale-110 transition-transform">
+              <Shield className="w-5 h-5" />
             </div>
           </div>
         </Card>
@@ -160,8 +171,9 @@ export function MetricsTab() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Average Scores per Section */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
             Average Scores per Section
           </h2>
           {metrics.sectionPerformance.length > 0 ? (
@@ -174,8 +186,9 @@ export function MetricsTab() {
         </Card>
 
         {/* Grammar Error Trends */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
             Grammar Error Trends
           </h2>
           {metrics.grammarTrends.length > 0 ? (
@@ -191,8 +204,9 @@ export function MetricsTab() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Coherence Score Distribution */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
             Coherence Score Distribution
           </h2>
           {metrics.coherenceDistribution.length > 0 ? (
@@ -205,8 +219,9 @@ export function MetricsTab() {
         </Card>
 
         {/* Vocabulary Complexity */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
             Vocabulary Complexity Index
           </h2>
           {metrics.vocabularyComplexity.length > 0 ? (
@@ -226,33 +241,35 @@ export function MetricsTab() {
       {/* Student Performance Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Performers */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm">
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8 flex items-center gap-2">
+            <TrendingUp size={18} className="text-success-default" />
             Top-Performing Students
           </h2>
           {metrics.topPerformers.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {metrics.topPerformers.map((student, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-3 bg-success-default/5 rounded-rd border border-success-default/20"
+                  className="flex items-center justify-between p-4 bg-neutral-50/50 rounded-2xl border border-neutral-100 hover:border-success-default/30 transition-all group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-success-default text-white flex items-center justify-center text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-success-default/10 text-success-default font-bold flex items-center justify-center text-sm shadow-sm">
                       {idx + 1}
                     </div>
                     <div>
-                      <p className="text-neutral-900">{student.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        {student.essays} essays
+                      <p className="text-sm font-bold text-neutral-800 tracking-tight">{student.name}</p>
+                      <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
+                        {student.essays} essays evaluated
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-success-default text-white">
+                    <span className="inline-block px-3 py-1 bg-success-default text-white font-bold text-sm rounded-lg shadow-md shadow-success-default/20">
                       {student.avgScore}%
-                    </Badge>
-                    <p className="text-xs text-success-default mt-1">
+                    </span>
+                    <p className="text-[11px] font-bold text-success-default uppercase tracking-widest mt-1.5 flex items-center justify-end gap-1">
+                      <TrendingUp size={12} />
                       {student.improvement}
                     </p>
                   </div>
@@ -267,35 +284,37 @@ export function MetricsTab() {
         </Card>
 
         {/* At-Risk Students */}
-        <Card className="p-6">
-          <h2 className="text-xl text-neutral-900 mb-4">At-Risk Students</h2>
+        <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm">
+          <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8 flex items-center gap-2">
+            <TrendingDown size={18} className="text-error-default" />
+            At-Risk Students
+          </h2>
           {metrics.atRiskStudents.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {metrics.atRiskStudents.map((student, idx) => (
                 <div
                   key={idx}
-                  className="p-4 bg-warning-default/5 rounded-rd border border-warning-default/20"
+                  className="p-5 bg-neutral-50/50 rounded-2xl border border-neutral-100 hover:border-error-default/30 transition-all"
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-neutral-900">{student.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        {student.essays} essays submitted
+                      <p className="text-sm font-bold text-neutral-800 tracking-tight">{student.name}</p>
+                      <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
+                        {student.essays} submissions
                       </p>
                     </div>
-                    <Badge className="bg-amber-600 text-white">
+                    <span className="px-3 py-1 bg-amber-500 text-white font-bold text-sm rounded-lg shadow-md shadow-amber-500/20">
                       {student.avgScore}%
-                    </Badge>
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2">
                     {student.issues.map((issue, i) => (
-                      <Badge
+                      <span
                         key={i}
-                        variant="outline"
-                        className="bg-error-default/10 text-error-default border-error-default/20 text-xs"
+                        className="px-2.5 py-1 bg-error-default/10 text-error-default border border-error-default/20 text-[10px] font-bold uppercase rounded-md tracking-wider"
                       >
                         {issue}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 </div>

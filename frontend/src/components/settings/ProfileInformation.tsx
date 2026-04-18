@@ -24,7 +24,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
   onSaveProfile,
 }) => {
   const inputClass =
-    "w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed";
+    "w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium";
 
   return (
     <ScrollableSection id={id} title="Profile Information" icon={User}>
@@ -37,7 +37,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Title</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Title</label>
               <input
                 id="title"
                 type="text"
@@ -49,7 +49,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Nickname</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Nickname</label>
               <input
                 id="nickname"
                 type="text"
@@ -61,7 +61,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">First Name</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">First Name</label>
               <input
                 id="first-name"
                 type="text"
@@ -72,9 +72,9 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
                 Middle Name
-                <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
+                <span className="text-neutral-300 ml-1 font-bold normal-case tracking-normal">(optional)</span>
               </label>
               <input
                 id="middle-name"
@@ -87,7 +87,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Last Name</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Last Name</label>
               <input
                 id="last-name"
                 type="text"
@@ -98,9 +98,9 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
                 Suffix
-                <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
+                <span className="text-neutral-300 ml-1 font-bold normal-case tracking-normal">(optional)</span>
               </label>
               <input
                 id="suffix"
@@ -113,7 +113,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">School</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">School</label>
               <input
                 id="school"
                 type="text"
@@ -124,7 +124,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Department</label>
+              <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Department</label>
               <input
                 id="department"
                 type="text"
@@ -137,7 +137,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Email</label>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Email</label>
             <input
               id="email"
               type="email"
@@ -145,7 +145,7 @@ export const ProfileInformation: React.FC<ProfileInformationProps> = ({
               value={profile.email}
               disabled
             />
-            <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
+            <p className="text-[11px] font-bold text-neutral-300 mt-2 ml-0.5 uppercase tracking-wide">
               Email cannot be changed. Contact your administrator.
             </p>
           </div>

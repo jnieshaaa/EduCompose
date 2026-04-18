@@ -129,18 +129,18 @@ export function StudentsTableView({
                 className="cursor-pointer hover:bg-neutral-100 transition-colors"
                 onClick={() => requestSort('id')}
               >
-                <div className="flex items-center gap-1.5 uppercase text-[10px] font-black tracking-widest text-neutral-400">
+                <div className="flex items-center gap-2 uppercase text-[11px] font-bold tracking-widest text-neutral-400">
                   Student ID
-                  {sortConfig?.key === 'id' ? (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  {sortConfig?.key === 'id' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="opacity-30" />}
                 </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-neutral-100 transition-colors"
                 onClick={() => requestSort('name')}
               >
-                <div className="flex items-center gap-1.5 uppercase text-[10px] font-black tracking-widest text-neutral-400">
+                <div className="flex items-center gap-2 uppercase text-[11px] font-bold tracking-widest text-neutral-400">
                   Name
-                  {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="opacity-30" />}
                 </div>
               </TableHead>
               {!urlSectionFilter && (
@@ -148,14 +148,14 @@ export function StudentsTableView({
                   className="cursor-pointer hover:bg-neutral-100 transition-colors"
                   onClick={() => requestSort('block')}
                 >
-                  <div className="flex items-center gap-1.5 uppercase text-[10px] font-black tracking-widest text-neutral-400">
+                  <div className="flex items-center gap-2 uppercase text-[11px] font-bold tracking-widest text-neutral-400">
                     Block
-                    {sortConfig?.key === 'block' ? (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                    {sortConfig?.key === 'block' ? (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <ArrowUpDown size={14} className="opacity-30" />}
                   </div>
                 </TableHead>
               )}
-              <TableHead className="uppercase text-[10px] font-black tracking-widest text-neutral-400">Email</TableHead>
-              <TableHead className='text-right uppercase text-[10px] font-black tracking-widest text-neutral-400'>Actions</TableHead>
+              <TableHead className="uppercase text-[11px] font-bold tracking-widest text-neutral-400">Email</TableHead>
+              <TableHead className='text-right uppercase text-[11px] font-bold tracking-widest text-neutral-400'>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,7 +173,7 @@ export function StudentsTableView({
                   <TableCell>
                     <Badge
                       variant='outline'
-                      className='bg-primary/5 text-primary border-primary/20 font-bold px-2 py-0.5 text-[10px]'
+                      className='bg-primary/5 text-primary border-primary/20 font-bold px-2.5 py-1 text-[11px] uppercase tracking-wider'
                     >
                       {student.block_name}
                     </Badge>

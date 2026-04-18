@@ -39,7 +39,7 @@ export function PlatformRubricCard({
     >
       {/* Top: Type badge + actions */}
       <div className="flex items-center justify-between mb-2.5">
-        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}`}>
           {rubric.type}
         </span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -107,22 +107,22 @@ export function PlatformRubricCard({
       <h3 className="text-sm font-bold text-neutral-800 mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
         {rubric.name}
       </h3>
-      <p className="text-[11px] text-neutral-400 line-clamp-2 mb-3">
+      <p className="text-xs text-neutral-400 line-clamp-2 mb-3 leading-relaxed">
         {rubric.description}
       </p>
 
       {/* Meta stats */}
       <div className="pt-2.5 border-t border-neutral-50 flex items-center gap-3">
-        <span className="text-[10px] text-neutral-400">
-          <strong className="text-neutral-600">{rubric.criteria.length}</strong> criteria
+        <span className="text-[11px] text-neutral-400">
+          <strong className="text-neutral-600 font-bold">{rubric.criteria.length}</strong> criteria
         </span>
         <span className="text-neutral-200">·</span>
-        <span className="text-[10px] text-neutral-400">
-          <strong className="text-neutral-600">{totalPoints}</strong> pts
+        <span className="text-[11px] text-neutral-400">
+          <strong className="text-neutral-600 font-bold">{totalPoints}</strong> pts
         </span>
         <span className="text-neutral-200">·</span>
-        <span className="text-[10px] text-neutral-400">
-          <strong className="text-neutral-600">{rubric.programs}</strong> programs
+        <span className="text-[11px] text-neutral-400">
+          <strong className="text-neutral-600 font-bold">{rubric.programs}</strong> programs
         </span>
       </div>
     </div>

@@ -17,52 +17,52 @@ export function StudentsStatsCards({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="p-4 border-l-4 border-l-primary">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/5 rounded-lg text-primary">
-            <Users size={20} />
+      <Card className="p-5 border-l-4 border-l-primary rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-primary/5 rounded-xl text-primary">
+            <Users size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-              {hasActiveFilters ? "Filtered Total" : "Total Students"}
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">
+              {hasActiveFilters ? "Filtered Total" : "Total Enrollment"}
             </p>
-            <p className="text-2xl font-black text-neutral-900 leading-none mt-1">{totalCount}</p>
+            <p className="text-3xl font-bold text-neutral-900 leading-none mt-2 tracking-tight">{totalCount}</p>
           </div>
         </div>
       </Card>
 
-      <Card className="p-4 border-l-4 border-l-success-default">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-success-default/5 rounded-lg text-success-default">
-            <UserCheck size={20} />
+      <Card className="p-5 border-l-4 border-l-success-default rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-success-default/5 rounded-xl text-success-default">
+            <UserCheck size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active This Term</p>
-            <p className="text-2xl font-black text-success-default leading-none mt-1">{activeCount}</p>
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Active This Term</p>
+            <p className="text-3xl font-bold text-success-default leading-none mt-2 tracking-tight">{activeCount}</p>
           </div>
         </div>
       </Card>
 
-      <Card className="p-4 border-l-4 border-l-info-default">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-info-default/5 rounded-lg text-info-default">
-            <Activity size={20} />
+      <Card className="p-5 border-l-4 border-l-info-default rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-info-default/5 rounded-xl text-info-default">
+            <Activity size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Avg Perf.</p>
-            <p className="text-2xl font-black text-info-default leading-none mt-1">--%</p>
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Avg Perf.</p>
+            <p className="text-3xl font-bold text-info-default leading-none mt-2 tracking-tight">--%</p>
           </div>
         </div>
       </Card>
 
-      <Card className="p-4 border-l-4 border-l-warning-default">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-warning-default/5 rounded-lg text-warning-default">
-            <AlertTriangle size={20} />
+      <Card className="p-5 border-l-4 border-l-warning-default rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2.5 bg-warning-default/5 rounded-xl text-warning-default">
+            <AlertTriangle size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Requires Attention</p>
-            <p className="text-2xl font-black text-warning-default leading-none mt-1">0</p>
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Attention Required</p>
+            <p className="text-3xl font-bold text-warning-default leading-none mt-2 tracking-tight">0</p>
           </div>
         </div>
       </Card>

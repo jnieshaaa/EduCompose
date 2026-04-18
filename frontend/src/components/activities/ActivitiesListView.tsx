@@ -87,15 +87,15 @@ export function ActivitiesListView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Essay Activities</h1>
-          <p className="text-xs text-neutral-500 mt-0.5">Define assignments and manage submission cycles</p>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Essay Activities</h1>
+          <p className="text-sm text-neutral-500 mt-1 font-medium">Define assignments and manage submission cycles</p>
         </div>
         {!isReadOnly && (
           <button
             onClick={onCreateActivity}
-            className="flex items-center gap-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="flex items-center gap-2 bg-primary text-sm font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            <Plus size={16} /> Create Activity
+            <Plus size={18} /> Create Activity
           </button>
         )}
       </div>
@@ -108,11 +108,11 @@ export function ActivitiesListView({
           { label: "Due This Cycle", value: upcomingDue, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" }
         ].map((stat, i) => (
           <div key={i} className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm flex items-center gap-4">
-            <div className={`p-2.5 ${stat.bg} ${stat.color} rounded-xl`}>
-              <stat.icon size={18} />
+            <div className={`p-3 ${stat.bg} ${stat.color} rounded-xl`}>
+              <stat.icon size={20} />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-300">{stat.label}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-neutral-300">{stat.label}</p>
               <p className="text-xl font-bold text-neutral-900 leading-none mt-1">{stat.value}</p>
             </div>
           </div>
@@ -128,31 +128,31 @@ export function ActivitiesListView({
             placeholder="Search activities by name..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-neutral-50/50 border border-neutral-100 rounded-xl text-xs placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
+            className="w-full pl-10 pr-4 py-3 bg-neutral-50/50 border border-neutral-100 rounded-xl text-sm placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
           />
         </div>
 
         <div className="flex items-center gap-1 bg-neutral-50 p-1 rounded-xl border border-neutral-100/50">
           <button
             onClick={() => onViewModeChange("cards")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               viewMode === "cards"
                 ? "bg-white text-primary shadow-sm ring-1 ring-neutral-100"
                 : "text-neutral-400 hover:text-neutral-600"
             }`}
           >
-            <LayoutGrid size={14} />
+            <LayoutGrid size={16} />
             Cards
           </button>
           <button
             onClick={() => onViewModeChange("table")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               viewMode === "table"
                 ? "bg-white text-primary shadow-sm ring-1 ring-neutral-100"
                 : "text-neutral-400 hover:text-neutral-600"
             }`}
           >
-            <List size={14} />
+            <List size={16} />
             Table
           </button>
         </div>
@@ -164,8 +164,8 @@ export function ActivitiesListView({
           <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <BookOpen className="w-8 h-8 text-neutral-100" />
           </div>
-          <h3 className="text-sm font-bold text-neutral-800 mb-2">No Activities Found</h3>
-          <p className="text-xs text-neutral-400 max-w-[240px] mx-auto mb-6 leading-relaxed">
+          <h3 className="text-base font-bold text-neutral-800 mb-2">No Activities Found</h3>
+          <p className="text-sm text-neutral-400 max-w-[280px] mx-auto mb-8 leading-relaxed">
             {activities.length === 0
               ? "Start defining assignments by creating your first essay activity."
               : "No activities match your search query."}
@@ -173,7 +173,7 @@ export function ActivitiesListView({
           {activities.length === 0 && !isReadOnly && (
             <button 
               onClick={onCreateActivity}
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 px-6 py-2 rounded-full transition-all border border-primary/20"
+              className="text-sm font-bold uppercase tracking-widest text-primary hover:bg-primary/5 px-8 py-3 rounded-full transition-all border border-primary/20"
             >
               Get Started
             </button>
@@ -206,7 +206,7 @@ export function ActivitiesListView({
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-neutral-800 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                      <h3 className="text-lg font-bold text-neutral-800 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
                         {activity.title}
                       </h3>
                     </div>
@@ -231,30 +231,30 @@ export function ActivitiesListView({
 
                   {/* Description */}
                   {activity.description && (
-                    <p className="text-xs text-neutral-400 line-clamp-2 mb-4 leading-relaxed">
+                    <p className="text-sm text-neutral-500 line-clamp-3 mb-5 leading-relaxed">
                       {activity.description}
                     </p>
                   )}
 
                   {/* Metadata */}
-                  <div className="space-y-3 mb-6 flex-1">
-                    <div className="flex flex-wrap gap-1.5 tracking-tight font-bold text-[10px] uppercase text-neutral-300">
-                      <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-50 rounded-lg bg-neutral-50/50">
-                        <Users size={10} />
-                        <span className="truncate max-w-[80px]">
+                  <div className="space-y-4 mb-7 flex-1">
+                    <div className="flex flex-wrap gap-2 tracking-tight font-bold text-[13px] uppercase text-neutral-400">
+                      <div className="flex items-center gap-2 px-3.5 py-1.5 border border-neutral-50 rounded-lg bg-neutral-50/50">
+                        <Users size={14} className="text-neutral-300" />
+                        <span className="truncate max-w-[120px]">
                           {getCoursesLabel(activity.courseIds, courses.map((c) => ({ id: c.id, name: c.name })))}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-50 rounded-lg bg-neutral-50/50">
-                        <Layers size={10} />
-                        <span className="truncate max-w-[60px]">
+                      <div className="flex items-center gap-2 px-3.5 py-1.5 border border-neutral-50 rounded-lg bg-neutral-50/50">
+                        <Layers size={14} className="text-neutral-300" />
+                        <span className="truncate max-w-[100px]">
                           {getBlocksLabel(activity.blockIds, sections.map((s) => ({ id: s.id, name: s.name, courseId: s.courseId })))}
                         </span>
                       </div>
                     </div>
                     {rubricLabel && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary/60">
-                        <Target size={12} className="text-primary/40" />
+                      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                        <Target size={14} className="text-primary/40" />
                         <span className="truncate">{rubricLabel}</span>
                       </div>
                     )}
@@ -263,8 +263,8 @@ export function ActivitiesListView({
                   {/* Footer */}
                   <div className="pt-4 border-t border-neutral-50 flex items-center justify-between">
                     {dueDateStatus && (
-                      <div className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.1em] ${dueDateStatus.label.includes('Overdue') ? 'text-error-default' : 'text-neutral-400'}`}>
-                        <Calendar size={11} className="opacity-40" />
+                      <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] ${dueDateStatus.label.includes('Overdue') ? 'text-error-default' : 'text-neutral-500'}`}>
+                        <Calendar size={13} className="opacity-40" />
                         {dueDateStatus.label}
                       </div>
                     )}
@@ -284,11 +284,11 @@ export function ActivitiesListView({
           <Table>
             <TableHeader className="bg-neutral-50/50">
               <TableRow>
-                <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Activity Title</TableHead>
-                <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Course</TableHead>
-                <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Block</TableHead>
-                <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Due Date</TableHead>
-                <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Activity Title</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Course</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Block</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Due Date</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-neutral-50">
@@ -305,29 +305,29 @@ export function ActivitiesListView({
                     className="cursor-pointer hover:bg-neutral-50/30 transition-colors"
                     onClick={() => onActivityClick(activity.id)}
                   >
-                    <TableCell className="py-4">
-                      <div className="text-[11px] font-bold text-neutral-800 leading-tight mb-0.5">
+                    <TableCell className="py-5">
+                      <div className="text-sm font-bold text-neutral-800 leading-tight mb-1">
                         {activity.title}
                       </div>
-                      <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-neutral-300">
-                        <Target size={10} className="opacity-50" />
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                        <Target size={12} className="opacity-50" />
                         {rubricLabel || "No Rubric"}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1 bg-neutral-50 border border-neutral-100 rounded-lg">
+                      <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 px-3 py-1.5 bg-neutral-50 border border-neutral-100 rounded-lg">
                         {getCoursesLabel(activity.courseIds, courses.map((c) => ({ id: c.id, name: c.name })))}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1 bg-neutral-50 border border-neutral-100 rounded-lg">
+                      <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 px-3 py-1.5 bg-neutral-50 border border-neutral-100 rounded-lg">
                         {getBlocksLabel(activity.blockIds, sections.map((s) => ({ id: s.id, name: s.name, courseId: s.courseId })))}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {dueDateStatus ? (
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border ${
-                          dueDateStatus.label.includes('Overdue') ? 'bg-error-default/5 border-error-default/20 text-error-default' : 'bg-neutral-50 border-neutral-100 text-neutral-400'
+                        <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border ${
+                          dueDateStatus.label.includes('Overdue') ? 'bg-error-default/5 border-error-default/20 text-error-default' : 'bg-neutral-50 border-neutral-100 text-neutral-500'
                         }`}>
                           {dueDateStatus.label}
                         </span>

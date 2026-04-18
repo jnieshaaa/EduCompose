@@ -59,47 +59,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Helper with Timeout for Database calls
-  const safeDbQuery = async (query: any, timeoutMs = 2500) => {
-    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
-      setTimeout(() => resolve({ data: null, error: { message: "DB_TIMEOUT" } }), timeoutMs);
+  const safeDbQuery = async (query: any, timeoutMs = 10000) => {
+    const timeoutPromise = new Promise<{ data: null; error: { message: string; isTimeout: boolean } }>((resolve) => {
+      setTimeout(() => resolve({ data: null, error: { message: "DB_TIMEOUT", isTimeout: true } }), timeoutMs);
     });
     return Promise.race([query, timeoutPromise]);
   };
 
-  // Sync session to DB without blocking
-  const syncSessionToDB = async (_authUserId: string, _token: string) => {
-    // try {
-    //   const { data: userRec } = await safeDbQuery(
-    //     supabase.from("users").select("id").eq("auth_user_id", authUserId).maybeSingle()
-    //   );
-    //   const table = userRec ? "users" : "students";
-    //   await supabase.from(table).update({ current_session_id: token }).eq("auth_user_id", authUserId);
-    // } catch (e) { /* ignore */ }
-  };
-
-  const fetchUserFromTable = async (authUserId: string): Promise<User | null> => {
+  const fetchUserFromTable = async (authUserId: string): Promise<{ user: User | null; error: any }> => {
     try {
       // 1. Try fetching from users table (Teacher/Admin)
       const userResult: any = await safeDbQuery(
         supabase.from("users").select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
       );
 
+      if (userResult.error && userResult.error.message !== "DB_TIMEOUT") {
+         return { user: null, error: userResult.error };
+      }
+
       if (userResult.data) {
         const data = userResult.data;
         const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
         return {
-          id: data.id.toString(),
-          auth_id: authUserId,
-          email: data.email ?? "",
-          username: data.email ?? "",
-          full_name: fullName,
-          role: data.role || "teacher",
-          is_active: data.is_active ?? true,
-          email_verified: true,
-          onboarding_completed: data.onboarding_completed ?? false,
-          title: data.title,
-          nickname: data.nickname,
+          user: {
+            id: data.id.toString(),
+            auth_id: authUserId,
+            email: data.email ?? "",
+            username: data.email ?? "",
+            full_name: fullName,
+            role: data.role || "teacher",
+            is_active: data.is_active ?? true,
+            email_verified: true,
+            onboarding_completed: data.onboarding_completed ?? false,
+            title: data.title,
+            nickname: data.nickname,
+          },
+          error: null
         };
+      }
+
+      // If we got here and there was a timeout, return error to prevent logout
+      if (userResult.error?.isTimeout) {
+        return { user: null, error: userResult.error };
       }
 
       // 2. Try fetching from students table
@@ -111,35 +112,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const data = studentResult.data;
         const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "Student";
         return {
-          id: data.id.toString(),
-          auth_id: authUserId,
-          email: data.email ?? "",
-          username: data.email ?? "",
-          full_name: fullName,
-          role: "student",
-          is_active: true,
-          email_verified: true,
-          onboarding_completed: data.onboarding_completed ?? false,
+          user: {
+            id: data.id.toString(),
+            auth_id: authUserId,
+            email: data.email ?? "",
+            username: data.email ?? "",
+            full_name: fullName,
+            role: "student",
+            is_active: true,
+            email_verified: true,
+            onboarding_completed: data.onboarding_completed ?? false,
+          },
+          error: null
         };
       }
 
-      return null;
-    } catch { return null; }
-  };
-
-  const mapSupabaseUser = async (supabaseUser: any): Promise<User | null> => {
-    const su = supabaseUser;
-    const userFromTable = await fetchUserFromTable(su.id);
-    
-    // If the account was deleted from the database but still exists in Auth (stale session)
-    // we should treat it as null so the app forces a logout
-    if (!userFromTable) {
-      console.warn("User still has auth session but no database record found. Forcing logout check.");
-      return null;
+      return { user: null, error: studentResult.error };
+    } catch (e) { 
+      return { user: null, error: e }; 
     }
-
-    return userFromTable;
   };
+
+  const mapSupabaseUser = async (supabaseUser: any): Promise<{ user: User | null; error: any }> => {
+    const su = supabaseUser;
+    return await fetchUserFromTable(su.id);
+  };
+
 
   const logout = useCallback(async (reason?: string) => {
     try { 
@@ -181,9 +179,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      const mappedUser = await mapSupabaseUser(session.user);
+      const { user: mappedUser, error: mapError } = await mapSupabaseUser(session.user);
+      
+      if (mapError) {
+        console.warn("Database lookup failed during checkAuth but auth session exists. Retaining session for now.");
+        // We stay in current state (keep user if we had one)
+        return;
+      }
+
       if (!mappedUser) {
-        // If we have a session but no database record, sign the user out
+        // Record truly missing
         console.error("Authenticated but record not found in database. Signing out...");
         await logout("Account record no longer exists. Please sign up again.");
         return;
@@ -207,11 +212,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem("user");
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session.user) {
-          syncSessionToDB(session.user.id, session.access_token);
-          const mappedUser = await mapSupabaseUser(session.user);
-          localStorage.setItem("auth_token", session.access_token);
-          localStorage.setItem("user", JSON.stringify(mappedUser));
-          setUser(mappedUser);
+          const { user: mappedUser, error: mapError } = await mapSupabaseUser(session.user);
+          if (mappedUser) {
+            localStorage.setItem("auth_token", session.access_token);
+            localStorage.setItem("user", JSON.stringify(mappedUser));
+            setUser(mappedUser);
+          } else if (mapError) {
+            console.warn("Auth state change error (possibly timeout). Skipping state update.");
+          } else {
+            // No user and no error -> Record truly missing
+            await logout("Account database record not found.");
+          }
         }
       }
     });

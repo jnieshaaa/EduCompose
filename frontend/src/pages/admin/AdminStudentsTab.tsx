@@ -6,30 +6,34 @@ import {
   Edit2,
   Trash2,
   UserX,
-  Users,
-  UserCheck,
   MoreVertical,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Filter,
   X,
+  Activity,
+  User,
   Mail,
-  CheckSquare,
-  Square,
   Zap,
+  UserPlus,
+  ShieldCheck,
+  GraduationCap,
+  History,
+  Layers,
+  ChevronDown,
+  UserCircle
 } from "lucide-react";
 import { supabase, supabaseAdmin } from "../../lib/supabaseClient";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
 import EditStudentModal from "../../components/admin/EditStudentModal";
+import EnrollStudentModal from "../../components/admin/EnrollStudentModal.tsx";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
 import { authApi } from "../../api";
 import AlertModal from "../../components/ui/AlertModal";
 import { AdminPendingStudentsTab } from "./AdminPendingStudentsTab";
 import { useNotification } from "../../context/NotificationContext";
+import { motion, AnimatePresence } from "framer-motion";
+import Button from "../../components/ui/Button";
 
 interface Student {
   id: string;
@@ -63,11 +67,11 @@ interface Student {
 export const AdminStudentsTab: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
@@ -120,7 +124,7 @@ export const AdminStudentsTab: React.FC = () => {
     (triggerEl: HTMLElement, menuHeight: number = 280) => {
       const rect = triggerEl.getBoundingClientRect();
       const viewportPadding = 8;
-      const menuWidth = Math.min(208, window.innerWidth - viewportPadding * 2); // w-52 but capped to viewport
+      const menuWidth = Math.min(220, window.innerWidth - viewportPadding * 2);
 
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
@@ -143,7 +147,6 @@ export const AdminStudentsTab: React.FC = () => {
     [],
   );
 
-  // Keep portal dropdown aligned with its trigger while scrolling/resizing.
   useEffect(() => {
     if (!openDropdown) return;
 
@@ -168,12 +171,10 @@ export const AdminStudentsTab: React.FC = () => {
   const loadStudents = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
 
       const { data, error: fetchError } = await supabase
         .from("students")
-        .select(
-          `
+        .select(`
           *,
           users(is_active, onboarding_completed),
           programs_lookup(
@@ -186,14 +187,13 @@ export const AdminStudentsTab: React.FC = () => {
               code
             )
           )
-        `,
-        )
+        `)
         .order("last_name", { ascending: true });
 
       if (fetchError) throw fetchError;
       setStudents(data || []);
     } catch (err: any) {
-      setError(err instanceof Error ? err.message : String(err));
+      showNotification('error', err instanceof Error ? err.message : "Registry connection failed.");
     } finally {
       setLoading(false);
     }
@@ -232,8 +232,9 @@ export const AdminStudentsTab: React.FC = () => {
       if (updateError) throw updateError;
       await loadStudents();
       setOpenDropdown(null);
+      showNotification('success', `Student status transitioned to ${newStatus}.`);
     } catch (err: any) {
-      showNotification('error', err.message || "Failed to update student status");
+      showNotification('error', err.message || "Registry update failure.");
     }
   };
 
@@ -251,8 +252,6 @@ export const AdminStudentsTab: React.FC = () => {
       setConfirmingAction(null);
       const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // Prefer the auth-linked email (from users table) when available.
-      // This avoids failures when students.email was changed and became desynced from auth.
       let emailForAuthReset = student.email;
       if (student.auth_user_id) {
         const { data: linkedUser, error: linkedUserError } = await supabase
@@ -266,16 +265,14 @@ export const AdminStudentsTab: React.FC = () => {
         }
       }
 
-      // Call Supabase RPC (SECURITY DEFINER — no backend/service-role key needed)
       const { data: ok, error: rpcError } = await supabase.rpc(
         "admin_reset_student_password",
         { p_email: emailForAuthReset, p_new_password: newPassword }
       );
 
       if (rpcError) throw new Error(rpcError.message);
-      if (!ok) throw new Error("Student email not found in auth system. Has their account been provisioned?");
+      if (!ok) throw new Error("Synchronization failure: Auth identity not found.");
 
-      // Send the new password to the student via EmailJS
       await sendStudentWelcomeEmail({
         to_name: `${student.first_name} ${student.last_name}`.trim(),
         to_email: student.email,
@@ -283,14 +280,10 @@ export const AdminStudentsTab: React.FC = () => {
         temp_password: newPassword,
       });
 
-      if (emailForAuthReset !== student.email) {
-        showNotification('warning', `Password was reset using linked auth email (${emailForAuthReset}). The welcome email was sent to ${student.email}. Please align student email with auth email to avoid future login issues.`);
-      } else {
-        showNotification('success', "New password generated and sent to the student's email successfully.");
-      }
+      showNotification('success', "Credentials recalculated and dispatched.");
       setOpenDropdown(null);
     } catch (err: any) {
-      showNotification('error', err.message || "Failed to resend password.");
+      showNotification('error', err.message || "Registry synchronization failure.");
     } finally {
       setLoading(false);
     }
@@ -298,7 +291,7 @@ export const AdminStudentsTab: React.FC = () => {
 
   const handleProvisionAuthAccount = async (student: Student) => {
     if (!student.email) {
-      showNotification('warning', "Student email is required before provisioning an auth account.");
+      showNotification('warning', "Instructional email undefined.");
       return;
     }
     setConfirmingAction({ type: "provision", student });
@@ -324,11 +317,9 @@ export const AdminStudentsTab: React.FC = () => {
 
       const authId = provisionResult.auth_id;
       if (authId) {
-        // Link student record
         await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
       }
 
-      // 4. Send Email
       await sendStudentWelcomeEmail({
         to_name: `${student.first_name} ${student.last_name}`.trim(),
         to_email: student.email,
@@ -338,9 +329,9 @@ export const AdminStudentsTab: React.FC = () => {
 
       await loadStudents();
       setOpenDropdown(null);
-      showNotification('success', "Account provisioned and welcome email sent successfully via Supabase RPC.");
+      showNotification('success', "Registry identity provisioned.");
     } catch (err: any) {
-      showNotification('error', "Error: " + (err.message || "Failed to provision account."));
+      showNotification('error', err.message || "Instructional provisioning failure.");
     } finally {
       setLoading(false);
     }
@@ -365,14 +356,13 @@ export const AdminStudentsTab: React.FC = () => {
       if (deleteError) throw deleteError;
       await loadStudents();
       setOpenDropdown(null);
+      showNotification('success', "Student record decommissioned.");
     } catch (err: any) {
-      showNotification('error', err.message || "Failed to delete student");
+      showNotification('error', err.message || "Decommissioning failure.");
     } finally {
       setLoading(false);
     }
   };
-
-  // --- BULK ACTION HANDLERS ---
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -407,11 +397,11 @@ export const AdminStudentsTab: React.FC = () => {
         
       if (error) throw error;
       
-      showNotification('success', `Successfully archived ${ids.length} students.`);
+      showNotification('success', `${ids.length} records purged from registry.`);
       setSelectedIds(new Set());
       await loadStudents();
     } catch (err: any) {
-      showNotification('error', "Error during bulk delete: " + err.message);
+      showNotification('error', "Bulk purge failure: " + err.message);
     } finally {
       setIsBulkProcessing(false);
     }
@@ -420,12 +410,10 @@ export const AdminStudentsTab: React.FC = () => {
   const handleBulkProvision = async () => {
     const selectedStudents = students.filter(s => selectedIds.has(s.id));
     const needProvision = selectedStudents.filter(s => !s.auth_user_id);
-    
     if (needProvision.length === 0) {
-      showNotification('info', "All selected students already have auth accounts.");
+      showNotification('info', "All selected entities maintain valid identities.");
       return;
     }
-
     setConfirmingAction({ type: "bulk_provision" });
   };
 
@@ -491,13 +479,13 @@ export const AdminStudentsTab: React.FC = () => {
         });
         successCount++;
       } catch (err) {
-        console.error(`Failed to provision student ${student.student_code}:`, err);
+        console.error(`Failed to provision:`, err);
         failCount++;
       }
       setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
 
-    showNotification('success', `Bulk Provisioning Complete:\n- Success: ${successCount}\n- Failed: ${failCount}`);
+    showNotification('success', `Bulk provisioning complete. Success: ${successCount}, Failed: ${failCount}`);
     setSelectedIds(new Set());
     await loadStudents();
     setIsBulkProcessing(false);
@@ -545,13 +533,13 @@ export const AdminStudentsTab: React.FC = () => {
         });
         successCount++;
       } catch (err) {
-        console.error(`Failed to reset student ${student.student_code}:`, err);
+        console.error(`Failed:`, err);
         failCount++;
       }
       setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
 
-    showNotification('success', `Bulk Reset Complete:\n- Sent: ${successCount}\n- Failed: ${failCount}`);
+    showNotification('success', `Bulk dispatch complete. Success: ${successCount}, Failed: ${failCount}`);
     setSelectedIds(new Set());
     setIsBulkProcessing(false);
   };
@@ -574,7 +562,6 @@ export const AdminStudentsTab: React.FC = () => {
     return true;
   });
 
-  // Get unique blocks for the current selection
   const availableBlocks = Array.from(new Set(
     students
       .filter(s => {
@@ -590,12 +577,11 @@ export const AdminStudentsTab: React.FC = () => {
       .filter(Boolean)
   )).sort();
 
-  // Reset pagination when searching or filtering
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds(new Set());
   }, [searchTerm, deptFilter, progFilter, blockFilter]);
 
-  // Calculate pagination
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -640,523 +626,458 @@ export const AdminStudentsTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Students</h1>
-          <p className="text-neutral-600 mt-1">
-            View and manage student records
-          </p>
+          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Student Registry</h1>
+          <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">Institutional Student Lifecycle Management</p>
         </div>
-        <div className="flex gap-2">
-          {activeTab === "enrolled" && (
-            <Button variant="outline" onClick={loadStudents}>
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          )}
+        <div className="flex gap-3">
+          <Button 
+            variant="outline"
+            onClick={loadStudents}
+            className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
+          >
+            <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
+            <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Sync Registry</span>
+          </Button>
+          <Button 
+            onClick={() => setIsEnrollModalOpen(true)}
+            className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all px-6 h-12 flex items-center gap-2"
+          >
+            <UserPlus size={18} />
+            <span className="text-xs font-black uppercase tracking-widest">Enroll Student</span>
+          </Button>
         </div>
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-2 bg-neutral-100/50 p-1.5 rounded-[1.25rem] w-fit border border-neutral-100">
         <button
           onClick={() => setActiveTab("enrolled")}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-[0.15em] uppercase ${
             activeTab === "enrolled"
-              ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
-              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50"
+              ? "bg-white text-primary shadow-sm border border-neutral-200"
+              : "text-neutral-400 hover:text-neutral-600"
           }`}
         >
-          <UserCheck className="w-4 h-4" />
-          Enrolled Students
+          <ShieldCheck size={14} />
+          Enrolled Active
         </button>
         <button
           onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all relative ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-[0.15em] uppercase relative ${
             activeTab === "pending"
-              ? "bg-white text-primary shadow-sm ring-1 ring-black/5"
-              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50"
+              ? "bg-white text-primary shadow-sm border border-neutral-200"
+              : "text-neutral-400 hover:text-neutral-600"
           }`}
         >
-          <Users className="w-4 h-4" />
+          <History size={14} />
           Pending Approvals
-          {/* We could add a badge here if we fetch pending count */}
         </button>
       </div>
 
-      {activeTab === "pending" ? (
-         <AdminPendingStudentsTab />
-      ) : (
-        <>
-          {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input
-              type="text"
-              placeholder="Search by ID, name, or email..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-              className="pl-9 h-10 text-sm"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-neutral-400 shrink-0" />
-            <select
-              value={deptFilter}
-              onChange={(e) => {
-                setDeptFilter(e.target.value);
-                setProgFilter("");
-                setBlockFilter("");
-              }}
-              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.code}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={progFilter}
-              disabled={!deptFilter}
-              onChange={(e) => {
-                setProgFilter(e.target.value);
-                setBlockFilter("");
-              }}
-              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-            >
-              <option value="">All Programs</option>
-              {allPrograms
-                .filter(p => !deptFilter || p.department_id === departments.find(d => d.code === deptFilter)?.id)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.abbr})
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={blockFilter}
-              disabled={!progFilter && !deptFilter}
-              onChange={(e) => setBlockFilter(e.target.value)}
-              className="w-full h-10 px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-            >
-              <option value="">All Blocks</option>
-              {availableBlocks.map((b) => (
-                <option key={b} value={b}>
-                  Block {b}
-                </option>
-              ))}
-            </select>
-            {(searchTerm || deptFilter || progFilter || blockFilter) && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setDeptFilter("");
-                  setProgFilter("");
-                  setBlockFilter("");
-                }}
-                className="p-2 text-neutral-400 hover:text-neutral-600 shrink-0"
-                title="Clear all filters"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Bulk Actions Toolbar */}
-      {selectedIds.size > 0 && (
-        <Card className="p-4 bg-primary/5 border-primary/20 sticky top-0 z-30 shadow-lg animate-in slide-in-from-top-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold">
-                {selectedIds.size}
+      <AnimatePresence mode="wait">
+        {activeTab === "pending" ? (
+          <motion.div
+            key="pending"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminPendingStudentsTab />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="enrolled"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
+          >
+            {/* Telemetry Filter Hub */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
+              <div className="flex items-center gap-3">
+                <Search size={16} className="text-neutral-400" />
+                <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Telemetry Filters</h3>
               </div>
-              <div>
-                <p className="text-sm font-bold text-primary">Students Selected</p>
-                <p className="text-[10px] text-primary/60">Choose an action to perform on all selected records</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Universal Search</label>
+                  <div className="relative group/search">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/search:text-primary transition-colors" />
+                    <input
+                      placeholder="Name, ID, or Email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                  <div className="relative group/dept">
+                    <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/dept:text-primary transition-colors" />
+                    <select
+                      value={deptFilter}
+                      onChange={(e) => {
+                        setDeptFilter(e.target.value);
+                        setProgFilter("");
+                        setBlockFilter("");
+                      }}
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                    >
+                      <option value="">All Departments</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.code}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                  <div className="relative group/prog">
+                    <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/prog:text-primary transition-colors" />
+                    <select
+                      value={progFilter}
+                      disabled={!deptFilter}
+                      onChange={(e) => {
+                        setProgFilter(e.target.value);
+                        setBlockFilter("");
+                      }}
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
+                    >
+                      <option value="">Broad View</option>
+                      {allPrograms
+                        .filter(p => !deptFilter || p.department_id === departments.find(d => d.code === deptFilter)?.id)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.abbr}
+                          </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Block Segment</label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1 group/block">
+                      <select
+                        value={blockFilter}
+                        disabled={!progFilter && !deptFilter}
+                        onChange={(e) => setBlockFilter(e.target.value)}
+                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
+                      >
+                        <option value="">All Blocks</option>
+                        {availableBlocks.map((b) => (
+                          <option key={b} value={b}>
+                            Block {b}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 pointer-events-none" />
+                    </div>
+                    {(searchTerm || deptFilter || progFilter || blockFilter) && (
+                      <button
+                        onClick={() => {
+                          setSearchTerm("");
+                          setDeptFilter("");
+                          setProgFilter("");
+                          setBlockFilter("");
+                        }}
+                        className="w-11 h-11 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm border border-red-100"
+                        title="Reset Filters"
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {isBulkProcessing ? (
-                <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-lg border border-primary/10">
-                   <div className="text-sm font-bold text-primary animate-pulse">
-                     Processing {bulkProgress.current} / {bulkProgress.total}...
-                   </div>
-                   <div className="w-32 h-2 bg-neutral-200 rounded-full overflow-hidden">
-                     <div 
-                       className="h-full bg-primary transition-all duration-300"
-                       style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
-                     />
-                   </div>
+
+            {/* Bulk Execution Console */}
+            <AnimatePresence>
+              {selectedIds.size > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="sticky top-6 z-[60] p-6 bg-primary rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6"
+                >
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-white/10 rounded-2xl flex flex-col items-center justify-center border border-white/5 shadow-2xl">
+                      <span className="text-xl font-black text-white leading-none">{selectedIds.size}</span>
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-white/40 mt-1">Units</span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white tracking-tight uppercase">Bulk Execution Console</p>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest flex items-center gap-2">
+                        <Zap size={10} className="text-primary" /> Active Registry Operations
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    {isBulkProcessing ? (
+                      <div className="flex items-center gap-6 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
+                         <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5">Processing Provisioning</span>
+                            <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                                className="h-full bg-primary"
+                              />
+                            </div>
+                         </div>
+                         <div className="text-xs font-black text-white">
+                           {bulkProgress.current} <span className="text-white/30 mx-1">/</span> {bulkProgress.total}
+                         </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          onClick={handleBulkProvision}
+                          className="rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:scale-[1.03] transition-all"
+                        >
+                          Provision Access
+                        </Button>
+                        <Button 
+                          onClick={handleBulkResendWelcome}
+                          className="rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:bg-white/20 transition-all border border-white/5"
+                        >
+                          Dispatch Credentials
+                        </Button>
+                        <Button 
+                          onClick={handleBulkDelete}
+                          className="rounded-xl bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:bg-red-500/20 transition-all border border-red-500/20"
+                        >
+                          Registry Purge
+                        </Button>
+                        <button onClick={() => setSelectedIds(new Set())} className="p-2 text-white/30 hover:text-white transition-colors">
+                          <X size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden min-h-[400px]">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-50/50">
+                      <th className="px-8 py-5 w-10">
+                        <div className="flex items-center justify-center">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedIds.size === currentItems.length && currentItems.length > 0}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            className="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary"
+                          />
+                        </div>
+                      </th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Institutional Placement</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Lifecycle Status</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Telemetry Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-32 text-center">
+                          <div className="flex flex-col items-center justify-center gap-6">
+                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Querying Registry Hub</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : currentItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-32 text-center">
+                          <div className="flex flex-col items-center justify-center opacity-40">
+                            <UserCircle size={48} className="text-neutral-300 mb-4" />
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Zero signatures detected in search window</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      currentItems.map((student) => (
+                        <tr key={student.id} className="group hover:bg-neutral-50/50 transition-all duration-300">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center justify-center">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedIds.has(student.id)}
+                                onChange={() => handleToggleSelect(student.id)}
+                                className="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary transition-all group-hover:scale-110"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-5">
+                         <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                           <User size={20} />
+                         </div>
+                         <div>
+                                <div className="text-sm font-black text-neutral-900 tracking-tight">{student.last_name}, {student.first_name}</div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{student.student_code} • {student.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                                <Layers size={14} />
+                              </div>
+                              <div>
+                                <div className="text-xs font-black text-neutral-900 tracking-tight">{student.programs_lookup?.abbr} {student.year}{student.block_name}</div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                                  {student.programs_lookup?.departments?.name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col items-center gap-2">
+                               <div className="flex items-center gap-1.5">
+                                 <span className={`w-1.5 h-1.5 rounded-full ${student.is_active ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`} />
+                                 <span className={`text-[10px] font-black uppercase tracking-wider ${student.is_active ? 'text-green-600' : 'text-neutral-400'}`}>
+                                   {student.enrollment_status}
+                                 </span>
+                               </div>
+                               {!student.auth_user_id ? (
+                                 <span className="text-[9px] font-black bg-red-50 text-red-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Identity Pending</span>
+                               ) : student.users?.onboarding_completed ? (
+                                 <span className="text-[9px] font-black bg-green-50 text-green-500 px-2 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1">
+                                   <ShieldCheck size={10} /> Sync Active
+                                 </span>
+                               ) : (
+                                 <span className="text-[9px] font-black bg-amber-50 text-amber-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Pending Setup</span>
+                               )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <div className="relative inline-block text-left">
+                              <button
+                                data-student-action-trigger={student.id}
+                                onClick={() => setOpenDropdown(student.id)}
+                                className="p-2.5 text-neutral-300 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all"
+                              >
+                                <MoreVertical size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* High-Density Pagination Console */}
+              {!loading && filteredStudents.length > 0 && (
+                <div className="px-8 py-8 bg-white border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Viewing Data Window</span>
+                    <span className="text-sm font-black text-neutral-900">
+                      {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredStudents.length)} <span className="text-neutral-300 mx-1">/</span> {filteredStudents.length.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="p-3 text-neutral-400 hover:text-neutral-900 disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    
+                    <div className="flex items-center gap-1.5">
+                      {getPageNumbers().map((page, i) => (
+                        page === "..." ? (
+                          <span key={`dots-${i}`} className="px-2 text-neutral-300 font-black">•••</span>
+                        ) : (
+                          <button
+                            key={`page-${page}`}
+                            onClick={() => setCurrentPage(Number(page))}
+                            className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-black rounded-2xl transition-all ${
+                              currentPage === page
+                                ? "bg-primary text-white shadow-xl shadow-primary/20"
+                                : "bg-neutral-50 text-neutral-400 hover:bg-neutral-100"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      ))}
+                    </div>
+
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="p-3 text-neutral-400 hover:text-neutral-900 disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Density</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-black text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
+                    >
+                      {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-2" />
-                    Archive All
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleBulkResendWelcome}
-                  >
-                    <Mail className="w-3.5 h-3.5 mr-2" />
-                    Resend Auth
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="bg-primary text-white"
-                    onClick={handleBulkProvision}
-                  >
-                    <Zap className="w-3.5 h-3.5 mr-2" />
-                    Provision All
-                  </Button>
-                  <button 
-                    onClick={() => setSelectedIds(new Set())}
-                    className="ml-2 p-2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </>
               )}
             </div>
-          </div>
-        </Card>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-neutral-600 mt-4">Loading students...</p>
-        </div>
-      ) : students.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-neutral-600 mb-4">No students found.</p>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
-                <tr className="text-left">
-                  <th className="px-6 py-3">
-                    <button 
-                      onClick={() => handleSelectAll(selectedIds.size < currentItems.length)}
-                      className="flex items-center justify-center p-1 hover:bg-neutral-100 rounded transition-colors text-primary"
-                    >
-                      {selectedIds.size === currentItems.length ? (
-                        <CheckSquare className="w-4 h-4" />
-                      ) : (
-                        <Square className="w-4 h-4" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Student ID
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Dept
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Program
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Year/Block
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                    Account Status
-                  </th>
-                  <th className="px-6 py-3 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-neutral-100">
-                {currentItems.map((s) => (
-                  <tr
-                    key={s.id}
-                    className={`hover:bg-neutral-50/50 transition-colors group ${selectedIds.has(s.id) ? "bg-primary/5" : ""}`}
-                  >
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleToggleSelect(s.id)}
-                        className={`flex items-center justify-center p-1 rounded transition-colors ${selectedIds.has(s.id) ? "text-primary" : "text-neutral-300 group-hover:text-neutral-400"}`}
-                      >
-                        {selectedIds.has(s.id) ? (
-                          <CheckSquare className="w-4 h-4" />
-                        ) : (
-                          <Square className="w-4 h-4" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-600">
-                      {s.student_code}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-neutral-900">{`${s.first_name || ""} ${s.last_name || ""}`}</span>
-                        <span className="text-xs text-neutral-400">
-                          {s.email || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 bg-neutral-100 text-neutral-600 rounded text-[10px] font-bold uppercase">
-                        {s.programs_lookup?.departments?.code || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 bg-primary/5 text-primary rounded text-[10px] font-bold uppercase">
-                        {s.programs_lookup?.abbr || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {s.year || "-"}
-                      {s.block_name ? ` • ${s.block_name}` : ""}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-[10px] font-bold rounded uppercase ${
-                          s.enrollment_status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : s.enrollment_status === "dropped"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {s.enrollment_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {s.users && s.users.onboarding_completed === true ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
-                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                          Opened
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100">
-                          <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-                          Not yet opened
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <div className="relative inline-block text-left">
-                         <button
-                           data-student-action-trigger={s.id}
-                           onClick={(e) => {
-                             if (openDropdown === s.id) {
-                               setOpenDropdown(null);
-                             } else {
-                               calculateDropdownPosition(
-                                 e.currentTarget,
-                                 dropdownRef.current?.offsetHeight || 280,
-                               );
-                               setOpenDropdown(s.id);
-                             }
-                           }}
-                           className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"
-                         >
-                           <MoreVertical size={16} />
-                         </button>
-                       </div>
-                    </td>
-                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination Controls */}
-          {!loading && filteredStudents.length > 0 && (
-            <div className="px-6 py-8 bg-neutral-50/50 border-t border-neutral-200 space-y-4">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                {/* Range Indicator */}
-                <div className="order-2 md:order-1 flex flex-col">
-                  <div className="text-sm font-medium text-neutral-400">
-                    {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredStudents.length)} of {filteredStudents.length.toLocaleString()}
-                  </div>
-                </div>
-
-                {/* Pagination Controls */}
-                <div className="order-1 md:order-2 flex items-center gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft size={16} /> Back
-                  </button>
-
-                  <div className="flex items-center gap-1.5">
-                    {getPageNumbers().map((page, i) => (
-                      page === "..." ? (
-                        <span key={`dots-${i}`} className="px-2 text-neutral-400">...</span>
-                      ) : (
-                        <button
-                          key={`page-${page}`}
-                          onClick={() => setCurrentPage(Number(page))}
-                          className={`min-w-[36px] h-9 flex items-center justify-center text-sm font-bold rounded-lg transition-all border ${
-                            currentPage === page
-                              ? "bg-neutral-900 border-neutral-900 text-white shadow-lg"
-                              : "bg-white border-neutral-200 text-neutral-600 hover:border-neutral-400"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    ))}
-                  </div>
-
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
-
-                {/* Items Per Page */}
-                <div className="order-3 flex items-center gap-3">
-                  <span className="text-sm font-medium text-neutral-500 whitespace-nowrap">Result per page</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-bold text-neutral-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer min-w-[70px]"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-    </>
-  )}
-
-      {editingStudent && (
-        <EditStudentModal
-          isOpen={!!editingStudent}
-          student={editingStudent}
-          onClose={() => setEditingStudent(null)}
-          onSuccess={loadStudents}
+      {/* Reusable Modals */}
+      {isEnrollModalOpen && (
+        <EnrollStudentModal
+          isOpen={isEnrollModalOpen}
+          onClose={() => setIsEnrollModalOpen(false)}
+          onSuccess={() => {
+            setIsEnrollModalOpen(false);
+            loadStudents();
+          }}
         />
       )}
 
-      {selectedIds.size > 0 && isBulkProcessing && (
-        <div className="fixed inset-0 z-[110] bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          {/* Silent progress indicator for bulk */}
-        </div>
+      {editingStudent && (
+        <EditStudentModal
+          student={editingStudent}
+          isOpen={!!editingStudent}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={() => {
+            setEditingStudent(null);
+            loadStudents();
+          }}
+        />
       )}
 
-      <AlertModal
-        isOpen={confirmingAction?.type === "delete"}
-        onClose={() => setConfirmingAction(null)}
-        type="error"
-        title="Archive Student"
-        message={`Are you sure you want to archive ${confirmingAction?.student?.first_name} ${confirmingAction?.student?.last_name}? This will remove them from the active list.`}
-        showCancel
-        confirmText="Confirm Archive"
-        onConfirm={executeDelete}
-      />
-
-      <AlertModal
-        isOpen={confirmingAction?.type === "resend"}
-        onClose={() => setConfirmingAction(null)}
-        type="warning"
-        title="Reset Password"
-        message={`Generate a new temporary password for ${confirmingAction?.student?.first_name}? A welcome email will be sent immediately.`}
-        showCancel
-        confirmText="Generate & Send"
-        onConfirm={executeResend}
-      />
-
-      <AlertModal
-        isOpen={confirmingAction?.type === "provision"}
-        onClose={() => setConfirmingAction(null)}
-        type="info"
-        title="Provision Account"
-        message={`Create a new auth account for ${confirmingAction?.student?.first_name}? They will receive their login credentials via email.`}
-        showCancel
-        confirmText="Provision Now"
-        onConfirm={executeProvision}
-      />
-
-      <AlertModal
-        isOpen={confirmingAction?.type === "bulk_delete"}
-        onClose={() => setConfirmingAction(null)}
-        type="error"
-        title="Bulk Archive"
-        message={`Are you sure you want to archive ${selectedIds.size} selected students? This will remove them from the active roster.`}
-        showCancel
-        confirmText="Archive Selected"
-        onConfirm={executeBulkDelete}
-      />
-
-      <AlertModal
-        isOpen={confirmingAction?.type === "bulk_provision"}
-        onClose={() => setConfirmingAction(null)}
-        type="info"
-        title="Bulk Provision"
-        message={`Provision auth accounts for ${selectedIds.size} students? This may take a moment and will send emails to each student.`}
-        showCancel
-        confirmText="Start Provisioning"
-        onConfirm={executeBulkProvision}
-      />
-
-      <AlertModal
-        isOpen={confirmingAction?.type === "bulk_resend"}
-        onClose={() => setConfirmingAction(null)}
-        type="warning"
-        title="Bulk Resend"
-        message={`Reset passwords and resend credentials to ${selectedIds.size} students? Existing passwords will be invalidated.`}
-        showCancel
-        confirmText="Reset & Resend"
-        onConfirm={executeBulkResend}
-      />
-
-      {/* Portal dropdown — renders above the overflow-x-auto table */}
+      {/* Central Action Console (Portaled Dropdown) */}
       {openDropdown && dropdownPos &&
         createPortal(
           <div
@@ -1166,88 +1087,121 @@ export const AdminStudentsTab: React.FC = () => {
               top: dropdownPos.top,
               left: dropdownPos.left,
               zIndex: 9999,
-              width: "min(208px, calc(100vw - 16px))",
+              width: "min(220px, calc(100vw - 16px))",
               maxWidth: "calc(100vw - 16px)",
               maxHeight: "calc(100vh - 16px)",
               overflowY: "auto",
               overflowX: "hidden",
             }}
-            className="bg-white rounded-xl shadow-2xl border border-neutral-100 py-2 animate-in fade-in zoom-in duration-150"
+            className="bg-white rounded-3xl shadow-2xl border border-neutral-100 py-3 animate-in fade-in zoom-in duration-150 overflow-hidden"
           >
             {(() => {
               const s = currentItems.find((x) => x.id === openDropdown);
               if (!s) return null;
               return (
-                <>
-                  <button
-                    onClick={() => {
-                      setEditingStudent(s);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  >
-                    <Edit2 size={14} className="text-blue-500" />
-                    Edit Profile
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(s)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  >
-                    {s.enrollment_status === "active" ? (
-                      <>
-                        <UserX size={14} className="text-amber-500" />
-                        Deactivate (Drop)
-                      </>
+                <div className="flex flex-col focus:outline-none">
+                  <div className="px-5 py-3 border-b border-neutral-50 mb-1">
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.15em] mb-0.5">Record Context</p>
+                    <p className="text-xs font-black text-neutral-900 truncate">{s.first_name} {s.last_name}</p>
+                  </div>
+
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setEditingStudent(s); setOpenDropdown(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                    >
+                      <Edit2 size={14} className="text-neutral-400" />
+                      Modify Record
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedStudentForLogs(s);
+                        searchParams.set("logs", s.id);
+                        setSearchParams(searchParams);
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                    >
+                      <Activity size={14} className="text-neutral-400" />
+                      Telemetry Logs
+                    </button>
+                  </div>
+
+                  <div className="py-1 border-t border-neutral-50">
+                    <p className="px-5 py-2 text-[8px] font-black text-neutral-300 uppercase tracking-[0.2em]">Identity Management</p>
+                    {s.auth_user_id ? (
+                      <button
+                        onClick={() => { handleResendPassword(s); setOpenDropdown(null); }}
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                      >
+                        <Mail size={14} />
+                        Dispatch Credentials
+                      </button>
                     ) : (
-                      <>
-                        <UserCheck size={14} className="text-green-500" />
-                        Re-activate
-                      </>
+                      <button
+                        onClick={() => { handleProvisionAuthAccount(s); setOpenDropdown(null); }}
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                      >
+                        <Zap size={14} />
+                        Provision Identity
+                      </button>
                     )}
-                  </button>
-                  <div className="my-1 border-t border-neutral-100" />
-                  <button
-                    onClick={() => handleDeleteStudent(s)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
-                  >
-                    <Trash2 size={14} />
-                    Archive Student
-                  </button>
-                  <div className="my-1 border-t border-neutral-100" />
-                  <button
-                    onClick={() => handleResendPassword(s)}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  >
-                    <Mail size={14} className="text-blue-500" />
-                    Resend Password
-                  </button>
-                  <button
-                    onClick={() => handleProvisionAuthAccount(s)}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  >
-                    <UserCheck size={14} className="text-emerald-600" />
-                    {s.auth_user_id ? "Re-provision Auth Account" : "Provision Auth Account"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedStudentForLogs(s);
-                      setOpenDropdown(null);
-                      searchParams.set("logs", s.id);
-                      setSearchParams(searchParams);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                  >
-                    <Search size={14} className="text-primary" />
-                    View Activity Logs
-                  </button>
-                </>
+                    <button
+                      onClick={() => { handleToggleActive(s); setOpenDropdown(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                    >
+                      <UserX size={14} className="text-neutral-400" />
+                      Transition State
+                    </button>
+                  </div>
+
+                  <div className="py-1 border-t border-neutral-50">
+                    <button
+                      onClick={() => { handleDeleteStudent(s); setOpenDropdown(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-red-500 uppercase tracking-widest hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Purge Profile
+                    </button>
+                  </div>
+                </div>
               );
             })()}
           </div>,
-          document.body
+          document.body,
         )}
+
+      {/* Confirm Execution Console */}
+      {confirmingAction && (
+        <AlertModal
+          isOpen={!!confirmingAction}
+          onClose={() => setConfirmingAction(null)}
+          type={["delete", "bulk_delete"].includes(confirmingAction.type) ? "error" : "warning"}
+          title={
+            confirmingAction.type === "delete" ? "Record Decommission" :
+            confirmingAction.type === "bulk_delete" ? "Institutional Purge" :
+            confirmingAction.type === "resend" ? "Credential Dispatch" :
+            confirmingAction.type === "bulk_resend" ? "Global Credential Dispatch" :
+            confirmingAction.type === "provision" ? "Identity Provisioning" : "Global Provisioning"
+          }
+          message={
+            confirmingAction.type === "delete" ? `Confirm decommissioning of ${confirmingAction.student?.student_code}. All pedagogical data will be permanently detached.` :
+            confirmingAction.type === "bulk_delete" ? `Initialize purge of ${selectedIds.size} student records. This action is irreversible.` :
+            confirmingAction.type === "resend" || confirmingAction.type === "provision" ? `Begin credential calculation and dispatch for ${confirmingAction.student?.email}.` :
+            `Initialize instructional onboarding for ${selectedIds.size} entities across the global registry.`
+          }
+          showCancel
+          confirmText="Confirm Execution"
+          cancelText="Abort Operation"
+          onConfirm={
+            confirmingAction.type === "delete" ? executeDelete :
+            confirmingAction.type === "resend" ? executeResend :
+            confirmingAction.type === "provision" ? executeProvision :
+            confirmingAction.type === "bulk_delete" ? executeBulkDelete :
+            confirmingAction.type === "bulk_provision" ? executeBulkProvision : executeBulkResend
+          }
+        />
+      )}
     </div>
   );
 };
-
-export default AdminStudentsTab;

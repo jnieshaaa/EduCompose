@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2, School as SchoolIcon, Layers, X, Hash, GraduationCap, Building2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import type { School, Department, Program } from "../../types/academic";
 import { useNotification } from "../../context/NotificationContext";
+import { motion, AnimatePresence } from "framer-motion";
+import Button from "../../components/ui/Button";
 
 export const AdminSchoolsTab: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
@@ -134,9 +136,10 @@ export const AdminSchoolsTab: React.FC = () => {
       setSchoolForm({ name: "", code: "", departments: [] });
       setEditingSchool(null);
       setShowSchoolModal(false);
+      showNotification('success', editingSchool ? "Academic unit synchronized." : "Institutional record established.");
     } catch (error) {
       console.error("Error saving school:", error);
-      showNotification('error', "Error saving school. Please check if the code is unique.");
+      showNotification('error', "Error saving school. Unique ID conflict or database timeout.");
     }
   };
 
@@ -155,8 +158,6 @@ export const AdminSchoolsTab: React.FC = () => {
     });
     setDeptForm({ name: "", code: "", programs: [] });
   };
-
-
 
   const addDepartment = async () => {
     if (!deptForm.name || !deptForm.code || !selectedSchool) return;
@@ -215,7 +216,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteSchool = async (id: string) => {
-    if (confirm("Delete this school and all its departments?")) {
+    if (confirm("Terminate institutional record and cascading dependencies?")) {
       try {
         const { error } = await supabase.from("schools").delete().eq("id", id);
         if (error) throw error;
@@ -227,7 +228,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteDepartment = async (id: string) => {
-    if (confirm("Delete this department and all its programs?")) {
+    if (confirm("Decommission department and associated curriculum?")) {
       try {
         const { error } = await supabase
           .from("departments")
@@ -242,7 +243,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteProgram = async (id: string) => {
-    if (confirm("Delete this program?")) {
+    if (confirm("Purge program registry?")) {
       try {
         const { error } = await supabase
           .from("programs_lookup")
@@ -257,355 +258,493 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-neutral-900">
-          School Management
-        </h1>
-        <button
+    <div className="space-y-8 pb-20">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Institutional Architecture</h1>
+          <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">Academic Infrastructure & Registry</p>
+        </div>
+        <Button
           onClick={() => setShowSchoolModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+          className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-6 py-2.5 h-12"
         >
-          <Plus size={18} /> Add School
-        </button>
+          <Plus size={20} className="mr-2" /> Add Institution
+        </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid gap-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
-            <Loader2 className="w-10 h-10 animate-spin mb-4 text-primary" />
-            <p>Loading school data...</p>
+          <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden">
+            <div className="relative">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <div className="absolute inset-0 blur-xl bg-primary/20 animate-pulse rounded-full" />
+            </div>
+            <p className="mt-6 text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Synchronizing Registry</p>
           </div>
         ) : schools.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-lg border border-dashed border-neutral-300 text-neutral-500">
-            <p>No schools found. Add your first school to get started.</p>
+          <div className="text-center py-32 bg-white rounded-[2.5rem] border-2 border-dashed border-neutral-200 text-neutral-400">
+             <SchoolIcon size={48} className="mx-auto mb-4 opacity-20" />
+             <p className="text-[10px] font-black uppercase tracking-[0.2em]">No internal architecture detected</p>
           </div>
         ) : (
-          schools.map((school) => (
-            <div
-              key={school.id || school.code}
-              className="bg-white rounded-lg border border-neutral-200 overflow-hidden"
-            >
-              <div className="flex items-center justify-between p-4 bg-neutral-50">
-                <div className="flex items-center gap-3 flex-1">
-                  <button onClick={() => toggleSchool(school.id!)} className="text-neutral-600 hover:text-neutral-900">
-                    {expandedSchools.has(school.id!) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                  </button>
-                  <div>
-                    <h3 className="font-semibold text-neutral-900">{school.name}</h3>
-                    <p className="text-sm text-neutral-500">Code: {school.code}</p>
+          <AnimatePresence>
+            {schools.map((school, index) => (
+              <motion.div
+                key={school.id || school.code}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-[2rem] border border-neutral-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <div className={`flex items-center justify-between p-6 ${expandedSchools.has(school.id!) ? 'bg-neutral-50/80 border-b border-neutral-100' : 'bg-white'}`}>
+                  <div className="flex items-center gap-5 flex-1 cursor-pointer select-none" onClick={() => toggleSchool(school.id!)}>
+                    <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg">
+                      <SchoolIcon size={22} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-neutral-900 tracking-tight">{school.name}</h3>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">{school.code}</span>
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{school.departments.length} Departments</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pr-2">
+                    <button
+                      onClick={() => {
+                        setEditingSchool(school);
+                        setSchoolForm({ name: school.name, code: school.code, departments: [] });
+                        setShowSchoolModal(true);
+                      }}
+                      className="p-2.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedSchool(school.id!);
+                        setShowDeptModal(true);
+                      }}
+                      className="p-2.5 text-neutral-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                    >
+                      <Plus size={20} />
+                    </button>
+                    <button
+                      onClick={() => deleteSchool(school.id!)}
+                      className="p-2.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <div className="w-px h-6 bg-neutral-100 mx-2" />
+                    <button 
+                      onClick={() => toggleSchool(school.id!)} 
+                      className={`p-2.5 rounded-xl transition-colors ${expandedSchools.has(school.id!) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100'}`}
+                    >
+                      <ChevronDown size={20} className={`translate-all duration-300 ${expandedSchools.has(school.id!) ? 'rotate-180' : 'rotate-0'}`} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingSchool(school);
-                      setSchoolForm({ name: school.name, code: school.code, departments: [] });
-                      setShowSchoolModal(true);
-                    }}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedSchool(school.id!);
-                      setShowDeptModal(true);
-                    }}
-                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                  >
-                    <Plus size={18} />
-                  </button>
-                  <button
-                    onClick={() => deleteSchool(school.id!)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
 
-              {expandedSchools.has(school.id!) && (
-                <div className="p-4 space-y-4">
-                  <h4 className="font-semibold text-neutral-700 mb-2">Departments</h4>
-                  {school.departments.length === 0 ? (
-                    <p className="text-sm text-neutral-500 italic">No departments yet</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {school.departments.map((dept) => {
-                        const deptKey = `${school.code}-${dept.code}`;
-                        return (
-                          <div key={dept.id || dept.code} className="border border-neutral-200 rounded-lg overflow-hidden">
-                            <div className="flex items-center justify-between p-3 bg-neutral-50">
-                              <div className="flex items-center gap-2 flex-1">
-                                <button onClick={() => toggleDept(deptKey)} className="text-neutral-600 hover:text-neutral-900">
-                                  {expandedDepts.has(deptKey) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                                </button>
-                                <div>
-                                  <h4 className="font-medium text-neutral-900">{dept.name}</h4>
-                                  <p className="text-xs text-neutral-500">Code: {dept.code}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    setEditingDept(dept);
-                                    setDeptForm({ name: dept.name, code: dept.code, programs: [] });
-                                    setSelectedSchool(school.id!);
-                                    setShowDeptModal(true);
-                                  }}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                >
-                                  <Edit2 size={16} />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedSchool(school.id!);
-                                    setSelectedDept(dept.id!);
-                                    setShowProgramModal(true);
-                                  }}
-                                  className="p-1.5 text-primary hover:bg-primary/10 rounded transition-colors"
-                                >
-                                  <Plus size={16} />
-                                </button>
-                                <button
-                                  onClick={() => deleteDepartment(dept.id!)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {expandedDepts.has(deptKey) && (
-                              <div className="p-3 bg-white space-y-2">
-                                {(!dept.programs || dept.programs.length === 0) ? (
-                                  <p className="text-xs text-neutral-500 italic">No programs yet</p>
-                                ) : (
-                                  dept.programs.map((program) => (
-                                    <div key={program.id || program.name} className="flex items-center justify-between p-2 bg-neutral-50 rounded">
-                                      <span className="text-sm text-neutral-700">
-                                        {program.name} {program.abbr && `(${program.abbr})`}
-                                      </span>
-                                      <div className="flex items-center gap-1">
+                <AnimatePresence>
+                  {expandedSchools.has(school.id!) && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-8 space-y-6 bg-neutral-50/30">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Departmental Units</h4>
+                        </div>
+                        
+                        {school.departments.length === 0 ? (
+                           <div className="py-12 bg-white rounded-3xl border-2 border-dashed border-neutral-100 text-center">
+                              <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">No internal segments configured</p>
+                           </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {school.departments.map((dept) => {
+                              const deptKey = `${school.code}-${dept.code}`;
+                              const isExpanded = expandedDepts.has(deptKey);
+                              return (
+                                <div key={dept.id || dept.code} className={`group bg-white rounded-[2rem] border transition-all duration-300 ${isExpanded ? 'border-primary/20 shadow-xl' : 'border-neutral-100 shadow-sm hover:border-neutral-200'}`}>
+                                  <div className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                      <div className="w-10 h-10 bg-neutral-100 rounded-2xl flex items-center justify-center text-neutral-600 group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <Layers size={18} />
+                                      </div>
+                                      <div className="flex gap-1 group-hover:opacity-100 transition-opacity">
                                         <button
                                           onClick={() => {
-                                            setEditingProgram(program);
-                                            setProgramForm({ name: program.name, abbr: program.abbr });
-                                            setSelectedDept(dept.id!);
-                                            setShowProgramModal(true);
+                                            setEditingDept(dept);
+                                            setDeptForm({ name: dept.name, code: dept.code, programs: [] });
+                                            setSelectedSchool(school.id!);
+                                            setShowDeptModal(true);
                                           }}
-                                          className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                          className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
                                         >
                                           <Edit2 size={14} />
                                         </button>
                                         <button
-                                          onClick={() => deleteProgram(program.id!)}
-                                          className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                          onClick={() => {
+                                            setSelectedSchool(school.id!);
+                                            setSelectedDept(dept.id!);
+                                            setShowProgramModal(true);
+                                          }}
+                                          className="p-1.5 text-neutral-400 hover:text-primary transition-colors"
+                                        >
+                                          <Plus size={16} />
+                                        </button>
+                                        <button
+                                          onClick={() => deleteDepartment(dept.id!)}
+                                          className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors"
                                         >
                                           <Trash2 size={14} />
                                         </button>
                                       </div>
                                     </div>
-                                  ))
-                                )}
-                              </div>
-                            )}
+                                    
+                                    <h5 className="font-black text-neutral-900 tracking-tight leading-tight mb-1">{dept.name}</h5>
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">{dept.code}</p>
+                                    
+                                    <button 
+                                      onClick={() => toggleDept(deptKey)}
+                                      className="w-full flex items-center justify-between p-3 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-colors text-xs font-bold text-neutral-500"
+                                    >
+                                      <span>{dept.programs?.length || 0} Programs</span>
+                                      <ChevronRight size={14} className={`transition-transform duration-300 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
+                                    </button>
+                                  </div>
+
+                                  <AnimatePresence>
+                                    {isExpanded && (
+                                      <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="border-t border-neutral-50"
+                                      >
+                                        <div className="p-4 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                          {(dept.programs && dept.programs.length > 0) ? (
+                                            dept.programs.map((program) => (
+                                              <div key={program.id || program.name} className="flex items-center justify-between p-3 bg-neutral-50/50 rounded-xl hover:bg-neutral-50 transition-colors group/prog">
+                                                <div>
+                                                  <p className="text-xs font-bold text-neutral-700 leading-none mb-1">{program.name}</p>
+                                                  {program.abbr && <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{program.abbr}</p>}
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover/prog:opacity-100 transition-opacity">
+                                                  <button
+                                                    onClick={() => {
+                                                      setEditingProgram(program);
+                                                      setProgramForm({ name: program.name, abbr: program.abbr });
+                                                      setSelectedDept(dept.id!);
+                                                      setShowProgramModal(true);
+                                                    }}
+                                                    className="p-1 text-neutral-400 hover:text-blue-600"
+                                                  >
+                                                    <Edit2 size={12} />
+                                                  </button>
+                                                  <button
+                                                    onClick={() => deleteProgram(program.id!)}
+                                                    className="p-1 text-neutral-400 hover:text-red-600"
+                                                  >
+                                                    <Trash2 size={12} />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))
+                                          ) : (
+                                            <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest text-center py-4 italic">Baseline Only</p>
+                                          )}
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
+                        )}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-              )}
-            </div>
-          ))
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
       </div>
 
       {/* Add School Modal */}
-      {showSchoolModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">{editingSchool ? "Edit School" : "Add School"}</h2>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">School Name</label>
-                <input
-                  type="text"
-                  value={schoolForm.name}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., University of Example"
-                />
+      <AnimatePresence>
+        {showSchoolModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
+            >
+              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary rounded-2xl text-white shadow-lg">
+                    <Building2 size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update Registry" : "Instantiate School"}</h2>
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Top-Level Architecture</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSchoolModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                  <X size={20} />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">School Code</label>
-                <input
-                  type="text"
-                  value={schoolForm.code}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., UOE"
-                />
-              </div>
-            </div>
 
-            {!editingSchool && (
-              <div className="border-t pt-4 mb-6">
-                <h3 className="font-semibold mb-3">Add Initial Departments (Optional)</h3>
-                <div className="space-y-4 bg-neutral-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 gap-2">
+              <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Institutional Name</label>
                     <input
                       type="text"
-                      value={deptForm.name}
-                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      className="px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="Dept name (e.g., College of CSS)"
-                    />
-                    <input
-                      type="text"
-                      value={deptForm.code}
-                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                      className="px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="e.g., CSS"
+                      value={schoolForm.name}
+                      onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
+                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                      placeholder="e.g. University of Perpetual Growth"
                     />
                   </div>
-                  <button
-                    onClick={addDepartmentToSchoolForm}
-                    className="w-full px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Plus size={14} /> Add Department
-                  </button>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Acronym / Code</label>
+                    <div className="relative group">
+                      <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
+                      <input
+                        type="text"
+                        value={schoolForm.code}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
+                        className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
+                        placeholder="UPG"
+                      />
+                    </div>
+                  </div>
                 </div>
-                {schoolForm.departments.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {schoolForm.departments.map((d, i) => (
-                      <div key={i} className="flex justify-between items-center p-2 bg-white border border-neutral-200 rounded">
-                        <span className="text-sm">{d.name} ({d.code})</span>
-                        <button
-                          onClick={() => setSchoolForm({ ...schoolForm, departments: schoolForm.departments.filter((_, idx) => idx !== i) })}
-                          className="text-red-600"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+
+                {!editingSchool && (
+                  <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
+                    <div>
+                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Bootstrapping</h3>
+                      <p className="text-xs text-neutral-500">Initialize with foundational departmental units.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        value={deptForm.name}
+                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                        className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all shadow-sm"
+                        placeholder="Segment Name"
+                      />
+                      <input
+                        type="text"
+                        value={deptForm.code}
+                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                        className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all shadow-sm uppercase"
+                        placeholder="ID"
+                      />
+                    </div>
+                    <Button
+                      onClick={addDepartmentToSchoolForm}
+                      variant="outline"
+                      className="w-full h-11 rounded-xl bg-white border-neutral-200 hover:border-primary hover:text-primary transition-all text-xs font-black uppercase tracking-widest"
+                    >
+                      <Plus size={16} className="mr-2" /> Add Department To Queue
+                    </Button>
+
+                    {schoolForm.departments.length > 0 && (
+                      <div className="space-y-2">
+                        {schoolForm.departments.map((d, i) => (
+                          <div key={i} className="flex justify-between items-center p-3 bg-white border border-neutral-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center text-neutral-500 font-bold text-[10px]">{d.code}</div>
+                              <span className="text-xs font-bold text-neutral-700">{d.name}</span>
+                            </div>
+                            <button
+                              onClick={() => setSchoolForm({ ...schoolForm, departments: schoolForm.departments.filter((_, idx) => idx !== i) })}
+                              className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
-            )}
 
-            <div className="flex gap-2 justify-end border-t pt-4">
-              <button
-                onClick={() => {
-                  setShowSchoolModal(false);
-                  setSchoolForm({ name: "", code: "", departments: [] });
-                  setEditingSchool(null);
-                }}
-                className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button onClick={addSchool} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600">
-                {editingSchool ? "Update School" : "Add School"}
-              </button>
-            </div>
+              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowSchoolModal(false);
+                    setSchoolForm({ name: "", code: "", departments: [] });
+                    setEditingSchool(null);
+                  }}
+                  className="rounded-2xl border-neutral-200 px-6"
+                >
+                  Discard
+                </Button>
+                <Button 
+                  onClick={addSchool} 
+                  className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[140px]"
+                >
+                  {editingSchool ? "Commit Changes" : "Create Record"}
+                </Button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Dept Modal */}
-      {showDeptModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingDept ? "Edit Department" : "Add Department"}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Department Name</label>
-                <input
-                  type="text"
-                  value={deptForm.name}
-                  onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., College of Computing Studies"
-                />
+      <AnimatePresence>
+        {showDeptModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
+            >
+              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20">
+                    <Layers size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingDept ? "Modify Segment" : "New Department"}</h2>
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Academic Subdivision</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowDeptModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                  <X size={20} />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Department Code</label>
-                <input
-                  type="text"
-                  value={deptForm.code}
-                  onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., CSS"
-                />
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Segment Name</label>
+                  <input
+                    type="text"
+                    value={deptForm.name}
+                    onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                    placeholder="e.g. College of Applied Science"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Internal Reference ID</label>
+                  <input
+                    type="text"
+                    value={deptForm.code}
+                    onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
+                    placeholder="CAS"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2 justify-end">
-                <button
+
+              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowDeptModal(false);
                     setEditingDept(null);
                     setDeptForm({ name: "", code: "", programs: [] });
                   }}
-                  className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg"
+                  className="rounded-2xl border-neutral-200 px-6"
                 >
-                  Cancel
-                </button>
-                <button onClick={addDepartment} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600">
-                  {editingDept ? "Update" : "Add"}
-                </button>
+                  Abort
+                </Button>
+                <Button 
+                  onClick={addDepartment} 
+                  className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[120px]"
+                >
+                  {editingDept ? "Synchronize" : "Establish Unit"}
+                </Button>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Program Modal */}
-      {showProgramModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingProgram ? "Edit Program" : "Add Program"}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Program Name</label>
-                <input
-                  type="text"
-                  value={programForm.name}
-                  onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., Bachelor of Science in IT"
-                />
+      <AnimatePresence>
+        {showProgramModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
+            >
+              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200">
+                    <GraduationCap size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Refine Program" : "Curriculum Registry"}</h2>
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Degree Specification</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowProgramModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                  <X size={20} />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Abbreviation</label>
-                <input
-                  type="text"
-                  value={programForm.abbr}
-                  onChange={(e) => setProgramForm({ ...programForm, abbr: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., BSIT"
-                />
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Program Title</label>
+                  <input
+                    type="text"
+                    value={programForm.name}
+                    onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                    placeholder="e.g. Bachelor of Science in Artificial Intelligence"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Abbreviation / Hash</label>
+                  <input
+                    type="text"
+                    value={programForm.abbr}
+                    onChange={(e) => setProgramForm({ ...programForm, abbr: e.target.value })}
+                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
+                    placeholder="BSAI"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2 justify-end">
-                <button
+
+              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowProgramModal(false);
                     setEditingProgram(null);
                     setProgramForm({ name: "", abbr: "" });
                   }}
-                  className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg"
+                  className="rounded-2xl border-neutral-200 px-6"
                 >
-                  Cancel
-                </button>
-                <button onClick={addProgram} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600">
-                  {editingProgram ? "Update" : "Add"}
-                </button>
+                  Discard
+                </Button>
+                <Button 
+                  onClick={addProgram} 
+                  className="rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 px-8 h-11 min-w-[120px]"
+                >
+                  {editingProgram ? "Update Record" : "Integrate Program"}
+                </Button>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

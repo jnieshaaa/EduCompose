@@ -55,9 +55,9 @@ export const AIAssessmentSettingsComponent: React.FC<
                 idx < toggleItems.length - 1 ? "border-b border-neutral-50" : ""
               }`}
             >
-              <div className="min-w-0">
-                <span className="text-xs font-semibold text-neutral-700">{item.label}</span>
-                <p className="text-[10px] text-neutral-400 mt-0.5">{item.desc}</p>
+              <div className="min-w-0 pr-4">
+                <span className="text-sm font-bold text-neutral-800 tracking-tight">{item.label}</span>
+                <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide leading-tight">{item.desc}</p>
               </div>
               <Switch
                 checked={settings[item.key] as boolean}

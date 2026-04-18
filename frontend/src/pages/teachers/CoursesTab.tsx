@@ -106,7 +106,7 @@ export function CoursesTab() {
         </div>
         <button
           onClick={() => setIsAddDialogOpen(true)}
-          className="flex items-center gap-2 bg-primary text-white text-[11px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 bg-primary text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           <Plus size={16} /> Add New Subject
         </button>
@@ -118,7 +118,7 @@ export function CoursesTab() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] transition-all border-b-2 whitespace-nowrap ${
+            className={`px-5 py-3 text-xs font-bold uppercase tracking-[0.12em] transition-all border-b-2 whitespace-nowrap ${
               activeTab === tab 
               ? "border-primary text-primary" 
               : "border-transparent text-neutral-400 hover:text-neutral-600"
@@ -146,7 +146,7 @@ export function CoursesTab() {
           </div>
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
               showFilters || selectedDeptId || selectedProgId
                 ? "bg-primary/5 border-primary/20 text-primary"
                 : "bg-white border-neutral-100 text-neutral-500 hover:bg-neutral-50"
@@ -167,7 +167,7 @@ export function CoursesTab() {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Department Scope</label>
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Department Scope</label>
                   <select
                     value={selectedDeptId}
                     disabled={activeTab === "dept"}
@@ -186,7 +186,7 @@ export function CoursesTab() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Program Track</label>
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Program Track</label>
                   <select
                     value={selectedProgId}
                     onChange={(e) => setSelectedProgId(e.target.value)}
@@ -221,7 +221,7 @@ export function CoursesTab() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-neutral-50 shadow-sm">
           <Loader2 className="w-8 h-8 animate-spin text-primary/30 mb-4" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing Catalog...</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing Catalog...</p>
         </div>
       ) : getActiveCourses().length === 0 ? (
         <div className="p-20 text-center bg-white rounded-3xl border border-neutral-50 shadow-sm">
@@ -237,7 +237,7 @@ export function CoursesTab() {
           {activeTab === "my" && (
             <button 
               onClick={() => setActiveTab("dept")} 
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 px-6 py-2 rounded-full transition-all border border-primary/20"
+              className="text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/5 px-6 py-2 rounded-full transition-all border border-primary/20"
             >
               Browse Department
             </button>
@@ -263,7 +263,7 @@ export function CoursesTab() {
                 <div className={`absolute top-0 left-0 w-1 h-full transition-transform ${isAdded ? 'bg-primary scale-y-100' : 'bg-neutral-100 scale-y-0'}`} />
 
                 <div className="flex justify-between items-start mb-4">
-                  <div className="px-2 py-1 bg-neutral-50 rounded-lg text-neutral-500 font-mono font-bold text-[11px] border border-neutral-100 tracking-tight">
+                  <div className="px-2 py-1 bg-neutral-50 rounded-lg text-neutral-500 font-mono font-bold text-xs border border-neutral-100 tracking-tight">
                     {course.course_code}
                   </div>
                   <div className="flex gap-1">
@@ -285,7 +285,7 @@ export function CoursesTab() {
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleLoad(course.id, isAdded); }}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all shadow-sm ${
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm ${
                           isAdded 
                             ? "bg-neutral-50 text-neutral-400 hover:bg-error-default/5 hover:text-error-default" 
                             : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
@@ -302,24 +302,24 @@ export function CoursesTab() {
                 </h3>
                 
                 <div className="flex items-center gap-2 mb-6">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">
                     {course.departments?.code || course.department || course.departments?.name?.split(' ')[0] || "General"}
                   </p>
                   {isAdded && activeTab !== "my" && (
-                      <span className="text-[9px] font-bold text-success-default uppercase px-1.5 py-0.5 rounded-md border border-success-default/10">
+                      <span className="text-[10px] font-bold text-success-default uppercase px-1.5 py-0.5 rounded-md border border-success-default/10">
                           Enrolled
                       </span>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{course.units} Units</span>
+                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{course.units} Units</span>
                   {isMyCourse ? (
-                    <span className="text-[9px] font-bold text-purple-600 uppercase bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
+                    <span className="text-[10px] font-bold text-purple-600 uppercase bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
                       Private Load
                     </span>
                   ) : (
-                    <span className="text-[9px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                    <span className="text-[10px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
                       Standard
                     </span>
                   )}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Briefcase, Mail, UserCircle, Shield, GraduationCap, CheckCircle, AlertCircle } from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../ui/Button";
-import Input from "../ui/Input";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface EditUserModalProps {
   user: {
@@ -62,11 +62,6 @@ export default function EditUserModal({
       return;
     }
 
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       setError("Please enter a valid email address");
@@ -87,13 +82,13 @@ export default function EditUserModal({
         is_active: isActive,
       });
 
-      setSuccess("User updated successfully!");
+      setSuccess("Profile updated successfully!");
       setTimeout(() => {
         onClose();
       }, 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Failed to update user. Please try again.");
+      setError(message || "Update failed. Please check network connectivity.");
     } finally {
       setIsLoading(false);
     }
@@ -102,183 +97,180 @@ export default function EditUserModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm z-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-2xl overflow-hidden">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 z-20 rounded-full bg-white/80 hover:bg-neutral-100 transition-colors shadow-md"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5 text-neutral-600" />
-        </button>
-
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-4">
-            Edit User Account
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                User Role
-              </label>
-              <div className="flex gap-2">
-                {(["admin", "teacher", "student"] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                      role === r
-                        ? "border-primary-500 bg-primary-50 text-primary-700"
-                        : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
-                    }`}
-                  >
-                    {r.charAt(0).toUpperCase() + r.slice(1)}
-                  </button>
-                ))}
-              </div>
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[60]">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-neutral-100"
+      >
+        <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-neutral-900 rounded-2xl text-white shadow-lg">
+              <UserCircle size={22} />
             </div>
+            <div>
+              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Edit Identity</h2>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Administrative Profile Overhaul</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Title
-                </label>
-                <select
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+        <form id="edit-identity-form" onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          <AnimatePresence>
+            {error && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold uppercase tracking-wider">
+                {error}
+              </motion.div>
+            )}
+            {success && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                {success}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Role Grid */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Account Permissions Level</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: 'student', icon: GraduationCap, label: 'Student' },
+                { id: 'teacher', icon: Briefcase, label: 'Teacher' },
+                { id: 'admin', icon: Shield, label: 'Admin' }
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRole(r.id as any)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all ${
+                    role === r.id
+                      ? "border-primary bg-primary/5 text-primary shadow-sm"
+                      : "border-neutral-100 bg-white text-neutral-400 hover:border-neutral-200"
+                  }`}
                 >
-                  <option value="">None</option>
-                  <option value="Mr.">Mr.</option>
-                  <option value="Ms.">Ms.</option>
-                  <option value="Mrs.">Mrs.</option>
-                  <option value="Dr.">Dr.</option>
-                  <option value="Prof.">Prof.</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Nickname
-                </label>
-                <Input
-                  type="text"
-                  value={nickname}
-                  onChange={(val) => setNickname(val)}
-                  placeholder="e.g. Antopina"
-                />
-              </div>
+                  <r.icon size={20} />
+                  <span className="text-xs font-black uppercase tracking-widest">{r.label}</span>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  First Name *
-                </label>
-                <Input
-                  type="text"
-                  value={firstName}
-                  onChange={(val) => setFirstName(val)}
-                  placeholder="First name"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Middle Name
-                </label>
-                <Input
-                  type="text"
-                  value={middleName}
-                  onChange={(val) => setMiddleName(val)}
-                  placeholder="Middle name (optional)"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Last Name *
-                </label>
-                <Input
-                  type="text"
-                  value={lastName}
-                  onChange={(val) => setLastName(val)}
-                  placeholder="Last name"
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+              <select
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+              >
+                <option value="">None</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Ms.">Ms.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Prof.">Prof.</option>
+              </select>
             </div>
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="e.g. Antopina"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+              />
+            </div>
+          </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Email Address *
-              </label>
-              <Input
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+              <input
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <input
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+              <input
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Contact Terminal</label>
+            <div className="relative group/mail">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={16} />
+              <input
+                required
                 type="email"
                 value={email}
-                onChange={(val) => setEmail(val)}
-                placeholder="user@example.com"
-                required
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
               />
             </div>
+          </div>
 
-            {/* Active Status */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
-              />
-              <label
-                htmlFor="isActive"
-                className="text-sm font-medium text-neutral-700"
-              >
-                Account is active
-              </label>
-            </div>
-
-            {/* Error/Success Messages */}
-            {error && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                {error}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsActive(!isActive)}
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${
+                isActive 
+                  ? "bg-emerald-50 border-emerald-100 text-emerald-700" 
+                  : "bg-red-50 border-red-100 text-red-700"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${isActive ? "bg-emerald-600" : "bg-red-600"} text-white transition-colors`}>
+                  {isActive ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black uppercase tracking-widest">Access State</p>
+                  <p className="text-[10px] opacity-70 font-bold uppercase tracking-tighter">
+                    Account is currently {isActive ? "operational" : "deactivated"}
+                  </p>
+                </div>
               </div>
-            )}
-
-            {success && (
-              <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-                {success}
+              <div className={`w-12 h-6 rounded-full relative transition-colors ${isActive ? "bg-emerald-600" : "bg-red-300"}`}>
+                <div className={`absolute top-1 bottom-1 w-4 bg-white rounded-full transition-all ${isActive ? "right-1" : "left-1"}`} />
               </div>
-            )}
+            </button>
+          </div>
+        </form>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onClose}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" disabled={isLoading}>
-                {isLoading ? "Updating..." : "Update User"}
-              </Button>
-            </div>
-          </form>
+        <div className="px-8 py-6 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100">
+          <Button variant="outline" onClick={onClose} disabled={isLoading} className="rounded-2xl border-neutral-200 px-6">
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            form="edit-identity-form"
+            disabled={isLoading} 
+            className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11"
+          >
+            {isLoading ? "Synchronizing..." : "Commit Changes"}
+          </Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

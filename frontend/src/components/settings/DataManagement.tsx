@@ -13,30 +13,30 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
     {/* Batch Upload Formats */}
     <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
-        <Upload className="w-4 h-4 text-neutral-400" />
-        <h2 className="text-sm font-bold text-neutral-800">Batch Upload Formats</h2>
+        <Upload className="w-4 h-4 text-primary" />
+        <h2 className="text-base font-bold text-neutral-800 tracking-tight">Batch Upload Formats</h2>
       </div>
       <div className="p-5 space-y-4">
         <div>
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
+          <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-3 block">
             Supported Formats
           </label>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             {[".csv", ".xlsx", ".xls"].map((ext) => (
-              <span key={ext} className="px-2.5 py-1 bg-neutral-50 rounded-lg text-[10px] font-semibold text-neutral-500 border border-neutral-100">
+              <span key={ext} className="px-3 py-1 bg-neutral-50 rounded-lg text-[11px] font-bold text-neutral-500 border border-neutral-100 uppercase tracking-wider">
                 {ext}
               </span>
             ))}
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors">
-            <Download className="w-3.5 h-3.5" />
+        <div className="flex gap-3">
+          <button className="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-300 transition-colors uppercase tracking-widest">
+            <Download size={16} />
             Programs Template
           </button>
           <span className="text-neutral-200">|</span>
-          <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-300 transition-colors">
-            <Download className="w-3.5 h-3.5" />
+          <button className="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-300 transition-colors uppercase tracking-widest">
+            <Download size={16} />
             Students Template
           </button>
         </div>
@@ -46,16 +46,16 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
     {/* Export Reports */}
     <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
-        <FileText className="w-4 h-4 text-neutral-400" />
-        <h2 className="text-sm font-bold text-neutral-800">Export Reports</h2>
+        <FileText className="w-4 h-4 text-primary" />
+        <h2 className="text-base font-bold text-neutral-800 tracking-tight">Export Reports</h2>
       </div>
       <div className="p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Report Type</label>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Report Type</label>
             <select
               id="report-type"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all font-medium"
             >
               <option>Student Performance</option>
               <option>AI Metrics Summary</option>
@@ -64,10 +64,10 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Format</label>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Format</label>
             <select
               id="report-format"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all font-medium"
             >
               <option>PDF</option>
               <option>CSV</option>
@@ -77,11 +77,11 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Date From</label>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Date From</label>
             <input
               id="date-from"
               type="date"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all font-medium"
               defaultValue={
                 new Date(new Date().getFullYear(), 0, 1)
                   .toISOString()
@@ -90,11 +90,11 @@ export const DataManagement: React.FC<DataManagementProps> = ({ id }) => (
             />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">Date To</label>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">Date To</label>
             <input
               id="date-to"
               type="date"
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all font-medium"
               defaultValue={new Date().toISOString().split("T")[0]}
             />
           </div>

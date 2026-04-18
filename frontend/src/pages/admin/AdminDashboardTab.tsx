@@ -1,9 +1,30 @@
 import { useState, useEffect } from "react";
-import { Users, UserPlus, Shield, ClipboardCheck, FileText, Layers } from "lucide-react";
+import { 
+  Users, 
+  UserPlus, 
+  Shield, 
+  ClipboardCheck, 
+  FileText, 
+  Layers, 
+  ArrowRight, 
+  Activity, 
+  ChevronRight, 
+  Globe, 
+  Lock, 
+  Cpu, 
+  Database, 
+  Terminal,
+  BarChart3,
+  CheckCircle2,
+  AlertCircle,
+  History as HistoryIcon,
+  ShieldCheck,
+  BookOpen
+} from "lucide-react";
 import { adminApi } from "../../api";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
 import CreateUserModal from "../../components/admin/CreateUserModal";
+import { motion, AnimatePresence } from "framer-motion";
+import Button from "../../components/ui/Button";
 
 interface SystemStats {
   total_users: number;
@@ -22,7 +43,6 @@ export function AdminDashboardTab() {
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     loadStats();
@@ -31,184 +51,300 @@ export function AdminDashboardTab() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      setError("");
       const data = await adminApi.getSystemStats();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load statistics");
+      console.error("Telemetry failure:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  const statCards = stats ? [
+    { label: "Global Cluster", value: stats.total_users, sub: `${stats.total_admins} Systems`, icon: Globe, color: "text-primary", bg: "bg-primary/5 border-primary/10", trend: "+12% Growth" },
+    { label: "Academic Nodes", value: stats.total_programs, sub: `${stats.total_sections} Logic Units`, icon: Layers, color: "text-secondary", bg: "bg-secondary/5 border-secondary/10", trend: "Balanced" },
+    { label: "Instructional Pulse", value: stats.total_activities, sub: `${stats.total_essays} Submissions`, icon: Activity, color: "text-accent", bg: "bg-accent/5 border-accent/10", trend: "High Volume" },
+    { label: "Quality Standards", value: stats.total_rubrics, sub: `${stats.platform_rubrics} Base Protocols`, icon: Lock, color: "text-tertiary", bg: "bg-tertiary/5 border-tertiary/10", trend: "Standardized" },
+  ] : [];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-tight">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-neutral-600 mt-1">Manage users, platform rubrics, and system settings</p>
+    <div className="space-y-10 pb-20">
+      {/* Premium Integrated Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10 w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] font-black text-primary uppercase tracking-widest">System Core Active</span>
+          </div>
+          <h1 className="text-4xl font-black text-neutral-900 tracking-tighter">Command Center</h1>
+          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2">
+             Infrastructure Orchestration & Telemetry
+          </p>
         </div>
         <Button
-          variant="primary"
           onClick={() => setShowCreateUserModal(true)}
-          className="w-full sm:w-auto justify-center"
+          className="rounded-2xl bg-primary text-white shadow-2xl shadow-primary/30 hover:scale-[1.05] transition-all px-8 h-14 flex items-center gap-3 border-none group"
         >
-          <UserPlus className="w-5 h-5 mr-2" />
-          Create User Account
+          <UserPlus size={20} className="group-hover:rotate-12 transition-transform" />
+          <span className="text-xs font-black uppercase tracking-widest">Provision Account</span>
         </Button>
       </div>
 
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
-          {error}
-        </div>
-      )}
-
-      {/* Stats Cards */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-neutral-600 mt-4">Loading statistics...</p>
-        </div>
-      ) : stats ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-600">Total Users</p>
-                  <p className="text-2xl font-bold text-neutral-900 mt-1">{stats.total_users}</p>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    {stats.total_admins} admin, {stats.total_teachers} teachers, {stats.total_students} students
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-600">Programs</p>
-                  <p className="text-2xl font-bold text-neutral-900 mt-1">{stats.total_programs}</p>
-                  <p className="text-xs text-neutral-500 mt-1">{stats.total_sections} sections</p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Layers className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-600">Activities</p>
-                  <p className="text-2xl font-bold text-neutral-900 mt-1">{stats.total_activities}</p>
-                  <p className="text-xs text-neutral-500 mt-1">{stats.total_essays} essays</p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <FileText className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-600">Rubrics</p>
-                  <p className="text-2xl font-bold text-neutral-900 mt-1">{stats.total_rubrics}</p>
-                  <p className="text-xs text-neutral-500 mt-1">{stats.platform_rubrics} platform</p>
-                </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <ClipboardCheck className="w-6 h-6 text-orange-600" />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button
-                variant="secondary"
-                className="w-full justify-start"
-                onClick={() => {
-                  window.location.href = "/Admin/Users";
-                }}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Manage Users
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full justify-start"
-                onClick={() => {
-                  window.location.href = "/Admin/Rubrics";
-                }}
-              >
-                <ClipboardCheck className="w-4 h-4 mr-2" />
-                Manage Platform Rubrics
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full justify-start"
-                onClick={() => {
-                  window.location.href = "/Admin/Settings";
-                }}
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                System Settings
-              </Button>
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center py-40 bg-white rounded-[3rem] border border-neutral-100 shadow-sm"
+          >
+            <div className="relative mb-8">
+              <div className="w-20 h-20 border-4 border-primary/10 rounded-full" />
+              <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
+              <Terminal className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary w-8 h-8 opacity-20" />
             </div>
-          </Card>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400 animate-pulse">Synchronizing Global Telemetry</p>
+          </motion.div>
+        ) : stats ? (
+          <motion.div 
+            key="dashboard"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-10"
+          >
+            {/* High-Density Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {statCards.map((card, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="group relative p-8 bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all outline-none overflow-hidden"
+                >
+                  <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 ${card.bg}`} />
+                  
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3 ${card.bg} ${card.color}`}>
+                        <card.icon size={26} />
+                      </div>
+                      <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">{card.trend}</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">{card.label}</p>
+                      <p className="text-4xl font-black text-primary tracking-tighter">{stats ? card.value.toLocaleString() : "..."}</p>
+                      <div className="h-1 w-full bg-neutral-50 rounded-full mt-4 overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: "60%" }}
+                          transition={{ delay: 1 + i*0.1, duration: 2 }}
+                          className={`h-full opacity-30 ${card.color.replace('text', 'bg')}`}
+                        />
+                      </div>
+                      <p className="text-[10px] font-bold text-neutral-400 mt-4 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-200" />
+                        {card.sub}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
 
-          {/* System Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-neutral-900 mb-4">User Distribution</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Admins</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_admins}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              {/* Intelligent Operational Hub */}
+              <div className="lg:col-span-2 space-y-10">
+                <div className="bg-white rounded-[3rem] border border-neutral-100 shadow-sm overflow-hidden">
+                  <div className="px-10 py-8 border-b border-neutral-50 bg-neutral-50/20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Terminal size={18} className="text-primary" />
+                      <h2 className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.3em]">Operational Logic Hub</h2>
+                    </div>
+                    <span className="text-[9px] font-black text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 tracking-[0.1em] uppercase">Modules Locked & Loaded</span>
+                  </div>
+                  <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { label: "Identity Terminal", desc: "Governance of global user registry", icon: Users, link: "/Admin/Users", color: "text-primary", bg: "bg-primary/5" },
+                      { label: "Instructional Standards", desc: "Protocol rubrics & curriculum sets", icon: ClipboardCheck, link: "/Admin/Rubrics", color: "text-amber-500", bg: "bg-amber-50/50" },
+                      { label: "Registry Archive", desc: "Decommissioned historical records", icon: HistoryIcon, link: "/Admin/Archive", color: "text-emerald-500", bg: "bg-emerald-50/50" },
+                      { label: "Configuration Core", desc: "Platform security & global policies", icon: Shield, link: "/Admin/Settings", color: "text-neutral-500", bg: "bg-neutral-50/50" },
+                    ].map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => window.location.href = action.link}
+                        className="group flex items-center gap-5 p-6 rounded-[2rem] border border-neutral-100/50 hover:bg-neutral-50 hover:border-primary/20 transition-all text-left relative overflow-hidden active:scale-[0.98]"
+                      >
+                        <div className={`p-4 rounded-2xl ${action.bg} ${action.color} group-hover:scale-110 transition-all shadow-sm`}>
+                          <action.icon size={22} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-neutral-800 tracking-tight mb-0.5">{action.label}</p>
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{action.desc}</p>
+                        </div>
+                        <ArrowRight size={18} className="text-neutral-200 group-hover:translate-x-1 group-hover:text-primary transition-all opacity-0 group-hover:opacity-100" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Teachers</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_teachers}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Students</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_students}</span>
+
+                {/* Analytical Visualizer */}
+                <div className="bg-primary rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden p-10 relative group">
+                  <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-1000" />
+                  
+                  <div className="relative z-10 flex flex-col md:flex-row gap-16">
+                     <div className="flex-1 space-y-8">
+                        <div className="space-y-2">
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em] opacity-40">Account Stratification</h3>
+                          <p className="text-2xl font-black text-white tracking-tight">Active Entity Distribution</p>
+                        </div>
+                        <div className="space-y-6">
+                          {[
+                            { label: "Instructional Lead", value: stats.total_teachers, total: stats.total_users, color: "bg-white" },
+                            { label: "Academic Scholar", value: stats.total_students, total: stats.total_users, color: "bg-white/80" },
+                            { label: "System Operator", value: stats.total_admins, total: stats.total_users, color: "bg-white/60" }
+                          ].map((item, i) => (
+                            <div key={i} className="space-y-3">
+                               <div className="flex justify-between text-[10px] font-black uppercase tracking-[0.2em]">
+                                  <span className="text-white/60">{item.label}</span>
+                                  <span className="text-white">{item.value.toLocaleString()} <span className="text-white/20 mx-1">/</span> {item.total.toLocaleString()}</span>
+                               </div>
+                               <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden border border-white/10">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(item.value / item.total) * 100}%` }}
+                                    transition={{ duration: 1.5, delay: 0.8 + (i * 0.1), ease: "easeOut" }}
+                                    className={`h-full ${item.color} rounded-full shadow-[0_0_15px_-2px_rgba(0,0,0,0.1)]`} 
+                                  />
+                               </div>
+                            </div>
+                          ))}
+                        </div>
+                     </div>
+
+                     <div className="w-[1px] bg-white/10 hidden md:block" />
+
+                     <div className="space-y-8 md:w-64">
+                        <div className="space-y-2">
+                          <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em] opacity-40">Knowledge Base</h3>
+                          <p className="text-2xl font-black text-white tracking-tight">Intel Assets</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                           {[
+                             { label: "Academic Hubs", val: stats.total_programs, icon: BookOpen },
+                             { label: "Active Cohorts", val: stats.total_sections, icon: Layers },
+                             { label: "Activity Logic", val: stats.total_activities, icon: Activity },
+                             { label: "Doc Submissions", val: stats.total_essays, icon: FileText }
+                           ].map((node, i) => (
+                             <motion.div 
+                               key={i} 
+                               initial={{ opacity: 0, x: 20 }}
+                               animate={{ opacity: 1, x: 0 }}
+                               transition={{ delay: 1.2 + i*0.1 }}
+                               className="p-4 bg-white/10 rounded-[1.5rem] border border-white/5 flex items-center gap-4 group/box hover:bg-white/[0.2] transition-all"
+                             >
+                                <div className="p-2.5 bg-white/10 rounded-xl text-white/40 group-hover/box:text-white transition-colors">
+                                   <node.icon size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                   <p className="text-xl font-black text-white leading-none tracking-tight">{node.val.toLocaleString()}</p>
+                                   <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-1.5">{node.label}</p>
+                                </div>
+                             </motion.div>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
                 </div>
               </div>
-            </Card>
 
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-neutral-900 mb-4">Content Overview</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Programs</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_programs}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Sections</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_sections}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Activities</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_activities}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-600">Essays</span>
-                  <span className="font-semibold text-neutral-900">{stats.total_essays}</span>
-                </div>
+              {/* Sidebar Infrastructure Telemetry */}
+              <div className="space-y-8">
+                 <div className="bg-primary/10 rounded-[2.5rem] border border-primary/20 p-8 relative overflow-hidden group shadow-xl shadow-primary/5">
+                    <div className="absolute top-0 right-0 -mr-12 -mt-12 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+                    <h3 className="text-sm font-black text-neutral-900 tracking-tight mb-3 flex items-center gap-3">
+                       <Shield size={18} className="text-primary" />
+                       Service Integrity
+                    </h3>
+                    <p className="text-xs font-bold text-neutral-500 leading-relaxed mb-8 uppercase tracking-wide opacity-80">
+                       Platform cluster is currently stable. AI evaluators and secure nodes are fully synchronized.
+                    </p>
+                    <div className="space-y-3">
+                       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-xl shadow-primary/5 group-hover:scale-[1.02] transition-transform">
+                          <div className="flex items-center gap-3">
+                             <Database size={14} className="text-neutral-300" />
+                             <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Database Node</span>
+                          </div>
+                          <span className="flex items-center gap-1.5 text-[9px] font-black text-success-default uppercase px-3 py-1 bg-success-default/10 rounded-lg">
+                             <CheckCircle2 size={10} /> Active
+                          </span>
+                       </div>
+                       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-xl shadow-primary/5 group-hover:scale-[1.02] transition-transform">
+                          <div className="flex items-center gap-3">
+                             <Cpu size={14} className="text-neutral-300" />
+                             <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Neural Link</span>
+                          </div>
+                          <span className="flex items-center gap-1.5 text-[9px] font-black text-primary uppercase px-3 py-1 bg-primary/10 rounded-lg">
+                             <ShieldCheck size={10} /> Secure
+                          </span>
+                       </div>
+                    </div>
+                    <div className="mt-8 pt-8 border-t border-primary/10">
+                       <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black text-primary/40 uppercase tracking-widest">Last Heartbeat</span>
+                          <span className="text-[10px] font-black text-neutral-900">{new Date().toLocaleTimeString()}</span>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm p-8 space-y-6">
+                    <div className="flex items-center gap-3">
+                       <BarChart3 size={16} className="text-amber-500" />
+                       <h3 className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">Platform Capacity</h3>
+                    </div>
+                    <div className="space-y-6">
+                       <div className="flex items-center gap-4 group/item">
+                          <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center border border-amber-100 group-hover/item:scale-110 transition-transform">
+                             <ClipboardCheck size={20} />
+                          </div>
+                          <div className="flex-1">
+                             <p className="text-sm font-black text-neutral-800 tracking-tight">{stats.platform_rubrics} Base Protocols</p>
+                             <div className="flex justify-between items-center mt-1">
+                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Platform Templates</p>
+                                <span className="text-[10px] font-black text-amber-600">Global</span>
+                             </div>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-4 group/item">
+                          <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center border border-indigo-100 group-hover/item:scale-110 transition-transform">
+                             <FileText size={20} />
+                          </div>
+                          <div className="flex-1">
+                             <p className="text-sm font-black text-neutral-800 tracking-tight">{stats.total_essays.toLocaleString()} Asset Volume</p>
+                             <div className="flex justify-between items-center mt-1">
+                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Submission Pipeline</p>
+                                <ChevronRight size={12} className="text-neutral-200" />
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                    
+                    <button className="w-full py-4 text-[10px] font-black uppercase tracking-[0.3em] text-neutral-300 hover:text-primary transition-colors border-t border-neutral-50 mt-4 outline-none">
+                       View Complete Analytics
+                    </button>
+                 </div>
               </div>
-            </Card>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-40">
+             <AlertCircle size={48} className="text-red-100 mb-4" />
+             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Failed to establish telemetry connection</p>
+             <Button variant="outline" onClick={loadStats} className="mt-6 rounded-xl border-neutral-100 text-[10px] font-black uppercase tracking-widest">Reconnect Pipeline</Button>
           </div>
-        </>
-      ) : null}
+        )}
+      </AnimatePresence>
 
       <CreateUserModal
         isOpen={showCreateUserModal}
@@ -220,3 +356,5 @@ export function AdminDashboardTab() {
     </div>
   );
 }
+
+

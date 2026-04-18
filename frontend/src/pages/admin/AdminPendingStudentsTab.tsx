@@ -1,21 +1,24 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { 
-  Users, 
   UserCheck, 
   MoreVertical, 
   ArrowLeft, 
   Loader2,
   Search,
   RefreshCw,
-  Trash2
+  Trash2,
+  UserCircle,
+  Layers,
+  CheckCircle2,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
 import { useNotification } from "../../context/NotificationContext";
 import { authApi } from "../../api";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
+import { motion } from "framer-motion";
 
 interface PendingBlock {
   block_name: string;
@@ -222,7 +225,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
         }
       }
 
-      showNotification('success', `Successfully enrolled ${successCount} students.`);
+      showNotification('success', `Institutional provisioning complete. Success: ${successCount}.`);
       await loadPendingBlocks();
       setViewDetailBlock(null);
     } catch (err: any) {
@@ -233,7 +236,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
   };
 
   const deletePendingBlock = async (block: PendingBlock) => {
-    if (!window.confirm("Remove this pending list?")) return;
+    if (!window.confirm("Initialize list decommissioning?")) return;
     setIsProcessing(true);
     try {
       const { error } = await supabase
@@ -245,7 +248,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
         .eq("year", block.year)
         .eq("teacher_id", block.teacher_id);
       if (error) throw error;
-      showNotification('success', "Pending list removed");
+      showNotification('success', "Pending list decommissioned.");
       await loadPendingBlocks();
     } catch (err: any) {
       showNotification('error', err.message);
@@ -262,164 +265,204 @@ export const AdminPendingStudentsTab: React.FC = () => {
 
   if (viewDetailBlock) {
     return (
-      <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="space-y-8"
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setViewDetailBlock(null)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-500">
-              <ArrowLeft className="w-5 h-5" />
+          <div className="flex items-center gap-6">
+            <button 
+               onClick={() => setViewDetailBlock(null)} 
+               className="p-3 bg-white rounded-2xl shadow-sm border border-neutral-100 text-neutral-400 hover:text-primary transition-all group"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
             <div>
-              <h2 className="text-2xl font-bold text-neutral-900">{viewDetailBlock.program_abbr} - {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
-              <p className="text-sm text-neutral-500">Added by <span className="font-bold text-primary">{viewDetailBlock.teacher_name}</span></p>
+              <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{viewDetailBlock.program_abbr} <span className="text-neutral-300 mx-1">•</span> {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">
+                Instructional Provisioning by <span className="text-primary">{viewDetailBlock.teacher_name}</span>
+              </p>
             </div>
           </div>
-          {!viewDetailBlock.processed && (
-            <Button onClick={() => enrollAllInBlock(viewDetailBlock)} disabled={isProcessing} className="bg-primary text-white shadow-lg shadow-primary/20 h-11 px-6 group">
-              {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserCheck className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />}
-              Approve & Enroll All
+          {!viewDetailBlock.processed ? (
+            <Button 
+               onClick={() => enrollAllInBlock(viewDetailBlock)} 
+               disabled={isProcessing} 
+               className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-8 h-12 flex items-center gap-2"
+            >
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck size={18} />}
+              <span className="text-xs font-black uppercase tracking-widest">Execute Enrollment</span>
             </Button>
-          )}
-          {viewDetailBlock.processed && (
-            <div className="px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 flex items-center gap-2 text-sm font-bold">
-               <UserCheck className="w-4 h-4" />
-               ENROLLED ON {new Date(viewDetailBlock.processed_at!).toLocaleDateString()}
+          ) : (
+            <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+               <CheckCircle2 size={16} />
+               Synchronized on {new Date(viewDetailBlock.processed_at!).toLocaleDateString()}
             </div>
           )}
         </div>
 
-        <Card className="overflow-hidden border-none shadow-sm ring-1 ring-neutral-100">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-neutral-50/50 border-b border-neutral-100">
-                <tr className="text-left">
-                  <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Student ID</th>
-                  <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Name</th>
-                  <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Email</th>
-                  {viewDetailBlock.processed && <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Opening Status</th>}
-                  <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest text-right">Action</th>
+        <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-neutral-50/50">
+                  <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Signature ID</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Full Name</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Communication Node</th>
+                  {viewDetailBlock.processed && <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Lifecycle Status</th>}
+                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
                 {blockStudents.map((s) => (
-                  <tr key={s.id} className="hover:bg-neutral-50/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-600">{s.student_code}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-neutral-900">{s.first_name} {s.last_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">{s.email}</td>
+                  <tr key={s.id} className="group hover:bg-neutral-50/30 transition-all duration-300">
+                    <td className="px-8 py-4">
+                       <span className="text-xs font-black text-neutral-500 font-mono tracking-tighter uppercase">{s.student_code}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                       <span className="text-sm font-black text-neutral-900 tracking-tight">{s.last_name}, {s.first_name}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                       <span className="text-xs font-bold text-neutral-400 lowercase">{s.email}</span>
+                    </td>
                     {viewDetailBlock.processed && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {s.onboarding_completed ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">Opened</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-pulse">Not yet opened</span>
-                        )}
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center">
+                          {s.onboarding_completed ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100">Synchronized</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100">Awaiting Setup</span>
+                          )}
+                        </div>
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                       <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all"><MoreVertical size={16} /></button>
+                    <td className="px-6 py-4 text-right">
+                       <button className="p-2 text-neutral-300 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all"><MoreVertical size={16} /></button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
-      </div>
+        </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
-          <Input type="text" placeholder="Search blocks or teachers..." value={searchTerm} onChange={(val) => setSearchTerm(val)} className="pl-9 h-11 text-sm bg-white border-neutral-200" />
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="relative w-full sm:w-80 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within:text-primary transition-colors" />
+          <input 
+             placeholder="Search by block or teacher..." 
+             value={searchTerm} 
+             onChange={(e) => setSearchTerm(e.target.value)} 
+             className="w-full h-12 pl-11 pr-4 bg-white border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+          />
         </div>
-        <div className="flex items-center gap-2">
-           <Button variant="outline" onClick={loadPendingBlocks} disabled={loading} className="h-11">
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Refresh
-           </Button>
-        </div>
+        <Button 
+           variant="outline" 
+           onClick={loadPendingBlocks} 
+           disabled={loading} 
+           className="rounded-2xl border-neutral-100 bg-white shadow-sm h-12 px-6 flex items-center gap-2 group"
+        >
+          <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
+          <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Sync Pipeline</span>
+        </Button>
       </div>
 
       {loading && pendingBlocks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-neutral-400">
-           <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary/20" />
-           <p className="font-medium animate-pulse">Loading registrations...</p>
+        <div className="flex flex-col items-center justify-center py-32">
+           <Loader2 className="w-12 h-12 animate-spin mb-6 text-primary/20" />
+           <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] animate-pulse">Monitoring Provisioning Pipeline</p>
         </div>
       ) : filteredBlocks.filter(b => !b.processed).length === 0 ? (
-        <Card className="p-16 text-center border-none shadow-sm ring-1 ring-neutral-100 flex flex-col items-center">
-          <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mb-4">
-            <UserCheck className="w-8 h-8 text-neutral-300" />
+        <div className="bg-white p-20 rounded-[2.5rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
+          <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center mb-6 border border-neutral-100">
+            <ShieldCheck className="w-10 h-10 text-primary opacity-20" />
           </div>
-          <h3 className="text-lg font-bold text-neutral-900">No Pending Approvals</h3>
-          <p className="text-neutral-500 max-w-sm mt-1">
-            All student list uploads have been processed and enrolled.
+          <h3 className="text-xl font-black text-neutral-900 tracking-tight">Pipeline Clear</h3>
+          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-2 max-w-sm mx-auto">
+            All institutional student list uploads have been synchronized and provisioned into the registry.
           </p>
-        </Card>
+        </div>
       ) : (
-        <div className="space-y-4">
-           <div className="flex items-center gap-2">
-             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-             <h3 className="text-sm font-black text-neutral-400 uppercase tracking-widest">Awaiting Approval</h3>
+        <div className="space-y-6">
+           <div className="flex items-center gap-3 px-1">
+             <Clock size={14} className="text-primary animate-pulse" />
+             <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Pending Approval Queue</h3>
            </div>
            
-           <Card className="overflow-hidden border-none shadow-sm ring-1 ring-neutral-100">
-             <div className="overflow-x-auto">
-               <table className="w-full">
-                 <thead className="bg-neutral-50/50 border-b border-neutral-100">
-                   <tr className="text-left">
-                     <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Block Identification</th>
-                     <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Students</th>
-                     <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest">Added By</th>
-                     <th className="px-6 py-4 text-xs font-black text-neutral-400 uppercase tracking-widest text-right">Actions</th>
+           <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden">
+             <div className="overflow-x-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="bg-neutral-50/50">
+                     <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Provisioning Block</th>
+                     <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Telemetry Count</th>
+                     <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Instructional Lead</th>
+                     <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Operations</th>
                    </tr>
                  </thead>
-                 <tbody className="divide-y divide-neutral-50 bg-white">
+                 <tbody className="divide-y divide-neutral-50">
                    {filteredBlocks.filter(b => !b.processed).map((block) => (
                      <tr 
                        key={block.id_key} 
-                       className="hover:bg-neutral-50/50 transition-all cursor-pointer group"
+                       className="group hover:bg-neutral-50/50 transition-all duration-300 cursor-pointer"
                        onClick={() => loadBlockDetail(block)}
                      >
-                       <td className="px-6 py-5">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                              <Users className="w-5 h-5 text-primary" />
+                       <td className="px-8 py-5">
+                         <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                              <Layers size={20} />
                             </div>
                             <div>
-                               <span className="text-sm font-bold text-neutral-900 block leading-tight">
+                               <span className="text-sm font-black text-neutral-900 block leading-tight tracking-tight">
                                  {block.program_abbr} {block.year}{block.block_name}
                                </span>
-                               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider text-wrap">
+                               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-[0.15em] mt-0.5 block">
                                  {block.academic_year} • {block.term}
                                </span>
                             </div>
                          </div>
                        </td>
                        <td className="px-6 py-5">
-                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold">
-                            {block.student_count} Students
+                         <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/5">
+                            {block.student_count} Identities
                          </span>
                        </td>
                        <td className="px-6 py-5">
-                         <div className="flex flex-col">
-                           <span className="text-sm font-medium text-neutral-700">{block.teacher_name}</span>
-                           <span className="text-[10px] text-neutral-400 font-bold uppercase">Instructor</span>
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                             <UserCircle size={16} />
+                           </div>
+                           <div className="flex flex-col">
+                             <span className="text-xs font-black text-neutral-700 tracking-tight">{block.teacher_name}</span>
+                             <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Authorized Instructor</span>
+                           </div>
                          </div>
                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10 font-bold text-xs" onClick={(e) => { e?.stopPropagation(); enrollAllInBlock(block); }} disabled={isProcessing}>Enroll All</Button>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <Button 
+                               onClick={(e) => { e?.stopPropagation(); enrollAllInBlock(block); }} 
+                               disabled={isProcessing}
+                               className="rounded-xl bg-neutral-50 text-[10px] font-black uppercase tracking-widest px-4 h-9 hover:bg-primary hover:text-white transition-all border border-neutral-100"
+                            >
+                              Sync All
+                            </Button>
                             <button 
                               onClick={(e) => {
                                  e.stopPropagation();
                                  deletePendingBlock(block);
                               }}
-                              className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove list"
+                              className="p-2.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                             >
                               <Trash2 size={16} />
                             </button>
+                            <ArrowRight size={14} className="text-neutral-200 group-hover:translate-x-1 group-hover:text-primary transition-all" />
                           </div>
                         </td>
                      </tr>
@@ -427,9 +470,27 @@ export const AdminPendingStudentsTab: React.FC = () => {
                  </tbody>
                </table>
              </div>
-           </Card>
+           </div>
         </div>
       )}
     </div>
   );
 };
+
+const ShieldCheck = ({ size, className }: { size?: number, className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size || 24} 
+    height={size || 24} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
