@@ -7,22 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { sendSignupCodeEmail } from "../../services/emailService";
 
 // Minimal typed shape for Supabase user metadata
-interface UserMetadata {
-  full_name?: string;
-  name?: string;
-  role?: string;
-  [key: string]: unknown;
-}
 
-interface StudentRow {
-  id: number;
-  student_code: string;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  email: string | null;
-  is_active: boolean;
-}
 
 interface StudentLoginLookup {
   student_id: string;  // uuid
@@ -69,19 +54,6 @@ const Login: React.FC = () => {
     }
   }, []);
 
-  const buildStudentName = (
-    student: Pick<
-      StudentRow,
-      "first_name" | "middle_name" | "last_name" | "student_code" | "email"
-    >,
-  ) => {
-    const parts = [student.first_name, student.middle_name, student.last_name]
-      .map((value) => value?.trim())
-      .filter(Boolean);
-    return (
-      parts.join(" ") || student.student_code || student.email || "Student"
-    );
-  };
 
   const handleForgotPassword = async () => {
     const normalizedStudentCode = studentCode.trim();
@@ -245,13 +217,8 @@ const Login: React.FC = () => {
           auth_id: authUserId,
           email: pendingStudent.email.trim().toLowerCase() || signUpData.user.email || "",
           username: pendingStudent.student_code,
-          full_name: buildStudentName({
-            first_name: pendingStudent.first_name,
-            middle_name: pendingStudent.middle_name,
-            last_name: pendingStudent.last_name,
-            student_code: pendingStudent.student_code,
-            email: pendingStudent.email,
-          }),
+          first_name: pendingStudent.first_name,
+          last_name: pendingStudent.last_name,
           role: "student",
           is_active: pendingStudent.is_active,
           email_verified: !!signUpData.user.email_confirmed_at,
@@ -356,13 +323,8 @@ const Login: React.FC = () => {
             auth_id: data.user.id,
             email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
             username: studentIdentity.student_code,
-            full_name: buildStudentName({
-              first_name: studentIdentity.first_name,
-              middle_name: studentIdentity.middle_name,
-              last_name: studentIdentity.last_name,
-              student_code: studentIdentity.student_code,
-              email: studentIdentity.email,
-            }),
+            first_name: studentIdentity.first_name,
+            last_name: studentIdentity.last_name,
             role: "student",
             is_active: studentIdentity.is_active,
             email_verified: !!data.user.email_confirmed_at,
@@ -411,17 +373,8 @@ const Login: React.FC = () => {
           auth_id: data.user.id,
           email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
           username: studentIdentity.student_code,
-          full_name:
-            ((data.user.user_metadata as UserMetadata)?.full_name as
-              | string
-              | undefined) ??
-            buildStudentName({
-              first_name: studentIdentity.first_name,
-              middle_name: studentIdentity.middle_name,
-              last_name: studentIdentity.last_name,
-              student_code: studentIdentity.student_code,
-              email: studentIdentity.email,
-            }),
+          first_name: studentIdentity.first_name,
+          last_name: studentIdentity.last_name,
           role: "student",
           is_active: studentIdentity.is_active,
           email_verified: !!data.user.email_confirmed_at,

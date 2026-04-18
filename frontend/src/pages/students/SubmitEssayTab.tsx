@@ -168,7 +168,7 @@ export function SubmitEssayTab() {
             .eq('user_id', actRow.teacher_id)
             .eq('type', 'resubmission_request')
             .eq('related_id', activityIdParam)
-            .ilike('message', `%${user.nickname || user.full_name}%`)
+            .ilike('message', `%${user.nickname || `${user.first_name} ${user.last_name}`}%`)
             .maybeSingle();
 
           if (requestData) {
@@ -335,7 +335,7 @@ export function SubmitEssayTab() {
       // Notify the teacher
       if (activity?.teacherId) {
 
-        const studentName = user?.nickname || user?.full_name || "A student";
+        const studentName = user?.nickname || (user ? `${user.first_name} ${user.last_name}` : "") || "A student";
         const { data: latestEssay } = await supabase
           .from('essays')
           .select('id')
@@ -381,7 +381,7 @@ export function SubmitEssayTab() {
 
     try {
       setRequestingResubmission(true);
-      const studentName = user?.nickname || user?.full_name || "A student";
+      const studentName = user?.nickname || (user ? `${user.first_name} ${user.last_name}` : "") || "A student";
       
       const { error: requestError } = await supabase
         .from('notifications')

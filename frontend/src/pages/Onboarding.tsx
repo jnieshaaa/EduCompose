@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Users,
   School,
-  GraduationCap,
   ArrowRight,
   User,
   Mail,

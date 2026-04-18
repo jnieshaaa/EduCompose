@@ -409,14 +409,14 @@ export const studentApi = {
       .filter(Boolean)
       .map((s: any) => ({
         ...s,
-        full_name: `${s.first_name} ${s.last_name}`.trim(),
         class_id: classId
       })) as Student[];
   },
 
   createStudent: async (studentData: {
     student_id: string;
-    full_name: string;
+    first_name: string;
+    last_name: string;
     email?: string;
     class_id: string | number;
   }) => {

@@ -154,7 +154,7 @@ const Gradebook: React.FC = () => {
 
   const filteredEntries = gradebookEntries.filter(
     (entry) =>
-      entry.student.full_name
+      `${entry.student.first_name || ''} ${entry.student.last_name || ''}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       entry.student.student_id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -167,7 +167,7 @@ const Gradebook: React.FC = () => {
       case "submissions":
         return b.totalEssays - a.totalEssays;
       default:
-        return a.student.full_name.localeCompare(b.student.full_name);
+        return `${a.student.first_name || ''} ${a.student.last_name || ''}`.localeCompare(`${b.student.first_name || ''} ${b.student.last_name || ''}`);
     }
   });
 
@@ -384,11 +384,11 @@ const Gradebook: React.FC = () => {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white ${
                         entry.averageScore >= 90 ? 'bg-gradient-to-br from-primary to-primary-600' : 'bg-neutral-300'
                       }`}>
-                        {entry.student.full_name.charAt(0)}
+                        {entry.student.first_name?.charAt(0)}
                       </div>
                       <div>
                         <p className="font-bold text-neutral-900 group-hover:text-primary transition-colors text-base">
-                          {entry.student.full_name}
+                          {entry.student.first_name} {entry.student.last_name}
                         </p>
                         <p className="text-xs font-bold text-neutral-400 uppercase tracking-tighter">
                           ID: {entry.student.student_id}
@@ -497,7 +497,7 @@ const Gradebook: React.FC = () => {
             setShowStudentModal(false);
             setSelectedStudent(null);
           }}
-          title={`${selectedStudent.full_name} — Diagnostic Profile`}
+          title={`${selectedStudent.first_name} ${selectedStudent.last_name} — Diagnostic Profile`}
           size="xl"
         >
           <div className="space-y-8 p-1">
@@ -505,10 +505,10 @@ const Gradebook: React.FC = () => {
              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center p-6 bg-neutral-900 rounded-3xl text-white shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-[60px] rounded-full" />
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-4xl font-black shadow-lg relative z-10">
-                   {selectedStudent.full_name.charAt(0)}
+                   {selectedStudent.first_name?.charAt(0)}
                 </div>
                 <div className="flex-1 relative z-10">
-                   <h2 className="text-3xl font-black tracking-tight">{selectedStudent.full_name}</h2>
+                   <h2 className="text-3xl font-black tracking-tight">{selectedStudent.first_name} {selectedStudent.last_name}</h2>
                    <div className="flex flex-wrap gap-4 mt-2">
                       <div className="flex items-center gap-2 text-neutral-400 text-sm font-bold">
                          <Target className="w-4 h-4" /> ID: {selectedStudent.student_id}

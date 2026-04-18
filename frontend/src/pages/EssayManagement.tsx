@@ -418,7 +418,7 @@ const EssayManagement: React.FC = () => {
                 {students
                   .filter((s) => s.class_id === newEssay.class_id)
                   .map((student) => (
-                    <option key={student.id} value={student.id}>{student.full_name}</option>
+                    <option key={student.id} value={student.id}>{student.first_name} {student.last_name}</option>
                   ))}
               </select>
             </div>
