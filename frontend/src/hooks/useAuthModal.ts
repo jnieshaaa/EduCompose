@@ -110,12 +110,13 @@ export function useAuthModal(onClose: () => void) {
         console.log("Database lookup (users table):", userData);
 
         let role = "teacher"; // Default
-        let fullName = data.user.email?.split("@")[0] || "User";
+        let firstName = data.user.email?.split("@")[0] || "User";
+        let lastName = "";
 
         if (userData) {
           role = userData.role;
-          const name = [userData.first_name, userData.last_name].filter(Boolean).join(" ");
-          fullName = name || fullName;
+          firstName = userData.first_name || firstName;
+          lastName = userData.last_name || "";
         } else {
           console.log("User not found in 'users' table. Checking 'students' table...");
           // If not in users table, check if it's a student
@@ -129,7 +130,8 @@ export function useAuthModal(onClose: () => void) {
           
           if (studentData) {
             role = "student";
-            fullName = `${studentData.first_name} ${studentData.last_name}`;
+            firstName = studentData.first_name || "";
+            lastName = studentData.last_name || "";
           }
         }
 
@@ -158,7 +160,8 @@ export function useAuthModal(onClose: () => void) {
           auth_id: data.user.id,
           email: data.user.email ?? "",
           username: data.user.email ?? "",
-          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
           role,
           is_active: true,
           email_verified: !!data.user.email_confirmed_at,
@@ -230,6 +233,7 @@ export function useAuthModal(onClose: () => void) {
     try {
       // 1. Direct Database Checks (Fast fail)
       const checkResult = await authApi.checkEmail(normalizedEmail);
+
       if (checkResult.exists) {
         setSignupError(checkResult.message || "Email already registered.");
         setIsSigningUp(false);
@@ -237,7 +241,6 @@ export function useAuthModal(onClose: () => void) {
       }
 
       // 2. ULTIMATE CHECK: Try to sign up via Supabase Auth immediately
-      // This is the only way to check if the email exists in Supabase's internal auth table
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: signupPassword,
@@ -377,7 +380,8 @@ export function useAuthModal(onClose: () => void) {
           auth_id: user.id,
           email: user.email ?? "",
           username: user.email ?? "",
-          full_name: user.email?.split("@")[0] || "Teacher",
+          first_name: user.email?.split("@")[0] || "Teacher",
+          last_name: "",
           role: "teacher",
           is_active: true,
           email_verified: true,

@@ -227,15 +227,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </AnimatePresence>
           <button 
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} 
-            className={`w-full flex items-center ${isSidebarOpen ? "gap-2.5 px-2" : "justify-center"} py-2 rounded-xl hover:bg-white/5 transition-all transition-duration-200`}
+            className={`w-full flex items-center ${isSidebarOpen ? "gap-3 px-2.5" : "justify-center"} py-2.5 rounded-2xl hover:bg-white/10 transition-all duration-300 group`}
           >
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-xs shrink-0 text-white">
-              {user?.full_name?.charAt(0) || "A"}
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-xs shrink-0 text-white shadow-lg border border-white/5 group-hover:scale-110 transition-transform">
+              {(user?.first_name || "A").charAt(0).toUpperCase()}
             </div>
             {isSidebarOpen && (
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-[11px] font-bold text-white truncate">{user?.full_name || "Admin"}</p>
-                <p className="text-[9px] text-white/40 truncate uppercase tracking-[0.12em] font-bold">Administrator</p>
+              <div className="flex-1 text-left min-w-0 animate-in fade-in slide-in-from-left-1">
+                <p className="text-[11px] font-black text-white truncate tracking-tight">
+                  {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Administrator"}
+                </p>
+                <p className="text-[9px] text-white/40 truncate uppercase tracking-[0.15em] font-black mt-0.5">Core Access</p>
               </div>
             )}
           </button>

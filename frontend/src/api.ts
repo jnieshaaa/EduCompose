@@ -171,7 +171,6 @@ export const authApi = {
     title?: string;
     nickname?: string;
     username?: string;
-    full_name?: string;
   }) => {
     // Synced securely via backend
     return apiRequest<{
@@ -180,7 +179,8 @@ export const authApi = {
         id: number;
         email: string;
         username: string;
-        full_name: string;
+        first_name: string;
+        last_name: string;
         role: string;
         email_verified: boolean;
         supabase_user_id?: string;
@@ -831,7 +831,6 @@ export const adminApi = {
     userId: string,
     data: {
       email?: string;
-      full_name?: string;
       first_name?: string;
       middle_name?: string;
       last_name?: string;

@@ -10,7 +10,8 @@ interface User {
   id: string | number;
   email: string;
   username: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   role: string;
   is_active: boolean;
   email_verified?: boolean;
@@ -79,14 +80,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (userResult.data) {
         const data = userResult.data;
-        const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "User";
         return {
           user: {
             id: data.id.toString(),
             auth_id: authUserId,
             email: data.email ?? "",
             username: data.email ?? "",
-            full_name: fullName,
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
             role: data.role || "teacher",
             is_active: data.is_active ?? true,
             email_verified: true,
@@ -110,14 +111,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (studentResult.data) {
         const data = studentResult.data;
-        const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email?.split("@")[0] || "Student";
         return {
           user: {
             id: data.id.toString(),
             auth_id: authUserId,
             email: data.email ?? "",
             username: data.email ?? "",
-            full_name: fullName,
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
             role: "student",
             is_active: true,
             email_verified: true,

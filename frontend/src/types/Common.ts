@@ -28,7 +28,6 @@ export interface Student {
   last_name?: string;
   middle_name?: string;
   email: string;
-  full_name?: string;
   class_id?: string | number; // legacy support
   year?: number;
   block_name?: string;

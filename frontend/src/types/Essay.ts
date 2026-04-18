@@ -203,7 +203,9 @@ export interface ArgumentAnalysis {
 export interface Student {
   id: string;  // uuid
   student_id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
   email?: string;
   class_id: string | number;
   created_at: string;
@@ -223,7 +225,8 @@ export interface User {
   id: string | number;
   email: string;
   username: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   title?: string;
   nickname?: string;
   role: "teacher" | "admin";

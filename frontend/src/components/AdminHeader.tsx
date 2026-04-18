@@ -116,7 +116,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     navigate("/");
   };
 
-  const userName = user?.full_name || "Admin";
+  const userName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Admin";
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
@@ -147,7 +147,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           onMouseLeave={() => !isMobile && setIsDropdownOpen(false)}
           onClick={() => isMobile && setIsDropdownOpen(!isDropdownOpen)}
         >
-          <div className='w-10 h-10 rounded-full flex items-center justify-center bg-red-600 text-white font-bold shadow-sm'>
+          <div className='w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white font-black shadow-lg shadow-primary/20'>
             {userInitial}
           </div>
 
@@ -188,10 +188,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         </div>
       </div>
 
-      <div className='absolute bottom-0 left-0 w-full h-[2px] overflow-hidden'>
+          <div className='absolute bottom-0 left-0 w-full h-[3px] overflow-hidden'>
         <motion.div
-          className='h-full bg-red-600'
-          style={{ width: `${progress}%` }}
+           className='h-full bg-primary shadow-[0_0_10px_rgba(7,145,178,0.5)]'
+           style={{ width: `${progress}%` }}
         />
       </div>
 
@@ -212,8 +212,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <p className='text-sm text-neutral-400 mt-1 font-medium'>Logout from Admin portal?</p>
               </div>
               <div className='flex gap-2 pt-1'>
-                <button className="flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-                <button className="flex-1 px-4 py-2.5 rounded-lg bg-error-default text-white text-sm font-bold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15" onClick={confirmLogout}>Log Out</button>
+                <button className="flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel Operation</button>
+                <button className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-md shadow-red-500/15" onClick={confirmLogout}>Terminal Sign-out</button>
               </div>
             </motion.div>
           </div>

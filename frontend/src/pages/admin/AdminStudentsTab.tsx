@@ -437,13 +437,12 @@ export const AdminStudentsTab: React.FC = () => {
           email: normalizedEmail,
           password: tempPassword,
           email_confirm: true,
-          user_metadata: {
-            role: "student",
-            student_code: student.student_code,
-            first_name: student.first_name,
-            last_name: student.last_name,
-            full_name: `${student.first_name} ${student.last_name}`.trim(),
-          }
+            user_metadata: {
+              role: "student",
+              student_code: student.student_code,
+              first_name: student.first_name,
+              last_name: student.last_name,
+            }
         });
 
         let authId = authData?.user?.id;
@@ -463,7 +462,6 @@ export const AdminStudentsTab: React.FC = () => {
             email: normalizedEmail,
             first_name: student.first_name,
             last_name: student.last_name,
-            full_name: `${student.first_name} ${student.last_name}`.trim(),
             role: "student",
             is_active: true
           }, { onConflict: "auth_user_id" });

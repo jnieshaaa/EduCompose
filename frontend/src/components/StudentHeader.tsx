@@ -131,15 +131,14 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   };
 
   const getDisplayName = () => {
-    if (!user?.full_name || user.full_name === "Student" || user.full_name.includes("@")) {
-      return user?.username || "Student";
+    if (user?.first_name) {
+      return user.first_name;
     }
-    const nameParts = user.full_name.trim().split(/\s+/);
-    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+    return user?.username?.split('@')[0] || "Student";
   };
 
   const userName = getDisplayName();
-  const userInitial = (user?.full_name || userName).charAt(0).toUpperCase();
+  const userInitial = (user?.first_name || userName).charAt(0).toUpperCase();
 
   return (
     <header className="relative bg-white border-b border-neutral-100 h-14 flex items-center justify-between px-4 sm:px-6 z-40">
