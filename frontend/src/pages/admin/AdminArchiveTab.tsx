@@ -11,22 +11,16 @@ import {
   Download, 
   Trash2, 
   ChevronDown,
-  Clock,
-  ShieldCheck,
-  MoreVertical,
   Activity,
   History,
   Archive,
-  BarChart3,
-  FileText
+  BarChart3
 } from "lucide-react";
-import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { useNotification } from "../../context/NotificationContext";
 import { fetchAllTeacherLoads, fetchAcademicSettings, deleteTeacherCourseLoad } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 import { motion, AnimatePresence } from "framer-motion";
-import AlertModal from "../../components/ui/AlertModal";
 
 export function AdminArchiveTab() {
   const [academicSettings, setAcademicSettings] = useState<AcademicSettings | null>(null);

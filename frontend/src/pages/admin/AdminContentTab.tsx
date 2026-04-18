@@ -2,20 +2,16 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { 
   BookOpen, 
-  FileText, 
   ClipboardCheck, 
   Search, 
   Loader2, 
   Layers, 
-  ArrowRight,
   ChevronRight,
-  Filter,
   Activity,
   Zap,
   Box
 } from "lucide-react";
 import { adminApi } from "../../api";
-import Card from "../../components/ui/Card";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AdminContentTab() {
