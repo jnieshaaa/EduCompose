@@ -83,10 +83,19 @@ def warmup_all_models() -> Dict[str, Any]:
         
         logger.info("    → ArgumentMiner...")
         try:
-            _ = essay_analysis_service.argument_miner.analyze(dummy_text[:200])
-            if essay_analysis_service.argument_miner._transformer_available:
+            # Only warm up if using LOCAL models (to load weights into RAM/VRAM)
+            # Remote models (HF/LLM) don't benefit from local warmup and waste API quota
+            if not essay_analysis_service.argument_miner.use_transformer_classifier or \
+               not essay_analysis_service.argument_miner._ensure_transformer_classifier_loaded() or \
+               not essay_analysis_service.argument_miner.transformer_classifier.use_remote:
+                
+                _ = essay_analysis_service.argument_miner.analyze(dummy_text[:200])
+                if essay_analysis_service.argument_miner._transformer_available:
+                    warmup_results["argument_miner"] = True
+                logger.info("      ArgumentMiner ready")
+            else:
+                logger.info("      ℹ ArgumentMiner uses remote API, skipping startup warmup")
                 warmup_results["argument_miner"] = True
-            logger.info("      ArgumentMiner ready")
         except Exception as e:
             logger.debug(f"      ArgumentMiner warmup skipped: {e}")
             
