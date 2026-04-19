@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Badge from '../../components/ui/Badge';
-import { Search, Eye, Download, FileText, AlertCircle, MoreVertical } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, 
+  Eye, 
+  Download, 
+  FileText, 
+  AlertCircle, 
+  MoreVertical, 
+  CheckCircle, 
+  Clock, 
+  Zap, 
+  Filter,
+  ArrowRight,
+  Loader2
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { buildSecureUrl } from '../../utils/secureUrl';
 import {
@@ -22,6 +31,7 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function MyEssaysTab() {
   const navigate = useNavigate();
@@ -55,9 +65,9 @@ export function MyEssaysTab() {
         const formattedData = (data || []).map(e => ({
           id: e.id,
           title: (e.essay_activities as any)?.title || 'Untitled Assignment',
-          filename: e.title || 'No filename available',
+          filename: e.title || 'No name',
           submitted: new Date(e.submitted_at).toLocaleDateString(),
-          status: e.status === 'reviewed' ? 'Reviewed' : (e.status === 'analyzed' ? 'Graded' : 'Submitted'),
+          status: e.status === 'reviewed' ? 'Teacher Checked' : (e.status === 'analyzed' ? 'Done' : 'Sent'),
           aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
           hasTeacherFeedback: e.status === 'reviewed',
@@ -66,7 +76,7 @@ export function MyEssaysTab() {
         }));
         setEssaysData(formattedData);
       } catch (error) {
-        console.error('Error fetching essays for student:', error);
+        console.error('Error fetching essays:', error);
         setError(getErrorMessage(error));
       } finally {
         setLoading(false);
@@ -75,192 +85,214 @@ export function MyEssaysTab() {
     fetchEssays();
   }, []);
 
-  if (loading && essaysData.length === 0) {
-    return null;
-  }
+  const filteredEssays = useMemo(() => {
+    return essaysData.filter(essay =>
+      essay.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [essaysData, searchQuery]);
 
-  if (error) {
+  const stats = useMemo(() => {
+    const total = essaysData.length;
+    const reviewed = essaysData.filter(e => e.hasTeacherFeedback).length;
+    const pending = total - reviewed;
+    const scores = essaysData.filter(e => e.aiScore).map(e => e.aiScore);
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) + '%' : '0%';
+    
+    return { total, reviewed, pending, avgScore };
+  }, [essaysData]);
+
+  if (loading && essaysData.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-          <AlertCircle className="w-8 h-8 text-red-600" />
-        </div>
-        <h2 className="text-xl font-semibold text-neutral-900 mb-2">Failed to Load Essays</h2>
-        <p className="text-neutral-500 max-w-sm mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()} className="bg-primary">
-          Try Again
-        </Button>
+      <div className="flex flex-col items-center justify-center min-h-[40vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Opening your folder...</p>
       </div>
     );
   }
 
-  const filteredEssays = essaysData.filter(essay =>
-    essay.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2">Something went wrong</h2>
+        <p className="text-sm font-medium text-neutral-400 max-w-sm mb-8">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-6 py-2.5 bg-neutral-900 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-neutral-800 transition-all"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Reviewed':
-      case 'Graded':
-        return <Badge className="bg-emerald-600 text-white">Graded</Badge>;
-      case 'Not Submitted':
-      case 'Not yet submitted':
-        return <Badge className="bg-red-600 text-white">Not Submitted</Badge>;
-      case 'Under AI Evaluation':
-        return <Badge className="bg-amber-600 text-white">Evaluating</Badge>;
-      default:
-        return <Badge variant="neutral" className="bg-neutral-100 text-neutral-600 border-neutral-200">{status}</Badge>;
-    }
-  };
-
-  const getScoreBadge = (score: number | null) => {
-    if (score === null) return <span className="text-sm text-neutral-400">-</span>;
-    return <span className="text-sm font-semibold text-neutral-900">{score}%</span>;
-  };
-
-  // Empty state
   if (essaysData.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-          <FileText className="w-12 h-12 text-neutral-400" />
-        </div>
-        <h2 className="text-2xl text-neutral-900 mb-2">No essays submitted yet</h2>
-        <p className="text-neutral-500 text-center max-w-md mb-6">
-          You haven't submitted any essays yet. Upload your first essay to get AI-powered feedback and start improving your writing!
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-24 h-24 bg-neutral-50 rounded-[2rem] flex items-center justify-center mb-8"
+        >
+          <FileText size={48} className="text-neutral-200" />
+        </motion.div>
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2 tracking-tight">No work sent yet</h2>
+        <p className="text-sm font-medium text-neutral-400 max-w-sm mb-10 leading-relaxed">
+          You haven't sent any essays yet. Send your first assignment to get AI tips and improve your writing!
         </p>
-        <Button className="bg-primary hover:bg-primary-300">
-          Submit Your First Essay
-        </Button>
+        <button 
+          onClick={() => navigate('/Student/Submit')}
+          className="group flex items-center gap-3 bg-neutral-900 text-white px-8 py-3.5 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-primary/10"
+        >
+          Send My First Work
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 px-1 sm:px-0">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white">
-          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Total</p>
-          <p className="text-xl sm:text-2xl font-bold text-neutral-900 mt-0.5 sm:mt-1">{essaysData.length}</p>
-        </Card>
-        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-success-default">
-          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Reviewed</p>
-          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">{essaysData.filter(e => e.hasTeacherFeedback).length}</p>
-        </Card>
-        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-warning-default">
-          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Pending</p>
-          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">{essaysData.filter(e => !e.hasTeacherFeedback).length}</p>
-        </Card>
-        <Card className="p-3 sm:p-4 border-none shadow-sm bg-white text-primary">
-          <p className="text-[10px] sm:text-sm text-neutral-500 uppercase tracking-wider font-bold">Avg. Score</p>
-          <p className="text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1">
-            {essaysData.filter(e => e.aiScore).length > 0 
-              ? Math.round(essaysData.filter(e => e.aiScore).reduce((sum, e) => sum + e.aiScore, 0) / essaysData.filter(e => e.aiScore).length) + '%' 
-              : 'N/A'}
-          </p>
-        </Card>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'All Work', value: stats.total, icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Teacher Checked', value: stats.reviewed, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          { label: 'Waiting', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'Total Score', value: stats.avgScore, icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50' }
+        ].map((stat, i) => (
+          <motion.div 
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="bg-white p-5 rounded-3xl border border-neutral-100 shadow-sm"
+          >
+            <div className={`w-10 h-10 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4`}>
+              <stat.icon size={18} />
+            </div>
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-2xl font-bold text-neutral-900">{stat.value}</p>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Search & Filter */}
-      <Card className="p-3 sm:p-4 border-none shadow-sm bg-white">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input
-              type="search"
-              placeholder="Search essays..."
-              value={searchQuery}
-              onChange={(value) => setSearchQuery(value)}
-              className="pl-10 h-10"
-            />
-          </div>
-          <select className="h-10 px-3 border border-neutral-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
-            <option>All Status</option>
-            <option>Reviewed</option>
-            <option>Graded</option>
-            <option>Evaluating</option>
-            <option>Not Submitted</option>
-          </select>
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300" />
+          <input
+            type="text"
+            placeholder="Find by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-5 h-14 bg-white border border-neutral-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary/50 outline-none transition-all shadow-sm"
+          />
         </div>
-      </Card>
+        <button className="h-14 px-6 bg-white border border-neutral-100 rounded-3xl flex items-center gap-2 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:bg-neutral-50 transition-all shadow-sm">
+          <Filter size={14} />
+          All Progress
+        </button>
+      </div>
 
-      {/* Essays Table */}
-      <Card className="border-none shadow-sm bg-white overflow-hidden">
+      {/* Main Table Card */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-neutral-50/50">
-              <TableRow>
-                <TableHead className="min-w-[220px]">Essay Title</TableHead>
-                <TableHead className="text-center min-w-[120px]">Submitted At</TableHead>
-                <TableHead className="text-center min-w-[120px]">Status</TableHead>
-                <TableHead className="text-center min-w-[100px]">System Score</TableHead>
-                <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+            <TableHeader>
+              <TableRow className="bg-neutral-50/50 hover:bg-neutral-50/50 border-b border-neutral-50">
+                <TableHead className="py-5 px-6 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Assignment Name</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Sent On</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Progress</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">AI Score</TableHead>
+                <TableHead className="text-right px-6 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Open</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEssays.map((essay) => (
-                <TableRow key={essay.id} className="hover:bg-neutral-50/50 transition-colors">
-                  <TableCell>
-                    <div className="font-semibold text-neutral-900 leading-tight">{essay.title}</div>
-                    <div className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1">
-                      <FileText className="w-3 h-3" />
-                      <span className="truncate max-w-[150px]">{essay.filename}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="text-sm text-neutral-600">{essay.submitted}</div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {getStatusBadge(essay.status)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {getScoreBadge(essay.aiScore)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="w-4 h-4 text-neutral-500" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem 
-                          className="cursor-pointer font-medium" 
-                          onClick={() => {
-                            const url = buildSecureUrl("/Student/Essays/Result", {
-                              essayId: essay.id,
-                              activityId: essay.activityId,
-                              activityTitle: essay.title,
-                              studentId: essay.studentCode,
-                              fromEssays: "true"
-                            });
-                            navigate(url);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-2 text-primary" />
-                          View Results
-                        </DropdownMenuItem>
-                        
-                        {/* {essay.hasAiFeedback && (
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => {}}>
-                            <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
-                            AI Feedback
+              <AnimatePresence>
+                {filteredEssays.map((essay, idx) => (
+                  <motion.tr 
+                    key={essay.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: idx * 0.02 }}
+                    className="group hover:bg-neutral-50/50 border-b border-neutral-50 last:border-0 transition-all"
+                  >
+                    <TableCell className="py-4 px-6">
+                      <div className="font-bold text-neutral-800 tracking-tight text-sm mb-0.5 group-hover:text-primary transition-colors">
+                        {essay.title}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
+                        <FileText size={10} />
+                        {essay.filename}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="text-[11px] font-bold text-neutral-500">{essay.submitted}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide
+                        ${essay.status === 'Teacher Checked' || essay.status === 'Done' 
+                          ? 'bg-emerald-50 text-emerald-600' 
+                          : 'bg-amber-50 text-amber-600'}`}>
+                        {essay.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-bold text-neutral-800">
+                        {essay.aiScore !== null ? `${essay.aiScore}%` : <span className="text-neutral-200">--</span>}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right px-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-2.5 rounded-xl hover:bg-white hover:shadow-md transition-all text-neutral-400 hover:text-neutral-900 border border-transparent hover:border-neutral-100">
+                            <MoreVertical size={16} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-2xl border-neutral-100 p-2 shadow-xl">
+                          <DropdownMenuItem 
+                            className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700"
+                            onClick={() => {
+                              const url = buildSecureUrl("/Student/Essays/Result", {
+                                essayId: essay.id,
+                                activityId: essay.activityId,
+                                activityTitle: essay.title,
+                                studentId: essay.studentCode,
+                                fromEssays: "true"
+                              });
+                              navigate(url);
+                            }}
+                          >
+                            <Eye size={14} className="mr-2 text-primary" />
+                            See Score
                           </DropdownMenuItem>
-                        )} */}
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Download className="w-4 h-4 mr-2 text-neutral-500" />
-                          Download Essay
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          <DropdownMenuItem className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700">
+                            <Download size={14} className="mr-2 text-neutral-400" />
+                            Get File
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             </TableBody>
           </Table>
+          {filteredEssays.length === 0 && (
+            <div className="py-20 text-center">
+              <p className="text-[11px] font-bold text-neutral-300 uppercase tracking-widest">Nothing found with that name</p>
+            </div>
+          )}
         </div>
-      </Card>
+      </motion.div>
     </div>
   );
 }

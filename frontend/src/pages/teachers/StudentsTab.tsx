@@ -60,18 +60,18 @@ export function StudentsTab() {
       {/* Header - Simplified as Breadcrumb shows the path */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-100 pb-6">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight flex items-center gap-3">
             {urlBlockName ? (
               <>
                 <div className="w-1.5 h-8 bg-primary rounded-full" />
                 {urlBlockName} Students
               </>
-            ) : "Students Management"}
+            ) : "Students"}
           </h1>
           <p className="text-sm text-neutral-500 mt-1">
             {urlBlockName 
-              ? `Managing class list for block ${urlBlockName}` 
-              : "Comprehensive student directory and institutional records"}
+              ? `Managing students for class ${urlBlockName}` 
+              : "View and manage your student list"}
           </p>
         </div>
         <div className="flex items-center gap-2">

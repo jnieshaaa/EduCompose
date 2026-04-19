@@ -209,9 +209,9 @@ export function CourseSectionsView({
         {/* Table Header */}
         <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-neutral-800">Assigned Blocks</h2>
+            <h2 className="text-sm font-bold text-neutral-800">Assigned Classes</h2>
             <p className="text-[11px] text-neutral-400 mt-0.5">
-              Click a block to view its students and submissions
+              Click a class to see students and essays
             </p>
           </div>
           <Button 
@@ -232,7 +232,7 @@ export function CourseSectionsView({
         <Table>
           <TableHeader>
             <TableRow className="bg-neutral-50/50">
-              <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider pl-5">Block</TableHead>
+              <TableHead className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pl-5">Class</TableHead>
               <TableHead className="text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Students</TableHead>
               <TableHead className="text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider pr-5">Submissions</TableHead>
             </TableRow>
@@ -307,12 +307,12 @@ export function CourseSectionsView({
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Manage Activity Blocks"
+        title="Manage Classes"
         size="lg"
       >
         <div className="space-y-5">
           <p className="text-xs text-neutral-500">
-            Assign this activity to additional courses, programs, and blocks.
+            Add this activity to other courses and classes.
           </p>
 
           {/* Targeting Grid */}
@@ -320,7 +320,7 @@ export function CourseSectionsView({
             <div className="flex items-center gap-2">
               <LayoutGrid className="w-3.5 h-3.5 text-neutral-400" />
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em]">
-                Select Blocks
+                Select Classes
               </span>
             </div>
 
@@ -377,12 +377,12 @@ export function CourseSectionsView({
               {/* Sections */}
               <div>
                 <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">
-                  Blocks
+                  Classes
                 </label>
                 <div className="border border-neutral-200 rounded-lg bg-white overflow-y-auto h-40 p-1.5">
                   {filteredSections.length === 0 ? (
                     <p className="text-[11px] text-neutral-300 p-3 text-center italic">
-                      {selectedProgramLoadIds.length > 0 ? "No blocks" : "Select programs first"}
+                      {selectedProgramLoadIds.length > 0 ? "No classes" : "Select programs first"}
                     </p>
                   ) : (
                     filteredSections.map((s) => (
@@ -409,7 +409,7 @@ export function CourseSectionsView({
           {/* Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
             <span className="text-[11px] text-neutral-400">
-              <span className="font-bold text-neutral-600">{selectedSectionIds.length}</span> block{selectedSectionIds.length !== 1 ? "s" : ""} assigned
+              <span className="font-bold text-neutral-600">{selectedSectionIds.length}</span> class{selectedSectionIds.length !== 1 ? "es" : ""} assigned
             </span>
 
             <div className="flex items-center gap-2.5">

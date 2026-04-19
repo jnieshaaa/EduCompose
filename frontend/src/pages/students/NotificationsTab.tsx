@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, ArrowRight, Zap, Info, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabaseClient";
 import { 
@@ -14,14 +11,13 @@ import {
 } from "../../services/notificationService";
 import type { Notification } from "../../types/notification";
 import { buildSecureUrl } from "../../utils/secureUrl";
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function NotificationsTab() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ... (rest of the component)
 
   // Load and Subscribe to Notifications
   useEffect(() => {
@@ -38,7 +34,6 @@ export function NotificationsTab() {
 
     loadNotifications();
 
-    // Subscribe to real-time notifications
     const channel = subscribeToNotifications(userId, (newNotif) => {
       setNotifications((prev) => [newNotif, ...prev]);
     });
@@ -46,43 +41,49 @@ export function NotificationsTab() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.auth_id]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!user?.auth_id) return;
 
-    // Optimistically update UI
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
 
-    // Update in Supabase
     await markNotificationAsRead(id, user.auth_id);
   };
 
   const handleMarkAllAsRead = async () => {
     if (!user?.auth_id) return;
 
-    // Optimistically update UI
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-
-    // Update in Supabase
     await markAllNotificationsAsRead(user.auth_id);
   };
 
-  const getNotificationIcon = () => {
-    return Bell; // You can customize icons per type
+  const getNotificationStyles = (type: string) => {
+    switch (type) {
+      case 'essay_graded':
+        return { icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50' };
+      case 'new_activity':
+        return { icon: Info, color: 'text-blue-500', bg: 'bg-blue-50' };
+      case 'resubmission_open':
+      case 'resubmission_allowed':
+        return { icon: ArrowRight, color: 'text-emerald-500', bg: 'bg-emerald-50' };
+      case 'upcoming_deadline':
+        return { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' };
+      default:
+        return { icon: Bell, color: 'text-primary', bg: 'bg-primary/5' };
+    }
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // 1. Mark as read if not already
     if (!notification.read) {
       await handleMarkAsRead(notification.id);
     }
 
-    // 2. Extract ID (handle both plain and JSON strings)
     let rawRelatedId = notification.relatedId;
     let activityId = "";
     let essayId = "";
@@ -92,158 +93,125 @@ export function NotificationsTab() {
          const parsed = JSON.parse(rawRelatedId);
          activityId = parsed.activityId || "";
          essayId = parsed.essayId || "";
-         if (!activityId && !essayId) {
-            activityId = parsed.id || rawRelatedId;
-         }
        } catch (e) {
-         console.error("Failed to parse JSON relatedId:", e);
-         activityId = rawRelatedId;
+         console.error("Failed to parse relatedId:", e);
        }
     } else {
       activityId = rawRelatedId || "";
-      essayId = rawRelatedId || "";
-    }
-
-    // 3. Optional: Fetch Breadcrumb Info for better header experience
-    let info = null;
-    if (activityId || essayId) {
-      const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
-      info = await fetchActivityBreadcrumbInfo(activityId || essayId);
     }
 
     const params: Record<string, string> = {};
-    if (activityId || essayId) params.activityId = activityId || essayId;
-    if (info) {
-      if (info.programAbbr) params.programAbbr = info.programAbbr;
-      if (info.courseName) params.courseName = info.courseName;
-      if (info.activityTitle) params.activityTitle = info.activityTitle;
-    }
+    if (activityId) params.activityId = activityId;
+    if (essayId) params.essayId = essayId;
 
-    // 4. Navigate based on type
     if (activityId || essayId) {
       switch (notification.type) {
-        case "new_activity":
-        case "resubmission_open":
-        case "resubmission_requested":
-        case "resubmission_request":
-        case "resubmission_allowed":
-        case "submission_received":
-        case "upcoming_deadline":
-        case "revision_requested":
-          // Lead to the Submit Essay page
-          navigate(buildSecureUrl('/Student/Submit', params));
-          break;
         case "essay_graded":
-          // Lead to Feedback page
-          if (essayId) params.essayId = essayId;
           navigate(buildSecureUrl('/Student/Feedback', params));
           break;
         default:
-          // Default: try Submit page if it's an ID
-          if (!isNaN(parseInt(activityId))) {
-            navigate(buildSecureUrl('/Student/Submit', params));
-          }
+          navigate(buildSecureUrl('/Student/Submit', params));
           break;
       }
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Checking for news...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl text-neutral-900">Notifications</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            {unreadCount > 0
-              ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
-              : "All caught up!"}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 px-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Updates</h1>
+          <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <Bell size={14} className="text-primary/50" />
+            {unreadCount > 0 ? `${unreadCount} new updates for you` : "You're all done!"}
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button
-            variant="outline"
+          <button
             onClick={handleMarkAllAsRead}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-sm hover:bg-neutral-50 transition-all"
           >
-            <Check className="w-4 h-4" />
-            Mark all as read
-          </Button>
+            <Check size={12} />
+            Clean Up
+          </button>
         )}
       </div>
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {isLoading ? (
-          <Card className="p-12 text-center">
-            <Bell className="w-16 h-16 mx-auto mb-4 text-neutral-300 animate-pulse" />
-            <p className="text-neutral-500">Loading notifications...</p>
-          </Card>
-        ) : notifications.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Bell className="w-16 h-16 mx-auto mb-4 text-neutral-300" />
-            <p className="text-neutral-500">No notifications</p>
-          </Card>
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-neutral-50 shadow-sm">
+            <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex items-center justify-center mb-6">
+               <CheckCircle size={32} className="text-neutral-200" />
+            </div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">No new updates right now</p>
+          </div>
         ) : (
-          notifications.map((notification) => {
-            const Icon = getNotificationIcon();
-            return (
-              <Card
-                key={notification.id}
-                className={`p-5 transition-all hover:shadow-md cursor-pointer ${
-                  !notification.read
-                    ? "border-l-4 border-l-primary bg-primary/5"
-                    : ""
-                }`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="bg-primary/10 text-primary p-3 rounded-rd flex-shrink-0">
-                    <Icon className="w-5 h-5" />
+          <AnimatePresence>
+            {notifications.map((notification, i) => {
+              const { icon: Icon, color, bg } = getNotificationStyles(notification.type);
+              return (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`
+                    relative group p-6 rounded-3xl border transition-all flex items-start gap-5 cursor-pointer
+                    ${!notification.read 
+                      ? 'bg-white border-primary/20 shadow-lg shadow-primary/5' 
+                      : 'bg-neutral-50/50 border-neutral-100 opacity-80 hover:bg-white hover:opacity-100'}
+                  `}
+                >
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${bg} ${color}`}>
+                    <Icon size={20} />
                   </div>
+                  
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
-                      <h3
-                        className={`font-medium ${
-                          !notification.read
-                            ? "text-neutral-900"
-                            : "text-neutral-700"
-                        }`}
-                      >
+                      <h3 className={`text-sm font-bold tracking-tight ${!notification.read ? 'text-neutral-900' : 'text-neutral-500'}`}>
                         {notification.title}
                       </h3>
                       {!notification.read && (
-                        <Badge className="bg-primary text-white flex-shrink-0">
-                          New
-                        </Badge>
+                        <span className="shrink-0 w-2 h-2 bg-primary rounded-full animate-pulse mt-2" title="Fresh" />
                       )}
                     </div>
-                    <p className="text-sm text-neutral-600 mb-2">
+                    <p className={`text-xs leading-relaxed mb-3 ${!notification.read ? 'text-neutral-600 font-medium' : 'text-neutral-400'}`}>
                       {notification.message}
                     </p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-neutral-400">
+                      <span className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">
                         {notification.timestamp}
-                      </p>
+                      </span>
                       {!notification.read && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs"
-                          onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
-                            e?.stopPropagation();
-                            handleMarkAsRead(notification.id);
-                          }}
+                        <button
+                          onClick={(e) => handleMarkAsRead(notification.id, e)}
+                          className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
                         >
-                          Mark as Read
-                        </Button>
+                          I've seen this
+                        </button>
                       )}
                     </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })
+
+                  {!notification.read && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
     </div>

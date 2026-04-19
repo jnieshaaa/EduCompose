@@ -94,10 +94,10 @@ export const SIMULATION_DATA: SimulationData = {
 };
 
 export const COLORS: Record<Entity['type'], string> = {
-  Thesis: '#38bdf8', // sky-400
-  Claim: '#14b8a6', // teal-500
+  Thesis: '#0891b2', // cyan-600
+  Claim: '#0e7490', // cyan-700
   Evidence: '#f59e0b', // amber-500
-  'Counter-Claim': '#6b7280', // gray-500
+  'Counter-Claim': '#64748b', // slate-500
   Rebuttal: '#6366f1', // indigo-500
 };
 
@@ -125,14 +125,12 @@ function useResizeObserver(
 
 // --- Main Component ---
 export function KnowledgeGraphSimulation() {
-  // State Management
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [coherenceScore, setCoherenceScore] = useState(0);
   const [strengthScores, setStrengthScores] = useState<{ label: string; score: number }[]>([]);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
 
-  // Refs
   const knowledgeGraphCanvasRef = useRef<HTMLCanvasElement>(null);
   const graphContainerRef = useRef<HTMLDivElement>(null);
   const strengthChartRef = useRef<HTMLCanvasElement>(null);
@@ -141,7 +139,6 @@ export function KnowledgeGraphSimulation() {
   const graphEdges = useRef<GraphEdge[]>([]);
   const graphIterations = useRef(0);
 
-  // Evidence Verification Table Data
   const evidenceTableData = useMemo(() => {
     const evidenceEntities = SIMULATION_DATA.entities.filter((e) => e.type === 'Evidence');
     return evidenceEntities.map((evidence) => {
@@ -150,12 +147,11 @@ export function KnowledgeGraphSimulation() {
       return {
         text: evidence.text,
         status: status,
-        statusColor: status === 'Verified' ? 'text-green-600' : 'text-red-600',
+        statusColor: status === 'Verified' ? 'text-emerald-600' : 'text-rose-600',
       };
     });
   }, []);
 
-  // Calculate Coherence Score
   const calculateCoherence = useCallback((): number => {
     const nodes = graphNodes.current;
     const edges = graphEdges.current;
@@ -176,14 +172,13 @@ export function KnowledgeGraphSimulation() {
         }
         if (edge.target.id === currentNode.id && !visited.has(edge.source.id)) {
           visited.add(edge.source.id);
-          queue.push(edge.source);
+          queue.push(edge.target);
         }
       });
     }
     return Math.round((connectedCount / nodes.length) * 100);
   }, []);
 
-  // Drawing function
   const drawGraph = useCallback(() => {
     const canvas = knowledgeGraphCanvasRef.current;
     if (!canvas) return;
@@ -201,19 +196,16 @@ export function KnowledgeGraphSimulation() {
       });
     }
 
-    // Draw Edges
     graphEdges.current.forEach((edge) => {
-      const isHighlighted =
-        hoveredNode && (edge.source.id === hoveredNode.id || edge.target.id === hoveredNode.id);
+      const isHighlighted = hoveredNode && (edge.source.id === hoveredNode.id || edge.target.id === hoveredNode.id);
       ctx.beginPath();
       ctx.moveTo(edge.source.x, edge.source.y);
       ctx.lineTo(edge.target.x, edge.target.y);
-      ctx.strokeStyle = isHighlighted ? '#0284c7' : '#94a3b8';
+      ctx.strokeStyle = isHighlighted ? '#0891b2' : '#e2e8f0';
       ctx.lineWidth = isHighlighted ? 2.5 : 1;
       ctx.stroke();
     });
 
-    // Draw Nodes
     graphNodes.current.forEach((node) => {
       const isDimmed = hoveredNode && !connectedNodeIds.has(node.id);
       ctx.beginPath();
@@ -221,19 +213,15 @@ export function KnowledgeGraphSimulation() {
       ctx.fillStyle = COLORS[node.type];
       ctx.globalAlpha = isDimmed ? 0.3 : 1.0;
       ctx.fill();
-      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
       ctx.stroke();
     });
     ctx.globalAlpha = 1.0;
   }, [hoveredNode]);
 
-  // Force Layout Simulation
   const runForceLayout = useCallback(() => {
-    const attraction = 0.02,
-      repulsion = 1000,
-      damping = 0.95,
-      maxIterations = 200;
+    const attraction = 0.02, repulsion = 1000, damping = 0.95, maxIterations = 200;
     const nodes = graphNodes.current;
     const edges = graphEdges.current;
     const canvas = knowledgeGraphCanvasRef.current;
@@ -244,14 +232,10 @@ export function KnowledgeGraphSimulation() {
         drawGraph();
         return;
       }
-
-      // Repulsion
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
-          const nodeA = nodes[i],
-            nodeB = nodes[j];
-          const dx = nodeB.x - nodeA.x,
-            dy = nodeB.y - nodeA.y;
+          const nodeA = nodes[i], nodeB = nodes[j];
+          const dx = nodeB.x - nodeA.x, dy = nodeB.y - nodeA.y;
           const distance = Math.sqrt(dx * dx + dy * dy) || 0.1;
           const force = repulsion / (distance * distance);
           nodeA.vx -= force * (dx / distance);
@@ -260,18 +244,13 @@ export function KnowledgeGraphSimulation() {
           nodeB.vy += force * (dy / distance);
         }
       }
-
-      // Attraction
       edges.forEach((edge) => {
-        const dx = edge.target.x - edge.source.x,
-          dy = edge.target.y - edge.source.y;
+        const dx = edge.target.x - edge.source.x, dy = edge.target.y - edge.source.y;
         edge.source.vx += dx * attraction;
         edge.source.vy += dy * attraction;
         edge.target.vx -= dx * attraction;
         edge.target.vy -= dy * attraction;
       });
-
-      // Update positions
       nodes.forEach((node) => {
         node.vx *= damping;
         node.vy *= damping;
@@ -280,7 +259,6 @@ export function KnowledgeGraphSimulation() {
         node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
         node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
       });
-
       drawGraph();
       graphIterations.current++;
       animationFrameId.current = requestAnimationFrame(update);
@@ -288,12 +266,9 @@ export function KnowledgeGraphSimulation() {
     update();
   }, [drawGraph]);
 
-  // Initialize Graph State
   const initGraph = useCallback(() => {
     const canvas = knowledgeGraphCanvasRef.current;
     if (!canvas) return;
-
-    // Reset and init nodes
     graphIterations.current = 0;
     graphNodes.current = SIMULATION_DATA.entities.map((e) => ({
       ...e,
@@ -301,29 +276,22 @@ export function KnowledgeGraphSimulation() {
       y: Math.random() * canvas.height,
       vx: 0,
       vy: 0,
-      radius: e.type === 'Thesis' ? 20 : 15,
+      radius: e.type === 'Thesis' ? 24 : 18,
     }));
-
-    // Init edges
     graphEdges.current = SIMULATION_DATA.relations.map((r) => ({
       source: graphNodes.current.find((n) => n.id === r.source)!,
       target: graphNodes.current.find((n) => n.id === r.target)!,
       label: r.label,
     }));
-
     if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     runForceLayout();
   }, [runForceLayout]);
 
-  // Analysis Logic
   const runAnalysis = useCallback(() => {
-    // 1. Calculate Strength Scores
     const claims = SIMULATION_DATA.entities.filter((e) => e.type === 'Claim');
     const scores = claims.map((claim) => {
       const evidenceCount = SIMULATION_DATA.relations.filter(
-        (r) =>
-          r.target === claim.id &&
-          SIMULATION_DATA.entities.find((e) => e.id === r.source)?.type === 'Evidence'
+        (r) => r.target === claim.id && SIMULATION_DATA.entities.find((e) => e.id === r.source)?.type === 'Evidence'
       ).length;
       return {
         label: `Claim: "${claim.text.substring(0, 30)}..."`,
@@ -331,27 +299,18 @@ export function KnowledgeGraphSimulation() {
       };
     });
     setStrengthScores(scores);
-
-    // 2. Calculate Coherence Score
     setCoherenceScore(calculateCoherence());
-
-    // 3. Mark Analysis Complete
     setIsAnalysisComplete(true);
   }, [calculateCoherence]);
 
-  // Resize canvas using ResizeObserver
   const handleResize = useCallback((entry: ResizeObserverEntry) => {
     const canvas = knowledgeGraphCanvasRef.current;
     if (!canvas) return;
-
     const { width, height } = entry.contentRect;
     if (width > 0 && height > 0) {
       canvas.width = width;
       canvas.height = height;
-
-      // Re-initialize graph if it's already been started
       if (graphNodes.current.length > 0) {
-        // Keep nodes within new bounds
         graphNodes.current.forEach((node) => {
           node.x = Math.max(node.radius, Math.min(width - node.radius, node.x));
           node.y = Math.max(node.radius, Math.min(height - node.radius, node.y));
@@ -363,12 +322,9 @@ export function KnowledgeGraphSimulation() {
 
   useResizeObserver(graphContainerRef, handleResize);
 
-  // Handle Simulation Analysis Start Button Click
   const handleSimulationAnalyze = () => {
     setIsAnalyzing(true);
     setIsAnalysisComplete(false);
-
-    // Small delay to allow DOM to render the graph container
     requestAnimationFrame(() => {
       const canvas = knowledgeGraphCanvasRef.current;
       const container = graphContainerRef.current;
@@ -378,342 +334,249 @@ export function KnowledgeGraphSimulation() {
       }
       initGraph();
     });
-
     setTimeout(() => {
       runAnalysis();
       setIsAnalyzing(false);
-    }, 2500);
+    }, 2000);
   };
 
-  // Graph Mouse Interactions
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = knowledgeGraphCanvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      let foundNode: GraphNode | null = null;
-      for (const node of graphNodes.current) {
-        const dx = node.x - mouseX;
-        const dy = node.y - mouseY;
-        if (dx * dx + dy * dy < node.radius * node.radius) {
-          foundNode = node;
-          break;
-        }
-      }
-
-      setHoveredNode(foundNode);
-      if (graphIterations.current > 200 || !animationFrameId.current) {
-        drawGraph();
-      }
-    },
-    [drawGraph]
-  );
-
-  const handleMouseOut = () => {
-    if (hoveredNode) {
-      setHoveredNode(null);
-      if (graphIterations.current > 200 || !animationFrameId.current) {
-        drawGraph();
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = knowledgeGraphCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    let foundNode: GraphNode | null = null;
+    for (const node of graphNodes.current) {
+      const dx = node.x - mouseX;
+      const dy = node.y - mouseY;
+      if (dx * dx + dy * dy < node.radius * node.radius) {
+        foundNode = node;
+        break;
       }
     }
-  };
+    setHoveredNode(foundNode);
+    if (graphIterations.current > 200) drawGraph();
+  }, [drawGraph]);
 
-  // Strength Chart (Bar Chart)
   useEffect(() => {
     const ctx = strengthChartRef.current?.getContext('2d');
     let chart: Chart<'bar'> | undefined;
-
     if (ctx && strengthScores.length > 0) {
       chart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: strengthScores.map((s) => s.label),
-          datasets: [
-            {
-              label: 'Strength Score',
-              data: strengthScores.map((s) => s.score),
-              backgroundColor: '#14b8a6',
-              borderColor: '#0f766e',
-              borderWidth: 1,
-            },
-          ],
+          datasets: [{
+            label: 'Strength Score',
+            data: strengthScores.map((s) => s.score),
+            backgroundColor: '#0891b2',
+            borderRadius: 8,
+            borderWidth: 0,
+          }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           indexAxis: 'y',
           scales: {
-            x: { beginAtZero: true, max: 100, grid: { color: '#e5e7eb' } },
-            y: { grid: { display: false } },
+            x: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 10 } } },
           },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: (context) => context[0].label.split('"')[1] ?? 'Argument Strength',
-              },
-            },
-          },
+          plugins: { legend: { display: false } },
         },
       });
     }
-    return () => {
-      chart?.destroy();
-    };
+    return () => chart?.destroy();
   }, [strengthScores]);
 
-  // Cleanup animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
-    };
-  }, []);
-
   return (
-    <section id="simulation" className="bg-white py-16 md:py-24">
-      <motion.div
-        className="container mx-auto px-6"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: false, amount: 0.1 }}
-        transition={{ duration: 0.5, ease: 'easeInOut' }}
-      >
-        <motion.header
-          className="text-center mb-12"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: false, amount: 0.5 }}
-          transition={{ duration: 0.8, ease: 'easeInOut' }}
-        >
-          <h2 className="text-3xl md:text-4xl font-bold">Live Simulation: From Essay to Insight</h2>
-          <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-            This simulation demonstrates how EduCompose deconstructs an essay to analyze its
-            argumentative structure using a Knowledge Graph.
-          </p>
-        </motion.header>
+    <div className="space-y-12">
+      {/* Simulation Stepper */}
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <div className="space-y-8">
+          <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm">
+             <div className="flex items-center gap-4 mb-6">
+                <span className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">1</span>
+                <div>
+                   <h3 className="font-bold text-slate-800 text-xl tracking-tight">The Student Essay</h3>
+                   <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Initial Data Source</p>
+                </div>
+             </div>
+             
+             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                <h4 className="font-bold text-center mb-4 text-slate-700">The Urgency of Renewable Energy Adoption</h4>
+                <div className="space-y-4 text-sm leading-relaxed text-slate-600">
+                  {SIMULATION_DATA.entities.map((entity) => (
+                    <p key={entity.id}>
+                      <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] uppercase mr-2 ${
+                        entity.type === 'Thesis' ? 'bg-cyan-100 text-cyan-700' :
+                        entity.type === 'Claim' ? 'bg-blue-100 text-blue-700' :
+                        entity.type === 'Evidence' ? 'bg-amber-100 text-amber-700' :
+                        'bg-slate-100 text-slate-700'
+                      }`}>
+                        {entity.type}
+                      </span>
+                      {entity.text}
+                    </p>
+                  ))}
+                </div>
+             </div>
 
-        <main className="space-y-12">
-          {/* Step 1: The Student Essay */}
-          <motion.section
-            id="sim-step1"
-            className="step-card visible bg-white p-6 rounded-xl shadow-md border border-gray-200"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: false, amount: 0.3 }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          >
-            <div className="flex items-center mb-4">
-              <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
-                1
-              </div>
-              <h3 className="text-2xl font-bold ml-4 text-gray-700">The Student Essay</h3>
-            </div>
-            <p className="mb-4 text-gray-600">
-              This section contains the sample essay to be analyzed. The system will deconstruct
-              this text to identify the core claims, supporting evidence, and the main thesis.
-              Click the button below to begin the analysis.
-            </p>
-            <div
-              id="essayContainer"
-              className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-gray-700 space-y-3"
-            >
-              <h4 className="font-bold text-center">The Urgency of Renewable Energy Adoption</h4>
-              {SIMULATION_DATA.entities.map((entity) => (
-                <p key={entity.id}>
-                  <span
-                    className={`font-semibold ${
-                      entity.type === 'Thesis'
-                        ? 'text-sky-700'
-                        : entity.type === 'Claim'
-                        ? 'text-teal-700'
-                        : entity.type === 'Evidence'
-                        ? 'text-amber-700'
-                        : entity.type === 'Counter-Claim'
-                        ? 'text-gray-600'
-                        : 'text-indigo-700'
-                    }`}
-                    data-entity-id={entity.id}
-                  >
-                    [{entity.type}]
-                  </span>{' '}
-                  {entity.text}
-                </p>
-              ))}
-            </div>
-            <div className="text-center mt-6">
-              <button
-                id="analyzeBtn"
-                className="bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-cyan-700 transition-colors shadow disabled:bg-gray-400"
+             <button
+                className="w-full mt-6 bg-primary text-white font-bold py-4 px-6 rounded-2xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed group"
                 onClick={handleSimulationAnalyze}
                 disabled={isAnalyzing}
               >
-                {isAnalyzing ? 'Analyzing...' : 'Begin Analysis'}
+                {isAnalyzing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Analyzing Essay...
+                  </span>
+                ) : 'Run Writing Analytics'}
               </button>
-            </div>
-          </motion.section>
+          </div>
+        </div>
 
-          {/* Step 2: Argument Knowledge Graph */}
+        <div className="relative">
           <AnimatePresence mode="wait">
-            {(isAnalyzing || isAnalysisComplete) && (
-              <motion.section
-                key="sim-step2"
-                id="sim-step2"
-                className="step-card bg-white p-6 rounded-xl shadow-md border border-gray-200"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+            {!isAnalyzing && !isAnalysisComplete ? (
+              <motion.div 
+                key="empty"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="h-[550px] bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center p-12"
               >
-                <div className="flex items-center mb-4">
-                  <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
-                    2
-                  </div>
-                  <h3 className="text-2xl font-bold ml-4 text-gray-700">Argument Knowledge Graph</h3>
+                <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6">
+                   <span className="text-4xl">🚀</span>
                 </div>
-                <p className="mb-4 text-gray-600">
-                  The system constructs a Knowledge Graph to map the essay's structure. Nodes
-                  represent concepts, and edges show their logical relationships. Hover over a node
-                  to see its text and highlight connections.
-                </p>
-                <div
-                  ref={graphContainerRef}
-                  id="graph-container"
-                  className="w-full h-[500px] bg-gray-100 rounded-lg border border-gray-200 relative"
-                >
-                  <canvas
-                    id="knowledgeGraph"
-                    ref={knowledgeGraphCanvasRef}
-                    onMouseMove={handleMouseMove}
-                    onMouseOut={handleMouseOut}
-                    className="w-full h-full"
-                  />
-                  {hoveredNode && (
-                    <div
-                      id="tooltip"
-                      className="absolute bg-black bg-opacity-75 text-white text-sm rounded-md p-2 pointer-events-none transition-opacity duration-300 max-w-xs"
-                      style={{
-                        left: `${Math.min(hoveredNode.x + 15, (graphContainerRef.current?.clientWidth ?? 300) - 200)}px`,
-                        top: `${hoveredNode.y + 15}px`,
-                        opacity: 1,
-                      }}
-                    >
-                      <span className="font-semibold">{hoveredNode.type}:</span> {hoveredNode.text}
-                    </div>
-                  )}
-                </div>
-                <div
-                  id="legend"
-                  className="flex justify-center items-center space-x-4 mt-4 text-sm text-gray-600 flex-wrap"
-                >
-                  {Object.entries(COLORS).map(([type, color]) => (
-                    <div key={type} className="flex items-center">
-                      <span
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: color }}
+                <h4 className="text-lg font-bold text-slate-800 mb-2">Ready for Simulation</h4>
+                <p className="text-slate-500 text-sm">Click "Run Writing Analytics" to deconstruct the essay into a semantic Knowledge Graph.</p>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="active"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-6"
+              >
+                <div className="bg-slate-900 rounded-[2.5rem] p-4 shadow-2xl relative overflow-hidden group">
+                   <div className="absolute top-4 left-6 z-10">
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Logical Mapping</p>
+                      <h3 className="text-white font-bold">Argument Knowledge Graph</h3>
+                   </div>
+                   
+                   <div ref={graphContainerRef} className="h-[450px] w-full rounded-[2rem] bg-slate-800/50 relative">
+                      <canvas
+                        ref={knowledgeGraphCanvasRef}
+                        onMouseMove={handleMouseMove}
+                        onMouseOut={() => setHoveredNode(null)}
+                        className="w-full h-full cursor-crosshair"
                       />
-                      {type}
-                    </div>
-                  ))}
+                      {hoveredNode && (
+                        <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl pointer-events-none max-w-[250px] transition-all">
+                          <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-1">{hoveredNode.type}</p>
+                          <p className="text-xs text-white/90 leading-relaxed font-medium">"{hoveredNode.text}"</p>
+                        </div>
+                      )}
+                   </div>
+
+                   <div className="mt-4 flex flex-wrap gap-4 px-4 pb-2 justify-center">
+                     {Object.entries(COLORS).map(([type, color]) => (
+                       <div key={type} className="flex items-center gap-2 text-[10px] font-bold text-white/60 uppercase tracking-wider">
+                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                         {type}
+                       </div>
+                     ))}
+                   </div>
                 </div>
-              </motion.section>
+              </motion.div>
             )}
           </AnimatePresence>
+        </div>
+      </div>
 
-          {/* Step 3: Generated Insights */}
-          <motion.section
-            id="sim-step3"
-            className={`step-card bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-opacity duration-500 ${
-              isAnalysisComplete ? 'visible opacity-100' : 'opacity-0 hidden'
-            }`}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: false, amount: 0.3 }}
-            transition={{ duration: 1, ease: 'easeOut' }}
+      <AnimatePresence>
+        {isAnalysisComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid md:grid-cols-2 gap-8"
           >
-            <div className="flex items-center mb-4">
-              <div className="bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">
-                3
-              </div>
-              <h3 className="text-2xl font-bold ml-4 text-gray-700">Generated Insights</h3>
-            </div>
-            <p className="mb-6 text-gray-600">
-              By analyzing the Knowledge Graph, the system provides scores for key writing
-              attributes. This goes beyond grammar to assess the quality of the argumentation
-              itself, providing specific, actionable feedback for the teacher.
-            </p>
-            <div className="grid md:grid-cols-2 gap-8 items-start">
-              <div>
-                <h4 className="text-xl font-semibold mb-3 text-center text-gray-700">
-                  Argument Strength
-                </h4>
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Measures how well each claim is supported by evidence. A higher bar indicates
-                  stronger support.
-                </p>
-                <div className="relative w-full max-w-[600px] h-[350px] md:h-[400px] mx-auto">
-                  <canvas id="strengthChart" ref={strengthChartRef} />
-                </div>
-              </div>
-              <div className="space-y-8">
-                <div>
-                  <h4 className="text-xl font-semibold mb-3 text-gray-700">Coherence Score</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Measures how well all parts of the essay connect to the central thesis. A higher
-                    score indicates a more unified argument.
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-6">
-                    <div
-                      id="coherenceBar"
-                      className="bg-teal-500 h-6 rounded-full text-center text-white font-medium flex items-center justify-center transition-all duration-1000"
-                      style={{ width: `${coherenceScore}%` }}
-                    >
-                      {coherenceScore}%
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-50 rounded-full blur-3xl -mr-16 -mt-16" />
+               <div className="flex items-center gap-4 mb-8">
+                  <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">2</span>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-xl tracking-tight">Coherence & Strength</h3>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Generated Assessment</p>
+                  </div>
+               </div>
+
+               <div className="space-y-10">
+                  <div>
+                    <div className="flex justify-between items-end mb-3">
+                       <p className="text-sm font-bold text-slate-700 tracking-tight">Overall Coherence Score</p>
+                       <p className="text-2xl font-black text-primary">{coherenceScore}%</p>
                     </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${coherenceScore}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="bg-gradient-to-r from-primary to-cyan-500 h-full rounded-full"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-3 italic leading-relaxed">
+                       *Logic Analysis: {coherenceScore > 70 ? 'High logical unity detected.' : 'Some fragmented claims identified.'}
+                    </p>
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-xl font-semibold mb-3 text-gray-700">Evidence Verification</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Checks provided evidence against an external knowledge base to assess its
-                    validity.
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table id="evidenceTable" className="w-full text-sm text-left text-gray-600">
-                      <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-                        <tr>
-                          <th scope="col" className="px-4 py-2">
-                            Evidence Statement
-                          </th>
-                          <th scope="col" className="px-4 py-2">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {evidenceTableData.map((row, index) => (
-                          <tr key={index} className="bg-white border-b">
-                            <td className="px-4 py-3">{row.text.substring(0, 40)}...</td>
-                            <td className={`px-4 py-3 font-semibold ${row.statusColor}`}>
-                              {row.status}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                  <div className="h-[300px]">
+                      <p className="text-sm font-bold text-slate-700 tracking-tight mb-4 text-center">Claim Support Strength</p>
+                      <canvas ref={strengthChartRef} />
                   </div>
-                </div>
-              </div>
+               </div>
             </div>
-          </motion.section>
-        </main>
-      </motion.div>
-    </section>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl flex flex-col">
+               <div className="flex items-center gap-4 mb-8">
+                  <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">3</span>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-xl tracking-tight">Evidence Verification</h3>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Cross-Reference Layer</p>
+                  </div>
+               </div>
+
+               <div className="flex-1 space-y-4">
+                  {evidenceTableData.map((row, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-6"
+                    >
+                      <p className="text-xs font-medium text-slate-600 leading-normal">"{row.text.substring(0, 80)}..."</p>
+                      <div className={`px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-widest shrink-0 shadow-sm ${
+                        row.status === 'Verified' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                      }`}>
+                        {row.status}
+                      </div>
+                    </motion.div>
+                  ))}
+               </div>
+
+               <div className="mt-8 pt-8 border-t border-slate-100 text-center">
+                  <p className="text-sm text-slate-400 font-medium">
+                     Simulated analysis complete. 
+                  </p>
+                  <p className="text-[11px] text-slate-300 font-bold uppercase tracking-[0.2em] mt-2">EduCompose x Laguna University</p>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

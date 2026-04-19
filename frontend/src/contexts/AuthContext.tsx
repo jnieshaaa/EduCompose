@@ -60,16 +60,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Helper with Timeout for Database calls
-  const safeDbQuery = async (query: any, timeoutMs = 10000) => {
+  const safeDbQuery = async (query: any, timeoutMs = 15000) => {
     const timeoutPromise = new Promise<{ data: null; error: { message: string; isTimeout: boolean } }>((resolve) => {
       setTimeout(() => resolve({ data: null, error: { message: "DB_TIMEOUT", isTimeout: true } }), timeoutMs);
     });
     return Promise.race([query, timeoutPromise]);
   };
 
-  const fetchUserFromTable = async (authUserId: string): Promise<{ user: User | null; error: any }> => {
+  const fetchUserFromTable = async (authUserId: string, roleHint?: string): Promise<{ user: User | null; error: any }> => {
     try {
-      // 1. Try fetching from users table (Teacher/Admin)
+      // 1. If we have a student hint, try students table first
+      if (roleHint === 'student') {
+        const studentResult: any = await safeDbQuery(
+          supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
+        );
+
+        if (studentResult.data) {
+          const data = studentResult.data;
+          return {
+            user: {
+              id: data.id.toString(),
+              auth_id: authUserId,
+              email: data.email ?? "",
+              username: data.email ?? "",
+              first_name: data.first_name || "",
+              last_name: data.last_name || "",
+              role: "student",
+              is_active: true,
+              email_verified: true,
+              onboarding_completed: data.onboarding_completed ?? false,
+            },
+            error: null
+          };
+        }
+        
+        if (studentResult.error?.isTimeout) return { user: null, error: studentResult.error };
+      }
+
+      // 2. Try fetching from users table (Teacher/Admin or default)
       const userResult: any = await safeDbQuery(
         supabase.from("users").select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
       );
@@ -99,36 +127,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
 
-      // If we got here and there was a timeout, return error to prevent logout
-      if (userResult.error?.isTimeout) {
-        return { user: null, error: userResult.error };
+      if (userResult.error?.isTimeout) return { user: null, error: userResult.error };
+
+      // 3. Fallback to students table if not tried yet
+      if (roleHint !== 'student') {
+        const studentResult: any = await safeDbQuery(
+          supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
+        );
+
+        if (studentResult.data) {
+          const data = studentResult.data;
+          return {
+            user: {
+              id: data.id.toString(),
+              auth_id: authUserId,
+              email: data.email ?? "",
+              username: data.email ?? "",
+              first_name: data.first_name || "",
+              last_name: data.last_name || "",
+              role: "student",
+              is_active: true,
+              email_verified: true,
+              onboarding_completed: data.onboarding_completed ?? false,
+            },
+            error: null
+          };
+        }
+        return { user: null, error: studentResult.error };
       }
 
-      // 2. Try fetching from students table
-      const studentResult: any = await safeDbQuery(
-        supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
-      );
-
-      if (studentResult.data) {
-        const data = studentResult.data;
-        return {
-          user: {
-            id: data.id.toString(),
-            auth_id: authUserId,
-            email: data.email ?? "",
-            username: data.email ?? "",
-            first_name: data.first_name || "",
-            last_name: data.last_name || "",
-            role: "student",
-            is_active: true,
-            email_verified: true,
-            onboarding_completed: data.onboarding_completed ?? false,
-          },
-          error: null
-        };
-      }
-
-      return { user: null, error: studentResult.error };
+      return { user: null, error: null };
     } catch (e) { 
       return { user: null, error: e }; 
     }
@@ -136,7 +164,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const mapSupabaseUser = async (supabaseUser: any): Promise<{ user: User | null; error: any }> => {
     const su = supabaseUser;
-    return await fetchUserFromTable(su.id);
+    const roleHint = su.user_metadata?.role;
+    return await fetchUserFromTable(su.id, roleHint);
   };
 
 

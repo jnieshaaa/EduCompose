@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { motion, useAnimation, useInView } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import HeaderPublic from "../components/HeaderPublic";
+import HeaderPublic from "../components/landing/HeaderPublic";
 import AuthModal from "../components/LoginModal";
 import TextAnalysisModal from "../components/essay/TextAnalysisModal";
 import Modal from "../components/ui/Modal";

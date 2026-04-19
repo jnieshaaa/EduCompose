@@ -46,7 +46,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       },
       {
         icon: <Layers className="w-5 h-5" />,
-        label: "Course Management",
+        label: "Classes",
         path: "/Teacher/Courses",
       },
       {
@@ -216,7 +216,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
               </div>
               {isSidebarOpen && (
                 <span className="text-xs font-bold whitespace-nowrap overflow-hidden">
-                  Help Center
+                  Help
                 </span>
               )}
             </button>

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Card from '../../components/ui/Card';
-import { BookOpen, ChevronRight, Users, Calendar, GraduationCap } from 'lucide-react';
+import { BookOpen, Users, Calendar, GraduationCap, Loader2, ArrowRight } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildSecureUrl } from '../../utils/secureUrl';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AcademicClass {
   id: string; // teacher_course_load_id
@@ -105,7 +105,7 @@ export function MyClassesTab() {
                     ? (tcl.users.title && tcl.users.nickname 
                       ? `${tcl.users.title} ${tcl.users.nickname}` 
                       : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name}` : tcl.users.last_name))
-                    : "TBA",
+                    : "No Teacher yet",
                   term: tcl.term || "---",
                   academicYear: tcl.academic_year || "---",
                   section: sectionName
@@ -129,74 +129,98 @@ export function MyClassesTab() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-neutral-500 font-medium animate-pulse">Loading your classes...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Looking for your classes...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 sm:px-0">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">My Classes</h1>
-        <p className="text-sm sm:text-base text-neutral-600">Select a class to view activities and assignments</p>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 px-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Your Classes</h1>
+          <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <GraduationCap size={14} className="text-primary/50" />
+            Pick a class to see your homework and tasks
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {classes.length > 0 ? (
-          classes.map((classItem) => (
-            <Card 
-              key={classItem.id}
-              className="p-6 hover:shadow-lg transition-shadow cursor-pointer group border-none shadow-sm hover:ring-2 hover:ring-primary/20 bg-white"
-              onClick={() => navigate(buildSecureUrl(`/Student/Classes/${classItem.id}`, { courseName: classItem.name, courseCode: classItem.code }))}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-primary/5 rounded-xl group-hover:bg-primary/10 transition-colors">
-                  <BookOpen className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                  <span className="text-xs font-bold text-primary">Go to class</span>
-                  <ChevronRight className="w-4 h-4 text-primary" />
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <div className="text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                  {classItem.code}
-                </div>
-                <h3 className="text-lg font-bold text-neutral-900 leading-snug">
-                  {classItem.name}
-                </h3>
-              </div>
-              
-              <div className="space-y-2.5 pt-4 border-t border-neutral-100">
-                <div className="flex items-center gap-2.5 text-xs font-medium text-neutral-600">
-                  <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center">
-                    <Users className="w-3.5 h-3.5" />
+      {/* Classes Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence>
+          {classes.length > 0 ? (
+            classes.map((classItem, i) => (
+              <motion.div 
+                key={classItem.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ y: -5 }}
+                className="bg-white p-7 rounded-3xl border border-neutral-100 shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all cursor-pointer group relative overflow-hidden"
+                onClick={() => navigate(buildSecureUrl(`/Student/Classes/${classItem.id}`, { courseName: classItem.name, courseCode: classItem.code }))}
+              >
+                {/* Accent Decor */}
+                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full translate-x-12 -translate-y-12 group-hover:bg-primary/10 transition-colors" />
+
+                <div className="flex items-start justify-between mb-6 relative z-10">
+                  <div className="p-3.5 bg-primary/5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                    <BookOpen size={24} className="group-hover:scale-110 transition-transform" />
                   </div>
-                  <span>{classItem.instructor}</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs font-medium text-neutral-600">
-                  <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center">
-                    <Calendar className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Open Class</span>
+                    <ArrowRight size={14} className="text-primary" />
                   </div>
-                  <span>{classItem.term} • {classItem.academicYear}</span>
                 </div>
-                <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-neutral-50 rounded text-[10px] font-bold text-neutral-400 uppercase">
-                  <GraduationCap className="w-3 h-3" />
-                  Block {classItem.section}
+                
+                <div className="mb-6 relative z-10">
+                  <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5 px-2 py-0.5 bg-primary/5 w-fit rounded-lg">
+                    {classItem.code}
+                  </div>
+                  <h3 className="text-xl font-bold text-neutral-900 leading-[1.2] group-hover:text-primary transition-colors pr-4">
+                    {classItem.name}
+                  </h3>
                 </div>
+                
+                <div className="space-y-3.5 pt-5 border-t border-neutral-50 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-50 flex items-center justify-center shrink-0">
+                      <Users size={14} className="text-neutral-400" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Teacher</p>
+                      <p className="text-xs font-bold text-neutral-600">{classItem.instructor}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-50 flex items-center justify-center shrink-0">
+                      <Calendar size={14} className="text-neutral-400" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Schedule</p>
+                      <p className="text-xs font-bold text-neutral-600">{classItem.term} • {classItem.academicYear}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-neutral-400 uppercase tracking-widest bg-neutral-50/50 w-fit px-3 py-1.5 rounded-xl">
+                    <Users size={12} className="text-neutral-300" />
+                    Group {classItem.section}
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-full py-24 text-center bg-white rounded-3xl border border-neutral-50 shadow-sm">
+              <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex items-center justify-center mb-6 mx-auto">
+                <BookOpen size={32} className="text-neutral-200" />
               </div>
-            </Card>
-          ))
-        ) : (
-          <div className="col-span-full py-12 text-center bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200">
-            <BookOpen className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-neutral-900">No classes found</h3>
-            <p className="text-neutral-500">You haven't been added to any classes yet.</p>
-          </div>
-        )}
+              <h3 className="text-xl font-bold text-neutral-900 mb-2">No classes yet</h3>
+              <p className="text-sm font-medium text-neutral-400">You haven't been added to any classes right now.</p>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

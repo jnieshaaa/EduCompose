@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import { AlertCircle, Calendar, BookOpen, ChevronRight, BarChart2, Clock, CheckCircle, FileText } from 'lucide-react';
-import Button from '../../components/ui/Button';
+import { AlertCircle, Calendar, BookOpen, BarChart2, Clock, CheckCircle, FileText, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildSecureUrl } from '../../utils/secureUrl';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface StudentClassActivity {
   id: string;
@@ -18,7 +16,6 @@ interface StudentClassActivity {
   instructions?: string;
   color: "purple" | "green";
   activityId: string;
-  loginTime?: string;
 }
 
 interface ClassHeaderData {
@@ -45,7 +42,6 @@ export function ClassDetailTab() {
       try {
         setIsLoading(true);
 
-        // 1. Get student & block context using Auth UUID
         const { data: student } = await supabase
           .from("students")
           .select("id")
@@ -54,7 +50,6 @@ export function ClassDetailTab() {
 
         if (!student) return;
           
-        // 2. Get Class Info
         const { data: tcl, error: tclError } = await supabase
           .from("teacher_course_loads")
           .select(`
@@ -78,7 +73,6 @@ export function ClassDetailTab() {
 
         if (tclError) throw tclError;
 
-        // 3. Find which block the student is in for this Course Load
         const { data: enrollments } = await supabase
           .from("block_students")
           .select(`
@@ -115,7 +109,6 @@ export function ClassDetailTab() {
           }
         }
 
-        // console.log("Context - Course:", tcl.course_id, "Block:", currentBlockId, "Program:", programId);
         setBlockId(currentBlockId);
 
         const instructors = Array.isArray(tcl.users) ? tcl.users : (tcl.users ? [tcl.users] : []);
@@ -133,8 +126,6 @@ export function ClassDetailTab() {
           section: sectionName
         });
 
-        // 4. Fetch Activities
-        // Activities assigned specifically to this block OR broadly to this course OR to this program
         let query = supabase
           .from("essay_activities")
           .select("*")
@@ -147,11 +138,8 @@ export function ClassDetailTab() {
         query = query.or(filterParts.join(','));
 
         const { data: activityRows, error: activitiesError } = await query;
-        console.log("Fetched Activities Count:", activityRows?.length || 0);
-
         if (activitiesError) throw activitiesError;
 
-        // 5. Check submission status for each activity
         const { data: studentEssays } = await supabase
           .from("essays")
           .select("activity_id")
@@ -162,13 +150,13 @@ export function ClassDetailTab() {
         const mappedActivities: StudentClassActivity[] = (activityRows || []).map((row: any) => ({
           id: String(row.id),
           title: row.title,
-          type: "Essay Activity",
+          type: "Essay Work",
           status: submittedActivityIds.has(String(row.id)) ? "DONE" : "PENDING",
           deadline: row.due_date ? new Date(row.due_date).toLocaleDateString(undefined, {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
           }) : undefined,
           postedDate: new Date(row.created_at).toLocaleDateString(undefined, {
-            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            year: 'numeric', month: 'long', day: 'numeric'
           }),
           instructions: row.instructions,
           color: submittedActivityIds.has(String(row.id)) ? "green" : "purple",
@@ -185,7 +173,7 @@ export function ClassDetailTab() {
     };
 
     fetchClassDetails();
-  }, [classId, user?.id]);
+  }, [classId, user?.auth_id]);
 
   const handleActivityClick = (activityId: string) => {
     const activity = activities.find(a => a.activityId === activityId);
@@ -204,180 +192,193 @@ export function ClassDetailTab() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-neutral-500 font-medium animate-pulse">Loading class content...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Opening class materials...</p>
       </div>
     );
   }
 
   if (!classData) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-error-default mx-auto mb-4" />
-        <h2 className="text-xl font-bold">Class Not Found</h2>
-        <Button onClick={() => navigate('/Student/Classes')} className="mt-4">
-          Return to Classes
-        </Button>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2 tracking-tight">Class Not Found</h2>
+        <p className="text-sm font-medium text-neutral-400 max-w-sm mb-10 leading-relaxed">
+          We couldn't find the class info you're looking for.
+        </p>
+        <button 
+          onClick={() => navigate('/Student/Classes')}
+          className="bg-neutral-900 text-white px-8 py-3.5 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/10"
+        >
+          Back to Classes
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-      {/* Course Header Banner */}
-      <div className="mb-8 bg-success-default rounded-2xl p-8 text-white shadow-xl shadow-primary/20 relative overflow-hidden group">
-        {/* Subtle decorative circle */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/15 transition-colors duration-500"></div>
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      {/* Premium Class Banner */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-full translate-x-12 -translate-y-12" />
         
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="px-2.5 py-0.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-md text-[10px] font-bold uppercase tracking-wider">
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+          <div className="space-y-6 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-3.5 py-1.5 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest rounded-xl">
                 {classData.code}
               </span>
-              <span className="px-2.5 py-0.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                Block {classData.section}
+              <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-xl">
+                Group {classData.section}
               </span>
             </div>
-            <h1 className="text-3xl font-extrabold mb-2 tracking-tight">
+            
+            <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 leading-tight tracking-tight">
               {classData.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-white/90 text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <div className="p-1 bg-white/10 rounded-full">
-                  <BookOpen className="w-3.5 h-3.5" />
+            
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-50 flex items-center justify-center shrink-0">
+                  <BookOpen size={18} className="text-neutral-400" />
                 </div>
-                {classData.instructor}
-              </span>
-              <span className="flex items-center gap-2">
-                <div className="p-1 bg-white/10 rounded-full">
-                  <Calendar className="w-3.5 h-3.5" />
+                <div>
+                  <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Teacher</p>
+                  <p className="text-sm font-bold text-neutral-600">{classData.instructor}</p>
                 </div>
-                {classData.term}
-              </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-50 flex items-center justify-center shrink-0">
+                  <Calendar size={18} className="text-neutral-400" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Semester</p>
+                  <p className="text-sm font-bold text-neutral-600">{classData.term}</p>
+                </div>
+              </div>
             </div>
           </div>
           
-          <Button 
-            className="bg-white !text-[#0791B2] hover:bg-white hover:shadow-2xl hover:shadow-black/30 shadow-lg shadow-black/20 font-bold px-6 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
+          <button 
             onClick={() => navigate('/Student/Progress')}
+            className="flex items-center gap-3 px-8 py-4 bg-neutral-900 text-white font-bold text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-neutral-900/20 hover:bg-primary transition-all group shrink-0"
           >
-            <BarChart2 className="w-4 h-4 !text-[#0791B2]" />
-            My Performance
-          </Button>
+            <BarChart2 size={16} />
+            See My Scores
+            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Activities Section Header */}
-      <div className="flex items-center gap-2 mb-6 ml-1">
-        <div className="w-1.5 h-5 bg-primary rounded-full"></div>
-        <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Essay Activities</h2>
-        <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-primary/20">
-          {activities.length} Available
-        </Badge>
-      </div>
+      {/* Activities Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-1">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Your Tasks</h2>
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Homework and assignments</p>
+          </div>
+          <div className="px-3 py-1 bg-neutral-50 rounded-lg text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+            {activities.length} To Do
+          </div>
+        </div>
 
-      {/* Activities List */}
-      <div className="grid grid-cols-1 gap-5">
-        {activities.length > 0 ? (
-          activities.map((activity) => (
-            <Card
-              key={activity.id}
-              className={`
-                group relative border-none shadow-sm hover:shadow-md transition-all duration-300 p-5 cursor-pointer rounded-2xl overflow-hidden
-                ${activity.status === 'DONE' 
-                  ? 'bg-neutral-50/50' 
-                  : 'bg-white'
-                }
-              `}
-              onClick={() => handleActivityClick(activity.activityId)}
-            >
-              {/* Status Indicator Bar */}
-              <div className={`absolute top-0 left-0 bottom-0 w-1.5 transition-all duration-300 ${
-                activity.status === 'DONE' 
-                  ? 'bg-success-default/60 group-hover:bg-success-default' 
-                  : 'bg-primary/40 group-hover:bg-primary'
-              }`}></div>
-
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 ml-2">
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-start justify-between sm:justify-start gap-4">
-                    <div className={`p-3 rounded-2xl flex-shrink-0 transition-colors ${
-                      activity.status === 'DONE' 
-                        ? 'bg-success-default/10 text-success-default' 
-                        : 'bg-primary/10 text-primary'
-                    }`}>
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                          {activity.type}
-                        </span>
-                        {activity.status === 'DONE' && (
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-success-default bg-success-default/10 px-1.5 py-0.5 rounded uppercase">
-                            <CheckCircle className="w-2.5 h-2.5" />
-                            Completed
-                          </div>
+        <div className="grid grid-cols-1 gap-4">
+          <AnimatePresence>
+            {activities.length > 0 ? (
+              activities.map((activity, i) => (
+                <motion.div
+                  key={activity.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  onClick={() => handleActivityClick(activity.activityId)}
+                  className={`
+                    group bg-white p-6 rounded-[2rem] border border-neutral-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer relative overflow-hidden
+                    ${activity.status === 'DONE' ? 'opacity-80' : ''}
+                  `}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <div className="flex items-start gap-5 flex-1">
+                      <div className={`p-4 rounded-[1.25rem] shrink-0 transition-colors ${
+                        activity.status === 'DONE' 
+                          ? 'bg-emerald-50 text-emerald-500' 
+                          : 'bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white'
+                      }`}>
+                        <FileText size={28} />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{activity.type}</span>
+                          {activity.status === 'DONE' && (
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                              <CheckCircle size={10} />
+                              Finished
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 leading-snug group-hover:text-primary transition-colors pr-10">
+                          {activity.title}
+                        </h3>
+                        {activity.instructions && (
+                          <p className="text-sm text-neutral-400 font-medium line-clamp-1 max-w-2xl italic">
+                            {activity.instructions}
+                          </p>
                         )}
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 tracking-tight group-hover:text-primary transition-colors">
-                        {activity.title}
-                      </h3>
                     </div>
-                  </div>
 
-                  {activity.instructions && (
-                    <p className="text-sm text-neutral-500 leading-relaxed line-clamp-2 max-w-3xl">
-                      {activity.instructions}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Posted {activity.postedDate}</span>
-                    </div>
-                    {activity.deadline && (
-                      <div className={`flex items-center gap-2 text-xs font-bold ${
-                        activity.status === 'DONE' ? 'text-neutral-400' : 'text-primary'
-                      }`}>
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span>Ends {activity.deadline}</span>
+                    <div className="flex flex-wrap md:flex-col items-center md:items-end gap-x-6 gap-y-4">
+                      <div className="space-y-1 md:text-right">
+                        <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Sent on</p>
+                        <p className="text-xs font-bold text-neutral-500">{activity.postedDate}</p>
                       </div>
-                    )}
-                  </div>
-                </div>
+                      
+                      {activity.deadline && (
+                        <div className="space-y-1 md:text-right">
+                          <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Due on</p>
+                          <div className={`flex items-center gap-2 text-xs font-bold ${
+                            activity.status === 'DONE' ? 'text-neutral-400' : 'text-primary'
+                          }`}>
+                            <Clock size={12} />
+                            {activity.deadline}
+                          </div>
+                        </div>
+                      )}
 
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center self-stretch gap-4 w-full sm:w-auto">
-                  <div className="sm:hidden w-px h-10 bg-neutral-100"></div>
-                  <Button 
-                    variant="ghost" 
-                    className={`
-                      font-bold gap-2 px-4 py-2 rounded-xl transition-all
-                      ${activity.status === 'DONE' 
-                        ? 'text-neutral-400 hover:text-primary hover:bg-primary/5' 
-                        : 'text-primary bg-primary/5 hover:bg-primary hover:text-white'
-                      }
-                    `}
-                  >
-                    {activity.status === 'DONE' ? 'Review Submission' : 'Start Essay'}
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                      <button className={`
+                        flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all
+                        ${activity.status === 'DONE' 
+                          ? 'bg-neutral-50 text-neutral-400' 
+                          : 'bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white'}
+                      `}>
+                        {activity.status === 'DONE' ? 'See My Work' : 'Start Writing'}
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="py-24 text-center bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm">
+                <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex items-center justify-center mb-6 mx-auto">
+                  <BookOpen size={36} className="text-neutral-100" />
                 </div>
+                <h3 className="text-xl font-bold text-neutral-900 mb-2">No tasks yet</h3>
+                <p className="text-sm font-medium text-neutral-400 max-w-sm mx-auto px-6">
+                  Your teacher hasn't given any homework for this class yet.
+                </p>
               </div>
-            </Card>
-          ))
-        ) : (
-          <div className="py-24 text-center bg-white rounded-3xl border-2 border-dashed border-neutral-100 shadow-sm">
-            <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-neutral-100">
-              <BookOpen className="w-8 h-8 text-neutral-300" />
-            </div>
-            <h3 className="text-xl font-bold text-neutral-900 mb-2">Activities coming soon</h3>
-            <p className="text-neutral-500 max-w-sm mx-auto">Your instructor hasn't posted any essay activities for this block yet. Stay tuned!</p>
-          </div>
-        )}
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

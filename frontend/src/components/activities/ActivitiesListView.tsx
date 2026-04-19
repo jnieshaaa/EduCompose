@@ -87,15 +87,15 @@ export function ActivitiesListView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Essay Activities</h1>
-          <p className="text-sm text-neutral-500 mt-1 font-medium">Define assignments and manage submission cycles</p>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Activities</h1>
+          <p className="text-sm text-neutral-500 mt-1 font-medium">Create and manage your student assignments</p>
         </div>
         {!isReadOnly && (
           <button
             onClick={onCreateActivity}
             className="flex items-center gap-2 bg-primary text-sm font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            <Plus size={18} /> Create Activity
+            <Plus size={18} /> New Activity
           </button>
         )}
       </div>
@@ -103,9 +103,9 @@ export function ActivitiesListView({
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: "Total Assigned", value: totalActivities, icon: ClipboardList, color: "text-primary", bg: "bg-primary/5" },
-          { label: "Active Submissions", value: totalSubmissions, icon: FileText, color: "text-blue-500", bg: "bg-blue-50" },
-          { label: "Due This Cycle", value: upcomingDue, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" }
+          { label: "Total Activities", value: totalActivities, icon: ClipboardList, color: "text-primary", bg: "bg-primary/5" },
+          { label: "Essays Submitted", value: totalSubmissions, icon: FileText, color: "text-blue-500", bg: "bg-blue-50" },
+          { label: "Due Soon", value: upcomingDue, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" }
         ].map((stat, i) => (
           <div key={i} className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm flex items-center gap-4">
             <div className={`p-3 ${stat.bg} ${stat.color} rounded-xl`}>
@@ -167,8 +167,8 @@ export function ActivitiesListView({
           <h3 className="text-base font-bold text-neutral-800 mb-2">No Activities Found</h3>
           <p className="text-sm text-neutral-400 max-w-[280px] mx-auto mb-8 leading-relaxed">
             {activities.length === 0
-              ? "Start defining assignments by creating your first essay activity."
-              : "No activities match your search query."}
+              ? "Start by creating your first student assignment."
+              : "No activities match your search."}
           </p>
           {activities.length === 0 && !isReadOnly && (
             <button 
@@ -284,11 +284,11 @@ export function ActivitiesListView({
           <Table>
             <TableHeader className="bg-neutral-50/50">
               <TableRow>
-                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Activity Title</TableHead>
-                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Course</TableHead>
-                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Block</TableHead>
-                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Due Date</TableHead>
-                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Activity Name</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Course</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Block</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Due Date</TableHead>
+                <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-neutral-50">

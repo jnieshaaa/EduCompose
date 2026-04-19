@@ -159,8 +159,8 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               <User size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Modify Registry</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Academic Profile Update</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Edit Student</h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update student information</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -184,7 +184,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Internal Code</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Student ID</label>
               <div className="relative group/id">
                 <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/id:text-primary transition-colors" size={14} />
                 <input
@@ -197,7 +197,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Email</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
               <div className="relative group/mail">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={14} />
                 <input
@@ -214,7 +214,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
               <input
                 required
                 value={formData.first_name}
@@ -223,7 +223,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
               <input
                 value={formData.middle_name}
                 onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
@@ -231,7 +231,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
               <input
                 required
                 value={formData.last_name}
@@ -243,7 +243,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
           <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Academic Program Concentration</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program Concentration</label>
               {isLoadingPrograms ? (
                 <div className="h-11 flex items-center gap-2 text-xs font-bold text-neutral-400 px-4">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -271,7 +271,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
                 <div className="relative group/year">
                    <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/year:text-primary transition-colors shadow-none" size={14} />
                    <select
@@ -286,7 +286,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Block Unit</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Class</label>
                 <input
                   value={formData.block_name}
                   onChange={(e) => setFormData({ ...formData, block_name: e.target.value })}
@@ -298,7 +298,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Lifecycle Status</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Student Status</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'active', label: 'Active', icon: CheckCircle, color: 'emerald' },
@@ -313,7 +313,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                     enrollment_status: s.id as any, 
                     is_active: s.id === 'active' 
                   })}
-                  className={`flex items-center justify-center gap-2 h-11 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                  className={`flex items-center justify-center gap-2 h-11 px-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
                     formData.enrollment_status === s.id
                       ? `bg-${s.color}-600 border-${s.color}-600 text-white shadow-lg shadow-${s.color}-200`
                       : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
@@ -342,7 +342,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             disabled={loading}
             className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[140px]"
           >
-            {loading ? "Synchronizing..." : "Update Registry"}
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </motion.div>

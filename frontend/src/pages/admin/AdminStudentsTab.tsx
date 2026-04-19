@@ -226,7 +226,7 @@ export const AdminStudentsTab: React.FC = () => {
       setStudents(data || []);
       setTotalStudentsCount(count || 0);
     } catch (err: any) {
-      showNotification('error', err instanceof Error ? err.message : "Registry connection failed.");
+      showNotification('error', err instanceof Error ? err.message : "Failed to connect to database.");
     } finally {
       setLoading(false);
     }
@@ -273,7 +273,7 @@ export const AdminStudentsTab: React.FC = () => {
       setOpenDropdown(null);
       showNotification('success', `Student status transitioned to ${newStatus}.`);
     } catch (err: any) {
-      showNotification('error', err.message || "Registry update failure.");
+      showNotification('error', err.message || "Failed to update status.");
     }
   };
 
@@ -319,10 +319,10 @@ export const AdminStudentsTab: React.FC = () => {
         temp_password: newPassword,
       });
 
-      showNotification('success', "Credentials recalculated and dispatched.");
+      showNotification('success', "Password reset and email sent.");
       setOpenDropdown(null);
     } catch (err: any) {
-      showNotification('error', err.message || "Registry synchronization failure.");
+      showNotification('error', err.message || "Failed to sync account.");
     } finally {
       setLoading(false);
     }
@@ -330,7 +330,7 @@ export const AdminStudentsTab: React.FC = () => {
 
   const handleProvisionAuthAccount = async (student: Student) => {
     if (!student.email) {
-      showNotification('warning', "Instructional email undefined.");
+      showNotification('warning', "Email address is missing.");
       return;
     }
     setConfirmingAction({ type: "provision", student });
@@ -368,9 +368,9 @@ export const AdminStudentsTab: React.FC = () => {
 
       await loadStudents();
       setOpenDropdown(null);
-      showNotification('success', "Registry identity provisioned.");
+      showNotification('success', "Student account created successfully.");
     } catch (err: any) {
-      showNotification('error', err.message || "Instructional provisioning failure.");
+      showNotification('error', err.message || "Failed to create account.");
     } finally {
       setLoading(false);
     }
@@ -395,9 +395,9 @@ export const AdminStudentsTab: React.FC = () => {
       if (deleteError) throw deleteError;
       await loadStudents();
       setOpenDropdown(null);
-      showNotification('success', "Student record decommissioned.");
+      showNotification('success', "Student record deleted.");
     } catch (err: any) {
-      showNotification('error', err.message || "Decommissioning failure.");
+      showNotification('error', err.message || "Failed to delete student.");
     } finally {
       setLoading(false);
     }
@@ -436,11 +436,11 @@ export const AdminStudentsTab: React.FC = () => {
         
       if (error) throw error;
       
-      showNotification('success', `${ids.length} records purged from registry.`);
+      showNotification('success', `${ids.length} records deleted from system.`);
       setSelectedIds(new Set());
       await loadStudents();
     } catch (err: any) {
-      showNotification('error', "Bulk purge failure: " + err.message);
+      showNotification('error', "Failed to delete multiple records: " + err.message);
     } finally {
       setIsBulkProcessing(false);
     }
@@ -450,7 +450,7 @@ export const AdminStudentsTab: React.FC = () => {
     const selectedStudents = students.filter(s => selectedIds.has(s.id));
     const needProvision = selectedStudents.filter(s => !s.auth_user_id);
     if (needProvision.length === 0) {
-      showNotification('info', "All selected entities maintain valid identities.");
+      showNotification('info', "All selected students already have accounts.");
       return;
     }
     setConfirmingAction({ type: "bulk_provision" });
@@ -632,8 +632,8 @@ export const AdminStudentsTab: React.FC = () => {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Student Registry</h1>
-          <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">Institutional Student Lifecycle Management</p>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Students</h1>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage all enrolled students</p>
         </div>
         <div className="flex gap-3">
           <Button 
@@ -642,14 +642,14 @@ export const AdminStudentsTab: React.FC = () => {
             className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
           >
             <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Sync Registry</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Sync Data</span>
           </Button>
           <Button 
             onClick={() => setIsEnrollModalOpen(true)}
             className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all px-6 h-12 flex items-center gap-2"
           >
             <UserPlus size={18} />
-            <span className="text-xs font-black uppercase tracking-widest">Enroll Student</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Add Student</span>
           </Button>
         </div>
       </div>
@@ -657,25 +657,25 @@ export const AdminStudentsTab: React.FC = () => {
       <div className="flex items-center gap-2 bg-neutral-100/50 p-1.5 rounded-[1.25rem] w-fit border border-neutral-100">
         <button
           onClick={() => setActiveTab("enrolled")}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-[0.15em] uppercase ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all tracking-[0.15em] uppercase ${
             activeTab === "enrolled"
               ? "bg-white text-primary shadow-sm border border-neutral-200"
               : "text-neutral-400 hover:text-neutral-600"
           }`}
         >
           <ShieldCheck size={14} />
-          Enrolled Active
+          Active Students
         </button>
         <button
           onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-[0.15em] uppercase relative ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all tracking-[0.15em] uppercase relative ${
             activeTab === "pending"
               ? "bg-white text-primary shadow-sm border border-neutral-200"
               : "text-neutral-400 hover:text-neutral-600"
           }`}
         >
           <History size={14} />
-          Pending Approvals
+          New Requests
         </button>
       </div>
 
@@ -697,15 +697,15 @@ export const AdminStudentsTab: React.FC = () => {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8"
           >
-            {/* Telemetry Filter Hub */}
+            {/* Search & Filters */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <Search size={16} className="text-neutral-400" />
-                <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Telemetry Filters</h3>
+                <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Search Filters</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Universal Search</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Students</label>
                   <div className="relative group/search">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/search:text-primary transition-colors" />
                     <input
@@ -718,7 +718,7 @@ export const AdminStudentsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
                   <div className="relative group/dept">
                     <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/dept:text-primary transition-colors" />
                     <select
@@ -742,7 +742,7 @@ export const AdminStudentsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
                   <div className="relative group/prog">
                     <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/prog:text-primary transition-colors" />
                     <select
@@ -768,7 +768,7 @@ export const AdminStudentsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Block Segment</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Block Segment</label>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1 group/block">
                       <select
@@ -805,7 +805,7 @@ export const AdminStudentsTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Bulk Execution Console */}
+            {/* Bulk Actions Panel */}
             <AnimatePresence>
               {selectedIds.size > 0 && (
                 <motion.div 
@@ -816,13 +816,13 @@ export const AdminStudentsTab: React.FC = () => {
                 >
                   <div className="flex items-center gap-6">
                     <div className="w-14 h-14 bg-white/10 rounded-2xl flex flex-col items-center justify-center border border-white/5 shadow-2xl">
-                      <span className="text-xl font-black text-white leading-none">{selectedIds.size}</span>
-                      <span className="text-[9px] font-black uppercase tracking-tighter text-white/40 mt-1">Units</span>
+                      <span className="text-xl font-bold text-white leading-none">{selectedIds.size}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-tighter text-white/40 mt-1">Units</span>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-black text-white tracking-tight uppercase">Bulk Execution Console</p>
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={10} className="text-primary" /> Active Registry Operations
+                      <p className="text-sm font-bold text-white tracking-tight uppercase">Bulk Actions Panel</p>
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
+                        <Zap size={10} className="text-primary" /> Active Student Operations
                       </p>
                     </div>
                   </div>
@@ -831,7 +831,7 @@ export const AdminStudentsTab: React.FC = () => {
                     {isBulkProcessing ? (
                       <div className="flex items-center gap-6 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5">Processing Provisioning</span>
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1.5">Processing Accounts...</span>
                             <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
                               <motion.div 
                                 initial={{ width: 0 }}
@@ -840,7 +840,7 @@ export const AdminStudentsTab: React.FC = () => {
                               />
                             </div>
                          </div>
-                         <div className="text-xs font-black text-white">
+                         <div className="text-xs font-bold text-white">
                            {bulkProgress.current} <span className="text-white/30 mx-1">/</span> {bulkProgress.total}
                          </div>
                       </div>
@@ -848,21 +848,21 @@ export const AdminStudentsTab: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Button 
                           onClick={handleBulkProvision}
-                          className="rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:scale-[1.03] transition-all"
+                          className="rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:scale-[1.03] transition-all"
                         >
                           Provision Access
                         </Button>
                         <Button 
                           onClick={handleBulkResendWelcome}
-                          className="rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:bg-white/20 transition-all border border-white/5"
+                          className="rounded-xl bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-white/20 transition-all border border-white/5"
                         >
                           Dispatch Credentials
                         </Button>
                         <Button 
                           onClick={handleBulkDelete}
-                          className="rounded-xl bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest px-5 h-10 hover:bg-red-500/20 transition-all border border-red-500/20"
+                          className="rounded-xl bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-red-500/20 transition-all border border-red-500/20"
                         >
-                          Registry Purge
+                          Bulk Delete
                         </Button>
                         <button onClick={() => setSelectedIds(new Set())} className="p-2 text-white/30 hover:text-white transition-colors">
                           <X size={18} />
@@ -879,8 +879,8 @@ export const AdminStudentsTab: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-neutral-50/50">
-                      <th className="pl-8 pr-0 py-5 w-12">
-                        <div className="flex items-center justify-center">
+                      <th className="pl-6 py-5 w-10">
+                        <div className="flex items-center">
                           <input 
                             type="checkbox" 
                             checked={selectedIds.size === currentItems.length && currentItems.length > 0}
@@ -889,10 +889,10 @@ export const AdminStudentsTab: React.FC = () => {
                           />
                         </div>
                       </th>
-                      <th className="pl-4 pr-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Placement</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                      <th className="px-4 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
+                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Placement</th>
+                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
+                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -901,7 +901,7 @@ export const AdminStudentsTab: React.FC = () => {
                         <td colSpan={5} className="px-8 py-32 text-center">
                           <div className="flex flex-col items-center justify-center gap-6">
                             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Querying Registry Hub</p>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Loading Student Data...</p>
                           </div>
                         </td>
                       </tr>
@@ -910,15 +910,15 @@ export const AdminStudentsTab: React.FC = () => {
                         <td colSpan={5} className="px-8 py-32 text-center">
                           <div className="flex flex-col items-center justify-center opacity-40">
                             <UserCircle size={48} className="text-neutral-300 mb-4" />
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Zero signatures detected in search window</p>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">No results found for your search</p>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       currentItems.map((student) => (
                         <tr key={student.id} className="group hover:bg-neutral-50/50 transition-all duration-300">
-                          <td className="pl-8 pr-0 py-5">
-                            <div className="flex items-center justify-center">
+                          <td className="pl-6 py-5">
+                            <div className="flex items-center">
                               <input 
                                 type="checkbox" 
                                 checked={selectedIds.has(student.id)}
@@ -927,13 +927,13 @@ export const AdminStudentsTab: React.FC = () => {
                               />
                             </div>
                           </td>
-                          <td className="pl-4 pr-6 py-5">
+                          <td className="px-4 py-5">
                             <div className="flex items-center gap-5">
                          <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                            <User size={20} />
                          </div>
                          <div>
-                                <div className="text-sm font-black text-neutral-900 tracking-tight">{student.last_name}, {student.first_name}</div>
+                                <div className="text-sm font-bold text-neutral-900 tracking-tight">{student.last_name}, {student.first_name}</div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{student.student_code} • {student.email}</div>
                               </div>
                             </div>
@@ -944,7 +944,7 @@ export const AdminStudentsTab: React.FC = () => {
                                 <Layers size={14} />
                               </div>
                               <div>
-                                <div className="text-xs font-black text-neutral-900 tracking-tight">{student.programs_lookup?.abbr} {student.year}{student.block_name}</div>
+                                <div className="text-xs font-bold text-neutral-900 tracking-tight">{student.programs_lookup?.abbr} {student.year}{student.block_name}</div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                                   {student.programs_lookup?.departments?.name}
                                 </div>
@@ -955,18 +955,18 @@ export const AdminStudentsTab: React.FC = () => {
                             <div className="flex flex-col items-center gap-2">
                                <div className="flex items-center gap-1.5">
                                  <span className={`w-1.5 h-1.5 rounded-full ${student.is_active ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`} />
-                                 <span className={`text-[10px] font-black uppercase tracking-wider ${student.is_active ? 'text-green-600' : 'text-neutral-400'}`}>
+                                 <span className={`text-[10px] font-bold uppercase tracking-wider ${student.is_active ? 'text-green-600' : 'text-neutral-400'}`}>
                                    {student.enrollment_status}
                                  </span>
                                </div>
                                {!student.auth_user_id ? (
-                                 <span className="text-[9px] font-black bg-red-50 text-red-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Identity Pending</span>
+                                 <span className="text-[9px] font-bold bg-red-50 text-red-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">No Account</span>
                                ) : student.users?.onboarding_completed ? (
-                                 <span className="text-[9px] font-black bg-green-50 text-green-500 px-2 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1">
-                                   <ShieldCheck size={10} /> Sync Active
+                                 <span className="text-[9px] font-bold bg-green-50 text-green-500 px-2 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1">
+                                   <ShieldCheck size={10} /> Active Account
                                  </span>
                                ) : (
-                                 <span className="text-[9px] font-black bg-amber-50 text-amber-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Pending Setup</span>
+                                 <span className="text-[9px] font-bold bg-amber-50 text-amber-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Pending Setup</span>
                                )}
                             </div>
                           </td>
@@ -992,8 +992,8 @@ export const AdminStudentsTab: React.FC = () => {
               {!loading && totalStudentsCount > 0 && (
                 <div className="px-8 py-8 bg-white border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Viewing Data Window</span>
-                    <span className="text-sm font-black text-neutral-900">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Showing rows</span>
+                    <span className="text-sm font-bold text-neutral-900">
                       {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalStudentsCount)} <span className="text-neutral-300 mx-1">/</span> {totalStudentsCount.toLocaleString()}
                     </span>
                   </div>
@@ -1010,12 +1010,12 @@ export const AdminStudentsTab: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       {getPageNumbers().map((page, i) => (
                         page === "..." ? (
-                          <span key={`dots-${i}`} className="px-2 text-neutral-300 font-black">•••</span>
+                          <span key={`dots-${i}`} className="px-2 text-neutral-300 font-bold">•••</span>
                         ) : (
                           <button
                             key={`page-${page}`}
                             onClick={() => setCurrentPage(Number(page))}
-                            className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-black rounded-2xl transition-all ${
+                            className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-bold rounded-2xl transition-all ${
                               currentPage === page
                                 ? "bg-primary text-white shadow-xl shadow-primary/20"
                                 : "bg-neutral-50 text-neutral-400 hover:bg-neutral-100"
@@ -1037,14 +1037,14 @@ export const AdminStudentsTab: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Density</span>
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Rows</span>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
-                      className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-black text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
+                      className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-bold text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
                     >
                       {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
@@ -1104,17 +1104,17 @@ export const AdminStudentsTab: React.FC = () => {
               return (
                 <div className="flex flex-col focus:outline-none">
                   <div className="px-5 py-3 border-b border-neutral-50 mb-1">
-                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.15em] mb-0.5">Record Context</p>
-                    <p className="text-xs font-black text-neutral-900 truncate">{s.first_name} {s.last_name}</p>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] mb-0.5">Student Details</p>
+                    <p className="text-xs font-bold text-neutral-900 truncate">{s.first_name} {s.last_name}</p>
                   </div>
 
                   <div className="py-1">
                     <button
                       onClick={() => { setEditingStudent(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <Edit2 size={14} className="text-neutral-400" />
-                      Modify Record
+                      Edit Student
                     </button>
                     <button
                       onClick={() => {
@@ -1123,48 +1123,48 @@ export const AdminStudentsTab: React.FC = () => {
                         setSearchParams(searchParams);
                         setOpenDropdown(null);
                       }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <Activity size={14} className="text-neutral-400" />
-                      Telemetry Logs
+                      Activity Logs
                     </button>
                   </div>
 
                   <div className="py-1 border-t border-neutral-50">
-                    <p className="px-5 py-2 text-[8px] font-black text-neutral-300 uppercase tracking-[0.2em]">Identity Management</p>
+                    <p className="px-5 py-2 text-[8px] font-bold text-neutral-300 uppercase tracking-[0.2em]">Account Management</p>
                     {s.auth_user_id ? (
                       <button
                         onClick={() => { handleResendPassword(s); setOpenDropdown(null); }}
-                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
                       >
                         <Mail size={14} />
-                        Dispatch Credentials
+                        Resend Email
                       </button>
                     ) : (
                       <button
                         onClick={() => { handleProvisionAuthAccount(s); setOpenDropdown(null); }}
-                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
                       >
                         <Zap size={14} />
-                        Provision Identity
+                        Create Account
                       </button>
                     )}
                     <button
                       onClick={() => { handleToggleActive(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <UserX size={14} className="text-neutral-400" />
-                      Transition State
+                      Change Status
                     </button>
                   </div>
 
                   <div className="py-1 border-t border-neutral-50">
                     <button
                       onClick={() => { handleDeleteStudent(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-black text-red-500 uppercase tracking-widest hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-red-500 uppercase tracking-widest hover:bg-red-50 transition-colors"
                     >
                       <Trash2 size={14} />
-                      Purge Profile
+                      Delete Student
                     </button>
                   </div>
                 </div>

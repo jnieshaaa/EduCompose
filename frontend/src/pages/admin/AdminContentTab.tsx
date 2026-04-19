@@ -80,9 +80,9 @@ export function AdminContentTab() {
 
   const getLabel = (tab: string) => {
     switch (tab) {
-      case "programs": return "Academic Hubs";
-      case "activities": return "Active Missions";
-      case "rubrics": return "Quality Tokens";
+      case "programs": return "Programs";
+      case "activities": return "Activities";
+      case "rubrics": return "Rubrics";
       default: return tab;
     }
   };
@@ -92,10 +92,10 @@ export function AdminContentTab() {
       {/* Premium Integrated Header */}
       <div className="flex flex-col sm:flex-row items-end justify-between gap-8">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Content Discovery</h1>
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Resources</h1>
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1 flex items-center gap-2">
             <Box size={14} className="text-primary/50" />
-            Cross-Platform Asset Audit & Intelligence
+            View and manage programs, activities, and rubrics
           </p>
         </div>
         
@@ -109,7 +109,7 @@ export function AdminContentTab() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
                 activeTab === tab.id
                   ? "bg-white text-primary shadow-sm border border-neutral-100"
                   : "text-neutral-400 hover:text-neutral-600"
@@ -127,7 +127,7 @@ export function AdminContentTab() {
         <div className="flex-1 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={18} />
           <input
-            placeholder={`Query local ${activeTab} cluster...`}
+            placeholder={`Search ${activeTab}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-bold placeholder:text-neutral-300 focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
@@ -146,7 +146,7 @@ export function AdminContentTab() {
             className="flex flex-col items-center justify-center py-40 bg-white rounded-[3.5rem] border border-neutral-100 shadow-sm"
           >
             <Loader2 className="animate-spin text-primary/30 w-12 h-12 mb-6" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400 animate-pulse">Establishing Intelligence Link</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 animate-pulse">Loading resources...</p>
           </motion.div>
         ) : (
           <motion.div 
@@ -168,11 +168,11 @@ export function AdminContentTab() {
                     <div className="w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                       {getIcon(activeTab)}
                     </div>
-                    <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest bg-neutral-50 px-3 py-1.5 rounded-xl">ID: {item.id.toString().slice(-6)}</span>
+                    <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest bg-neutral-50 px-3 py-1.5 rounded-xl">ID: {item.id.toString().slice(-6)}</span>
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-xl font-black text-neutral-900 tracking-tight leading-tight group-hover:text-primary transition-colors">
+                    <h3 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight group-hover:text-primary transition-colors">
                       {item.name || item.title}
                     </h3>
                     {item.description && (
@@ -185,16 +185,16 @@ export function AdminContentTab() {
                   <div className="pt-4 border-t border-neutral-50 flex items-center justify-between">
                      <div className="flex items-center gap-2">
                         <Zap size={14} className="text-primary/40" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{getLabel(activeTab)}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{getLabel(activeTab)}</span>
                      </div>
-                     <span className="text-[9px] font-black text-neutral-300 uppercase tracking-tighter">
+                     <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-tighter">
                         Log: {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
                      </span>
                   </div>
                 </div>
                 
                 <button className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white">
-                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Full Content Audit</span>
+                   <span className="text-[10px] font-bold uppercase tracking-widest">View Details</span>
                    <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                 </button>
               </motion.div>
@@ -206,7 +206,7 @@ export function AdminContentTab() {
       {filteredContent().length === 0 && !loading && (
         <div className="bg-white p-20 rounded-[3.5rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
            <Layers className="w-16 h-16 text-neutral-100 mb-6" />
-           <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Zero assets detected in {activeTab} cluster</p>
+           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">No {activeTab} found</p>
         </div>
       )}
     </div>

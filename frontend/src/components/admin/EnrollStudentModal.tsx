@@ -148,7 +148,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
             </div>
             <div>
               <h2 className="text-xl font-bold text-neutral-900 leading-tight">Enroll New Student</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-0.5">Academic Registry Entry</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">Add a student to the system</p>
             </div>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 transition-colors p-2 rounded-full hover:bg-neutral-100">
@@ -165,7 +165,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Student ID/Code*</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Student ID *</label>
               <div className="relative group">
                 <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                 <input
@@ -179,7 +179,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Email Terminal*</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Email Address *</label>
               <div className="relative group">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                 <input
@@ -196,7 +196,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">First Name*</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">First Name*</label>
               <input
                 required
                 placeholder="Juan"
@@ -206,7 +206,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Middle</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Middle</label>
               <input
                 placeholder="Middle"
                 className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-100 rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none text-sm font-medium transition-all"
@@ -215,7 +215,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Last Name*</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Last Name*</label>
               <input
                 required
                 placeholder="Cruz"
@@ -228,9 +228,9 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
           <div className="p-5 bg-neutral-50/50 rounded-[1.5rem] border border-neutral-100 space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
                 <BookOpen size={12} className="text-primary" />
-                Academic Program*
+                Program *
               </label>
               {isLoadingPrograms ? (
                 <div className="h-11 flex items-center justify-center bg-white border border-neutral-100 rounded-xl">
@@ -243,7 +243,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                   onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
                   className="w-full px-4 h-11 bg-white border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none cursor-pointer group"
                 >
-                  <option value="">Select Target Program</option>
+                  <option value="">Select a program</option>
                   {programs.map((p) => (
                     <option key={p.id} value={p.id}>
                       [{p.departments?.code || '???'}] {p.name}
@@ -255,7 +255,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Year Level</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Year Level</label>
                 <select
                   value={formData.year}
                   onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
@@ -267,7 +267,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Block / Section</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Class</label>
                 <input
                   placeholder="e.g. 1A"
                   className="w-full px-4 h-11 bg-white border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all uppercase"
@@ -279,7 +279,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Date of Birth</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Date of Birth</label>
             <div className="relative group">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
               <input
@@ -297,8 +297,8 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
         <div className="px-6 py-5 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between gap-4">
           <div className="hidden sm:block">
-             <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Immediate Provisioning</p>
-             <p className="text-[10px] text-neutral-500">Record will be synced to database.</p>
+             <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Instant Access</p>
+             <p className="text-[10px] text-neutral-500">Student can login immediately.</p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <Button 
@@ -320,7 +320,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
               ) : (
                 <>
                   <UserPlus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                  Enroll Now
+                  Enroll Student
                 </>
               )}
             </Button>

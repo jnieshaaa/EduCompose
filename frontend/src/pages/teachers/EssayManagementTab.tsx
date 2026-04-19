@@ -419,9 +419,9 @@ export function EssayManagementTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900 font-bold">Essay Management</h1>
+          <h1 className="text-2xl text-neutral-900 font-bold">Manage Essays</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Create essay activities and manage batch uploads mapped to real students.
+            Create activities and upload student essays.
           </p>
         </div>
       </div>
@@ -435,7 +435,7 @@ export function EssayManagementTab() {
                 <ClipboardList className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-lg font-bold text-neutral-900">
-                New Essay Activity
+                New Activity
               </h2>
             </div>
 
@@ -449,7 +449,7 @@ export function EssayManagementTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-widest">
                   Program
                 </label>
                 <select
@@ -471,15 +471,15 @@ export function EssayManagementTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wider">
-                  Block / Section
+                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-widest">
+                  Class
                 </label>
                 <select
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                   value={newActivity.blockId}
                   onChange={(e) => setNewActivity((prev) => ({ ...prev, blockId: e.target.value }))}
                 >
-                  <option value="all">All Blocks</option>
+                  <option value="all">All Classes</option>
                   {filteredBlocks.map((b) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
@@ -489,7 +489,7 @@ export function EssayManagementTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-widest">
                   Rubric
                 </label>
                 <select
@@ -505,7 +505,7 @@ export function EssayManagementTab() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-widest">
                   Due Date
                 </label>
                 <input
@@ -534,7 +534,7 @@ export function EssayManagementTab() {
                 className="w-full sm:w-auto"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Create Activity
+                New Activity
               </Button>
             </div>
           </Card>
@@ -546,14 +546,14 @@ export function EssayManagementTab() {
                 <Upload className="w-5 h-5 text-success-default" />
               </div>
               <h2 className="text-lg font-bold text-neutral-900">
-                Batch Upload Essays
+                Upload Multiple Essays
               </h2>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wider">
-                  Target Activity
+                <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-widest">
+                  Select Activity
                 </label>
                 <select
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
@@ -568,7 +568,7 @@ export function EssayManagementTab() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-widest">
                   Select Files (PDF/Images)
                 </label>
                 <div className="relative group">
@@ -601,7 +601,7 @@ export function EssayManagementTab() {
               <div className="border-t pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-neutral-800">
-                    Pending Files ({pendingUploads.length})
+                    Files selected ({pendingUploads.length})
                   </span>
                 </div>
                 <div className="max-h-64 overflow-y-auto border rounded-xl bg-neutral-50/50">
@@ -627,7 +627,7 @@ export function EssayManagementTab() {
                                 setIsSubmitModalOpen(true);
                               }}
                             >
-                              {u.studentId ? students.find(s => s.id === u.studentId)?.name || 'Assigned' : "Assign Student"}
+                              {u.studentId ? students.find(s => s.id === u.studentId)?.name || 'Assigned' : "Assign to Student"}
                             </Button>
                           </TableCell>
                           <TableCell className="p-3 text-right">
@@ -653,7 +653,7 @@ export function EssayManagementTab() {
                   disabled={!selectedActivityForUpload || !pendingUploads.some((u) => u.studentId) || isSubmitting}
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
-                  Submit {pendingUploads.filter(u => u.studentId).length} Assigned
+                  Upload {pendingUploads.filter(u => u.studentId).length} Essays
                 </Button>
               </div>
             )}
@@ -669,7 +669,7 @@ export function EssayManagementTab() {
                   <BookOpen className="w-5 h-5 text-primary" />
                 </div>
                 <h2 className="text-lg font-bold text-neutral-900">
-                  Active Essay Activities
+                  Existing Activities
                 </h2>
               </div>
               <Badge className="bg-neutral-100 text-neutral-600 border-none">{activities.length} total</Badge>
@@ -714,7 +714,7 @@ export function EssayManagementTab() {
                           </Badge>
                           <Badge variant="outline" className="text-[10px] py-0 bg-white">
                             <Layers className="w-2.5 h-2.5 mr-1" />
-                            {blk ? blk.name : 'All Blocks'}
+                            {blk ? blk.name : 'All Classes'}
                           </Badge>
                           <Badge className="ml-auto bg-neutral-900 text-white text-[10px] py-0">
                             {subCount} Submissions
@@ -737,7 +737,7 @@ export function EssayManagementTab() {
                     <Users className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-neutral-900">Submissions Status</h2>
+                    <h2 className="text-lg font-bold text-neutral-900">Student Submissions</h2>
                     <p className="text-xs text-neutral-500">Managing activity: {activities.find(a => a.id === activeActivityId)?.title}</p>
                   </div>
                 </div>
@@ -747,17 +747,17 @@ export function EssayManagementTab() {
                 <Table>
                   <TableHeader className="bg-neutral-50">
                     <TableRow>
-                      <TableHead className="py-4 pl-6">Student Full Name</TableHead>
+                      <TableHead className="py-4 pl-6">Student Name</TableHead>
                       <TableHead className="py-4">Student ID</TableHead>
                       <TableHead className="py-4 text-center">Status</TableHead>
-                      <TableHead className="py-4 text-right pr-6">File Reference</TableHead>
+                      <TableHead className="py-4 text-right pr-6">File Name</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {students.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="py-12 text-center text-neutral-400 italic">
-                          No students found in the selected program/block scope.
+                          No students found in the selected course/class.
                         </TableCell>
                       </TableRow>
                     ) : (

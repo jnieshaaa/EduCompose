@@ -279,9 +279,9 @@ export const AdminPendingStudentsTab: React.FC = () => {
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
             <div>
-              <h2 className="text-2xl font-black text-neutral-900 tracking-tight">{viewDetailBlock.program_abbr} <span className="text-neutral-300 mx-1">•</span> {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">
-                Instructional Provisioning by <span className="text-primary">{viewDetailBlock.teacher_name}</span>
+              <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">{viewDetailBlock.program_abbr} <span className="text-neutral-300 mx-1">•</span> {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
+                Added by <span className="text-primary">{viewDetailBlock.teacher_name}</span>
               </p>
             </div>
           </div>
@@ -292,12 +292,12 @@ export const AdminPendingStudentsTab: React.FC = () => {
                className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-8 h-12 flex items-center gap-2"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck size={18} />}
-              <span className="text-xs font-black uppercase tracking-widest">Execute Enrollment</span>
+              <span className="text-xs font-bold uppercase tracking-widest">Approve All</span>
             </Button>
           ) : (
-            <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
                <CheckCircle2 size={16} />
-               Synchronized on {new Date(viewDetailBlock.processed_at!).toLocaleDateString()}
+               Approved on {new Date(viewDetailBlock.processed_at!).toLocaleDateString()}
             </div>
           )}
         </div>
@@ -307,21 +307,21 @@ export const AdminPendingStudentsTab: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-neutral-50/50">
-                  <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Signature ID</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Full Name</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Communication Node</th>
-                  {viewDetailBlock.processed && <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Lifecycle Status</th>}
-                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Student ID</th>
+                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Full Name</th>
+                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Email</th>
+                  {viewDetailBlock.processed && <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">Status</th>}
+                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
                 {blockStudents.map((s) => (
                   <tr key={s.id} className="group hover:bg-neutral-50/30 transition-all duration-300">
                     <td className="px-8 py-4">
-                       <span className="text-xs font-black text-neutral-500 font-mono tracking-tighter uppercase">{s.student_code}</span>
+                       <span className="text-xs font-bold text-neutral-500 font-mono tracking-tighter uppercase">{s.student_code}</span>
                     </td>
                     <td className="px-6 py-4">
-                       <span className="text-sm font-black text-neutral-900 tracking-tight">{s.last_name}, {s.first_name}</span>
+                       <span className="text-sm font-bold text-neutral-900 tracking-tight">{s.last_name}, {s.first_name}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                        <span className="text-xs font-bold text-neutral-400 lowercase">{s.email}</span>
@@ -330,9 +330,9 @@ export const AdminPendingStudentsTab: React.FC = () => {
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           {s.onboarding_completed ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100">Synchronized</span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-green-100">Registered</span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100">Awaiting Setup</span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-amber-100">Pending Setup</span>
                           )}
                         </div>
                       </td>
@@ -369,30 +369,30 @@ export const AdminPendingStudentsTab: React.FC = () => {
            className="rounded-2xl border-neutral-100 bg-white shadow-sm h-12 px-6 flex items-center gap-2 group"
         >
           <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-          <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Sync Pipeline</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Refresh</span>
         </Button>
       </div>
 
       {loading && pendingBlocks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32">
            <Loader2 className="w-12 h-12 animate-spin mb-6 text-primary/20" />
-           <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] animate-pulse">Monitoring Provisioning Pipeline</p>
+           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest animate-pulse">Loading registrations...</p>
         </div>
       ) : filteredBlocks.filter(b => !b.processed).length === 0 ? (
         <div className="bg-white p-20 rounded-[2.5rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
           <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center mb-6 border border-neutral-100">
             <ShieldCheck className="w-10 h-10 text-primary opacity-20" />
           </div>
-          <h3 className="text-xl font-black text-neutral-900 tracking-tight">Pipeline Clear</h3>
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-2 max-w-sm mx-auto">
-            All institutional student list uploads have been synchronized and provisioned into the registry.
+          <h3 className="text-xl font-bold text-neutral-900 tracking-tight">No Pending Requests</h3>
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-2 max-w-sm mx-auto">
+            All student registration requests have been processed.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
            <div className="flex items-center gap-3 px-1">
              <Clock size={14} className="text-primary animate-pulse" />
-             <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Pending Approval Queue</h3>
+             <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Pending Approvals</h3>
            </div>
            
            <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden">
@@ -400,10 +400,10 @@ export const AdminPendingStudentsTab: React.FC = () => {
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="bg-neutral-50/50">
-                     <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Provisioning Block</th>
-                     <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Telemetry Count</th>
-                     <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Instructional Lead</th>
-                     <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Operations</th>
+                     <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Class / Section</th>
+                     <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Students</th>
+                     <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Teacher</th>
+                     <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-neutral-50">
@@ -419,7 +419,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
                               <Layers size={20} />
                             </div>
                             <div>
-                               <span className="text-sm font-black text-neutral-900 block leading-tight tracking-tight">
+                               <span className="text-sm font-bold text-neutral-900 block leading-tight tracking-tight">
                                  {block.program_abbr} {block.year}{block.block_name}
                                </span>
                                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-[0.15em] mt-0.5 block">
@@ -429,8 +429,8 @@ export const AdminPendingStudentsTab: React.FC = () => {
                          </div>
                        </td>
                        <td className="px-6 py-5">
-                         <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/5">
-                            {block.student_count} Identities
+                         <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest border border-primary/5">
+                            {block.student_count} Students
                          </span>
                        </td>
                        <td className="px-6 py-5">
@@ -439,8 +439,8 @@ export const AdminPendingStudentsTab: React.FC = () => {
                              <UserCircle size={16} />
                            </div>
                            <div className="flex flex-col">
-                             <span className="text-xs font-black text-neutral-700 tracking-tight">{block.teacher_name}</span>
-                             <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Authorized Instructor</span>
+                             <span className="text-xs font-bold text-neutral-700 tracking-tight">{block.teacher_name}</span>
+                             <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Teacher</span>
                            </div>
                          </div>
                        </td>
@@ -449,9 +449,9 @@ export const AdminPendingStudentsTab: React.FC = () => {
                             <Button 
                                onClick={(e) => { e?.stopPropagation(); enrollAllInBlock(block); }} 
                                disabled={isProcessing}
-                               className="rounded-xl bg-neutral-50 text-[10px] font-black uppercase tracking-widest px-4 h-9 hover:bg-primary hover:text-white transition-all border border-neutral-100"
+                               className="rounded-xl bg-neutral-50 text-[10px] font-bold uppercase tracking-widest px-4 h-9 hover:bg-primary hover:text-white transition-all border border-neutral-100"
                             >
-                              Sync All
+                              Approve All
                             </Button>
                             <button 
                               onClick={(e) => {

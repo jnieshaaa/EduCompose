@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { readSecureParams } from "../../utils/secureUrl";
-import { Plus, Trash2, Edit2, Loader2, BookOpen, Search, Filter, X } from "lucide-react";
+import { Trash2, Edit2, Loader2, BookOpen, Search, Filter, X } from "lucide-react";
 import { useCourses } from "../../hooks/useCourses";
 import type { Course } from "../../types/academic";
 import { CourseSectionsView } from "./CourseSectionsView";
@@ -105,15 +105,15 @@ export function CoursesTab() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Course Management</h1>
-          <p className="text-neutral-500 text-xs mt-0.5">Personal loads and institutional catalogs for {schoolCode}</p>
+          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Manage Courses</h1>
+          <p className="text-neutral-500 text-xs mt-0.5">Your subjects and the school list for {schoolCode}</p>
         </div>
-        <button
+        {/* <button
           onClick={() => setIsAddDialogOpen(true)}
           className="flex items-center gap-2 bg-primary text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
-          <Plus size={16} /> Add New Subject
-        </button>
+          <Plus size={16} /> Add Subject
+        </button> */}
       </div>
 
       {/* Tabs */}
@@ -128,9 +128,9 @@ export function CoursesTab() {
               : "border-transparent text-neutral-400 hover:text-neutral-600"
             }`}
           >
-            {tab === 'my' && `My Loads (${myCourses.length})`}
-            {tab === 'dept' && `Department catalog`}
-            {tab === 'school' && `${schoolCode} catalog`}
+            {tab === 'my' && `My Subjects (${myCourses.length})`}
+            {tab === 'dept' && `Department Courses`}
+            {tab === 'school' && `${schoolCode} Courses`}
           </button>
         ))}
       </div>
@@ -171,7 +171,7 @@ export function CoursesTab() {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Department Scope</label>
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
                   <select
                     value={selectedDeptId}
                     disabled={activeTab === "dept"}
@@ -190,7 +190,7 @@ export function CoursesTab() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.15em] ml-1">Program Track</label>
+                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
                   <select
                     value={selectedProgId}
                     onChange={(e) => setSelectedProgId(e.target.value)}
@@ -225,7 +225,7 @@ export function CoursesTab() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-neutral-50 shadow-sm">
           <Loader2 className="w-8 h-8 animate-spin text-primary/30 mb-4" />
-          <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Synchronizing Catalog...</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading...</p>
         </div>
       ) : getActiveCourses().length === 0 ? (
         <div className="p-20 text-center bg-white rounded-3xl border border-neutral-50 shadow-sm">
@@ -235,7 +235,7 @@ export function CoursesTab() {
           <h3 className="text-sm font-bold text-neutral-800 mb-2">No Courses Found</h3>
           <p className="text-xs text-neutral-400 max-w-[240px] mx-auto mb-6 leading-relaxed">
             {activeTab === "my" 
-              ? "Your load list is empty. Start by adding courses from the catalog tabs."
+              ? "Your list is empty. Start by adding courses from the school list."
               : "We couldn't find any subjects matching your selection."}
           </p>
           {activeTab === "my" && (
@@ -243,7 +243,7 @@ export function CoursesTab() {
               onClick={() => setActiveTab("dept")} 
               className="text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/5 px-6 py-2 rounded-full transition-all border border-primary/20"
             >
-              Browse Department
+              See Department list
             </button>
           )}
         </div>
@@ -307,7 +307,7 @@ export function CoursesTab() {
                             <span>Processing...</span>
                           </>
                         ) : (
-                          isAdded ? "Remove" : "Add to Load"
+                          isAdded ? "Remove" : "Add to My List"
                         )}
                       </button>
                     )}
@@ -333,11 +333,11 @@ export function CoursesTab() {
                   <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{course.units} Units</span>
                   {isMyCourse ? (
                     <span className="text-[10px] font-bold text-purple-600 uppercase bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
-                      Private Load
+                      My Personal Subject
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                      Standard
+                      School Standard
                     </span>
                   )}
                 </div>
@@ -350,8 +350,8 @@ export function CoursesTab() {
           {getActiveCourses().length > itemsPerPage && (
             <div className="flex items-center justify-between pt-10 pb-12 border-t border-neutral-50 mt-10">
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Navigation Hub</span>
-                <span className="text-xs font-black text-neutral-900">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Page Navigation</span>
+                <span className="text-xs font-bold text-neutral-900">
                   Page {currentPage} of {Math.ceil(getActiveCourses().length / itemsPerPage)}
                 </span>
               </div>
@@ -363,7 +363,7 @@ export function CoursesTab() {
                     setCurrentPage(prev => Math.max(prev - 1, 1));
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="px-4 py-2 bg-white border border-neutral-100 rounded-xl text-[10px] font-black uppercase text-neutral-400 hover:text-primary disabled:opacity-30 transition-all shadow-sm"
+                  className="px-4 py-2 bg-white border border-neutral-100 rounded-xl text-[10px] font-bold uppercase text-neutral-400 hover:text-primary disabled:opacity-30 transition-all shadow-sm"
                 >
                   Previous
                 </button>
@@ -373,7 +373,7 @@ export function CoursesTab() {
                     setCurrentPage(prev => prev + 1);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase hover:shadow-lg hover:shadow-primary/20 disabled:opacity-30 transition-all shadow-sm"
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-bold uppercase hover:shadow-lg hover:shadow-primary/20 disabled:opacity-30 transition-all shadow-sm"
                 >
                   Next
                 </button>
@@ -402,8 +402,8 @@ export function CoursesTab() {
             >
               <div className="px-6 py-5 border-b border-neutral-50 flex justify-between items-center bg-neutral-50/30">
                 <div>
-                  <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">New Personal Load</h2>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">Define a subject code and title</p>
+                  <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Add New Subject</h2>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">Enter the subject code and title</p>
                 </div>
                 <button 
                   onClick={() => setIsAddDialogOpen(false)}
@@ -465,14 +465,14 @@ export function CoursesTab() {
                   onClick={() => setIsAddDialogOpen(false)}
                   className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors"
                 >
-                  Discard
+                  Cancel
                 </button>
                 <button
                   onClick={() => handleCreateCourse(newCourse)}
                   disabled={isCreating || !newCourse.course_code || !newCourse.course_title}
                   className="bg-primary text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
                 >
-                  {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Verify & Save"}
+                  {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Save Subject"}
                 </button>
               </div>
             </motion.div>

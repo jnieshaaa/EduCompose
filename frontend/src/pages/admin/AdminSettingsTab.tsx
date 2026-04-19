@@ -59,7 +59,7 @@ export function AdminSettingsTab() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      showNotification('success', "Global configuration updated.");
+      showNotification('success', "Settings updated successfully.");
     }, 800);
   };
 
@@ -68,9 +68,9 @@ export function AdminSettingsTab() {
     setSavingAcademic(true);
     const result = await updateAcademicSettings(academicSettings.id, academicSettings);
     if (result.success) {
-      showNotification('success', "Academic temporal settings synchronized across cluster.");
+      showNotification('success', "Academic calendar updated.");
     } else {
-      showNotification('error', result.error || "Temporal sync failure.");
+      showNotification('error', result.error || "Failed to update calendar.");
     }
     setSavingAcademic(false);
   };
@@ -80,10 +80,10 @@ export function AdminSettingsTab() {
       {/* Premium Integrated Header */}
       <div className="flex flex-col sm:flex-row items-end justify-between gap-8">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">System Settings</h1>
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">System Settings</h1>
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1 flex items-center gap-2">
             <Settings size={14} className="text-primary/50" />
-            Core Configuration & Institutional Protocols
+            Manage system and academic setup
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -93,7 +93,7 @@ export function AdminSettingsTab() {
              className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2"
            >
              <RefreshCw size={16} className={`text-neutral-400 ${loadingAcademic ? 'animate-spin' : ''}`} />
-             <span className="text-[10px] font-black uppercase tracking-widest text-neutral-600">Full Sync</span>
+             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Full Sync</span>
            </Button>
         </div>
       </div>
@@ -108,33 +108,33 @@ export function AdminSettingsTab() {
                   <Calendar size={22} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-neutral-900 tracking-tight">Academic Timeline</h2>
-                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Control global temporal context</p>
+                  <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Academic Calendar</h2>
+                  <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">Set the current school year and active semester</p>
                 </div>
               </div>
-              <span className="text-[9px] font-black text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 tracking-widest uppercase">Institutional Pulse</span>
+              <span className="text-[9px] font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 tracking-widest uppercase">System Status</span>
             </div>
             
             <div className="p-10 space-y-10">
               {loadingAcademic ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader2 className="w-10 h-10 animate-spin text-primary/20 mb-4" />
-                  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-neutral-300">Syncing Temporal Records</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">Updating calendar...</p>
                 </div>
               ) : academicSettings ? (
                 <div className="space-y-10 animate-in fade-in duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Institutional Cycle (A.Y.)</label>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">School Year (A.Y.)</label>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 relative group">
                            <input
                             type="number"
                             value={academicSettings.ay_start}
                             onChange={(e) => setAcademicSettings({...academicSettings, ay_start: parseInt(e.target.value)})}
-                            className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                            className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                            />
-                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-300 uppercase tracking-widest">Start</span>
+                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Start</span>
                         </div>
                         <div className="text-neutral-200 font-bold">/</div>
                         <div className="flex-1 relative group">
@@ -142,20 +142,20 @@ export function AdminSettingsTab() {
                             type="number"
                             value={academicSettings.ay_end}
                             onChange={(e) => setAcademicSettings({...academicSettings, ay_end: parseInt(e.target.value)})}
-                            className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                            className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                            />
-                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-300 uppercase tracking-widest">End</span>
+                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-neutral-300 uppercase tracking-widest">End</span>
                         </div>
                       </div>
                     </div>
                     
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Active Instructional Session</label>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Current Semester</label>
                       <div className="relative group">
                          <select
                           value={academicSettings.current_semester}
                           onChange={(e) => setAcademicSettings({...academicSettings, current_semester: e.target.value})}
-                          className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-[11px] font-black uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                          className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-[11px] font-bold uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                          >
                           <option value="1st Semester">1st Semester</option>
                           <option value="2nd Semester">2nd Semester</option>
@@ -169,16 +169,16 @@ export function AdminSettingsTab() {
                   <div className="p-6 bg-primary/[0.02] border border-primary/5 rounded-[2rem] space-y-4">
                      <div className="flex items-center gap-3">
                         <Archive size={16} className="text-primary opacity-40" />
-                        <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Operational Impact Analysis</h3>
+                        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Important Note on Transitions</h3>
                      </div>
                      <p className="text-[11px] font-bold text-neutral-500 leading-relaxed tracking-tight">
-                        Critical: Transitioning the active term will automatically detach current course loads and synchronize historical data to the platform archive. All instructor nodes will be re-initialized for the target session.
+                        Note: Changing the active semester will move current teacher assignments to the archive. All teacher schedules will be reset for the new semester.
                      </p>
                      <button 
                         onClick={() => navigate("/Admin/Archive")}
-                        className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform"
+                        className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform"
                      >
-                        Audit Archive Record Cluster <ArrowRight size={12} />
+                        View Archive <ArrowRight size={12} />
                      </button>
                   </div>
 
@@ -189,27 +189,27 @@ export function AdminSettingsTab() {
                       { title: "Extended Summer", startKey: "summer_start_month", endKey: "summer_end_month" }
                     ].map((session, i) => (
                       <div key={i} className="space-y-4 p-6 bg-neutral-50/50 border border-neutral-100 rounded-3xl group hover:border-primary/20 transition-all">
-                        <h4 className="text-[10px] font-black text-neutral-900 uppercase tracking-widest flex items-center gap-2">
+                        <h4 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
                            <Clock size={12} className="text-neutral-300" />
                            {session.title}
                         </h4>
                         <div className="space-y-3">
                           <div className="space-y-1">
-                             <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest ml-1">Ingress</span>
+                             <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Start Month</span>
                              <select
                               value={(academicSettings as any)[session.startKey]}
                               onChange={(e) => setAcademicSettings({...academicSettings, [session.startKey]: e.target.value} as any)}
-                              className="w-full h-10 px-3 bg-white border border-neutral-100 rounded-xl text-[10px] font-black uppercase tracking-tighter outline-none focus:ring-4 focus:ring-primary/5 transition-all"
+                              className="w-full h-10 px-3 bg-white border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-tighter outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                              >
                               {months.map(m => <option key={m} value={m}>{m}</option>)}
                              </select>
                           </div>
                           <div className="space-y-1">
-                             <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest ml-1">Egress</span>
+                             <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest ml-1">End Month</span>
                              <select
                               value={(academicSettings as any)[session.endKey]}
                               onChange={(e) => setAcademicSettings({...academicSettings, [session.endKey]: e.target.value} as any)}
-                              className="w-full h-10 px-3 bg-white border border-neutral-100 rounded-xl text-[10px] font-black uppercase tracking-tighter outline-none focus:ring-4 focus:ring-primary/5 transition-all"
+                              className="w-full h-10 px-3 bg-white border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-tighter outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                              >
                               {months.map(m => <option key={m} value={m}>{m}</option>)}
                              </select>
@@ -226,7 +226,7 @@ export function AdminSettingsTab() {
                       className="rounded-2xl bg-primary text-white shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all px-10 h-14 flex items-center gap-3 border-none"
                     >
                       {savingAcademic ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw size={18} />}
-                      <span className="text-xs font-black uppercase tracking-widest">Execute Temporal Sync</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">Save Calendar Settings</span>
                     </Button>
                   </div>
                 </div>
@@ -241,27 +241,27 @@ export function AdminSettingsTab() {
                   <Terminal size={22} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-neutral-900 tracking-tight">Platform Core</h2>
-                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Governance of platform-wide operational logic</p>
+                  <h2 className="text-xl font-bold text-neutral-900 tracking-tight">System Settings</h2>
+                  <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">Manage the platform's basic information and features</p>
                 </div>
              </div>
              <div className="p-10 space-y-8">
                 <div className="space-y-3">
-                   <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Platform Alias</label>
+                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Name</label>
                    <input
                      type="text"
                      value={settings.platformName}
                      onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
                      placeholder="EduCompose"
-                     className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                     className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                    />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    {[
-                     { id: 'emailNotifications', label: 'Telemetry Alerts', desc: 'Dispatch operational reports via email', icon: Bell, checked: settings.emailNotifications },
-                     { id: 'autoBackup', label: 'Cluster Backups', desc: 'Automated institutional state preservation', icon: Database, checked: settings.autoBackup },
-                     { id: 'maintenanceMode', label: 'Isolation Protocol', desc: 'Restrict cluster access to system operators', icon: Lock, checked: settings.maintenanceMode }
+                     { id: 'emailNotifications', label: 'Email Notifications', desc: 'Send system alerts and reports via email', icon: Bell, checked: settings.emailNotifications },
+                     { id: 'autoBackup', label: 'Automatic Backups', desc: 'Keep a backup of all system data', icon: Database, checked: settings.autoBackup },
+                     { id: 'maintenanceMode', label: 'Maintenance Mode', desc: 'Prevent users from logging in during updates', icon: Lock, checked: settings.maintenanceMode }
                    ].map((item, i) => (
                      <div key={i} className="flex items-start gap-5 p-6 bg-neutral-50/50 border border-neutral-100 rounded-[2rem] group hover:border-primary/20 transition-all flex-1">
                         <div className={`p-4 rounded-xl bg-white border border-neutral-100 shadow-sm group-hover:scale-110 transition-transform ${item.checked ? 'text-primary' : 'text-neutral-300'}`}>
@@ -269,7 +269,7 @@ export function AdminSettingsTab() {
                         </div>
                         <div className="flex-1 space-y-2">
                            <div className="flex justify-between items-center">
-                              <span className="text-[11px] font-black text-neutral-800 uppercase tracking-widest">{item.label}</span>
+                              <span className="text-[11px] font-bold text-neutral-800 uppercase tracking-widest">{item.label}</span>
                               <div 
                                 onClick={() => setSettings({ ...settings, [item.id]: !item.checked } as any)}
                                 className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors duration-300 ${item.checked ? 'bg-primary' : 'bg-neutral-200'}`}
@@ -290,7 +290,7 @@ export function AdminSettingsTab() {
                     className="rounded-2xl bg-neutral-50 text-neutral-600 hover:bg-primary hover:text-white transition-all px-10 h-14 flex items-center gap-3 border border-neutral-100 outline-none"
                   >
                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
-                    <span className="text-xs font-black uppercase tracking-widest">Update Global Config</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Save Changes</span>
                   </Button>
                 </div>
              </div>
@@ -299,68 +299,68 @@ export function AdminSettingsTab() {
 
         {/* Sidebar Communication & Data Hub */}
         <div className="space-y-10">
-           {/* Communication Node */}
+           {/* Email Server */}
            <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm p-8 space-y-8">
               <div className="flex items-center gap-4">
                  <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center border border-indigo-100">
                    <Mail size={22} />
                  </div>
-                 <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-none">Dispatcher</h2>
+                 <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-none">Mail Settings</h2>
               </div>
               <div className="space-y-6">
                 {[
-                  { label: "Transmission Node (SMTP)", placeholder: "smtp.institutional.link" },
-                  { label: "Secure Port", placeholder: "TLS Protocol 587" },
-                  { label: "Authorized Sender", placeholder: "core-telemetry@educompose.com" }
+                  { label: "SMTP Server", placeholder: "smtp.example.com" },
+                  { label: "Port", placeholder: "e.g., 587" },
+                  { label: "Sender Email", placeholder: "admin@educompose.com" }
                 ].map((input, i) => (
                   <div key={i} className="space-y-2">
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">{input.label}</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">{input.label}</label>
                     <input
                       type="text"
                       placeholder={input.placeholder}
-                      className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-black focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500/20 transition-all outline-none"
+                      className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500/20 transition-all outline-none"
                     />
                   </div>
                 ))}
-                <button className="w-full h-12 mt-4 bg-indigo-50 text-indigo-500 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
-                   Test Connection Node
+                <button className="w-full h-12 mt-4 bg-indigo-50 text-indigo-500 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                   Test Connection
                 </button>
               </div>
            </div>
 
-           {/* Data Orchestration */}
+           {/* Backup & Restore */}
            <div className="bg-primary/95 rounded-[2.5rem] border border-white/5 shadow-2xl p-8 space-y-8 relative overflow-hidden group">
               <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
               <div className="flex items-center gap-4 relative z-10">
                  <div className="w-12 h-12 bg-white/5 text-white rounded-2xl flex items-center justify-center border border-white/5">
                    <Database size={22} />
                  </div>
-                 <h2 className="text-xl font-black text-white tracking-tight leading-none">Registry Cloud</h2>
+                 <h2 className="text-xl font-bold text-white tracking-tight leading-none">Backup & Restore</h2>
               </div>
               <div className="space-y-6 relative z-10">
                  <p className="text-[11px] font-bold text-white/40 leading-relaxed tracking-tight uppercase">
-                    Execute institutional state preservation or inject external registry records into the core cluster.
+                    Backup your data or upload record files to the system.
                  </p>
                  <div className="grid grid-cols-1 gap-4">
                     <button className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all">
                        <div className="flex items-center gap-4">
                           <Download size={18} className="text-white/20 group-hover/btn:text-primary transition-colors" />
-                          <span className="text-[10px] font-black text-white uppercase tracking-widest">Preserve Assets</span>
+                          <span className="text-[10px] font-bold text-white uppercase tracking-widest">Download Backup</span>
                        </div>
                        <ChevronRight size={14} className="text-white/20 group-hover/btn:translate-x-1 transition-transform" />
                     </button>
                     <button className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all">
                        <div className="flex items-center gap-4">
                           <Upload size={18} className="text-white/20 group-hover/btn:text-primary transition-colors" />
-                          <span className="text-[10px] font-black text-white uppercase tracking-widest">Inject Data</span>
+                          <span className="text-[10px] font-bold text-white uppercase tracking-widest">Upload Records</span>
                        </div>
                        <ChevronRight size={14} className="text-white/20 group-hover/btn:translate-x-1 transition-transform" />
                     </button>
                  </div>
                  <div className="pt-6 border-t border-white/5">
                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">State Integrity</span>
-                      <span className="flex items-center gap-2 text-[10px] font-black text-success-default uppercase tracking-widest">
+                      <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">System Status</span>
+                      <span className="flex items-center gap-2 text-[10px] font-bold text-success-default uppercase tracking-widest">
                          <CheckCircle2 size={12} /> Optimized
                       </span>
                    </div>

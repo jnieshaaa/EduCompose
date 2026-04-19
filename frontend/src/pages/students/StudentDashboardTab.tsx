@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
 import {
   FileText,
   CheckCircle,
@@ -13,10 +11,40 @@ import {
   Lightbulb,
   TrendingUp,
   ChevronRight,
-  BarChart2,
+  Zap,
+  ArrowRight,
+  BookOpen,
 } from 'lucide-react';
 import { buildSecureUrl } from '../../utils/secureUrl';
-import Button from '../../components/ui/Button';
+import { motion } from 'framer-motion';
+
+// Format timestamp to relative time (ported from teacher dashboard for consistency)
+const formatTimeAgo = (timestamp: string | Date): string => {
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds} second${diffInSeconds !== 1 ? "s" : ""} ago`;
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""} ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} hour${diffInHours !== 1 ? "s" : ""} ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) {
+    return `${diffInDays} day${diffInDays !== 1 ? "s" : ""} ago`;
+  }
+
+  return date.toLocaleDateString();
+};
 
 export function StudentDashboardTab() {
   const [essays, setEssays] = useState<any[]>([]);
@@ -59,42 +87,37 @@ export function StudentDashboardTab() {
     fetchEssays();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center flex-col items-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-neutral-500 text-sm">Loading your dashboard...</p>
-      </div>
-    );
-  }
+  const stats = useMemo(() => {
+    const submittedCount = essays.length;
+    const evaluatedCount = essays.filter(e => e.status === 'analyzed' || e.status === 'reviewed').length;
+    const pendingCount = essays.filter(e => e.status === 'submitted' || e.status === 'processing').length;
+    
+    const evaluatedEssays = essays.filter(e => e.overall_score);
+    const avgScore = evaluatedEssays.length > 0
+      ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.overall_score || 0), 0) / evaluatedEssays.length) + '%'
+      : '0%';
 
-  const submittedCount = essays.length;
-  const evaluatedCount = essays.filter(e => e.status === 'analyzed' || e.status === 'reviewed').length;
-  const pendingCount = essays.filter(e => e.status !== 'analyzed' && e.status !== 'reviewed').length;
+    return {
+      submittedCount,
+      evaluatedCount,
+      pendingCount,
+      avgScore
+    };
+  }, [essays]);
 
-  const evaluatedEssays = essays.filter(e => e.overall_score);
-  const avgScore = evaluatedEssays.length > 0
-    ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.overall_score || 0), 0) / evaluatedEssays.length) + '%'
-    : 'N/A';
+  const performanceMetrics = useMemo(() => {
+    const evaluatedEssays = essays.filter(e => e.overall_score);
+    const getAvg = (key: string) => evaluatedEssays.length > 0 
+      ? Math.round(evaluatedEssays.reduce((s, e) => s + (e[key] || 0), 0) / evaluatedEssays.length) + '%' 
+      : '0%';
 
-  const statsCards = [
-    { label: 'Essays Submitted', value: submittedCount.toString(), icon: FileText, color: 'text-primary', bg: 'bg-primary/10' },
-    { label: 'Essays Evaluated', value: evaluatedCount.toString(), icon: CheckCircle, color: 'text-success-default', bg: 'bg-success-default/10' },
-    { label: 'Average Score', value: avgScore, icon: Award, color: 'text-info-default', bg: 'bg-info-default/10' },
-    { label: 'Pending Reviews', value: pendingCount.toString(), icon: Clock, color: 'text-warning-default', bg: 'bg-warning-default/10' },
-  ];
-
-  const avgGrammar = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.grammar_score || 0), 0) / evaluatedEssays.length) + '%' : 'N/A';
-  const avgCoherence = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.coherence_score || 0), 0) / evaluatedEssays.length) + '%' : 'N/A';
-  const avgVocabulary = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.readability_score || 0), 0) / evaluatedEssays.length) + '%' : 'N/A';
-  const avgArguments = evaluatedEssays.length > 0 ? Math.round(evaluatedEssays.reduce((s, e) => s + (e.argument_strength_score || 0), 0) / evaluatedEssays.length) + '%' : 'N/A';
-
-  const performanceMetrics = [
-    { label: 'Grammar Accuracy', value: avgGrammar, color: 'text-success-default', bgColor: 'bg-success-default' },
-    { label: 'Coherence Score', value: avgCoherence, color: 'text-info-default', bgColor: 'bg-info-default' },
-    { label: 'Readability', value: avgVocabulary, color: 'text-primary', bgColor: 'bg-primary' },
-    { label: 'Argument Strength', value: avgArguments, color: 'text-success-default', bgColor: 'bg-success-default' },
-  ];
+    return [
+      { label: 'Grammar', value: getAvg('grammar_score'), icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+      { label: 'Structure', value: getAvg('coherence_score'), icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
+      { label: 'Vocabulary', value: getAvg('readability_score'), icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-50' },
+      { label: 'Arguments', value: getAvg('argument_strength_score'), icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+    ];
+  }, [essays]);
 
   const handleEssayClick = (essay: any) => {
     const isEvaluated = essay.status === 'analyzed' || essay.status === 'reviewed';
@@ -111,177 +134,217 @@ export function StudentDashboardTab() {
     navigate(url);
   };
 
-  return (
-    <div className="space-y-6">
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading Dashboard...</p>
+      </div>
+    );
+  }
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={idx} className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-neutral-900">{stat.value}</p>
-                </div>
-                <div className={`${stat.bg} ${stat.color} p-2 rounded-rd`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+  return (
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Dashboard</h1>
+          <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <Zap size={14} className="text-primary/50" />
+            Your writing progress at a glance
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+           <button 
+             onClick={() => navigate('/Student/Essays')}
+             className="flex items-center justify-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-sm hover:bg-neutral-50 transition-all"
+           >
+             Submit New Essay
+             <ArrowRight size={12} />
+           </button>
+        </div>
       </div>
 
-      {/* Performance Snapshot */}
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <BarChart2 className="w-4 h-4 text-primary" />
-          <h2 className="text-base font-semibold text-neutral-900">Performance Snapshot</h2>
-          <Badge className="ml-auto bg-primary/50 text-primary text-xs">AI-Powered</Badge>
-        </div>
-        <p className="text-xs text-neutral-400 mb-5 ml-6">Average scores across all evaluated essays</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {performanceMetrics.map((metric, idx) => (
-            <div key={idx} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-600">{metric.label}</span>
-                <span className={`text-sm font-semibold ${metric.color}`}>{metric.value}</span>
-              </div>
-              <div className="w-full bg-neutral-200 rounded-full h-1.5">
-                <div
-                  className={`${metric.bgColor} h-1.5 rounded-full transition-all`}
-                  style={{ width: metric.value === 'N/A' ? '0%' : metric.value }}
-                />
-              </div>
+      {/* Hero Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[
+          { label: 'Submitted', value: stats.submittedCount, sub: 'Total Essays', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Evaluated', value: stats.evaluatedCount, sub: 'With Feedback', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          { label: 'Avg Score', value: stats.avgScore, sub: 'Overall performance', icon: Award, color: 'text-purple-500', bg: 'bg-purple-50' },
+          { label: 'Pending', value: stats.pendingCount, sub: 'Awaiting Review', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+        ].map((stat, i) => (
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: i * 0.1 }}
+            className="p-6 bg-white rounded-3xl border border-neutral-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all group"
+          >
+            <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} w-fit mb-4 group-hover:scale-110 transition-transform`}>
+              <stat.icon size={22} />
             </div>
-          ))}
-        </div>
-      </Card>
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{stat.label}</p>
+            <div className="flex items-end gap-2 mt-1">
+              <p className="text-3xl font-bold text-neutral-900 tracking-tight">{stat.value}</p>
+              <p className="text-[11px] font-bold text-neutral-300 uppercase mb-1.5">{stat.sub}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-primary" />
-            <h2 className="text-base font-semibold text-neutral-900">Recent Activity</h2>
-          </div>
-          <div className="space-y-3">
-            {essays.length > 0 ? (
-              essays.slice(0, 3).map((essay, idx) => {
-                const isEvaluated = essay.status === 'analyzed' || essay.status === 'reviewed';
-                const activityTitle = essay.activityTitle || essay.title || 'Untitled';
-
-                return (
-                  <div
-                    key={essay.id || idx}
-                    onClick={() => handleEssayClick(essay)}
-                    className={`
-                      p-3.5 rounded-lg border flex items-center gap-3 transition-all
-                      ${isEvaluated
-                        ? 'bg-success-default/5 border-success-default/20 cursor-pointer hover:bg-success-default/10 hover:border-success-default/40 hover:shadow-sm'
-                        : 'bg-neutral-50 border-neutral-200 cursor-default opacity-80'
-                      }
-                    `}
-                  >
-                    {/* Icon */}
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isEvaluated ? 'bg-success-default/10 text-success-default' : 'bg-neutral-200 text-neutral-400'}`}>
-                      {isEvaluated ? <MessageSquare className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-neutral-900 truncate">{activityTitle}</h3>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {new Date(essay.submitted_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                        {' · '}
-                        <span className={isEvaluated ? 'text-success-default' : 'text-neutral-400'}>
-                          {isEvaluated ? 'Result available' : 'Pending review'}
-                        </span>
-                      </p>
-                    </div>
-
-                    {/* Right side */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {essay.overall_score && (
-                        <Badge className="bg-success-default text-white text-xs">{essay.overall_score}%</Badge>
-                      )}
-                      {isEvaluated && (
-                        <ChevronRight className="w-4 h-4 text-neutral-400" />
-                      )}
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content Column */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Performance Snapshot */}
+          <div className="space-y-4">
+            <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2 px-1">
+              <TrendingUp size={14} className="text-primary" />
+              Writing Diagnostics
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {performanceMetrics.map((metric, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 + (i * 0.1) }}
+                  className="bg-white p-5 rounded-2xl border border-neutral-50 shadow-sm flex flex-col items-center text-center group"
+                >
+                  <div className={`p-2 rounded-xl ${metric.bg} ${metric.color} mb-3 group-hover:rotate-12 transition-transform`}>
+                    <metric.icon size={16} />
                   </div>
-                );
-              })
-            ) : (
-              <div className="flex flex-col items-center py-8 text-center">
-                <FileText className="w-8 h-8 text-neutral-300 mb-2" />
-                <p className="text-sm text-neutral-500">No recent activity yet.</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{metric.label}</p>
+                  <p className="text-xl font-extrabold text-neutral-900">{metric.value}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Essays Section */}
+          <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-neutral-50 bg-neutral-50/20 flex items-center justify-between">
+              <div>
+                <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Recent Activity</h2>
+                <p className="text-xs text-neutral-500 font-medium">Your latest essay submissions and evaluations</p>
+              </div>
+              <button 
+                onClick={() => navigate('/Student/Essays')}
+                className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
+              >
+                View All
+              </button>
+            </div>
+            <div className="p-4 space-y-2">
+              {essays.length > 0 ? (
+                essays.slice(0, 5).map((essay, idx) => {
+                  const isEvaluated = essay.status === 'analyzed' || essay.status === 'reviewed';
+                  const activityTitle = essay.activityTitle || essay.title || 'Untitled';
+
+                  return (
+                    <motion.div
+                      key={essay.id || idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * idx }}
+                      onClick={() => handleEssayClick(essay)}
+                      className={`
+                        group p-4 rounded-2xl border border-transparent transition-all flex items-center gap-4
+                        ${isEvaluated 
+                          ? 'hover:bg-neutral-50 hover:border-neutral-100 cursor-pointer' 
+                          : 'opacity-70 cursor-default'}
+                      `}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${isEvaluated ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-400'}`}>
+                        {isEvaluated ? <MessageSquare size={20} /> : <FileText size={20} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <h3 className="text-sm font-bold text-neutral-800 tracking-tight truncate">{activityTitle}</h3>
+                          <span className="text-[11px] font-bold text-neutral-300 uppercase">{formatTimeAgo(essay.submitted_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${isEvaluated ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                              {isEvaluated ? 'Result Available' : essay.status}
+                           </span>
+                           {essay.overall_score && (
+                             <span className="text-xs font-bold text-primary">{essay.overall_score}%</span>
+                           )}
+                        </div>
+                      </div>
+                      {isEvaluated && (
+                        <ChevronRight className="w-5 h-5 text-neutral-200 group-hover:text-primary transition-colors" />
+                      )}
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center py-12 text-center opacity-40">
+                  <FileText className="w-12 h-12 text-neutral-300 mb-3" />
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 text-center">No essays found</p>
+                </div>
+              )}
+            </div>
+            {essays.length > 5 && (
+              <div className="p-4 bg-neutral-50/50 border-t border-neutral-50">
+                 <button 
+                  onClick={() => navigate('/Student/Essays')}
+                  className="w-full py-2.5 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center justify-center gap-2"
+                 >
+                     View all submissions <ArrowRight size={12} />
+                 </button>
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        {/* Right column */}
-        <div className="space-y-4">
+        {/* Sidebar Column */}
+        <div className="space-y-8">
+          
           {/* Quick Actions */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <h2 className="text-base font-semibold text-neutral-900">Quick Actions</h2>
+          <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-neutral-50 bg-neutral-50/20">
+              <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Shortcuts</h2>
             </div>
-            <div className="space-y-2.5">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-sm hover:bg-primary/5 hover:text-primary transition-colors"
-                onClick={() => navigate('/Student/Essays')}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                View All My Essays
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-sm hover:bg-primary/5 hover:text-primary transition-colors"
-                onClick={() => navigate('/Student/Progress')}
-              >
-                <Award className="w-4 h-4 mr-2" />
-                View Progress Report
-              </Button>
+            <div className="p-4 grid grid-cols-1 gap-2">
+              {[
+                { label: "My Essays", sub: "View all work", icon: FileText, path: "/Student/Essays", color: "text-blue-500", bg: "bg-blue-50" },
+                { label: "Growth Report", sub: "Track progress", icon: TrendingUp, path: "/Student/Progress", color: "text-purple-500", bg: "bg-purple-50" },
+                { label: "Writing Center", sub: "Tips & tricks", icon: Lightbulb, path: "#", color: "text-amber-500", bg: "bg-amber-50" },
+              ].map((nav, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => nav.path !== '#' && navigate(nav.path)}
+                  className="flex items-center gap-3.5 p-3 rounded-2xl hover:bg-neutral-50 transition-all group text-left border border-transparent hover:border-neutral-100"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${nav.bg} ${nav.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                     <nav.icon size={18} />
+                  </div>
+                  <div className="min-w-0">
+                     <p className="text-sm font-bold text-neutral-800 tracking-tight">{nav.label}</p>
+                     <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{nav.sub}</p>
+                  </div>
+                </button>
+              ))}
             </div>
-          </Card>
+          </div>
 
-          {/* Writing Tip */}
-          <Card className="p-5 bg-gradient-to-br from-support/5 to-primary/5 border-support/20">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-warning-default/10 flex items-center justify-center flex-shrink-0">
-                <Lightbulb className="w-4 h-4 text-warning-default" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-1">Writing Tip of the Day</h3>
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  To improve coherence, use transition words like "however," "furthermore," and "consequently" to connect your ideas smoothly.
-                </p>
-              </div>
+          {/* AI Tip Card */}
+          <div className="bg-primary/[0.02] rounded-3xl border border-primary/10 p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <h3 className="text-sm font-bold text-neutral-800 tracking-tight mb-2 flex items-center gap-2">
+              <Lightbulb size={16} className="text-primary" />
+              Writing Tip
+            </h3>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              To improve your <span className="text-primary font-bold uppercase tracking-tighter">Coherence</span> score, try using transition words like "furthermore," "nevertheless," and "consequently" to bridge your paragraphs.
+            </p>
+            <div className="mt-6 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm flex items-center justify-between">
+              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Next Goal</span>
+              <span className="text-[10px] font-bold text-primary uppercase px-2.5 py-1 bg-primary/5 rounded-md italic">Advanced Vocab</span>
             </div>
-          </Card>
+          </div>
 
-          {/* Your Progress */}
-          <Card className="p-5 bg-gradient-to-br from-success-default/5 to-info-default/5 border-success-default/20">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-success-default/10 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-4 h-4 text-success-default" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-1">Your Progress</h3>
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  {evaluatedEssays.length > 0
-                    ? `You've had ${evaluatedEssays.length} essay${evaluatedEssays.length > 1 ? 's' : ''} fully evaluated. Keep reviewing your feedback to improve!`
-                    : 'Submit your first essay to start seeing detailed analysis and strengths.'}
-                </p>
-              </div>
-            </div>
-          </Card>
         </div>
       </div>
     </div>

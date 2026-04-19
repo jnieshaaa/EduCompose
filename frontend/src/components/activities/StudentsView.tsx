@@ -157,11 +157,11 @@ export function StudentsView({
     );
 
     if (toGrade.length === 0) {
-      showNotification('info', "No valid pending essays found for batch grading.");
+      showNotification('info', "No essays found to grade.");
       return;
     }
 
-    if (!confirm(`Initialize grading for ${toGrade.length} essays?`)) return;
+    if (!confirm(`Start grading for ${toGrade.length} essays?`)) return;
 
     setIsGradingAll(true);
     for (const student of toGrade) {
@@ -185,7 +185,7 @@ export function StudentsView({
     }
     if (onRefresh) await onRefresh();
     setIsGradingAll(false);
-    showNotification('success', "Batch grading cycle finished.");
+    showNotification('success', "Finished grading.");
   };
 
   const filteredStudents = students.filter(s => 
@@ -226,7 +226,7 @@ export function StudentsView({
             className="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {isGradingAll ? <Loader2 size={16} className="animate-spin" /> : <Edit size={14} />}
-            {isGradingAll ? "Grading Cycle..." : "Grade All Pending"}
+            {isGradingAll ? "Grading..." : "Grade All"}
           </button>
         </div>
       </div>
@@ -235,9 +235,9 @@ export function StudentsView({
       <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-5 border-b border-neutral-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-50/20">
           <div>
-            <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] ml-1">Student Roster</h2>
+            <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Student List</h2>
             <p className="text-xs text-neutral-500 font-medium ml-1 mt-0.5">
-              {isLoading ? "Synchronizing roster..." : `${students.length} participants registered`}
+              {isLoading ? "Updating list..." : `${students.length} students`}
             </p>
           </div>
           <div className="relative w-full sm:w-64">
@@ -255,7 +255,7 @@ export function StudentsView({
         {isLoading ? (
           <div className="p-20 text-center">
             <Loader2 className="animate-spin text-primary/30 w-8 h-8 mx-auto mb-4" />
-            <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading roster...</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading...</p>
           </div>
         ) : students.length === 0 ? (
           <div className="p-20 text-center">
@@ -267,11 +267,11 @@ export function StudentsView({
             <Table>
               <TableHeader className="bg-neutral-50/50">
                 <TableRow>
-                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] pl-6">Student Name</TableHead>
-                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</TableHead>
-                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Metrics</TableHead>
-                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Total Score</TableHead>
-                  <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right pr-6">Actions</TableHead>
+                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-6">Student Name</TableHead>
+                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Status</TableHead>
+                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Analysis</TableHead>
+                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Grade</TableHead>
+                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-neutral-50">
@@ -296,9 +296,9 @@ export function StudentsView({
                                {student.wordCount || 0} WORDS
                              </span>
                              {isLowWordCount && (
-                                <span className="flex items-center gap-1 text-[8px] font-bold text-error-default uppercase bg-error-default/5 px-1.5 py-0.5 rounded-md">
-                                  <AlertCircle size={8} /> Sub-minimum
-                                </span>
+                                  <span className="flex items-center gap-1 text-[8px] font-bold text-error-default uppercase bg-error-default/5 px-1.5 py-0.5 rounded-md">
+                                   <AlertCircle size={8} /> Too short
+                                 </span>
                              )}
                           </div>
                         </div>
@@ -311,7 +311,7 @@ export function StudentsView({
                               currentStep={gradingStudents.get(student.id)?.step}
                               size="sm"
                             />
-                            <span className="text-[9px] font-bold text-primary uppercase animate-pulse">Processing</span>
+                             <span className="text-[9px] font-bold text-primary uppercase animate-pulse">Grading...</span>
                           </div>
                         ) : isSubmitted ? (
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
@@ -374,7 +374,7 @@ export function StudentsView({
                               disabled={isAllowingResubmission === student.id}
                             >
                               {isAllowingResubmission === student.id ? <Loader2 size={13} className="mr-2 animate-spin" /> : <CheckCircle2 size={13} className="mr-2" />}
-                              Allow Resubmission
+                              Let student resubmit
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
@@ -428,7 +428,7 @@ export function StudentsView({
                               disabled={student.status !== "submitted" || isGrading}
                             >
                                {isGrading ? <Loader2 size={13} className="mr-2 animate-spin" /> : isGraded ? <Eye size={13} className="mr-2" /> : <Edit size={13} className="mr-2" />}
-                               {isGraded ? "Show Result" : "Grade Essay"}
+                               {isGraded ? "View Grade" : "Grade Now"}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                className="text-xs font-medium text-error-default cursor-pointer"
@@ -439,7 +439,7 @@ export function StudentsView({
                                }}
                                disabled={student.status !== "submitted"}
                             >
-                              <Trash2 size={13} className="mr-2" /> Delete Submission
+                              <Trash2 size={13} className="mr-2" /> Delete Essay
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -474,10 +474,10 @@ export function StudentsView({
                 <div className="w-12 h-12 bg-error-default/10 text-error-default rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Trash2 size={24} />
                 </div>
-                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Confirm Deletion</h3>
-                <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
-                  Are you sure you want to delete <span className="text-neutral-700 font-bold">{selectedStudentForDelete?.name}'s</span> essay? All analysis and scoring data will be permanently removed.
-                </p>
+                 <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">Are you sure?</h3>
+                 <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                   This will permanently delete <span className="text-neutral-700 font-bold">{selectedStudentForDelete?.name}'s</span> essay and its grade.
+                 </p>
               </div>
               <div className="p-4 bg-neutral-50 flex gap-2">
                 <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600">Cancel</button>
@@ -491,7 +491,7 @@ export function StudentsView({
       </AnimatePresence>
 
       <div className="text-center">
-         <button onClick={onBack} className="text-[11px] font-bold text-neutral-300 uppercase tracking-[0.2em] hover:text-primary transition-all">Close Viewer</button>
+         <button onClick={onBack} className="text-[11px] font-bold text-neutral-300 uppercase tracking-widest hover:text-primary transition-all">Back</button>
       </div>
     </div>
   );

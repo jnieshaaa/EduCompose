@@ -141,6 +141,8 @@ export function EssaysTab() {
         const program = student?.student_programs?.[0]?.programs?.name || "No Program";
         const section = (e.blocks as any)?.section_name || "No Section";
         
+        const statusDisplay = e.status === 'analyzed' ? 'Graded' : (e.status === 'submitted' ? 'Pending' : 'Grading');
+        
         return {
           id: e.id,
           activityId: e.activity_id,
@@ -151,7 +153,7 @@ export function EssaysTab() {
           program: program,
           section: section,
           submitted: new Date(e.submitted_at).toLocaleDateString(),
-          status: e.status === 'analyzed' ? 'Completed' : (e.status === 'submitted' ? 'Pending' : 'In Progress'),
+          status: statusDisplay,
           score: e.overall_score,
           teacherReview: e.status === 'reviewed' ? 'Reviewed' : 'Pending',
           activityTitle: (e.essay_activities as any)?.title || "Unknown Activity"
@@ -206,7 +208,7 @@ export function EssaysTab() {
   // Stats calculation
   const stats = useMemo(() => {
     const total = filteredEssays.length;
-    const evaluated = filteredEssays.filter(e => e.status === 'Completed').length;
+    const evaluated = filteredEssays.filter(e => e.status === 'Graded').length;
     const pending = total - evaluated;
     const reviewed = filteredEssays.filter(e => e.teacherReview === 'Reviewed').length;
     const scores = filteredEssays.filter(e => e.score !== null).map(e => e.score as number);
@@ -217,8 +219,8 @@ export function EssaysTab() {
 
   const getAIStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': return 'bg-green-600 text-white';
-      case 'In Progress': return 'bg-blue-600 text-white';
+      case 'Graded': return 'bg-green-600 text-white';
+      case 'Grading': return 'bg-blue-600 text-white';
       case 'Pending': return 'bg-amber-600 text-white';
       default: return 'bg-neutral-600 text-white';
     }
@@ -243,11 +245,11 @@ export function EssaysTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900 font-semibold">Essay Submissions</h1>
+          <h1 className="text-2xl text-neutral-900 font-bold">Submissions</h1>
           <p className="text-sm text-neutral-500 mt-1">
             {selectedActivity 
               ? `Viewing submissions for "${selectedActivity.title}"`
-              : "Review and grade student essay submissions"
+              : "Check and grade your student essays"
             }
           </p>
         </div>
@@ -256,7 +258,7 @@ export function EssaysTab() {
           onClick={() => setIsBatchUploadOpen(true)}
         >
           <Upload className="w-4 h-4 mr-2" />
-          Upload Submissions
+          Upload Essays
         </Button>
       </div>
 
@@ -288,11 +290,11 @@ export function EssaysTab() {
           <p className="text-2xl text-neutral-900 font-bold mt-1">{stats.total}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-green-500">
-          <p className="text-sm text-neutral-500 font-medium">AI Evaluated</p>
+          <p className="text-sm text-neutral-500 font-medium">Graded by AI</p>
           <p className="text-2xl text-green-600 font-bold mt-1">{stats.evaluated}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-amber-500">
-          <p className="text-sm text-neutral-500 font-medium">Pending AI</p>
+          <p className="text-sm text-neutral-500 font-medium">To be graded</p>
           <p className="text-2xl text-amber-600 font-bold mt-1">{stats.pending}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-blue-500">
@@ -300,7 +302,7 @@ export function EssaysTab() {
           <p className="text-2xl text-blue-600 font-bold mt-1">{stats.reviewed}</p>
         </Card>
         <Card className="p-4 border-l-4 border-l-primary">
-          <p className="text-sm text-neutral-500 font-medium">Avg. Score</p>
+          <p className="text-sm text-neutral-500 font-medium">Average Grade</p>
           <p className="text-2xl text-primary font-bold mt-1">{stats.avg.toFixed(1)}%</p>
         </Card>
       </div>
@@ -357,7 +359,7 @@ export function EssaysTab() {
                 onClick={() => setIsBatchUploadOpen(true)}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                Upload Submissions
+                Upload Essays
               </Button>
             )}
           </div>
@@ -365,14 +367,14 @@ export function EssaysTab() {
           <Table>
             <TableHeader className="bg-neutral-50/50">
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Essay Title</TableHead>
-                <TableHead>Program / Section</TableHead>
-                <TableHead className="text-center">Submitted</TableHead>
-                <TableHead className="text-center">AI Status</TableHead>
-                <TableHead className="text-center">Score</TableHead>
-                <TableHead className="text-center">Review</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="font-bold text-neutral-400 uppercase tracking-widest text-xs">Student</TableHead>
+                <TableHead className="font-bold text-neutral-400 uppercase tracking-widest text-xs">Essay Title</TableHead>
+                <TableHead className="font-bold text-neutral-400 uppercase tracking-widest text-xs">Course / Class</TableHead>
+                <TableHead className="text-center font-bold text-neutral-400 uppercase tracking-widest text-xs">Submitted</TableHead>
+                <TableHead className="text-center font-bold text-neutral-400 uppercase tracking-widest text-xs">Status</TableHead>
+                <TableHead className="text-center font-bold text-neutral-400 uppercase tracking-widest text-xs">Grade</TableHead>
+                <TableHead className="text-center font-bold text-neutral-400 uppercase tracking-widest text-xs">Your Review</TableHead>
+                <TableHead className="text-right font-bold text-neutral-400 uppercase tracking-widest text-xs">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -439,7 +441,7 @@ export function EssaysTab() {
                           }}
                         >
                           <Eye className="w-4 h-4 mr-2 text-primary" />
-                          View Results
+                          View Grade
                         </DropdownMenuItem>
 
                         {(essay.status === 'Pending' || essay.status === 'In Progress') && (
@@ -459,7 +461,7 @@ export function EssaysTab() {
                         
                         <DropdownMenuItem className="cursor-pointer">
                           <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
-                          Add Feedback
+                          Send Feedback
                         </DropdownMenuItem>
                         
                         <DropdownMenuItem className="cursor-pointer">
@@ -482,13 +484,13 @@ export function EssaysTab() {
         onClose={() => {
           setIsBatchUploadOpen(false);
         }}
-        title="Upload Essay Submissions"
+        title="Upload Essays"
         size="lg"
       >
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-rd mb-4 flex gap-3">
           <Info className="w-5 h-5 text-amber-600 shrink-0" />
           <p className="text-xs text-amber-800">
-            To perform batch uploads, please use the <strong>Essay Management</strong> tab for a more robust assignment experience. Files uploaded here are for quick reference.
+            To upload multiple essays at once, please use the <strong>Manage Essays</strong> tab for a better way to manage classes. Files uploaded here are for quick reference.
           </p>
         </div>
         
@@ -497,7 +499,7 @@ export function EssaysTab() {
             className="bg-primary"
             onClick={() => navigate('/Teacher/EssayManagement')}
           >
-            Go to Essay Management
+            Go to Manage Essays
           </Button>
         </div>
       </Modal>

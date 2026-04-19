@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import { Textarea } from '../../components/ui/textarea';
-import Badge from '../../components/ui/Badge';
-import { Upload, FileText, X, Clock, AlertCircle, Award, MessageSquare } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, ArrowRight, CheckCircle, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { useNotification } from '../../context/NotificationContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Types
 interface ActivityDetails {
@@ -43,7 +39,6 @@ export function SubmitEssayTab() {
   const { user } = useAuth();
   const { showNotification } = useNotification();
 
-  // Decode secure URL params (with fallback to raw searchParams for backwards compatibility)
   const secureParams = readSecureParams(window.location.search);
   const activityIdParam = secureParams?.activityId || searchParams.get('activityId');
   const classId = secureParams?.classId || searchParams.get('classId');
@@ -65,7 +60,6 @@ export function SubmitEssayTab() {
   const [isResubmitRequested, setIsResubmitRequested] = useState(false);
   const [requestingResubmission, setRequestingResubmission] = useState(false);
   const [essayScore, setEssayScore] = useState<number | null>(null);
-  const [essayStatus, setEssayStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -75,7 +69,6 @@ export function SubmitEssayTab() {
         setLoading(true);
         setError(null);
 
-        // 1. Get Student ID
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('id')
@@ -89,7 +82,6 @@ export function SubmitEssayTab() {
         }
         setStudentId(studentData.id);
 
-        // 2. Fetch Activity Details
         const { data: actRow, error: actError } = await supabase
           .from('essay_activities')
           .select(`
@@ -107,8 +99,6 @@ export function SubmitEssayTab() {
 
         if (actError) throw actError;
 
-        // Fetch Course Details for the header (optional but nice)
-        // We might need to join with courses table if we want the course title
         let courseCode = "N/A";
         if (actRow.course_id && actRow.course_id.length > 0) {
           const { data: courseData } = await supabase
@@ -117,7 +107,7 @@ export function SubmitEssayTab() {
             .eq('id', actRow.course_id[0])
             .maybeSingle();
           if (courseData) {
-            courseCode = `${courseData.course_code} - ${courseData.course_title}`;
+            courseCode = `${courseData.course_code}`;
           }
         }
 
@@ -132,7 +122,9 @@ export function SubmitEssayTab() {
           title: actRow.title,
           course: courseCode,
           instructor: instructorName,
-          deadline: actRow.due_date ? new Date(actRow.due_date).toLocaleString() : "No deadline",
+          deadline: actRow.due_date ? new Date(actRow.due_date).toLocaleString(undefined, {
+             weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : "No deadline",
           instructions: actRow.instructions || "No instructions provided.",
           courseId: actRow.course_id?.[0] || "",
           term: actRow.term || "N/A",
@@ -141,7 +133,6 @@ export function SubmitEssayTab() {
           minWordCount: actRow.min_word_count || 150
         });
 
-        // 3. Fetch Existing Submission
         const { data: essayData } = await supabase
           .from('essays')
           .select('*')
@@ -152,16 +143,16 @@ export function SubmitEssayTab() {
         if (essayData) {
           setIsSubmitted(true);
           setEssayContent(essayData.content || '');
-          setSubmissionDate(new Date(essayData.submitted_at).toLocaleString());
+          setSubmissionDate(new Date(essayData.submitted_at).toLocaleDateString(undefined, {
+             month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          }));
           setEssayScore(essayData.overall_score || null);
-          setEssayStatus(essayData.status || 'submitted');
           if (essayData.title) {
             setSelectedFileName(essayData.title);
           } else if (essayData.file_path) {
             setSelectedFileName(essayData.file_path.split('/').pop() || 'Submitted File');
           }
 
-          // Check if resubmission is already requested
           const { data: requestData } = await supabase
             .from('notifications')
             .select('id')
@@ -176,9 +167,7 @@ export function SubmitEssayTab() {
           }
         }
 
-        // 4. Fetch All Activities in same Course (sidebar)
         if (actRow.course_id && actRow.course_id.length > 0) {
-          // Fetch all activities for this course
           const { data: allActs } = await supabase
             .from('essay_activities')
             .select('id, title, due_date')
@@ -186,7 +175,6 @@ export function SubmitEssayTab() {
             .order('created_at', { ascending: false })
             .limit(10);
 
-          // Fetch all submissions for these activities by this student
           const actIds = allActs?.map(a => a.id) || [];
           const { data: allSubmissions } = await supabase
             .from('essays')
@@ -200,7 +188,7 @@ export function SubmitEssayTab() {
             setPosts(allActs.map(a => ({
               id: a.id,
               title: a.title,
-              date: a.due_date ? new Date(a.due_date).toLocaleDateString() : "No date",
+              date: a.due_date ? new Date(a.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "No date",
               isOverdue: a.due_date ? new Date(a.due_date) < new Date() : false,
               isSubmitted: submittedIds.has(a.id),
               isCurrent: String(a.id) === String(activityIdParam)
@@ -223,7 +211,7 @@ export function SubmitEssayTab() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 10 * 1024 * 1024) {
-        showNotification('error', "File is too large. Maximum size is 10MB.");
+        showNotification('error', "File is too large. Wrap up at 10MB!");
         return;
       }
       setSelectedFile(file);
@@ -235,42 +223,20 @@ export function SubmitEssayTab() {
     return text.trim().split(/\s+/).filter(w => w.length > 0).length;
   };
 
-  // Lightweight client-side quality filter to block obvious gibberish submissions.
-  // Backend still performs final validation, this just gives immediate feedback to students.
   const validateTextEssayQuality = (text: string): string | null => {
     const cleaned = text.trim();
     const tokens = cleaned.split(/\s+/).filter(Boolean);
     const alphaTokens = tokens.filter((t) => /[a-zA-Z]/.test(t));
-    const uniqueAlpha = new Set(alphaTokens.map((t) => t.toLowerCase()));
-    const alphaChars = alphaTokens.join("").replace(/[^a-zA-Z]/g, "");
-    const sentenceParts = cleaned
-      .split(/[.!?]+|\n+/)
-      .map((s) => s.trim())
-      .filter((s) => s.replace(/[^a-zA-Z]/g, "").length >= 3);
-
-    const tokenCount = tokens.length;
-    const alphaRatio = tokenCount > 0 ? alphaTokens.length / tokenCount : 0;
-    const lexicalDiversity =
-      alphaTokens.length > 0 ? uniqueAlpha.size / alphaTokens.length : 0;
-    const avgWordLength =
-      alphaTokens.length > 0 ? alphaChars.length / alphaTokens.length : 0;
-
-    if (tokenCount < (activity?.minWordCount || 150)) {
-      return `Your essay is too short. Minimum is ${activity?.minWordCount || 150} words.`;
+    
+    if (tokens.length < (activity?.minWordCount || 150)) {
+      return `Your essay is a bit short. Try to reach ${activity?.minWordCount || 150} words!`;
     }
-    if (sentenceParts.length < 2) {
-      return "Please write at least 2 complete sentences with proper punctuation.";
-    }
+    
+    const alphaRatio = tokens.length > 0 ? alphaTokens.length / tokens.length : 0;
     if (alphaRatio < 0.6) {
-      return "Your submission appears to contain too many invalid fragments. Please use meaningful words and sentences.";
+      return "Hmm, this doesn't look like an essay. Please use full words and sentences.";
     }
-    if (lexicalDiversity < 0.12) {
-      return "Your submission repeats words too much. Please provide a complete, meaningful essay.";
-    }
-    if (avgWordLength < 2.5) {
-      return "Your submission appears to contain very short fragments. Please write complete words and sentences.";
-    }
-
+    
     return null;
   };
 
@@ -303,75 +269,48 @@ export function SubmitEssayTab() {
         if (uploadError) throw uploadError;
       }
 
-
-
       const { error: submitError } = await supabase
         .from('essays')
         .insert({
           student_id: studentId,
           activity_id: activityIdParam,
-          block_id: blockId || null, // Use UUID from URL or null
-          teacher_id: activity?.teacherId || null, // Ensure teacher can see it
+          block_id: blockId || null,
+          teacher_id: activity?.teacherId || null,
           content: uploadMode === 'text' ? essayContent : null,
           file_path: filePath,
-          title: selectedFileName || activity?.title || "Essay Submission",
+          title: selectedFileName || activity?.title || "Essay Work",
           status: 'submitted'
         });
 
-      if (submitError) {
-        console.error("[handleSubmit] Insert error:", submitError);
-        throw submitError;
-      }
-
-
+      if (submitError) throw submitError;
 
       setIsSubmitted(true);
-      setSubmissionDate(new Date().toLocaleString());
-      // Ensure the filename is set in state if it's a file upload
+      setSubmissionDate(new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+      
       if (uploadMode === 'file' && selectedFile) {
         setSelectedFileName(selectedFile.name);
       }
 
-      // Notify the teacher
       if (activity?.teacherId) {
-
         const studentName = user?.nickname || (user ? `${user.first_name} ${user.last_name}` : "") || "A student";
-        const { data: latestEssay } = await supabase
-          .from('essays')
-          .select('id')
-          .eq('student_id', studentId)
-          .eq('activity_id', activityIdParam)
-          .order('submitted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const { error: notifyError } = await supabase
+        
+        await supabase
           .from('notifications')
           .insert({
             user_id: activity.teacherUUID,
             type: 'submission_received',
-            title: 'New Essay Submission',
-            message: `${studentName} has uploaded an activity: "${activity.title}".`,
-            related_id: JSON.stringify({
-              activityId: String(activity.id),
-              studentId: String(studentId),
-              essayId: String(latestEssay?.id || "")
-            }),
+            title: 'New Essay Work',
+            message: `${studentName} sent their work: "${activity.title}".`,
+            related_id: activity.id,
             related_type: 'essay_activities'
           });
-
-        if (notifyError) {
-          console.error("[handleSubmit] Notification error:", notifyError);
-        }
-      } else {
-        console.warn("[handleSubmit] No teacherId found, skipping notification");
       }
+      
+      showNotification('success', "Work sent successfully!");
     } catch (err) {
       console.error("Submission error:", err);
-      showNotification('error', getErrorMessage(err));
+      showNotification('error', "Couldn't send your work. Try again!");
     } finally {
-      // Always clear loading state so the page does not get stuck
-      // after a successful submission.
       setLoading(false);
     }
   };
@@ -386,10 +325,10 @@ export function SubmitEssayTab() {
       const { error: requestError } = await supabase
         .from('notifications')
         .insert({
-          user_id: activity.teacherId,
+          user_id: activity.teacherUUID,
           type: 'resubmission_request',
-          title: 'Resubmission Requested',
-          message: `${studentName} is requesting to resubmit their work for activity: "${activity.title}".`,
+          title: 'Resubmit Request',
+          message: `${studentName} wants to fix their work for: "${activity.title}".`,
           related_id: activity.id,
           related_type: 'essay_activities'
         });
@@ -397,11 +336,9 @@ export function SubmitEssayTab() {
       if (requestError) throw requestError;
 
       setIsResubmitRequested(true);
-      showNotification('success', "Resubmission request sent to your teacher.");
-    } catch (err: unknown) {
-      console.error("Error requesting resubmission:", err);
-      const message = err instanceof Error ? err.message : "Unknown error";
-      showNotification('error', "Failed to send request: " + message);
+      showNotification('success', "Ask sent! Your teacher will check it.");
+    } catch (err: any) {
+      showNotification('error', "Couldn't send request. Try again!");
     } finally {
       setRequestingResubmission(false);
     }
@@ -409,349 +346,395 @@ export function SubmitEssayTab() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-neutral-500 font-medium">Loading activity details...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading the task details...</p>
       </div>
     );
   }
 
   if (error || !activity) {
     return (
-      <Card className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-error-default mx-auto mb-4" />
-        <h2 className="text-xl font-bold">Error</h2>
-        <p className="text-neutral-600 mt-2">{error || "Activity not found."}</p>
-        <Button onClick={() => navigate('/Student/Classes')} className="mt-4">
-          Return to Classes
-        </Button>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2 tracking-tight">Oops!</h2>
+        <p className="text-sm font-medium text-neutral-400 max-w-sm mb-10 leading-relaxed">
+          {error || "We couldn't find this task."}
+        </p>
+        <button 
+          onClick={() => navigate('/Student/Classes')}
+          className="bg-neutral-900 text-white px-8 py-3.5 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/10"
+        >
+          Back to Classes
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full font-sans">
-      {/* Page Header */}
-      <div className="mb-6 bg-success-default/10 border border-success-default/20 p-6 rounded-lg">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-success-default text-white rounded-full">
-            <FileText className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{activity.title}</h1>
-            <p className="text-neutral-600 mt-1 line-clamp-2">{activity.instructions}</p>
-          </div>
+    <div className="max-w-7xl mx-auto w-full pb-20">
+      
+      {/* Header Area */}
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 mb-8 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full translate-x-12 -translate-y-12" />
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+           <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-neutral-900 flex items-center justify-center text-white shrink-0">
+                 <FileText size={24} className="text-primary fill-primary/20" />
+              </div>
+              <div>
+                 <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase tracking-widest">{activity.course}</span>
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">• Group {blockId?.slice(0, 4) || '---'}</span>
+                 </div>
+                 <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">{activity.title}</h1>
+              </div>
+           </div>
+           <div className="flex items-center gap-6 text-right">
+              <div className="space-y-0.5">
+                 <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Teacher</p>
+                 <p className="text-sm font-bold text-neutral-600">{activity.instructor}</p>
+              </div>
+              <div className="w-px h-8 bg-neutral-100 hidden md:block" />
+              <div className="space-y-0.5">
+                 <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Submission Deadline</p>
+                 <p className={`text-sm font-bold ${activity.deadline.includes('No') ? 'text-neutral-400' : 'text-red-500'}`}>
+                    {activity.deadline}
+                 </p>
+              </div>
+           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
-        {/* LEFT COLUMN */}
-        <div className="lg:col-span-3 space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            
-            {/* 1. UPDATED: Custom styled tabs with bottom border indicator */}
-            <TabsList className="flex w-fit bg-transparent p-0 rounded-none justify-start gap-2">
-              <TabsTrigger 
-                value="details"
-                className="
-                  w-fit rounded-none px-3 py-2 text-sm font-medium
-                  text-neutral-500 hover:text-neutral-700
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-primary
-                  data-[state=active]:shadow-sm
-                  bg-transparent shadow-none transition-all
-                "
+        {/* Main Section */}
+        <div className="lg:col-span-3 space-y-8">
+          
+          <div className="flex items-center gap-2 p-1.5 bg-neutral-100/50 rounded-2xl w-fit">
+            <button 
+              onClick={() => setActiveTab('details')}
+              className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'details' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              Task Details
+            </button>
+            <button 
+              onClick={() => setActiveTab('my-work')}
+              className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'my-work' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              My Essay
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeTab === 'details' ? (
+              <motion.div 
+                key="details"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="bg-white p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-8"
               >
-                DETAILS
-              </TabsTrigger>
+                <div className="space-y-4">
+                   <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-4 bg-primary rounded-full" />
+                      <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Teacher's Message</h2>
+                   </div>
+                   <p className="text-sm font-medium text-neutral-500 leading-relaxed italic border-l-4 border-neutral-50 pl-6 py-2">
+                     "{activity.instructions}"
+                   </p>
+                </div>
 
-              <TabsTrigger 
-                value="my-work"
-                className="
-                  w-fit rounded-none px-3 py-2 text-sm font-medium
-                  text-neutral-500 hover:text-neutral-700
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-primary
-                  data-[state=active]:shadow-sm
-                  bg-transparent shadow-none transition-all
-                "
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-neutral-50">
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Min. Word Count</p>
+                      <p className="text-base font-bold text-neutral-600">{activity.minWordCount} Words</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Semester</p>
+                      <p className="text-base font-bold text-neutral-600">{activity.term}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Status</p>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase ${isSubmitted ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>
+                        {isSubmitted ? 'Sent' : 'Waiting for file'}
+                      </span>
+                   </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="my-work"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="space-y-8"
               >
-                MY WORK
-              </TabsTrigger>
-            </TabsList>
+                {!isSubmitted ? (
+                  <div className="bg-white p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-8">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                       <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Add My File</h2>
+                       <div className="flex items-center gap-2 p-1 bg-neutral-100 rounded-xl">
+                          <button 
+                            onClick={() => setUploadMode('text')}
+                            className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${uploadMode === 'text' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400'}`}
+                          >
+                            Type It
+                          </button>
+                          <button 
+                            onClick={() => setUploadMode('file')}
+                            className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${uploadMode === 'file' ? 'bg-white text-primary shadow-sm' : 'text-neutral-400'}`}
+                          >
+                            Upload File
+                          </button>
+                       </div>
+                    </div>
 
-
-
-            {/* DETAILS TAB */}
-            <TabsContent value="details">
-              <Card className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-semibold text-neutral-900 block">Course:</span>
-                    <span className="text-neutral-600">{activity.course}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-neutral-900 block">Instructor:</span>
-                    <span className="text-neutral-600">{activity.instructor}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-neutral-900 block">Term:</span>
-                    <span className="text-neutral-600">{activity.term}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-neutral-900 block">Deadline:</span>
-                    <span className="text-danger-default font-medium">{activity.deadline}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-neutral-900 block">Min. Word Count:</span>
-                    <span className="text-neutral-600">{activity.minWordCount} words</span>
-                  </div>
-                </div>
-                <div className="prose text-neutral-700 text-sm">
-                  <p>{activity.instructions}</p>
-                </div>
-              </Card>
-            </TabsContent>
-
-            {/* MY WORK TAB */}
-            <TabsContent value="my-work" className="space-y-6">
-              
-              {/* If NOT submitted, show the upload area */}
-              {!isSubmitted ? (
-                <Card className="p-6">
-                  <h2 className="text-xl text-neutral-900 mb-4">Add Work</h2>
-                  <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'file' | 'text')}>
-                    <TabsList className="grid w-full max-w-md grid-cols-2 mb-6 bg-neutral-100/50 p-1 rounded-xl">
-                      <TabsTrigger 
-                        value="file"
-                        className="
-                          data-[state=active]:bg-primary 
-                          data-[state=active]:text-white 
-                          data-[state=active]:shadow-md
-                          transition-all duration-200
-                        "
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        File Upload
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="text"
-                        className="
-                          data-[state=active]:bg-primary 
-                          data-[state=active]:text-white 
-                          data-[state=active]:shadow-md
-                          transition-all duration-200
-                        "
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Text Editor
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="file" className="space-y-4">
-                      {!selectedFile ? (
-                        <div className="border-2 border-dashed border-neutral-300 rounded-rd p-12 text-center hover:border-primary transition-colors relative">
-                          <input 
-                            type="file" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={handleFileChange}
-                          />
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                              <Upload className="w-8 h-8 text-primary" />
-                            </div>
-                            <p className="text-neutral-900">Drop your file here or click to browse</p>
-                            <p className="text-xs text-danger-default">* Maximum size 10MB</p>
-                            <Button className="mt-2 pointer-events-none bg-primary">Choose File</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="border border-neutral-200 rounded-rd p-4 flex items-center justify-between">
-                          <span className="text-sm font-medium">{selectedFileName}</span>
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedFile(null); setSelectedFileName(null); }}><X className="w-4 h-4" /></Button>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="text">
-                      <div className="space-y-2">
-                        <Textarea 
-                          placeholder="Type your submission..." 
-                          className="min-h-[300px]" 
+                    {uploadMode === 'text' ? (
+                      <div className="space-y-4">
+                        <textarea 
                           value={essayContent}
                           onChange={(e) => setEssayContent(e.target.value)}
+                          placeholder="Type your essay here..."
+                          className="w-full min-h-[400px] p-8 rounded-3xl bg-neutral-50/50 border border-neutral-100 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none shadow-inner"
                         />
-                        <div className="flex justify-between items-center px-1">
-                          <span className={`text-xs font-medium ${
-                            getWordCount(essayContent) < activity.minWordCount 
-                              ? 'text-danger-default' 
-                              : 'text-success-default'
-                          }`}>
-                            Word Count: {getWordCount(essayContent)} / {activity.minWordCount}
-                          </span>
-                          {getWordCount(essayContent) < activity.minWordCount && (
-                             <span className="text-[10px] text-danger-default italic">
-                               * Below minimum requirement
-                             </span>
-                          )}
+                        <div className="flex items-center justify-between px-2">
+                           <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold uppercase tracking-widest ${getWordCount(essayContent) < activity.minWordCount ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {getWordCount(essayContent)} / {activity.minWordCount} Words
+                              </span>
+                              {getWordCount(essayContent) < activity.minWordCount && (
+                                <Info size={12} className="text-amber-400" />
+                              )}
+                           </div>
                         </div>
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    ) : (
+                      <div className="space-y-4">
+                         {!selectedFile ? (
+                           <label className="group flex flex-col items-center justify-center w-full h-80 border-4 border-dashed border-neutral-50 rounded-[2rem] bg-neutral-50/30 hover:bg-white hover:border-primary/20 transition-all cursor-pointer">
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <div className="p-5 bg-white rounded-3xl shadow-xl shadow-neutral-900/5 mb-4 group-hover:scale-110 transition-transform">
+                                   <Upload className="w-8 h-8 text-primary" />
+                                </div>
+                                <p className="mb-1 text-sm font-bold text-neutral-900">Drop your file here</p>
+                                <p className="text-xs font-medium text-neutral-400">PDF, Word, or TXT up to 10MB</p>
+                              </div>
+                              <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" />
+                           </label>
+                         ) : (
+                           <div className="p-8 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-between animate-in zoom-in-95 duration-300">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white">
+                                    <FileText size={20} />
+                                 </div>
+                                 <div className="space-y-0.5">
+                                    <p className="text-sm font-bold text-neutral-900">{selectedFileName}</p>
+                                    <p className="text-[10px] font-bold text-primary uppercase">Ready to send</p>
+                                 </div>
+                              </div>
+                              <button 
+                                onClick={() => { setSelectedFile(null); setSelectedFileName(null); }}
+                                className="p-2 hover:bg-primary/20 rounded-lg text-primary transition-colors"
+                              >
+                                <X size={20} />
+                              </button>
+                           </div>
+                         )}
+                      </div>
+                    )}
 
-                  <div className="mt-6 flex justify-end gap-3">
-                     <Button variant="outline">Save Draft</Button>
-                      <Button 
-                        className="bg-primary hover:bg-primary-300" 
-                        disabled={
-                          loading || 
-                          (uploadMode === 'file' && !selectedFile) || 
-                          (uploadMode === 'text' && (!essayContent.trim() || getWordCount(essayContent) < activity.minWordCount))
-                        }
+                    <div className="flex items-center justify-between pt-8 border-t border-neutral-50">
+                       <button className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest hover:text-neutral-500 transition-colors">
+                          Save Draft
+                       </button>
+                       <button 
+                        disabled={loading || (uploadMode === 'file' && !selectedFile) || (uploadMode === 'text' && !essayContent.trim())}
                         onClick={handleSubmit}
-                      >
-                        {loading ? "Submitting..." : "Submit Assignment"}
-                      </Button>
-                  </div>
-                </Card>
-              ) : (
-                // If SUBMITTED, show the success state + Grade Placeholder
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <Card className="p-6 flex items-center justify-between bg-success-default/5 border-success-default/20">
-                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-success-default rounded-full flex items-center justify-center text-white">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                         <div>
-                          <p className="font-medium text-neutral-900">{selectedFileName || "Essay Submission"}</p>
-                          <p className="text-xs text-neutral-500">Submitted on {submissionDate}</p>
-                        </div>
-                     </div>
-                      <div className="flex items-center gap-2">
-                        {essayStatus === 'submitted' && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleRequestResubmission}
-                            disabled={isResubmitRequested || requestingResubmission}
-                          >
-                            {requestingResubmission ? "Sending..." : isResubmitRequested ? "Request Sent" : "Request Resubmission"}
-                          </Button>
-                        )}
-                        <Badge className="bg-success-default text-white">
-                          {essayStatus === 'reviewed' ? 'Reviewed' : (essayStatus === 'analyzed' ? 'AI Evaluated' : 'Submitted')}
-                        </Badge>
-                      </div>
-                  </Card>
-
-                  {/* 2. UPDATED: Grade Display - Shows actual grade if available */}
-                  {essayScore !== null ? (
-                    <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 text-center">
-                      <div className="flex flex-col items-center">
-                        <Award className="w-12 h-12 text-primary mb-3" />
-                        <h3 className="text-xl font-bold text-neutral-900 mb-1">
-                          {essayStatus === 'reviewed' ? 'Final Grade' : 'AI Evaluation Score'}
-                        </h3>
-                        <div className="text-4xl font-black text-primary mb-3">
-                          {essayScore}%
-                        </div>
-                        <p className="text-sm text-neutral-600 max-w-md mx-auto">
-                          {essayStatus === 'reviewed' 
-                            ? "Your teacher has reviewed your work and assigned this final grade. Great job!" 
-                            : "This score was generated by our AI based on your essay's grammar, coherence, and argument strength."}
-                        </p>
-                        <Button 
-                          variant="outline" 
-                          className="mt-6 border-primary/30 text-primary hover:bg-primary/5"
-                          onClick={() => navigate('/Student/Feedback')}
-                        >
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          View AI feedback
-                        </Button>
-                      </div>
-                    </Card>
-                  ) : (
-                    <div className="text-center py-10 text-neutral-400 text-sm">
-                      <div className="flex justify-center mb-3">
-                        <div className="w-8 h-8 rounded-full border-2 border-neutral-300 flex items-center justify-center">
-                           <span className="font-serif font-bold text-lg">!</span>
-                        </div>
-                      </div>
-                      Your grade for this work will appear here.
+                        className="flex items-center gap-3 px-10 py-4 bg-neutral-900 text-white font-bold text-[11px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-neutral-900/20 hover:bg-primary transition-all active:scale-95 disabled:opacity-30"
+                       >
+                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send size={14} /> Send Work</>}
+                       </button>
                     </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <motion.div 
+                      initial={{ scale: 0.98, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="bg-emerald-500 p-10 rounded-[2.5rem] text-white shadow-2xl shadow-emerald-500/20 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] translate-x-32 -translate-y-32" />
+                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                         <div className="flex items-center gap-6">
+                            <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center backdrop-blur-md">
+                               <CheckCircle size={40} className="text-white" />
+                            </div>
+                            <div className="space-y-1">
+                               <h2 className="text-2xl font-black tracking-tight">Sent Successfully!</h2>
+                               <p className="text-white/70 font-medium text-sm">Your teacher will evaluate your work soon.</p>
+                            </div>
+                         </div>
+                         <div className="text-right shrink-0">
+                            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Time of Submission</p>
+                            <p className="text-lg font-bold">{submissionDate}</p>
+                         </div>
+                      </div>
+                    </motion.div>
+
+                    {essayScore !== null && (
+                      <motion.div 
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-white p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 text-center"
+                      >
+                         <h3 className="text-[11px] font-black text-neutral-300 uppercase tracking-[0.2em] mb-8">AI Score Results</h3>
+                         <div className="relative w-40 h-40 mx-auto mb-10">
+                            <svg className="w-full h-full transform -rotate-90">
+                               <circle cx="80" cy="80" r="70" fill="none" stroke="currentColor" strokeWidth="12" className="text-neutral-50" />
+                               <motion.circle 
+                                 cx="80" cy="80" r="70" fill="none" stroke="currentColor" strokeWidth="12" 
+                                 strokeDasharray="440" 
+                                 initial={{ strokeDashoffset: 440 }}
+                                 animate={{ strokeDashoffset: 440 - (440 * (essayScore || 0) / 100) }}
+                                 transition={{ duration: 2, ease: "easeOut" }}
+                                 className="text-primary" 
+                               />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                               <span className="text-4xl font-black text-neutral-900 tracking-tighter">{essayScore}%</span>
+                               <span className="text-[9px] font-bold text-neutral-300 uppercase">Success Rate</span>
+                            </div>
+                         </div>
+                         
+                         <p className="text-sm font-medium text-neutral-500 max-w-sm mx-auto leading-relaxed mb-8">
+                            Great work! Our AI has checked your essay for grammar, flow, and strong ideas.
+                         </p>
+
+                         <button 
+                          onClick={() => navigate('/Student/Feedback')}
+                          className="px-10 py-4 bg-neutral-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-neutral-900/20 group"
+                         >
+                            See AI Tips
+                            <ArrowRight size={14} className="inline-block ml-2 group-hover:translate-x-1 transition-transform" />
+                         </button>
+                      </motion.div>
+                    )}
+
+                    {!essayScore && (
+                      <div className="bg-white p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mb-6 text-neutral-200">
+                          <Clock size={32} />
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900 mb-2">Evaluation is pending</h3>
+                        <p className="text-sm font-medium text-neutral-400 max-w-xs leading-relaxed">
+                          Your score will appear here once the AI or your teacher completes the review.
+                        </p>
+                        
+                        <div className="mt-10 pt-8 border-t border-neutral-50 w-full">
+                           <button 
+                            disabled={isResubmitRequested || requestingResubmission}
+                            onClick={handleRequestResubmission}
+                            className="text-primary text-[10px] font-black uppercase tracking-widest hover:underline transition-all disabled:opacity-30 disabled:no-underline"
+                           >
+                              {requestingResubmission ? 'Sending...' : isResubmitRequested ? 'Request Sent' : 'Ask to fix it (Resubmit)'}
+                           </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* RIGHT COLUMN: Sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="bg-white shadow-sm border border-neutral-200 sticky top-4 overflow-hidden">
-             <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
-               <h3 className="font-semibold text-neutral-700 flex items-center gap-2">
-                 <span className="text-lg">📰</span> Posts in {activity.course.split(' - ')[0]}
-               </h3>
-             </div>
-             
-              <div className="divide-y divide-neutral-100">
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
+           <div className="bg-white rounded-[2.25rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 overflow-hidden">
+              <div className="p-6 bg-neutral-900 text-white">
+                 <h3 className="text-sm font-bold tracking-tight uppercase tracking-[0.1em]">Tasks in Course</h3>
+              </div>
+              <div className="p-2">
                 {posts.length > 0 ? (
                   posts.map((post) => (
-                    <div 
-                      key={post.id} 
+                    <button
+                      key={post.id}
                       onClick={() => navigate(buildSecureUrl('/Student/Submit', {
                         activityId: String(post.id),
                         classId: classId || '',
                         blockId: blockId || '',
                         activityTitle: post.title,
-                        courseName: activity.course.split(' - ')[1] || '',
-                        courseCode: activity.course.split(' - ')[0],
+                        courseName: activity.course,
                       }))}
                       className={`
-                        p-4 hover:bg-neutral-50 transition-colors cursor-pointer group relative
-                        ${post.isCurrent ? 'bg-primary/5 border-l-4 border-l-primary' : ''}
+                        w-full p-6 text-left rounded-3xl transition-all group relative mb-1
+                        ${post.isCurrent ? 'bg-primary/5' : 'hover:bg-neutral-50'}
                       `}
                     >
-                      <h4 className={`
-                        text-sm font-medium mb-1 transition-colors
-                        ${post.isCurrent ? 'text-primary' : ''}
-                        ${!post.isCurrent && post.isSubmitted ? 'text-success-default' : ''}
-                        ${!post.isCurrent && !post.isSubmitted ? 'text-danger-default' : ''}
-                      `}>
-                        {post.title}
-                      </h4>
-                      <div className="flex items-center gap-1 text-xs">
-                        <Clock className="w-3 h-3 text-neutral-400" />
-                        <span className={post.isOverdue ? 'text-danger-default font-medium' : 'text-neutral-500'}>
-                          {post.date}
-                        </span>
+                      <div className="flex flex-col gap-1.5">
+                         <h4 className={`text-xs font-bold leading-snug transition-colors ${post.isCurrent ? 'text-primary' : 'text-neutral-700'}`}>
+                           {post.title}
+                         </h4>
+                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                           <Calendar size={12} className="text-neutral-200" />
+                           {post.date}
+                         </div>
+                         {post.isSubmitted && (
+                           <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.1em] mt-2 flex items-center gap-1">
+                             <CheckCircle size={10} />
+                             Done
+                           </span>
+                         )}
                       </div>
-                      {post.isSubmitted && (
-                        <div className="mt-2 text-[10px] font-bold text-success-default uppercase tracking-wide">
-                          ✓ Submitted
-                        </div>
+                      {post.isCurrent && (
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-full" />
                       )}
-                    </div>
+                    </button>
                   ))
                 ) : (
-                  <div className="p-4 text-center text-sm text-neutral-500 italic">
-                    No activities found for this course.
-                  </div>
+                  <div className="p-10 text-center opacity-30 italic text-xs">No other tasks.</div>
                 )}
-               
-               {/* View All Button always visible at bottom */}
-               <div className="p-4 text-center border-t border-neutral-100">
-                 <Button variant="outline" className="w-full text-primary border-primary/20 hover:bg-primary/5">
-                   View all posts
-                 </Button>
-               </div>
-             </div>
-          </Card>
+              </div>
+           </div>
+
+           <div className="bg-primary/5 p-8 rounded-[2rem] space-y-4 border border-primary/10">
+              <Info className="text-primary w-6 h-6" />
+              <p className="text-[11px] font-bold text-primary uppercase tracking-widest">A friendly tip</p>
+              <p className="text-xs font-medium text-neutral-600 leading-relaxed">
+                Make sure you check your grammar and word count before sending. Good luck!
+              </p>
+           </div>
         </div>
 
       </div>
     </div>
   );
 }
+
+const Calendar = ({ size, className }: { size?: number, className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size || 24} 
+    height={size || 24} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);

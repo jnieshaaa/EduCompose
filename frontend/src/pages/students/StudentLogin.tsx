@@ -6,8 +6,6 @@ import { useNotification } from "../../context/NotificationContext";
 import { supabase } from "../../lib/supabaseClient";
 import { sendSignupCodeEmail } from "../../services/emailService";
 
-// Minimal typed shape for Supabase user metadata
-
 
 interface StudentLoginLookup {
   student_id: string;  // uuid

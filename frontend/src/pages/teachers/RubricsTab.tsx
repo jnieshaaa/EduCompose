@@ -333,12 +333,12 @@ export function RubricsTab() {
               {currentView === "options"
                 ? editingRubricId
                   ? "Edit Rubric"
-                  : "New Rubric"
-                : "Rubrics"}
+                  : "Add Rubric"
+                : "Grading Rubrics"}
             </h1>
             {currentView === "list" && (
               <p className="text-sm text-neutral-400 mt-1">
-                Manage grading rubrics for your essay activities
+                Create and manage how you grade student essays
               </p>
             )}
           </div>
@@ -350,7 +350,7 @@ export function RubricsTab() {
             onClick={handleCreateClick}
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Rubric
+            Add Rubric
           </Button>
         )}
       </div>

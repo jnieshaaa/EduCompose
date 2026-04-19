@@ -64,9 +64,9 @@ export function ProgramsTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900 font-semibold">Programs</h1>
+          <h1 className="text-2xl text-neutral-900 font-bold">Programs</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Click on a program to view its sections and students
+            Select a program to see its classes and students
           </p>
         </div>
 

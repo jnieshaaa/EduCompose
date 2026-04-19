@@ -314,10 +314,10 @@ export function SettingsTab() {
 
   const settingsNavigation = [
     { id: "profile", name: "Profile", icon: User },
-    { id: "ai-assessment", name: "AI Assessment", icon: Settings },
-    { id: "thresholds", name: "Thresholds", icon: AlertTriangle },
-    { id: "rubric", name: "Rubric Defaults", icon: BookOpen },
-    { id: "data", name: "Data", icon: Upload },
+    { id: "ai-assessment", name: "AI Grading", icon: Settings },
+    { id: "thresholds", name: "Grading Targets", icon: AlertTriangle },
+    { id: "rubric", name: "Default Rubric", icon: BookOpen },
+    { id: "data", name: "My Data", icon: Upload },
   ];
 
   if (!settings && isLoading) {
@@ -349,7 +349,7 @@ export function SettingsTab() {
         <div className="mb-8">
           <h1 className="text-xl font-bold text-neutral-900">Settings</h1>
           <p className="text-sm text-neutral-400 mt-1 font-medium">
-            Manage your profile, AI preferences, and system configuration
+            Manage your account and AI grading settings
           </p>
         </div>
 
@@ -373,7 +373,7 @@ export function SettingsTab() {
                     <item.icon className={`w-4 h-4 flex-shrink-0 ${
                       isActive ? "text-primary" : "text-neutral-400"
                     }`} />
-                    <span className="text-sm font-bold uppercase tracking-wider">{item.name}</span>
+                    <span className="text-sm font-bold uppercase tracking-widest">{item.name}</span>
                   </button>
                 );
               })}

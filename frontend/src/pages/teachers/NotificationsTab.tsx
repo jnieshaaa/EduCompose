@@ -128,7 +128,7 @@ export function NotificationsTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl text-neutral-900">Notifications</h1>
+          <h1 className="text-2xl text-neutral-900 font-bold">Notifications</h1>
           <p className="text-sm text-neutral-500 mt-1">
             {unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`

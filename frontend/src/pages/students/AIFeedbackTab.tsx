@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
-import { Award, Download, FileText, AlertCircle, RefreshCw } from 'lucide-react';
-import { Progress } from '../../components/ui/progress';
+import { 
+  Download, 
+  FileText, 
+  AlertCircle, 
+  Zap, 
+  Lightbulb, 
+  Target, 
+  ArrowRight,
+  Loader2
+} from 'lucide-react';
 import { readSecureParams } from '../../utils/secureUrl';
 import { fetchEssayAnalysis } from '../../services/activityService';
-import { PremiumLoader } from '../../components/ui/PremiumLoader';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface FeedbackData {
   essayTitle: string;
@@ -39,9 +44,8 @@ export function AIFeedbackTab() {
     async function loadData() {
       const params = readSecureParams(window.location.search);
       if (!params || !params.studentId || !params.activityId) {
-        // Fallback for demo if no ref provided
         if (!window.location.search.includes('ref=')) {
-          setError("No essay identifiers provided. Please select an essay from your dashboard.");
+          setError("No essay identifiers provided. Please select an essay from your folder.");
           setLoading(false);
           return;
         }
@@ -53,52 +57,51 @@ export function AIFeedbackTab() {
       try {
         const result = await fetchEssayAnalysis(params.studentId, params.activityId);
         if (!result) {
-          setError("Could not find evaluation results for this essay.");
+          setError("Could not find score results for this essay.");
           return;
         }
 
-        // Map backend AnalysisResponse to UI format
         const analysis = result.analysis as any;
         const mapped: FeedbackData = {
-          essayTitle: params.activityTitle || result.title || "Essay Evaluation",
+          essayTitle: params.activityTitle || result.title || "Your Essay",
           submittedDate: analysis.generated_at ? new Date(analysis.generated_at).toLocaleDateString() : new Date().toLocaleDateString(),
           overallScore: Math.round(analysis.scores?.overall || 0),
           aiConfidence: Math.round(analysis.scores?.knowledge_graph || 95),
-          summary: analysis.diagnostic_summary?.overall_summary || "Evaluation completed successfully.",
+          summary: analysis.diagnostic_summary?.overall_summary || "Score report is ready!",
           criteria: [
             { 
-              name: 'Grammar & Mechanics', 
+              name: 'Grammar', 
               score: Math.round(analysis.scores?.grammar || 0), 
               weight: 20, 
-              feedback: analysis.detailed_analysis?.grammar?.summary || "Analyzed grammar and syntax patterns.",
+              feedback: analysis.detailed_analysis?.grammar?.summary || "Checked your spelling and grammar.",
               improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'grammar').flatMap((r: any) => r.action_items) || []
             },
             { 
-              name: 'Coherence & Flow', 
+              name: 'Smoothness', 
               score: Math.round(analysis.scores?.coherence || 0), 
               weight: 25, 
-              feedback: analysis.detailed_analysis?.coherence?.summary || "Evaluated logical flow and paragraph transitions.",
+              feedback: analysis.detailed_analysis?.coherence?.summary || "Checked how well your sentences flow.",
               improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'coherence').flatMap((r: any) => r.action_items) || []
             },
             { 
-              name: 'Vocabulary & Style', 
+              name: 'Word Choice', 
               score: Math.round(analysis.scores?.readability || 0), 
               weight: 15, 
-              feedback: analysis.detailed_analysis?.readability?.summary || "Assessed academic vocabulary and reading ease.",
+              feedback: analysis.detailed_analysis?.readability?.summary || "Checked the words you used.",
               improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'readability').flatMap((r: any) => r.action_items) || []
             },
             { 
-              name: 'Argument Strength', 
+              name: 'Strong Ideas', 
               score: Math.round(analysis.scores?.argument_strength || 0), 
               weight: 30, 
-              feedback: analysis.detailed_analysis?.argumentation?.summary || "Evaluated claims, evidence, and logical reasoning.",
+              feedback: analysis.detailed_analysis?.argumentation?.summary || "Checked your points and evidence.",
               improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'argumentation').flatMap((r: any) => r.action_items) || []
             },
             { 
-              name: 'Knowledge Integration', 
+              name: 'Idea Connections', 
               score: Math.round(analysis.scores?.knowledge_graph || 0), 
               weight: 10, 
-              feedback: "Assessed conceptual depth and knowledge graph connectivity.",
+              feedback: "Checked how well you connected different topics.",
               improvements: analysis.recommendations?.filter((r: any) => r.dimension === 'knowledge_graph').flatMap((r: any) => r.action_items) || []
             }
           ],
@@ -112,63 +115,45 @@ export function AIFeedbackTab() {
         setEssayFeedback(mapped);
       } catch (err) {
         console.error("Error loading feedback:", err);
-        setError("Failed to connect to the evaluation service.");
+        setError("Failed to connect to the score service.");
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, []);
-
-  const getCriteriaColor = (score: number) => {
-    if (score >= 90) return 'text-success-default';
-    if (score >= 80) return 'text-info-default';
-    if (score >= 70) return 'text-warning-default';
-    return 'text-error-default';
-  };
-
-
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'high':
-        return <Badge className="bg-red-600 text-white text-xs">High Priority</Badge>;
-      case 'medium':
-        return <Badge className="bg-amber-600 text-white text-xs">Medium</Badge>;
-      case 'low':
-        return <Badge className="bg-blue-600 text-white text-xs">Low Priority</Badge>;
-      default:
-        return null;
-    }
-  };
+  }, [navigate]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <PremiumLoader loading={true} message="Fetching AI Evaluation Results..." />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Reading your score report...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-4">
-        <div className="w-20 h-20 bg-error-light/10 rounded-full flex items-center justify-center mb-6">
-          <AlertCircle className="w-10 h-10 text-error-default" />
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-2xl text-neutral-900 mb-2 font-semibold">Unable to Load Feedback</h2>
-        <p className="text-neutral-500 text-center max-w-md mb-8">
-          {error}
-        </p>
+        <h2 className="text-xl font-bold text-neutral-900 mb-2">Could not find scores</h2>
+        <p className="text-sm font-medium text-neutral-400 max-w-sm mb-8">{error}</p>
         <div className="flex gap-4">
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-2.5 bg-neutral-100 text-neutral-600 text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-neutral-200 transition-all"
+          >
             Try Again
-          </Button>
-          <Button onClick={() => navigate('/Student/MyEssays')}>
-            Go to My Essays
-          </Button>
+          </button>
+          <button 
+            onClick={() => navigate('/Student/MyEssays')}
+            className="px-6 py-2.5 bg-neutral-900 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-neutral-800 transition-all"
+          >
+            Back to Folder
+          </button>
         </div>
       </div>
     );
@@ -177,144 +162,177 @@ export function AIFeedbackTab() {
   if (!essayFeedback) return null;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 max-w-5xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl text-neutral-900">AI Feedback</h1>
-          <p className="text-sm text-neutral-500 mt-1">Detailed NLP-based evaluation of your essay</p>
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 px-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">AI Score Report</h1>
+          <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <Zap size={14} className="text-primary/50" />
+            Tips to help you write better
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button className="bg-primary hover:bg-primary-300">
-            <FileText className="w-4 h-4 mr-2" />
-            View Essay
-          </Button>
+        <div className="flex gap-3">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-sm hover:bg-neutral-50 transition-all">
+            <Download size={14} />
+            Save as PDF
+          </button>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-xl shadow-neutral-900/10 hover:bg-neutral-800 transition-all">
+            <FileText size={14} />
+            See My Work
+          </button>
         </div>
       </div>
 
-      {/* Essay Info */}
-      <Card className="p-6 bg-gradient-to-r from-primary/10 to-support/10 border-primary/20">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl text-neutral-900 mb-1">{essayFeedback.essayTitle}</h2>
-            <p className="text-sm text-neutral-500">Submitted on {essayFeedback.submittedDate}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="flex items-center gap-2 mb-1">
-                <Award className="w-5 h-5 text-primary" />
-                <span className="text-sm text-neutral-600">Overall Score</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Main Hero Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-bl-full translate-x-12 -translate-y-12" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest rounded-lg">
+                   {essayFeedback.submittedDate}
+                 </div>
               </div>
-              <div className="text-3xl text-primary">{essayFeedback.overallScore}%</div>
+              
+              <h2 className="text-3xl font-bold text-neutral-900 mb-6 tracking-tight leading-tight">
+                {essayFeedback.essayTitle}
+              </h2>
+              
+              <div className="flex items-center gap-8">
+                 <div>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Your Total Score</p>
+                    <p className="text-5xl font-bold text-primary tracking-tighter">{essayFeedback.overallScore}%</p>
+                 </div>
+                 <div className="h-12 w-px bg-neutral-100" />
+                 <div>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Confidence</p>
+                    <p className="text-xl font-bold text-neutral-800">{essayFeedback.aiConfidence}%</p>
+                 </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Card>
+          </motion.div>
 
-      {/* AI Confidence */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-neutral-900">AI Evaluation Confidence</h3>
-          <Badge className="bg-primary/10 text-primary">{essayFeedback.aiConfidence}% Confident</Badge>
-        </div>
-        <Progress value={essayFeedback.aiConfidence} className="h-2" />
-        <p className="text-sm text-neutral-500 mt-2">
-          This indicates how confident the AI is in its evaluation based on the clarity and structure of your essay.
-        </p>
-      </Card>
-
-      {/* Criteria Breakdown */}
-      <Card className="p-6">
-        <h2 className="text-xl text-neutral-900 mb-4">Breakdown by Criteria</h2>
-        <div className="space-y-6">
-          {essayFeedback.criteria.map((criterion, idx) => (
-            <div key={idx} className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-neutral-900">{criterion.name}</h3>
-                    <Badge variant="outline" className="text-xs bg-neutral-100 text-neutral-600">
-                      Weight: {criterion.weight}%
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Progress value={criterion.score} className="flex-1 h-2" />
-                    <span className={`text-xl ${getCriteriaColor(criterion.score)}`}>
-                      {criterion.score}%
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-600 mb-3">{criterion.feedback}</p>
-                  {criterion.improvements.length > 0 && (
-                    <div className="bg-info-default/5 border border-info-default/20 rounded-rd p-3">
-                      <p className="text-sm text-neutral-900 mb-2">💡 Suggestions for improvement:</p>
-                      <ul className="text-sm text-neutral-600 space-y-1 list-disc list-inside">
-                        {criterion.improvements.map((improvement, i) => (
-                          <li key={i}>{improvement}</li>
-                        ))}
-                      </ul>
+          {/* Criteria Breakdown */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-8">
+             <div className="flex items-center justify-between border-b border-neutral-50 pb-6">
+                <h3 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest font-bold">How You Scored</h3>
+             </div>
+             
+             <div className="space-y-10">
+                {essayFeedback.criteria.map((criterion, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + (idx * 0.05) }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-end justify-between">
+                       <div className="space-y-1">
+                          <h4 className="text-lg font-bold text-neutral-900 tracking-tight">{criterion.name}</h4>
+                          <p className="text-xs text-neutral-400 font-medium">Worth {criterion.weight}% of total</p>
+                       </div>
+                       <p className={`text-4xl font-bold tracking-tighter ${criterion.score >= 90 ? 'text-emerald-500' : criterion.score >= 75 ? 'text-primary' : 'text-amber-500'}`}>
+                         {criterion.score}%
+                       </p>
                     </div>
-                  )}
-                </div>
-              </div>
-              {idx < essayFeedback.criteria.length - 1 && (
-                <div className="border-t border-neutral-200 pt-1"></div>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
+                    
+                    <div className="h-2 w-full bg-neutral-50 rounded-full overflow-hidden">
+                       <motion.div 
+                         initial={{ width: 0 }}
+                         animate={{ width: `${criterion.score}%` }}
+                         transition={{ duration: 1, delay: 0.5 }}
+                         className={`h-full rounded-full ${criterion.score >= 90 ? 'bg-emerald-500' : criterion.score >= 75 ? 'bg-primary' : 'bg-amber-500'}`}
+                       />
+                    </div>
+                    
+                    <p className="text-sm text-neutral-600 leading-relaxed font-medium bg-neutral-50/50 p-4 rounded-2xl border border-neutral-50">
+                      {criterion.feedback}
+                    </p>
 
-      {/* Highlighted Suggestions */}
-      <Card className="p-6">
-        <h2 className="text-xl text-neutral-900 mb-4">Highlighted Text Suggestions</h2>
-        <div className="space-y-3">
-          {essayFeedback.highlightedSuggestions.map((suggestion, idx) => (
-            <div 
-              key={idx} 
-              className={`p-4 rounded-rd border-l-4 ${
-                suggestion.severity === 'high' ? 'bg-error-light/10 border-error-default' :
-                suggestion.severity === 'medium' ? 'bg-warning-light/10 border-warning-default' :
-                'bg-info-light/10 border-info-default'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <Badge className={`text-xs ${
-                  suggestion.type === 'grammar' ? 'bg-red-600 text-white' :
-                  suggestion.type === 'coherence' ? 'bg-blue-600 text-white' :
-                  suggestion.type === 'vocabulary' ? 'bg-amber-600 text-white' :
-                  'bg-primary text-white'
-                }`}>
-                  {suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1)}
-                </Badge>
-                {getSeverityBadge(suggestion.severity)}
-              </div>
-              <p className="text-sm text-neutral-700">{suggestion.text}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Summary & Next Steps */}
-      <Card className="p-6 bg-gradient-to-br from-success-default/5 to-info-default/5 border-success-default/20">
-        <h2 className="text-xl text-neutral-900 mb-3">Summary & Next Steps</h2>
-        <div className="space-y-3">
-          <p className="text-neutral-700">
-            {essayFeedback.summary}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4">
-            <Button variant="outline" className="flex-1">
-              View Full Essay with Highlights
-            </Button>
-            <Button className="flex-1 bg-primary hover:bg-primary-300">
-              Revise & Resubmit
-            </Button>
+                    {criterion.improvements.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-2">
+                        {criterion.improvements.map((improvement, i) => (
+                          <div key={i} className="flex items-center gap-2 group">
+                             <div className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors shrink-0" />
+                             <p className="text-xs text-neutral-500 font-bold group-hover:text-neutral-700 transition-colors uppercase tracking-tight">{improvement}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+             </div>
           </div>
         </div>
-      </Card>
+
+        <div className="space-y-8">
+           {/* Sidebar Tip Suggestions */}
+           <div className="bg-neutral-900 p-8 rounded-[2.5rem] shadow-2xl shadow-neutral-900/20 text-white space-y-6">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-6">
+                  <div className="p-2.5 bg-white/10 rounded-xl">
+                    <Lightbulb size={20} className="text-primary" />
+                  </div>
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest">Specific Tips</h3>
+              </div>
+              
+              <div className="space-y-4">
+                {essayFeedback.highlightedSuggestions.map((suggestion, idx) => (
+                  <motion.div 
+                    key={idx}
+                    whileHover={{ x: 5 }}
+                    className={`p-5 rounded-3xl border transition-all ${
+                      suggestion.severity === 'high' ? 'bg-red-500/10 border-red-500/20' :
+                      suggestion.severity === 'medium' ? 'bg-amber-500/10 border-amber-500/20' :
+                      'bg-white/5 border-white/10'
+                    }`}
+                  >
+                    <p className={`text-[9px] font-bold uppercase tracking-widest mb-2 ${
+                      suggestion.severity === 'high' ? 'text-red-400' : 'text-primary'
+                    }`}>
+                      {suggestion.type}
+                    </p>
+                    <p className="text-xs font-bold leading-relaxed opacity-80">{suggestion.text}</p>
+                  </motion.div>
+                ))}
+              </div>
+           </div>
+
+           {/* Call to Action */}
+           <div className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
+              <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-50 rounded-xl">
+                    <Target size={20} className="text-emerald-500" />
+                  </div>
+                  <h3 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Your Goal</h3>
+              </div>
+              
+              <p className="text-sm text-neutral-600 leading-relaxed font-medium">
+                {essayFeedback.summary}
+              </p>
+              
+              <div className="space-y-3 pt-4">
+                <button className="w-full flex items-center justify-between gap-3 bg-neutral-900 text-white px-6 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-neutral-900/10 group">
+                   Try Again
+                   <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => navigate('/Student/MyEssays')}
+                  className="w-full text-center py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-neutral-900 transition-colors"
+                >
+                   Close Report
+                </button>
+              </div>
+           </div>
+        </div>
+      </div>
     </div>
   );
 }

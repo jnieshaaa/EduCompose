@@ -38,7 +38,7 @@ export default function ResetPasswordModal({
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Validation mismatch: Passwords must be identical.");
+      setError("Passwords do not match.");
       return;
     }
 
@@ -46,7 +46,7 @@ export default function ResetPasswordModal({
 
     try {
       await adminApi.resetUserPassword(user.id, newPassword.trim());
-      setSuccess("Credential synchronization complete!");
+      setSuccess("Password reset successfully!");
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => {
@@ -54,7 +54,7 @@ export default function ResetPasswordModal({
       }, 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Security override failed. Verify administrative permissions.");
+      setError(message || "Failed to reset password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +75,8 @@ export default function ResetPasswordModal({
               <Key size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Secret Override</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Credential Reset Flow</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Reset Password</h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update user password</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -88,19 +88,19 @@ export default function ResetPasswordModal({
           <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
              <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
              <div>
-                <p className="text-[11px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Account Target</p>
+                <p className="text-[11px] font-bold text-amber-900 uppercase tracking-widest leading-none mb-1">Account</p>
                 <p className="text-xs font-bold text-amber-700 font-mono">{user.email}</p>
              </div>
           </div>
 
           <AnimatePresence>
             {error && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-black uppercase tracking-wider">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider">
                 {error}
               </motion.div>
             )}
             {success && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
                 {success}
               </motion.div>
             )}
@@ -108,7 +108,7 @@ export default function ResetPasswordModal({
 
           <form id="reset-secret-form" onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">New Access Secret</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">New Password</label>
               <div className="relative group/pass">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/pass:text-primary transition-colors" size={16} />
                 <input
@@ -123,7 +123,7 @@ export default function ResetPasswordModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Confirm Secret</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Confirm Password</label>
               <div className="relative group/confirm">
                 <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/confirm:text-primary transition-colors" size={16} />
                 <input
@@ -145,15 +145,15 @@ export default function ResetPasswordModal({
                 disabled={isLoading}
                 className="flex-1 rounded-2xl border-neutral-200 h-11"
               >
-                Abondon
+                Cancel
               </Button>
               <Button 
                 type="submit"
                 form="reset-secret-form"
                 disabled={isLoading}
-                className="flex-[2] rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200 h-11 font-black uppercase text-[11px] tracking-widest"
+                className="flex-[2] rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200 h-11 font-bold uppercase text-[11px] tracking-widest"
               >
-                {isLoading ? "Overriding..." : "Reset Secret"}
+                {isLoading ? "Resetting..." : "Reset Password"}
               </Button>
             </div>
           </form>

@@ -78,7 +78,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       },
       {
         icon: <UserCog className="w-5 h-5" />,
-        label: "User Management",
+        label: "Users",
         path: "/Admin/Users",
       },
       {
@@ -88,22 +88,22 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       },
       {
         icon: <School className="w-5 h-5" />,
-        label: "Academics",
+        label: "Programs",
         path: "/Admin/Schools",
       },
       {
         icon: <ClipboardCheck className="w-5 h-5" />,
-        label: "Platform Rubrics",
+        label: "Rubrics",
         path: "/Admin/Rubrics",
       },
       {
         icon: <BookOpen className="w-5 h-5" />,
-        label: "Content Management",
+        label: "Classes",
         path: "/Admin/Content",
       },
       {
         icon: <Archive className="w-5 h-5" />,
-        label: "Archive Records",
+        label: "Archive",
         path: "/Admin/Archive",
       },
       {
@@ -216,11 +216,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 z-50 shadow-black/10"
               >
-                <button onClick={() => { handleItemClick("/Admin/Help"); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
-                  <HelpCircle size={14} className="text-neutral-400" /> Help Center
+                <button onClick={() => { handleItemClick("/Admin/Help"); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-neutral-600 hover:bg-neutral-50 transition-colors">
+                  <HelpCircle size={14} className="text-neutral-400" /> Help
                 </button>
-                <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-error-default hover:bg-error-default/5 transition-colors">
-                  <LogOut size={14} /> Sign Out
+                <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-error-default hover:bg-error-default/5 transition-colors">
+                  <LogOut size={14} /> Logout
                 </button>
               </motion.div>
             )}
@@ -235,9 +235,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {isSidebarOpen && (
               <div className="flex-1 text-left min-w-0 animate-in fade-in slide-in-from-left-1">
                 <p className="text-[11px] font-black text-white truncate tracking-tight">
-                  {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Administrator"}
+                  {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Admin"}
                 </p>
-                <p className="text-[9px] text-white/40 truncate uppercase tracking-[0.15em] font-black mt-0.5">Core Access</p>
+                <p className="text-[9px] text-white/40 truncate uppercase tracking-[0.15em] font-bold mt-0.5">Admin</p>
               </div>
             )}
           </button>

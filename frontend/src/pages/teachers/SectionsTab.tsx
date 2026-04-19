@@ -54,8 +54,8 @@ export function SectionsTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl text-neutral-900 font-semibold">Blocks / Sections</h1>
-          <p className="text-sm text-neutral-500 mt-1">Manage class sections and blocks for your courses</p>
+          <h1 className="text-2xl text-neutral-900 font-bold">Classes</h1>
+          <p className="text-sm text-neutral-500 mt-1">Manage your classes and student groups</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -63,7 +63,7 @@ export function SectionsTab() {
             onClick={() => setIsAddDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Block
+            Add Class
           </Button>
           <UnifiedStudentBatchUploadDialog 
             courseId={courseFilter !== "All Courses" ? courseFilter : null} 
@@ -77,7 +77,7 @@ export function SectionsTab() {
         <div className="md:col-span-2 relative">
           <input
             type="text"
-            placeholder="Search blocks..."
+            placeholder="Search classes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary/20"
@@ -113,22 +113,22 @@ export function SectionsTab() {
       ) : sections.length === 0 ? (
         <Card className="p-12 text-center">
           <Users className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-neutral-700 mb-2">No sections found</h3>
-          <p className="text-sm text-neutral-500 mb-4">You don't have any blocks for the current academic term.</p>
+          <h3 className="text-lg font-medium text-neutral-700 mb-2">No classes found</h3>
+          <p className="text-sm text-neutral-500 mb-4">You don't have any classes for the current academic term.</p>
           <Button
             className="bg-primary hover:bg-primary-300"
             onClick={() => setIsAddDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Your First Block
+            Add Your First Class
           </Button>
         </Card>
       ) : (
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wider">
+            <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4 font-semibold">Block Name</th>
+                <th className="px-6 py-4 font-semibold">Class Name</th>
                 <th className="px-6 py-4 font-semibold">Year/Level</th>
                 <th className="px-6 py-4 font-semibold">Course</th>
                 <th className="px-6 py-4 font-semibold">Academic Term</th>
@@ -181,10 +181,10 @@ export function SectionsTab() {
       {isAddDialogOpen && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-xl font-bold">Add New Block</h2>
+            <h2 className="text-xl font-bold">Add New Class</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase">Create New Block (Optional)</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Create New Class (Optional)</label>
                 <div className="flex gap-2">
                   <input
                       placeholder="e.g. A"
@@ -200,7 +200,7 @@ export function SectionsTab() {
                       {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Y{y}</option>)}
                   </select>
                 </div>
-                <p className="text-[10px] text-neutral-400 mt-1">Use this if the block doesn't exist below yet.</p>
+                <p className="text-[10px] text-neutral-400 mt-1">Use this if the class doesn't exist below yet.</p>
               </div>
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase">Course</label>
@@ -215,7 +215,7 @@ export function SectionsTab() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Program</label>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Program</label>
                   <select
                       value={newSection.program_id}
                       onChange={(e) => setNewSection({...newSection, program_id: e.target.value})}
@@ -226,7 +226,7 @@ export function SectionsTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Year Level</label>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Year Level</label>
                   <select
                       value={newSection.year}
                       onChange={(e) => setNewSection({...newSection, year: parseInt(e.target.value)})}
@@ -240,7 +240,7 @@ export function SectionsTab() {
               {newSection.program_id && programWideBlocks.length > 0 && (
                 <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                    Select Existing Blocks
+                    Select Existing Classes
                   </span>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
@@ -296,7 +296,7 @@ export function SectionsTab() {
               )}
 
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase">Term</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Term</label>
                 <select
                     value={newSection.term}
                     onChange={(e) => setNewSection({...newSection, term: e.target.value})}
@@ -334,7 +334,7 @@ export function SectionsTab() {
                 disabled={isCreatingSection} 
                 className="bg-primary text-white shadow-md hover:shadow-lg transition-all"
               >
-                {isCreatingSection ? "Creating..." : "Save Block"}
+                {isCreatingSection ? "Creating..." : "Save Class"}
               </Button>
             </div>
           </div>
@@ -345,10 +345,10 @@ export function SectionsTab() {
       {isEditDialogOpen && editingSection && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-xl font-bold">Edit Block</h2>
+            <h2 className="text-xl font-bold">Edit Class</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase">Block Name</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Class Name</label>
                 <input
                     placeholder="Block Name"
                     value={editingSection.name}
@@ -375,7 +375,7 @@ export function SectionsTab() {
                     Cancel
                 </button>
               <Button onClick={handleUpdateSection} className="bg-primary text-white shadow-md hover:shadow-lg transition-all">
-                Update Block
+                Update Class
               </Button>
             </div>
           </div>

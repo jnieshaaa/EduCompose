@@ -129,10 +129,10 @@ export function AdminArchiveTab() {
       {/* Premium Integrated Header */}
       <div className="flex flex-col sm:flex-row items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Academic Records</h1>
-          <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Academic Records</h1>
+          <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
             <Archive size={14} className="text-primary/50" />
-            Historical Assignment Repository
+            Archive of teacher course assignments
           </p>
         </div>
         <div className="flex gap-3">
@@ -142,31 +142,31 @@ export function AdminArchiveTab() {
             className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
           >
             <Printer size={16} className="text-neutral-400" />
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Print Audit</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Print Report</span>
           </Button>
           <Button 
             variant="outline"
             className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
           >
             <Download size={16} className="text-neutral-400" />
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-600">Export CSV</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Export CSV</span>
           </Button>
         </div>
       </div>
 
-      {/* Telemetry Filter Hub */}
+      {/* Search Filters */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
         <div className="flex items-center gap-3">
           <Filter size={16} className="text-neutral-400" />
-          <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Repository Query Parameters</h3>
+          <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Search and Filter</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Identity Search</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Records</label>
             <div className="relative group/search">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-primary transition-colors" size={18} />
               <input
-                placeholder="Query teacher or course context..."
+                placeholder="Search teacher or course..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
@@ -175,15 +175,15 @@ export function AdminArchiveTab() {
           </div>
           
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Academic Year</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Academic Year</label>
             <div className="relative group/ay">
               <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/ay:text-primary transition-colors" />
               <select
                 value={ayFilter}
                 onChange={(e) => setAyFilter(e.target.value)}
-                className="w-full h-12 pl-12 pr-10 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-[11px] font-black uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
+                className="w-full h-12 pl-12 pr-10 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-[11px] font-bold uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
               >
-                <option value="all">Historical Span</option>
+                <option value="all">All Years</option>
                 <option value="2024-2025">AY 2024-2025</option>
                 <option value="2025-2026">AY 2025-2026</option>
               </select>
@@ -192,15 +192,15 @@ export function AdminArchiveTab() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Term Filter</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Term Filter</label>
             <div className="relative group/term">
               <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/term:text-primary transition-colors" />
               <select
                 value={termFilter}
                 onChange={(e) => setTermFilter(e.target.value)}
-                className="w-full h-12 pl-12 pr-10 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-[11px] font-black uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
+                className="w-full h-12 pl-12 pr-10 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-[11px] font-bold uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
               >
-                <option value="all">Session Range</option>
+                <option value="all">All Semesters</option>
                 <option value="1st Semester">1ST SEMESTER</option>
                 <option value="2nd Semester">2ND SEMESTER</option>
                 <option value="Summer">SUMMER TERM</option>
@@ -211,15 +211,15 @@ export function AdminArchiveTab() {
         </div>
       </div>
 
-      {/* Refined Telemetry Board */}
+      {/* Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 bg-white rounded-[2rem] border border-neutral-100 shadow-sm flex items-center gap-5 group hover:border-primary/20 transition-all">
           <div className="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
             <User size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Active Instructors</p>
-            <p className="text-2xl font-black text-neutral-900 mt-0.5">{groupedLoads.length}</p>
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Active Teachers</p>
+            <p className="text-2xl font-bold text-neutral-900 mt-0.5">{groupedLoads.length}</p>
           </div>
         </div>
         <div className="p-6 bg-white rounded-[2rem] border border-neutral-100 shadow-sm flex items-center gap-5 group hover:border-secondary/20 transition-all">
@@ -227,8 +227,8 @@ export function AdminArchiveTab() {
             <BookOpen size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Course Deployments</p>
-            <p className="text-2xl font-black text-neutral-900 mt-0.5">{filteredLoads.length}</p>
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Course Count</p>
+            <p className="text-2xl font-bold text-neutral-900 mt-0.5">{filteredLoads.length}</p>
           </div>
         </div>
         <div className="p-6 bg-white rounded-[2rem] border border-neutral-100 shadow-sm flex items-center gap-5 group hover:border-accent/20 transition-all">
@@ -236,8 +236,8 @@ export function AdminArchiveTab() {
             <BarChart3 size={24} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Total Unit Load</p>
-            <p className="text-2xl font-black text-neutral-900 mt-0.5">
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Units</p>
+            <p className="text-2xl font-bold text-neutral-900 mt-0.5">
               {filteredLoads.reduce((acc, load) => acc + (load.courses?.units || 0), 0)}
             </p>
           </div>
@@ -248,79 +248,79 @@ export function AdminArchiveTab() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-40 bg-white rounded-[3rem] border border-neutral-100 shadow-sm">
           <Loader2 className="animate-spin text-primary/30 w-12 h-12 mb-6" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">Querying Historical Records</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Searching records...</p>
         </div>
       ) : groupedLoads.length === 0 ? (
         <div className="bg-white p-20 rounded-[3rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
           <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center mb-6 border border-neutral-100">
             <History className="w-10 h-10 text-neutral-200" />
           </div>
-          <h3 className="text-xl font-black text-neutral-900 tracking-tight">Zero Records Found</h3>
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-2 max-w-sm mx-auto leading-relaxed">
-            There are no course assignments matching the current telemetry parameters. Try adjusting the temporal span or session range.
+          <h3 className="text-xl font-bold text-neutral-900 tracking-tight">No records found</h3>
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-2 max-w-sm mx-auto leading-relaxed">
+            Try adjusting your search filters to find what you're looking for.
           </p>
         </div>
       ) : (
         <div className="space-y-8">
             <div className="flex items-center gap-3 px-1">
                <Activity size={14} className="text-primary" />
-               <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Instructional Identity Logs</h3>
+               <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Teacher Assignments</h3>
             </div>
             {groupedLoads.map((group, idx) => (
                 <div key={idx} className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden group/card hover:border-primary/20 transition-all duration-500">
                     <div className="bg-neutral-50/50 px-8 py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-neutral-100">
                         <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-xs shadow-xl group-hover/card:scale-110 transition-transform">
+                            <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-xl group-hover/card:scale-110 transition-transform">
                                 {group.teacher.first_name?.[0]}{group.teacher.last_name?.[0]}
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-neutral-900 tracking-tight">{group.teacher.first_name} {group.teacher.last_name}</h3>
+                                <h3 className="text-lg font-bold text-neutral-900 tracking-tight">{group.teacher.first_name} {group.teacher.last_name}</h3>
                                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{group.teacher.email}</p>
                                 {(group.teacher.title || group.teacher.nickname) && (
-                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest mt-1">
+                                    <p className="text-[9px] font-bold text-primary uppercase tracking-widest mt-1">
                                         {group.teacher.title ? `${group.teacher.title} ` : ''}{group.teacher.nickname || ''}
                                     </p>
                                 )}
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1.5">
-                           <span className="px-5 py-2 bg-white border border-neutral-100 rounded-xl text-[10px] font-black text-neutral-600 uppercase tracking-widest flex items-center shadow-sm">
+                           <span className="px-5 py-2 bg-white border border-neutral-100 rounded-xl text-[10px] font-bold text-neutral-600 uppercase tracking-widest flex items-center shadow-sm">
                                <Layers size={14} className="mr-2 text-primary" />
-                               {group.courses.length} Assignments Detached
+                               {group.courses.length} Assigned Courses
                            </span>
-                           <span className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.2em] mr-1">Instructor Load Context</span>
+                           <span className="text-[8px] font-bold text-neutral-300 uppercase tracking-widest mr-1">Teacher Load View</span>
                         </div>
                     </div>
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-white/50">
-                                    <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Course Identification</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Contextual Title</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Unit Load</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Temporal Data</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Operational Logic</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Course Code</th>
+                                    <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Course Title</th>
+                                    <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">Units</th>
+                                    <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Period</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-50">
                                 {group.courses.map((load: any, cidx: number) => (
                                     <tr key={cidx} className="hover:bg-neutral-50/30 transition-all duration-300 group/row">
                                         <td className="px-8 py-4">
-                                            <span className="font-mono text-xs font-black text-neutral-400 bg-neutral-100 px-3 py-1 rounded-lg uppercase tracking-tight">
+                                            <span className="font-mono text-xs font-bold text-neutral-400 bg-neutral-100 px-3 py-1 rounded-lg uppercase tracking-tight">
                                                 {load.courses?.course_code}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-black text-neutral-700 tracking-tight leading-tight">
+                                            <span className="text-sm font-bold text-neutral-700 tracking-tight leading-tight">
                                                 {load.courses?.course_title}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="text-xs font-black text-neutral-500">{load.courses?.units}</span>
+                                            <span className="text-xs font-bold text-neutral-500">{load.courses?.units}</span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex flex-col items-end">
-                                               <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
+                                               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                                                   {ayFilter !== 'all' ? ayFilter : academicSettings?.ay_start + '-' + academicSettings?.ay_end}
                                                </span>
                                                <span className="text-[9px] font-bold text-neutral-300 uppercase mt-0.5">
@@ -366,24 +366,24 @@ export function AdminArchiveTab() {
                   <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-2">
                     <Trash2 size={32} />
                   </div>
-                  <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Assignment Decommission</h2>
-                  <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest opacity-80">Historical Record Modification Portal</p>
+                  <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">Remove Assignment</h2>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest opacity-80">This will remove the assignment from the records.</p>
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-sm font-black text-neutral-600 leading-relaxed tracking-tight">
-                    Confirm detachment of <span className="text-primary font-black uppercase">{loadToDelete?.courses?.course_title}</span> from <span className="text-primary font-black uppercase">{loadToDelete?.users?.first_name} {loadToDelete?.users?.last_name}</span>. A systemic notification will be dispatched to the instructor.
+                  <p className="text-sm font-bold text-neutral-600 leading-relaxed tracking-tight">
+                    Are you sure you want to remove <span className="text-primary font-bold uppercase">{loadToDelete?.courses?.course_title}</span> from <span className="text-primary font-bold uppercase">{loadToDelete?.users?.first_name} {loadToDelete?.users?.last_name}</span>? The teacher will be notified of this change.
                   </p>
 
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">
-                      Reason for Decommission <span className="text-red-500">*</span>
+                    <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">
+                      Reason for deletion <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       value={deleteReason}
                       onChange={(e) => setDeleteReason(e.target.value)}
-                      placeholder="Specify rationale (e.g., Section Dissolution, Operational Error)..."
-                      className="w-full h-32 px-5 py-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-black focus:ring-4 focus:ring-red-500/5 focus:bg-white focus:border-red-500/20 transition-all outline-none resize-none shadow-sm"
+                      placeholder="Specify reason (e.g., Error in entry, Class cancelled)..."
+                      className="w-full h-32 px-5 py-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-red-500/5 focus:bg-white focus:border-red-500/20 transition-all outline-none resize-none shadow-sm"
                       required
                     ></textarea>
                   </div>
@@ -394,16 +394,16 @@ export function AdminArchiveTab() {
                     variant="outline"
                     onClick={() => setDeleteModalOpen(false)}
                     disabled={isDeleting}
-                    className="flex-1 rounded-2xl h-14 text-xs font-black uppercase tracking-widest border-neutral-100"
+                    className="flex-1 rounded-2xl h-14 text-xs font-bold uppercase tracking-widest border-neutral-100"
                   >
-                    Abort Operation
+                    Cancel
                   </Button>
                   <Button
                     onClick={confirmDelete}
                     disabled={isDeleting || deleteReason.trim().length === 0}
-                    className="flex-1 rounded-2xl h-14 bg-red-500 text-white shadow-xl shadow-red-500/20 text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all"
+                    className="flex-1 rounded-2xl h-14 bg-red-500 text-white shadow-xl shadow-red-500/20 text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-all"
                   >
-                    {isDeleting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Confirm Decommission"}
+                    {isDeleting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Delete"}
                   </Button>
                 </div>
              </motion.div>

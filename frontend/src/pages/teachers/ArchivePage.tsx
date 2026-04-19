@@ -67,7 +67,7 @@ export function ArchivePage() {
   if (selectedCourseId && selectedCourse) {
     const detailTabs = [
       { key: "activities" as const, label: "Activities", icon: BookOpen, count: courseActivities.length },
-      { key: "blocks" as const, label: "Blocks", icon: GitCompare, count: courseSections.length },
+      { key: "blocks" as const, label: "Classes", icon: GitCompare, count: courseSections.length },
       { key: "students" as const, label: "Students", icon: Users, count: courseStudents.length },
     ];
 
@@ -84,9 +84,9 @@ export function ArchivePage() {
             </button>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">{selectedCourse.academic_year}</span>
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{selectedCourse.academic_year}</span>
                 <span className="text-neutral-200 font-bold">&middot;</span>
-                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">{selectedCourse.term}</span>
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{selectedCourse.term}</span>
               </div>
               <h1 className="text-xl font-bold text-neutral-900 tracking-tight">{selectedCourse.course_title}</h1>
               <p className="text-sm font-medium text-neutral-400 mt-1 uppercase tracking-wide">{selectedCourse.course_code} &middot; {selectedCourse.programs_lookup?.abbr || selectedCourse.programs_lookup?.name}</p>
@@ -151,7 +151,7 @@ export function ArchivePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {courseSections.length === 0 ? (
                 <div className="col-span-full py-12 text-center">
-                  <p className="text-xs text-neutral-400">No blocks assigned to this course load</p>
+                   <p className="text-xs text-neutral-400">No classes found for this course</p>
                 </div>
               ) : (
                 courseSections.map((section: any) => (
@@ -164,7 +164,7 @@ export function ArchivePage() {
                         {section.year} Year
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-neutral-800 tracking-tight">Block {section.name}</h3>
+                    <h3 className="text-base font-bold text-neutral-800 tracking-tight">Class {section.name}</h3>
                     <p className="text-[11px] font-bold text-neutral-400 mt-1 uppercase tracking-wide leading-tight">{section.program_abbr}</p>
                   </div>
                 ))
@@ -176,16 +176,16 @@ export function ArchivePage() {
             <div>
               {courseStudents.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-xs text-neutral-400">No students were enrolled in this course context</p>
+                   <p className="text-xs text-neutral-400">No students found for this course</p>
                 </div>
               ) : (
                 <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Student</th>
-                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Program & Block</th>
-                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em]">Contact</th>
+                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Student</th>
+                         <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Program & Class</th>
+                        <th className="px-5 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Contact</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50">
@@ -229,8 +229,8 @@ export function ArchivePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Academic Archive</h1>
-          <p className="text-sm font-medium text-neutral-400 mt-1 uppercase tracking-widest">Browse previous courses and their historical content</p>
+          <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Past Courses</h1>
+          <p className="text-sm font-medium text-neutral-400 mt-1 uppercase tracking-widest">See your previous courses and past work</p>
         </div>
         
         <div className="flex items-center gap-3">

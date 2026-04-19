@@ -109,8 +109,8 @@ export default function EditUserModal({
               <UserCircle size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Edit Identity</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Administrative Profile Overhaul</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Edit User</h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update user information</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -134,7 +134,7 @@ export default function EditUserModal({
 
           {/* Role Grid */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Account Permissions Level</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">User Role</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'student', icon: GraduationCap, label: 'Student' },
@@ -152,7 +152,7 @@ export default function EditUserModal({
                   }`}
                 >
                   <r.icon size={20} />
-                  <span className="text-xs font-black uppercase tracking-widest">{r.label}</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
                 </button>
               ))}
             </div>
@@ -160,7 +160,7 @@ export default function EditUserModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Title</label>
               <select
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -175,7 +175,7 @@ export default function EditUserModal({
               </select>
             </div>
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
               <input
                 type="text"
                 value={nickname}
@@ -188,7 +188,7 @@ export default function EditUserModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
               <input
                 required
                 value={firstName}
@@ -197,7 +197,7 @@ export default function EditUserModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
               <input
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
@@ -205,7 +205,7 @@ export default function EditUserModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
               <input
                 required
                 value={lastName}
@@ -216,7 +216,7 @@ export default function EditUserModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Contact Terminal</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
             <div className="relative group/mail">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={16} />
               <input
@@ -244,9 +244,9 @@ export default function EditUserModal({
                   {isActive ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-black uppercase tracking-widest">Access State</p>
+                  <p className="text-sm font-bold uppercase tracking-widest">Account Status</p>
                   <p className="text-[10px] opacity-70 font-bold uppercase tracking-tighter">
-                    Account is currently {isActive ? "operational" : "deactivated"}
+                    Account is currently {isActive ? "active" : "inactive"}
                   </p>
                 </div>
               </div>
@@ -267,7 +267,7 @@ export default function EditUserModal({
             disabled={isLoading} 
             className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11"
           >
-            {isLoading ? "Synchronizing..." : "Commit Changes"}
+            {isLoading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </motion.div>

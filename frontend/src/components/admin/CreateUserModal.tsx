@@ -77,7 +77,7 @@ export default function CreateUserModal({
         nickname: nickname.trim() || undefined,
       });
 
-      setSuccess(`Account provisioned successfully for ${role}!`);
+      setSuccess(`Account created successfully for ${role}!`);
 
       setFirstName("");
       setMiddleName("");
@@ -95,7 +95,7 @@ export default function CreateUserModal({
       }, 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Provisioning failed. Please verify database constraints.");
+      setError(message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -117,8 +117,8 @@ export default function CreateUserModal({
               <UserPlus size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">Provision Identity</h2>
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Administrative Account Creation</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Create Account</h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Create a new user account</p>
             </div>
           </div>
           <button
@@ -146,7 +146,7 @@ export default function CreateUserModal({
 
           {/* Role Selection */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Assigned Platform Role</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Role</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'student', icon: GraduationCap, label: 'Student' },
@@ -164,7 +164,7 @@ export default function CreateUserModal({
                   }`}
                 >
                   <r.icon size={20} />
-                  <span className="text-xs font-black uppercase tracking-widest">{r.label}</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
                 </button>
               ))}
             </div>
@@ -172,7 +172,7 @@ export default function CreateUserModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Title</label>
               <select
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -187,7 +187,7 @@ export default function CreateUserModal({
               </select>
             </div>
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
               <div className="relative group">
                 <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
                 <input
@@ -204,7 +204,7 @@ export default function CreateUserModal({
           {/* Name Cluster */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name *</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name *</label>
               <input
                 required
                 value={firstName}
@@ -214,7 +214,7 @@ export default function CreateUserModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
               <input
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
@@ -223,7 +223,7 @@ export default function CreateUserModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name *</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name *</label>
               <input
                 required
                 value={lastName}
@@ -235,7 +235,7 @@ export default function CreateUserModal({
           </div>
 
           <div className="space-y-1.5 pt-2">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Registry Email *</label>
+            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address *</label>
             <div className="relative group">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
               <input
@@ -251,7 +251,7 @@ export default function CreateUserModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Access Terminal Password *</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Password *</label>
               <div className="relative group">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
                 <input
@@ -265,7 +265,7 @@ export default function CreateUserModal({
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Verify Password *</label>
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Verify Password *</label>
               <div className="relative group">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
                 <input
@@ -283,8 +283,8 @@ export default function CreateUserModal({
 
         <div className="px-8 py-6 bg-neutral-50 flex items-center justify-between border-t border-neutral-100">
           <div className="hidden sm:block">
-             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Instant Activation</p>
-             <p className="text-[11px] text-neutral-500">Subject to database validation.</p>
+             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Instant Access</p>
+             <p className="text-[11px] text-neutral-500">Account will be available immediately.</p>
           </div>
           <div className="flex gap-3">
             <Button
@@ -302,7 +302,7 @@ export default function CreateUserModal({
                 disabled={isLoading}
                 className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11"
             >
-              {isLoading ? "Synchronizing..." : "Provision Now"}
+              {isLoading ? "Creating..." : "Create Account"}
             </Button>
           </div>
         </div>

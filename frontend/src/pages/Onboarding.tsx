@@ -16,6 +16,7 @@ import {
   Building2,
   Presentation,
   ChevronDown,
+  LogOut
 } from "lucide-react";
 
 interface School {
@@ -44,7 +45,7 @@ interface OnboardingData {
 }
 
 const TeacherOnboarding: React.FC = () => {
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, logout } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -292,11 +293,17 @@ const TeacherOnboarding: React.FC = () => {
                 <Sparkles className="w-5 h-5" />
                 <span className="font-black tracking-tighter uppercase">EduCompose</span>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Step {currentStep} of 3</span>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-black uppercase tracking-widest">Step {currentStep} of 3</span>
+                <button onClick={() => logout()} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
+                  <LogOut size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Stepper HUD (Desktop Only) */}
-            <div className="hidden lg:flex px-12 py-8 justify-center">
+            <div className="hidden lg:flex px-12 py-8 justify-between items-center bg-white border-b border-neutral-50 sticky top-0 z-20">
+              <div className="flex-1" />
               <div className="flex items-center gap-12">
                 {[1, 2, 3].map((step) => (
                   <div key={step} className="flex items-center gap-3 group">
@@ -315,6 +322,16 @@ const TeacherOnboarding: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="flex-1 flex justify-end">
+                <button 
+                  onClick={() => logout()}
+                  className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-all group flex items-center gap-2"
+                  title="Logout"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
+                  <LogOut size={18} />
+                </button>
               </div>
             </div>
 

@@ -262,10 +262,10 @@ export function DashboardTab() {
   const displayPerformanceMetrics = useMemo(() => {
     if (!data) return [];
     const base = [
-      { label: "Avg Essay Score", value: data.performanceMetrics.avgScore.value, trend: data.performanceMetrics.avgScore.trend, status: data.performanceMetrics.avgScore.status, icon: Zap },
-      { label: "Grammar Accuracy", value: data.performanceMetrics.grammarAccuracy.value, trend: data.performanceMetrics.grammarAccuracy.trend, status: data.performanceMetrics.grammarAccuracy.status, icon: CheckCircle },
-      { label: "Coherence Score", value: data.performanceMetrics.coherenceScore.value, trend: data.performanceMetrics.coherenceScore.trend, status: data.performanceMetrics.coherenceScore.status, icon: Activity },
-      { label: "Vocabulary Complexity", value: data.performanceMetrics.vocabularyComplexity.value, trend: data.performanceMetrics.vocabularyComplexity.trend, status: data.performanceMetrics.vocabularyComplexity.status, icon: BookOpen },
+      { label: "Average Grade", value: data.performanceMetrics.avgScore.value, trend: data.performanceMetrics.avgScore.trend, status: data.performanceMetrics.avgScore.status, icon: Zap },
+      { label: "Grammar", value: data.performanceMetrics.grammarAccuracy.value, trend: data.performanceMetrics.grammarAccuracy.trend, status: data.performanceMetrics.grammarAccuracy.status, icon: CheckCircle },
+      { label: "Structure & Clarity", value: data.performanceMetrics.coherenceScore.value, trend: data.performanceMetrics.coherenceScore.trend, status: data.performanceMetrics.coherenceScore.status, icon: Activity },
+      { label: "Word Choice", value: data.performanceMetrics.vocabularyComplexity.value, trend: data.performanceMetrics.vocabularyComplexity.trend, status: data.performanceMetrics.vocabularyComplexity.status, icon: BookOpen },
     ];
     return base;
   }, [data]);
@@ -371,7 +371,7 @@ export function DashboardTab() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-300">Synchronizing your load...</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Loading...</p>
     </div>
   );
 
@@ -380,14 +380,14 @@ export function DashboardTab() {
       {/* Premium Welcome Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 pb-2">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Dashboard Overview</h1>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Overview</h1>
           <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
             <Zap size={14} className="text-primary/50" />
-            Performance & Activity Insights
+            Student progress and activities
           </p>
         </div>
         <div className="flex items-center gap-3">
-           <button className="flex items-center justify-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-sm hover:bg-neutral-50 transition-all">
+           <button className="flex items-center justify-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-sm hover:bg-neutral-50 transition-all">
              Generate Report
            </button>
         </div>
@@ -396,10 +396,10 @@ export function DashboardTab() {
       {/* Hero Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: "Total Subjects", value: data?.totalPrograms || 0, sub: "Departments", icon: Layers, color: "text-blue-500", bg: "bg-blue-50" },
-          { label: "Active Classes", value: data?.totalSections || 0, sub: "Student Groups", icon: Users, color: "text-emerald-500", bg: "bg-emerald-50" },
-          { label: "Essay Feed", value: data?.essaysSubmitted || 0, sub: `${data?.pendingReviews} Pending`, icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
-          { label: "Evaluated Submissions", value: data?.essaysEvaluated || 0, sub: "Analyzed Essays", icon: BookOpen, color: "text-amber-500", bg: "bg-amber-50" },
+          { label: "Subjects", value: data?.totalPrograms || 0, sub: "Your Courses", icon: Layers, color: "text-blue-500", bg: "bg-blue-50" },
+          { label: "My Classes", value: data?.totalSections || 0, sub: "Active Classes", icon: Users, color: "text-emerald-500", bg: "bg-emerald-50" },
+          { label: "Essays", value: data?.essaysSubmitted || 0, sub: `${data?.pendingReviews} Pending`, icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
+          { label: "Graded", value: data?.essaysEvaluated || 0, sub: "Total graded", icon: BookOpen, color: "text-amber-500", bg: "bg-amber-50" },
         ].map((stat, i) => (
           <motion.div 
             key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
@@ -426,7 +426,7 @@ export function DashboardTab() {
                 <div key={i} className="bg-white p-4 rounded-2xl border border-neutral-50 shadow-sm">
                    <div className="flex items-center gap-2 mb-2">
                       <m.icon size={12} className="text-neutral-300" />
-                      <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider truncate">{m.label}</span>
+                      <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest truncate">{m.label}</span>
                    </div>
                    <p className="text-xl font-bold text-neutral-900">{m.value}</p>
                    <div className={`text-[9px] font-bold mt-1 flex items-center gap-1 ${m.status === 'up' ? 'text-success-default' : m.status === 'down' ? 'text-error-default' : 'text-neutral-300'}`}>
@@ -438,14 +438,14 @@ export function DashboardTab() {
            </div>
 
            {/* Performance Visualization Card */}
-           <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col min-h-[450px]">
+            <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col min-h-[450px]">
               <div className="px-6 py-5 border-b border-neutral-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-50/20">
-                 <div>
-                    <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Academic Trends</h2>
-                    <p className="text-xs text-neutral-500 font-medium">Cross-activity performance analysis</p>
-                 </div>
+                  <div>
+                    <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Class Results</h2>
+                    <p className="text-xs text-neutral-500 font-medium">See how your classes are performing</p>
+                  </div>
                  <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-neutral-100">
-                    <button onClick={() => setPerfChartMode("blocks")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'blocks' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Class Trend</button>
+                     <button onClick={() => setPerfChartMode("blocks")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'blocks' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Class Average</button>
                     <button onClick={() => setPerfChartMode("students")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'students' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Students</button>
                  </div>
               </div>
@@ -467,30 +467,29 @@ export function DashboardTab() {
                  ) : (
                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
                       <TrendingUp size={48} className="text-neutral-200 mb-4" />
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Insufficient grading data for trend analysis</p>
+                       <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Not enough data for the graph yet</p>
                    </div>
                  )}
               </div>
            </div>
  
-           {/* Service Integrity panel (moved to left) */}
            <div className="bg-primary/[0.02] rounded-3xl border border-primary/10 p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
               <h3 className="text-sm font-bold text-neutral-800 tracking-tight mb-2 flex items-center gap-2">
-                 <Shield size={16} className="text-primary" />
-                 Neural Grading Nodes
-              </h3>
+                  <Shield size={16} className="text-primary" />
+                  AI Grading Status
+               </h3>
               <p className="text-xs text-neutral-500 leading-relaxed mb-6">
-                 All neural analysis nodes are online. Expected grading latency per essay: <span className="text-primary font-bold">~14s</span>.
+                  The AI is working normally. Average wait time per essay: <span className="text-primary font-bold">~14s</span>.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                  <div className="flex-1 flex items-center justify-between p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Engine Status</span>
-                    <span className="text-[10px] font-bold text-success-default uppercase px-2.5 py-1 bg-success-default/5 rounded-md">Optimal</span>
+                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">System Status</span>
+                    <span className="text-[10px] font-bold text-success-default uppercase px-2.5 py-1 bg-success-default/5 rounded-md">Online</span>
                  </div>
                  <div className="flex-1 flex items-center justify-between p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Node Latency</span>
-                    <span className="text-[10px] font-bold text-primary uppercase px-2.5 py-1 bg-primary/5 rounded-md">148ms</span>
+                     <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Grading Speed</span>
+                    <span className="text-[10px] font-bold text-primary uppercase px-2.5 py-1 bg-primary/5 rounded-md">Good</span>
                  </div>
               </div>
            </div>
@@ -501,14 +500,14 @@ export function DashboardTab() {
            {/* Quick Navigation Panel */}
            <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
               <div className="px-6 py-5 border-b border-neutral-50 bg-neutral-50/20">
-                <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Quick Navigation</h2>
+                 <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Shortcuts</h2>
               </div>
               <div className="p-4 grid grid-cols-1 gap-2">
                  {[
-                   { label: "Class Management", sub: "Enroll & Sections", icon: Users, path: "/Teacher/Sections", color: "text-blue-500", bg: "bg-blue-50" },
-                   { label: "Criteria Builder", sub: "Rubric Manager", icon: BookOpen, path: "/Teacher/Rubrics", color: "text-purple-500", bg: "bg-purple-50" },
-                   { label: "Academic Archive", sub: "Past Semesters", icon: Archive, path: "/Teacher/Archive", color: "text-amber-500", bg: "bg-amber-50" },
-                   { label: "Platform Settings", sub: "AI & Thresholds", icon: Settings, path: "/Teacher/Settings", color: "text-emerald-500", bg: "bg-emerald-50" },
+                    { label: "Manage Classes", sub: "View class lists", icon: Users, path: "/Teacher/Sections", color: "text-blue-500", bg: "bg-blue-50" },
+                    { label: "Manage Rubrics", sub: "Grading guides", icon: BookOpen, path: "/Teacher/Rubrics", color: "text-purple-500", bg: "bg-purple-50" },
+                    { label: "Past Classes", sub: "Old terms", icon: Archive, path: "/Teacher/Archive", color: "text-amber-500", bg: "bg-amber-50" },
+                    { label: "My Settings", sub: "Account setup", icon: Settings, path: "/Teacher/Settings", color: "text-emerald-500", bg: "bg-emerald-50" },
                  ].map((nav, i) => (
                    <button 
                      key={i} 
@@ -520,7 +519,7 @@ export function DashboardTab() {
                      </div>
                      <div className="min-w-0">
                         <p className="text-sm font-bold text-neutral-800 tracking-tight">{nav.label}</p>
-                        <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">{nav.sub}</p>
+                        <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{nav.sub}</p>
                      </div>
                    </button>
                  ))}
@@ -529,13 +528,13 @@ export function DashboardTab() {
 
            <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
               <div className="px-6 py-5 border-b border-neutral-50 bg-neutral-50/20">
-                <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Recent Activity</h2>
+                 <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Latest Updates</h2>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                  {filteredRecentActivity.length === 0 ? (
                     <div className="py-2.50 text-center opacity-30">
                        <Activity size={32} className="mx-auto mb-2" />
-                       <p className="text-[10px] font-bold">Waiting for events...</p>
+                        <p className="text-[10px] font-bold">No updates yet...</p>
                     </div>
                  ) : (
                    filteredRecentActivity.map((act, i) => (
@@ -559,7 +558,7 @@ export function DashboardTab() {
               </div>
               <div className="p-4 bg-neutral-50/50 border-t border-neutral-50">
                  <button className="w-full py-2.5 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center justify-center gap-2">
-                    View Activity Log <ArrowRight size={12} />
+                     View all logs <ArrowRight size={12} />
                  </button>
               </div>
            </div>

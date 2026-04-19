@@ -60,7 +60,7 @@ const Maintenance: React.FC<MaintenancePageProps> = ({
           >
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">
-              Service Interrupted • {role === "global" ? "System Wide" : `${role.toUpperCase()} Portal`}
+              Maintenance in Progress • {role === "global" ? "Full System" : `${role.toUpperCase()} Portal`}
             </span>
           </motion.div>
 
@@ -70,8 +70,8 @@ const Maintenance: React.FC<MaintenancePageProps> = ({
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-black text-neutral-900 tracking-tighter leading-tight"
           >
-            Undergoing <br/>
-            <span className="text-primary">Performance Upgrades</span>
+            System <br/>
+            <span className="text-primary">Update</span>
           </motion.h1>
 
           <motion.p
@@ -93,14 +93,14 @@ const Maintenance: React.FC<MaintenancePageProps> = ({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-left">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Expected Restoration</p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Back Online By</p>
               <p className="text-lg font-black text-neutral-900 leading-tight">{expectedBack}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">System Health</p>
+              <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">System Status</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <p className="text-sm font-black text-neutral-900">Infrastructure Healthy</p>
+                <p className="text-sm font-black text-neutral-900">Working Normally</p>
               </div>
             </div>
           </div>
@@ -115,7 +115,7 @@ const Maintenance: React.FC<MaintenancePageProps> = ({
           className="group flex items-center gap-3 text-xs font-black uppercase tracking-[0.2em] text-neutral-400 hover:text-primary transition-all"
         >
           <Wrench size={16} className="group-hover:rotate-12 transition-transform" />
-          Refresh Registry Status
+          Check System Again
         </motion.button>
       </div>
 

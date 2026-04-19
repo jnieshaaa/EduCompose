@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -11,15 +11,17 @@ import {
   Users,
   GraduationCap,
   ArrowRight,
-  // User,
   Lock,
   Eye,
   EyeOff,
   AlertCircle,
-  BookOpen,
   ShieldCheck,
   Building2,
   FileText,
+  User,
+  Mail,
+  UserCircle,
+  LogOut
 } from "lucide-react";
 import { useNotification } from "../../context/NotificationContext";
 
@@ -48,11 +50,12 @@ interface StudentData {
 }
 
 const StudentOnboarding: React.FC = () => {
-  const { checkAuth } = useAuth();
+  const { checkAuth, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [studentData, setStudentData] = useState<StudentData | null>(location.state?.student || null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,7 +64,6 @@ const StudentOnboarding: React.FC = () => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const { showNotification } = useNotification();
 
-  // Password requirements Check
   const hasMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
@@ -105,7 +107,6 @@ const StudentOnboarding: React.FC = () => {
         let data = initialData;
         const error = initialError;
 
-        // Fallback: If not found by auth_user_id, try by email
         if (!data && authUser.email) {
           const { data: emailData, error: emailError } = await supabase
             .from("students")
@@ -130,7 +131,6 @@ const StudentOnboarding: React.FC = () => {
 
           if (!emailError && emailData) {
             data = emailData;
-            // Proactively link the auth_user_id if it's missing
             if (!emailData.auth_user_id) {
               await supabase
                 .from("students")
@@ -144,13 +144,16 @@ const StudentOnboarding: React.FC = () => {
         setStudentData(data);
       } catch (err: any) {
         console.error("Error fetching student data:", err);
-        showNotification('error', "Failed to load student record");
       }
     };
     fetchStudentData();
   }, []);
 
   const handleNext = () => {
+    if (currentStep === 1 && !studentData) {
+      showNotification('error', "Wait! We're still fetching your info.");
+      return;
+    }
     if (currentStep < 4) setCurrentStep(currentStep + 1);
   };
 
@@ -164,17 +167,16 @@ const StudentOnboarding: React.FC = () => {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
-      if (!authUser) throw new Error("Not authenticated");
+      if (!authUser) throw new Error("Please log in first.");
 
-      // Optional Password Change
       if (newPassword) {
         if (newPassword !== confirmPassword) {
-          setPasswordError("Passwords do not match");
+          setPasswordError("Passwords don't match.");
           setIsLoading(false);
           return;
         }
-        if (newPassword.length < 6) {
-          setPasswordError("Password must be at least 6 characters");
+        if (!allRequirementsMet) {
+          setPasswordError("Password is too weak.");
           setIsLoading(false);
           return;
         }
@@ -185,26 +187,30 @@ const StudentOnboarding: React.FC = () => {
         if (pwdError) throw pwdError;
       }
 
-      // Mark onboarding as complete in students table
-      const { error } = await supabase
-        .from("students")
-        .update({ onboarding_completed: true })
-        .eq("auth_user_id", authUser.id);
-
-      if (error) {
-        // Fallback: If column doesn't exist yet, we still proceed to dashboard
-        // but tell user to inform admin.
-        console.warn(
-          "Could not mark onboarding_completed. Ensure migration is run.",
-        );
+      if (!studentData?.id) {
+        throw new Error("Missing student info.");
       }
 
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({ 
+          onboarding_completed: true,
+          auth_user_id: authUser.id 
+        })
+        .eq("id", studentData.id);
+
+      if (updateError) throw updateError;
+
       await checkAuth();
-      showNotification('success', "Account setup complete! Welcome to EduCompose.");
-      navigate("/Student/Dashboard");
+      
+      showNotification('success', "All set! Welcome to EduCompose.");
+      
+      setTimeout(() => {
+        navigate("/Student/Dashboard");
+      }, 100);
     } catch (err: any) {
       console.error("Error completing onboarding:", err);
-      showNotification('error', err.message || "Failed to complete setup");
+      showNotification('error', "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -212,61 +218,70 @@ const StudentOnboarding: React.FC = () => {
 
   const stepsContent = [
     {
-      title: "Welcome to EduCompose",
-      desc: "Your companion for improving essay writing through AI-powered feedback.",
+      title: "Write Better Essays",
+      desc: "EduCompose helps you fix your writing with smart tips from our AI.",
       icon: <Sparkles className="w-12 h-12 text-primary" />,
       features: [
-        "Real-time Grammar Analysis",
-        "Argument Mining & Coherence",
-        "Expert AI Feedback",
+        "Instant AI Tips",
+        "Idea Analysis",
+        "Better Grammar",
       ],
     },
     {
-      title: "Master the Art of Writing",
-      desc: "Submit your essays and get detailed insights on how to strengthen your arguments.",
-      icon: <BookOpen className="w-12 h-12 text-secondary" />,
+      title: "Check Your Info",
+      desc: "We got your info from your school records. Please check if they are correct.",
+      icon: <User className="w-12 h-12 text-secondary" />,
+      features: ["Your Name", "ID Number", "Personal Info"],
+    },
+    {
+      title: "Your Course & Group",
+      desc: "Check if your course and your section/group are correct.",
+      icon: <GraduationCap className="w-12 h-12 text-accent" />,
       features: [
-        "Submit via Text or File",
-        "Visual Knowledge Graphs",
-        "Progress Tracking",
+        "Your Course",
+        "Your Section",
+        "Your Department",
       ],
     },
     {
-      title: "Verify Your Information",
-      desc: "We've pre-filled your academic record. Please check if everything is correct.",
-      icon: <GraduationCap className="w-12 h-12 text-primary-300" />,
+      title: "Keep Your Account Safe",
+      desc: "Please create a new password so only you can open your account.",
+      icon: <ShieldCheck className="w-12 h-12 text-success-default" />,
       features: [
-        "Personal Details",
-        "Course & Program",
-        "Section/Block Assignment",
+        "Safe Password",
+        "Personal Keys",
+        "Account Security",
       ],
     },
   ];
 
   if (studentData && studentData.enrollment_status && studentData.enrollment_status !== 'active') {
     return (
-      <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4">
+      <div className="flex h-[100dvh] bg-neutral-900 items-center justify-center p-6">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-[2.5rem] p-12 max-w-lg w-full text-center shadow-2xl relative overflow-hidden"
         >
-          <div className="w-20 h-20 bg-tertiary-50/20 text-tertiary rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock size={40} />
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Lock size={160} />
           </div>
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Access Restricted</h2>
-          <p className="text-neutral-600 mb-8">
-            Your account status is currently set to <span className="font-bold uppercase text-tertiary">{studentData.enrollment_status}</span>. 
-            Only active students can proceed to the system.
+          <div className="w-24 h-24 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-red-500/10">
+            <Lock size={48} />
+          </div>
+          <h2 className="text-3xl font-black text-neutral-900 mb-4 tracking-tighter">Account Locked</h2>
+          <p className="text-neutral-500 mb-10 leading-relaxed font-medium">
+            Your account is currently <span className="font-bold text-red-500 uppercase tracking-widest">{studentData.enrollment_status}</span>. 
+            Please talk to your school admin if you need help.
           </p>
           <button 
             onClick={async () => {
               await supabase.auth.signOut();
-              window.location.href = "/login";
+              window.location.href = "/";
             }}
-            className="w-full py-4 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all"
+            className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/20 active:scale-95"
           >
-            Return to Login
+            Go Back
           </button>
         </motion.div>
       </div>
@@ -274,558 +289,427 @@ const StudentOnboarding: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white overflow-hidden">
-      <div className="flex flex-1 relative">
-        {/* Left Side: Illustration & Progress */}
-        <div className="hidden lg:flex w-[45%] bg-neutral-900 text-white relative flex-col justify-center p-16 xl:p-20 overflow-hidden">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/40 via-neutral-900 to-secondary-500/40" />
-          </div>
+    <div className="flex h-[100dvh] bg-white overflow-hidden font-sans select-none">
+      <AnimatePresence mode="wait">
+        <div className="flex flex-1 w-full relative">
+          {/* Left Side: Brand Narrative */}
+          <div className="hidden lg:flex w-[45%] bg-primary relative flex-col justify-between p-12 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none opacity-50">
+               <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white/10 rounded-full blur-[120px] animate-pulse" />
+               <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary-DEFAULT/30 rounded-full blur-[100px]" />
+               <svg className="absolute inset-0 w-full h-full opacity-[0.03]" viewBox="0 0 100 100" preserveAspectRatio="none">
+                 <defs>
+                   <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+                     <path d="M 8 0 L 0 0 0 8" fill="none" stroke="white" strokeWidth="0.5"/>
+                   </pattern>
+                 </defs>
+                 <rect width="100" height="100" fill="url(#grid)" />
+               </svg>
+            </div>
 
-          {/* Step counter pill */}
-          <div className="relative z-10 mb-8">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-              <span className="w-1.5 h-1.5 rounded-full bg-support animate-pulse" />
-              Step {currentStep} of 4
-            </span>
-          </div>
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="p-2 bg-white rounded-xl shadow-lg">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <span className="text-xl font-black tracking-tighter text-white uppercase italic">EduCompose<span className="text-white/50 not-italic">.online</span></span>
+            </div>
 
-          <div className="relative z-10 max-w-lg">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.5 }}
-                className="space-y-8"
-              >
-                {currentStep <= 3 ? (
-                  <>
-                    <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl inline-block border border-white/20">
-                      {stepsContent[currentStep - 1].icon}
+            <div className="relative z-10">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -30 }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-xl">
+                      <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Student Welcome</span>
                     </div>
-                    <h1 className="text-5xl font-bold leading-tight">
+                    <h1 className="text-4xl font-black leading-[1.1] text-white tracking-tighter">
                       {stepsContent[currentStep - 1].title}
                     </h1>
-                    <p className="text-xl text-neutral-400 font-light leading-relaxed">
+                    <p className="text-base text-white/70 font-medium leading-relaxed max-w-md">
                       {stepsContent[currentStep - 1].desc}
                     </p>
-                    <ul className="space-y-4 pt-4">
-                      {stepsContent[currentStep - 1].features.map(
-                        (feature, idx) => (
-                          <motion.li
-                            key={idx}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 + idx * 0.1 }}
-                            className="flex items-center gap-3 text-neutral-300"
-                          >
-                            <CheckCircle2 className="w-5 h-5 text-support" />
-                            <span className="font-medium">{feature}</span>
-                          </motion.li>
-                        ),
-                      )}
-                    </ul>
-                  </>
-                ) : (
-                  <>
-                    <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl inline-block border border-white/20">
-                      <Lock className="w-12 h-12 text-success-default" />
-                    </div>
-                    <h1 className="text-5xl font-bold leading-tight">
-                      Secure Your Account
-                    </h1>
-                    <p className="text-xl text-neutral-400 font-light leading-relaxed">
-                      Final step! You can optionally change your temporary
-                      password to a more secure one.
-                    </p>
-                  </>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {stepsContent[currentStep - 1].features.map((feature, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + idx * 0.1 }}
+                        className="flex items-center gap-4 p-3 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 transition-all group"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="font-bold text-white/90 text-sm tracking-wide">{feature}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 mt-6">
+               <div className="flex items-center gap-3 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex -space-x-2">
+                     {[1, 2, 3, 4].map(i => <div key={i} className={`w-6 h-6 rounded-full border-2 border-primary bg-neutral-200`} />)}
+                  </div>
+                  <span>Join thousands of students</span>
+               </div>
+               <div className="flex gap-1">
+                 {[1, 2, 3, 4].map(i => (
+                   <div key={i} className={`h-1 duration-500 transition-all rounded-full ${currentStep === i ? "w-8 bg-white" : "w-3 bg-white/20"}`} />
+                 ))}
+               </div>
+            </div>
           </div>
-        </div>
 
-        {/* Right Side: Step Content */}
-        <div className="flex-1 bg-neutral-50 flex flex-col items-center justify-center p-6 sm:p-10 lg:p-16 xl:p-20 relative overflow-y-auto">
-          <div className="w-full max-w-lg">
-            <AnimatePresence mode="wait">
-              {currentStep === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
+          {/* Right Side: Form Content */}
+          <div className="flex-1 bg-white flex flex-col relative h-screen overflow-hidden">
+            {/* Desktop Stepper HUD */}
+            <div className="hidden lg:flex px-12 py-8 justify-between items-center border-b border-neutral-50 bg-white/50 backdrop-blur-xl sticky top-0 z-20 w-full">
+              <div className="flex-1" />
+              <div className="flex items-center gap-10">
+                {[1, 2, 3, 4].map((step) => (
+                  <div key={step} className="flex items-center gap-3 group">
+                    <div className={`
+                      w-9 h-9 rounded-2xl flex items-center justify-center font-black text-[10px] transition-all duration-500 border-2
+                      ${currentStep === step ? "bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-110" : 
+                        currentStep > step ? "bg-secondary border-secondary text-white" : "bg-white border-neutral-100 text-neutral-300"}
+                    `}>
+                      {currentStep > step ? <CheckCircle2 className="w-5 h-5" /> : `0${step}`}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
+                        {step === 1 ? "Welcome" : step === 2 ? "Your Info" : step === 3 ? "Course" : "Security"}
+                      </span>
+                      <div className={`h-[2px] w-full mt-1.5 transition-all duration-500 ${currentStep >= step ? "bg-primary" : "bg-neutral-100"}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 flex justify-end">
+                <button 
+                  onClick={() => logout()}
+                  className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-all group flex items-center gap-2"
+                  title="Logout"
                 >
-                  <div className="text-center md:text-left">
-                    <h2 className="text-4xl font-bold text-neutral-900 tracking-tight">
-                      Writing Analytics
-                    </h2>
-                    <p className="text-neutral-500 text-lg mt-2">
-                      EduCompose uses advanced AI to analyze your essay
-                      structure.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-5">
-                    <div className="p-5 bg-white rounded-2xl border border-neutral-200 flex gap-4 hover:shadow-md transition-shadow">
-                      <div className="p-3 bg-primary/10 text-primary rounded-xl h-fit">
-                        <FileText size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-neutral-900">
-                          Structured Feedback
-                        </h4>
-                        <p className="text-sm text-neutral-500">
-                          Get insights on every part of your essay, from
-                          introduction to conclusion.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-5 bg-white rounded-2xl border border-neutral-200 flex gap-4 hover:shadow-md transition-shadow">
-                      <div className="p-3 bg-secondary/10 text-secondary-500 rounded-xl h-fit">
-                        <Users size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-neutral-900">
-                          Class Integration
-                        </h4>
-                        <p className="text-sm text-neutral-500">
-                          Stay connected with your courses and submit
-                          assignments with ease.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+                   <LogOut size={18} />
+                </button>
+              </div>
+            </div>
 
-              {currentStep === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
-                >
-                  <div className="text-center md:text-left">
-                    <h2 className="text-4xl font-bold text-neutral-900 tracking-tight">
-                      Personal & Academic
-                    </h2>
-                    <p className="text-neutral-500 text-lg mt-2">
-                      Verify your student identity and institutional records.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-white rounded-xl border border-neutral-200">
-                        <label className="text-[10px] font-bold text-neutral-400 uppercase">
-                          First Name
-                        </label>
-                        <p className="font-semibold text-neutral-900">
-                          {studentData?.first_name || "---"}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-white rounded-xl border border-neutral-200">
-                        <label className="text-[10px] font-bold text-neutral-400 uppercase">
-                          Middle Name
-                        </label>
-                        <p className="font-semibold text-neutral-900">
-                          {studentData?.middle_name || "---"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl border border-neutral-200">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">
-                        Last Name
-                      </label>
-                      <p className="font-semibold text-neutral-900">
-                        {studentData?.last_name || "---"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl border border-neutral-200">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase">
-                        Email Address
-                      </label>
-                      <p className="font-semibold text-neutral-900">
-                        {studentData?.email || "No email assigned"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl border border-neutral-200 flex justify-between items-center">
-                      <div>
-                        <label className="text-[10px] font-bold text-neutral-400 uppercase">
-                          Student ID
-                        </label>
-                        <p className="font-bold text-primary">
-                          {studentData?.student_code || "---"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {!studentData && !isLoading && (
-                      <div className="p-4 bg-error-default/5 border border-error-default/20 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="text-error-default w-5 h-5 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-bold text-error-dark">
-                            Student Record Not Found
-                          </p>
-                          <p className="text-xs text-error-default">
-                            Your account exists but isn't linked to your
-                            academic record. Please contact your teacher or
-                            administrator.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 3 && (
-                <motion.div
-                  key="step3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
-                >
-                  <div className="text-center md:text-left">
-                    <h2 className="text-4xl font-bold text-neutral-900 tracking-tight">
-                      Academic Load
-                    </h2>
-                    <p className="text-neutral-500 text-lg mt-2">
-                      Your current program and block information.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-lg space-y-0 divide-y divide-neutral-100">
-                    <div className="flex items-center gap-4 pb-5">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <GraduationCap className="text-primary w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-bold uppercase">
-                          Program
-                        </p>
-                        <p className="text-lg font-bold text-neutral-900">
-                          {studentData?.programs_lookup?.name || "---"} (
-                          {studentData?.programs_lookup?.abbr || "---"})
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 py-5">
-                      <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
-                        <Building2 className="text-secondary-500 w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-bold uppercase">
-                          Department & School
-                        </p>
-                        <p className="text-sm font-semibold text-neutral-700">
-                          {studentData?.programs_lookup?.departments?.code || studentData?.programs_lookup?.departments?.name ||
-                            "---"}
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {studentData?.programs_lookup?.departments?.schools
-                            ?.name || "---"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 pt-5">
-                      <div className="w-12 h-12 bg-success-default/10 rounded-full flex items-center justify-center">
-                        <Users className="text-success-default w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-400 font-bold uppercase">
-                          Current Year & BLock
-                        </p>
-                        <p className="text-lg font-bold text-neutral-900">
-                          {studentData?.year && studentData?.block_name
-                            ? `${studentData.year}${studentData.block_name}`
-                            : "No block assigned"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 4 && (
-                <motion.div
-                  key="step4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
-                >
-                  <div className="text-center md:text-left">
-                    <h2 className="text-4xl font-bold text-neutral-900 tracking-tight">
-                      Security Check
-                    </h2>
-                    <p className="text-neutral-500 text-lg mt-2 font-medium">
-                      Reset your password to keep your account safe.
-                    </p>
-                  </div>
-
-                  <div className="p-6 bg-white rounded-2xl border border-neutral-200">
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className="p-3 bg-warning-light/20 text-warning-dark rounded-xl">
-                        <AlertCircle size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-neutral-900">
-                          Optional Update
-                        </h4>
-                        <p className="text-sm text-neutral-500 leading-relaxed">
-                          Since your account was created by a teacher, we
-                          recommend changing your password. Leave this blank to
-                          keep your current password.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div>
-                        <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">
-                          New Password
-                        </label>
-                        <div className="relative">
-                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            value={newPassword}
-                            onChange={(e) => {
-                              setNewPassword(e.target.value);
-                              setPasswordError("");
-                            }}
-                            onFocus={() => setIsPasswordFocused(true)}
-                            onBlur={() => setIsPasswordFocused(false)}
-                            className="w-full pl-10 pr-12 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                            placeholder="Create a strong password"
-                          />
-                          <button
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                          >
-                            {showPassword ? (
-                              <EyeOff size={18} />
-                            ) : (
-                              <Eye size={18} />
-                            )}
-                          </button>
-
-                          {/* Floating Password Validation Modal */}
-                          <AnimatePresence>
-                            {isPasswordFocused && !allRequirementsMet && (
-                              <motion.div
-                                initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                                className="absolute left-full ml-4 top-0 w-64 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-5 z-[60] hidden md:block"
-                              >
-                                <div className="absolute -left-2 top-5 w-4 h-4 bg-white border-l border-b border-neutral-100 rotate-45" />
-                                <h5 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4">
-                                  Requirements
-                                </h5>
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-3">
-                                    <div
-                                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                                        hasMinLength
-                                          ? "bg-success-default text-white"
-                                          : "bg-neutral-100 text-neutral-300"
-                                      }`}
-                                    >
-                                      <CheckCircle2 size={12} />
-                                    </div>
-                                    <span
-                                      className={`text-xs font-bold ${
-                                        hasMinLength
-                                          ? "text-success-dark"
-                                          : "text-neutral-400"
-                                      }`}
-                                    >
-                                      8+ Characters
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div
-                                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                                        hasUppercase
-                                          ? "bg-success-default text-white"
-                                          : "bg-neutral-100 text-neutral-300"
-                                      }`}
-                                    >
-                                      <CheckCircle2 size={12} />
-                                    </div>
-                                    <span
-                                      className={`text-xs font-bold ${
-                                        hasUppercase
-                                          ? "text-success-dark"
-                                          : "text-neutral-400"
-                                      }`}
-                                    >
-                                      1 Uppercase Letter
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div
-                                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                                        hasNumber
-                                          ? "bg-success-default text-white"
-                                          : "bg-neutral-100 text-neutral-300"
-                                      }`}
-                                    >
-                                      <CheckCircle2 size={12} />
-                                    </div>
-                                    <span
-                                      className={`text-xs font-bold ${
-                                        hasNumber
-                                          ? "text-success-dark"
-                                          : "text-neutral-400"
-                                      }`}
-                                    >
-                                      1 Number
-                                    </span>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">
-                          Confirm Password
-                        </label>
-                        <div className="relative">
-                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => {
-                              setConfirmPassword(e.target.value);
-                              setPasswordError("");
-                            }}
-                            className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                            placeholder="Re-type new password"
-                          />
-                        </div>
-                      </div>
-
-                      {passwordError && (
-                        <div className="text-xs text-error-default font-bold ml-1 flex items-center gap-1">
-                          <AlertCircle size={12} /> {passwordError}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Security Notice Modal */}
-            <AnimatePresence>
-              {showSecurityModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center relative overflow-hidden"
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-5">
-                      <ShieldCheck size={120} />
-                    </div>
-                    <div className="w-20 h-20 bg-success-default/10 text-success-default rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Lock size={32} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-neutral-900 mb-3">
-                      Security First
-                    </h3>
-                    <p className="text-neutral-500 mb-8 leading-relaxed">
-                      To keep your work safe, we recommend setting a personal
-                      password. You can do this now or skip it if you're in a
-                      hurry!
-                    </p>
-                    <button
-                      onClick={() => setShowSecurityModal(false)}
-                      className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-lg"
+            {/* Form Area */}
+            <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto px-6 py-12 lg:px-24">
+              <div className="w-full max-w-lg">
+                <AnimatePresence mode="wait">
+                  {currentStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-8"
                     >
-                      Got it, thanks!
-                    </button>
-                  </motion.div>
-                </div>
-              )}
-            </AnimatePresence>
+                      <div className="space-y-3">
+                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 1</label>
+                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Let's Get<br/>Started.</h2>
+                        <p className="text-neutral-500 font-medium leading-relaxed">EduCompose uses AI to help you write better. We'll show you what to fix so you can get higher scores.</p>
+                      </div>
 
-            <div className="h-20" />
-          </div>
-        </div>
-      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100 flex gap-5 hover:bg-white hover:shadow-xl hover:shadow-primary/5 transition-all group">
+                          <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <FileText size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-neutral-900 text-base">Write Better</h4>
+                            <p className="text-sm text-neutral-500 font-medium mt-1">Send us your essays and we'll give you tips right away.</p>
+                          </div>
+                        </div>
+                        <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100 flex gap-5 hover:bg-white hover:shadow-xl hover:shadow-secondary/5 transition-all group">
+                          <div className="w-14 h-14 bg-secondary/10 text-secondary-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <GraduationCap size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-neutral-900 text-base">See Your Score</h4>
+                            <p className="text-sm text-neutral-500 font-medium mt-1">Watch how your scores get better with every essay you write.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
 
-      {/* Nav Bar */}
-      <div className="bg-white border-t border-neutral-200 z-50">
-        <div className="container mx-auto px-6 py-8 flex items-center justify-between">
-          <div className="w-32">
-            {currentStep > 1 && (
+                  {currentStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-8"
+                    >
+                      <div className="space-y-3">
+                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 2</label>
+                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Info.</h2>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                             {studentData?.first_name || "---"}
+                           </div>
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                             {studentData?.middle_name || "---"}
+                           </div>
+                         </div>
+                         <div className="sm:col-span-2 space-y-2">
+                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                             {studentData?.last_name || "---"}
+                           </div>
+                         </div>
+                         <div className="sm:col-span-2 space-y-2">
+                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">School Email</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic flex items-center gap-3">
+                             <Mail size={16} className="text-neutral-300" />
+                             {studentData?.email || "No email assigned"}
+                           </div>
+                         </div>
+                         <div className="sm:col-span-2 space-y-2">
+                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Student ID Number</label>
+                           <div className="px-5 py-4 bg-primary/[0.03] rounded-2xl border border-primary/10 text-base font-black text-primary flex items-center gap-3">
+                             <UserCircle size={18} />
+                             {studentData?.student_code || "---"}
+                           </div>
+                         </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-8"
+                    >
+                      <div className="space-y-3">
+                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 3</label>
+                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Course.</h2>
+                      </div>
+
+                      <div className="bg-neutral-50 p-10 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-8 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+                        
+                        <div className="flex items-center gap-6 relative">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/5 border border-primary/5">
+                            <GraduationCap className="text-primary w-8 h-8" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Course</p>
+                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none">
+                              {studentData?.programs_lookup?.name || "Program Name"}
+                            </p>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase mt-1">{studentData?.programs_lookup?.abbr || "---"}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 relative">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-secondary/5 border border-secondary/5">
+                            <Building2 className="text-secondary w-8 h-8" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Department</p>
+                            <p className="text-lg font-black text-neutral-900 tracking-tight leading-none">
+                              {studentData?.programs_lookup?.departments?.name || "Department Name"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 relative">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-xl shadow-accent/5 border border-accent/5">
+                            <Users className="text-accent w-8 h-8" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Group</p>
+                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none">
+                              {studentData?.year && studentData?.block_name ? `Year ${studentData.year} - Group ${studentData.block_name}` : "No Section Yet"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {currentStep === 4 && (
+                    <motion.div
+                      key="step4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-8"
+                    >
+                      <div className="space-y-3">
+                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 4</label>
+                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Keep Your<br/>Account Safe.</h2>
+                        <p className="text-neutral-500 font-medium leading-relaxed">Please change your password so that only you can open your account.</p>
+                      </div>
+
+                      <div className="p-8 bg-neutral-50 rounded-[2.5rem] border border-neutral-100 space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">New Password</label>
+                          <div className="relative group/pass">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/pass:text-primary transition-colors" />
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              value={newPassword}
+                              onChange={(e) => { setNewPassword(e.target.value); setPasswordError(""); }}
+                              onFocus={() => setIsPasswordFocused(true)}
+                              onBlur={() => setIsPasswordFocused(false)}
+                              placeholder="Type New Password"
+                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+                            />
+                            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-600">
+                              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+
+                            <AnimatePresence>
+                              {isPasswordFocused && !allRequirementsMet && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  className="absolute left-0 right-0 top-full mt-4 p-5 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-[60]"
+                                >
+                                  <h5 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-4">Password Rules</h5>
+                                  <div className="grid grid-cols-1 gap-3">
+                                    {[
+                                      { label: "8+ Letters", met: hasMinLength },
+                                      { label: "1 Big Letter (ABC)", met: hasUppercase },
+                                      { label: "1 Number (123)", met: hasNumber }
+                                    ].map((req, i) => (
+                                      <div key={i} className="flex items-center gap-3">
+                                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${req.met ? "bg-success-default text-white" : "bg-neutral-50 text-neutral-200"}`}>
+                                           <CheckCircle2 size={12} />
+                                        </div>
+                                        <span className={`text-[10px] font-black uppercase tracking-wider ${req.met ? "text-neutral-900" : "text-neutral-300"}`}>{req.label}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Type it Again</label>
+                          <div className="relative group/verify">
+                            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/verify:text-primary transition-colors" />
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              value={confirmPassword}
+                              onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
+                              placeholder="Re-type Password"
+                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {passwordError && (
+                          <div className="p-3.5 bg-red-50 text-red-500 rounded-xl border border-red-100 flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-widest italic animate-shake">
+                            <AlertCircle size={14} /> {passwordError}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Sticky Interaction Bar */}
+            <div className="px-12 py-8 bg-white/80 backdrop-blur-md border-t border-neutral-50 flex items-center justify-between sticky bottom-0 z-20">
               <button
+                disabled={currentStep === 1}
                 onClick={handleBack}
-                className="px-6 py-3 rounded-2xl font-bold text-neutral-500 hover:bg-neutral-100 transition-all flex items-center gap-2"
+                className="flex items-center gap-2 group disabled:opacity-0 transition-opacity"
               >
-                <ChevronLeft size={20} /> Back
+                <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center group-hover:bg-neutral-100 transition-colors">
+                  <ChevronLeft className="w-5 h-5 text-neutral-500" />
+                </div>
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-2">Back</span>
               </button>
-            )}
-          </div>
 
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  currentStep === s
-                    ? "bg-primary w-8"
-                    : currentStep > s
-                    ? "bg-primary/40 w-3"
-                    : "bg-neutral-200 w-3"
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="w-32 flex justify-end">
-            <button
-              onClick={currentStep === 4 ? handleComplete : handleNext}
-              className={`
-                px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all duration-300 shadow-lg active:scale-95
-                ${currentStep === 4 ? "bg-success-default hover:bg-success-dark shadow-success-default/20" : "bg-primary hover:bg-primary-300 shadow-primary/20"}
-                text-white
-              `}
-              disabled={isLoading}
-            >
-              {currentStep === 4
-                ? isLoading
-                  ? "Finishing..."
-                  : "Finish"
-                : "Next"}
-              {currentStep < 4 ? (
-                <ChevronRight size={20} />
-              ) : (
-                <ArrowRight size={20} />
-              )}
-            </button>
+              <button
+                onClick={currentStep === 4 ? handleComplete : handleNext}
+                disabled={isLoading}
+                className={`
+                  flex items-center gap-4 pl-12 pr-6 py-4 rounded-3xl font-black tracking-[0.15em] uppercase text-xs transition-all duration-500 relative overflow-hidden group active:scale-95 shadow-2xl shadow-primary/20
+                  ${currentStep === 4 ? "bg-success-default" : "bg-primary"} text-white
+                `}
+              >
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500 italic" />
+                <span className="relative z-10">{currentStep === 4 ? "Start Now" : "Next"}</span>
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center relative z-10 group-hover:translate-x-2 transition-transform">
+                  {currentStep === 4 ? <ArrowRight className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+              </button>
+            </div>
           </div>
         </div>
+      </AnimatePresence>
 
-        <footer className="bg-neutral-900 py-3">
-          <p className="text-center text-white/30 text-[9px] uppercase font-bold tracking-[0.25em]">
-            &copy; 2025 EduCompose | Student Onboarding
-          </p>
-        </footer>
-      </div>
+      <footer className="fixed bottom-0 left-0 w-full lg:w-[45%] p-8 pointer-events-none hidden lg:block">
+         <div className="flex justify-between items-center text-white/20 text-[9px] font-black uppercase tracking-[0.3em]">
+            <span>EduCompose AI v2.4</span>
+            <span>&copy; 2026</span>
+         </div>
+      </footer>
+
+      {/* Security Notice Modal */}
+      <AnimatePresence>
+        {showSecurityModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-sm w-full text-center relative overflow-hidden border border-neutral-100"
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-5">
+                <ShieldCheck size={120} />
+              </div>
+              <div className="w-20 h-20 bg-success-default/10 text-success-default rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-success-default/5">
+                <Lock size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-neutral-900 mb-4 tracking-tighter">Security Tip</h3>
+              <p className="text-neutral-500 mb-10 leading-relaxed font-medium">
+                Please create a password that only you know to keep your account safe.
+              </p>
+              <button
+                onClick={() => setShowSecurityModal(false)}
+                className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-xl active:scale-95"
+              >
+                Got it!
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

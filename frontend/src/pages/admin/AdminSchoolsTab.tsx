@@ -261,14 +261,14 @@ export const AdminSchoolsTab: React.FC = () => {
     <div className="space-y-8 pb-20">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Institutional Architecture</h1>
-          <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] mt-1">Academic Infrastructure & Registry</p>
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Schools</h1>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage schools, departments, and programs</p>
         </div>
         <Button
           onClick={() => setShowSchoolModal(true)}
           className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-6 py-2.5 h-12"
         >
-          <Plus size={20} className="mr-2" /> Add Institution
+          <Plus size={20} className="mr-2" /> Add School
         </Button>
       </div>
 
@@ -279,12 +279,12 @@ export const AdminSchoolsTab: React.FC = () => {
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <div className="absolute inset-0 blur-xl bg-primary/20 animate-pulse rounded-full" />
             </div>
-            <p className="mt-6 text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Synchronizing Registry</p>
+            <p className="mt-6 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">Loading Data...</p>
           </div>
         ) : schools.length === 0 ? (
           <div className="text-center py-32 bg-white rounded-[2.5rem] border-2 border-dashed border-neutral-200 text-neutral-400">
              <SchoolIcon size={48} className="mx-auto mb-4 opacity-20" />
-             <p className="text-[10px] font-black uppercase tracking-[0.2em]">No internal architecture detected</p>
+             <p className="text-[10px] font-bold uppercase tracking-widest">No schools found</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -302,9 +302,9 @@ export const AdminSchoolsTab: React.FC = () => {
                       <SchoolIcon size={22} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-neutral-900 tracking-tight">{school.name}</h3>
+                      <h3 className="text-lg font-bold text-neutral-900 tracking-tight">{school.name}</h3>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">{school.code}</span>
+                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">{school.code}</span>
                         <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{school.departments.length} Departments</span>
                       </div>
                     </div>
@@ -355,12 +355,12 @@ export const AdminSchoolsTab: React.FC = () => {
                     >
                       <div className="p-8 space-y-6 bg-neutral-50/30">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Departmental Units</h4>
+                          <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Departments</h4>
                         </div>
                         
                         {school.departments.length === 0 ? (
                            <div className="py-12 bg-white rounded-3xl border-2 border-dashed border-neutral-100 text-center">
-                              <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">No internal segments configured</p>
+                              <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">No departments found</p>
                            </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -405,8 +405,8 @@ export const AdminSchoolsTab: React.FC = () => {
                                       </div>
                                     </div>
                                     
-                                    <h5 className="font-black text-neutral-900 tracking-tight leading-tight mb-1">{dept.name}</h5>
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">{dept.code}</p>
+                                    <h5 className="font-bold text-neutral-900 tracking-tight leading-tight mb-1">{dept.name}</h5>
+                                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-4">{dept.code}</p>
                                     
                                     <button 
                                       onClick={() => toggleDept(deptKey)}
@@ -431,7 +431,7 @@ export const AdminSchoolsTab: React.FC = () => {
                                               <div key={program.id || program.name} className="flex items-center justify-between p-3 bg-neutral-50/50 rounded-xl hover:bg-neutral-50 transition-colors group/prog">
                                                 <div>
                                                   <p className="text-xs font-bold text-neutral-700 leading-none mb-1">{program.name}</p>
-                                                  {program.abbr && <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{program.abbr}</p>}
+                                                  {program.abbr && <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">{program.abbr}</p>}
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover/prog:opacity-100 transition-opacity">
                                                   <button
@@ -455,7 +455,7 @@ export const AdminSchoolsTab: React.FC = () => {
                                               </div>
                                             ))
                                           ) : (
-                                            <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest text-center py-4 italic">Baseline Only</p>
+                                            <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest text-center py-4 italic">No Programs</p>
                                           )}
                                         </div>
                                       </motion.div>
@@ -491,8 +491,8 @@ export const AdminSchoolsTab: React.FC = () => {
                     <Building2 size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update Registry" : "Instantiate School"}</h2>
-                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Top-Level Architecture</p>
+                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update School" : "Add School"}</h2>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">School Information</p>
                   </div>
                 </div>
                 <button onClick={() => setShowSchoolModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -503,7 +503,7 @@ export const AdminSchoolsTab: React.FC = () => {
               <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Institutional Name</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Institutional Name</label>
                     <input
                       type="text"
                       value={schoolForm.name}
@@ -513,7 +513,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Acronym / Code</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Acronym / Code</label>
                     <div className="relative group">
                       <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                       <input
@@ -530,7 +530,7 @@ export const AdminSchoolsTab: React.FC = () => {
                 {!editingSchool && (
                   <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
                     <div>
-                      <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Bootstrapping</h3>
+                      <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Bootstrapping</h3>
                       <p className="text-xs text-neutral-500">Initialize with foundational departmental units.</p>
                     </div>
                     
@@ -553,7 +553,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     <Button
                       onClick={addDepartmentToSchoolForm}
                       variant="outline"
-                      className="w-full h-11 rounded-xl bg-white border-neutral-200 hover:border-primary hover:text-primary transition-all text-xs font-black uppercase tracking-widest"
+                      className="w-full h-11 rounded-xl bg-white border-neutral-200 hover:border-primary hover:text-primary transition-all text-xs font-bold uppercase tracking-widest"
                     >
                       <Plus size={16} className="mr-2" /> Add Department To Queue
                     </Button>
@@ -596,7 +596,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   onClick={addSchool} 
                   className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[140px]"
                 >
-                  {editingSchool ? "Commit Changes" : "Create Record"}
+                  {editingSchool ? "Save Changes" : "Save School"}
                 </Button>
               </div>
             </motion.div>
@@ -619,8 +619,8 @@ export const AdminSchoolsTab: React.FC = () => {
                     <Layers size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingDept ? "Modify Segment" : "New Department"}</h2>
-                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Academic Subdivision</p>
+                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingDept ? "Modify Segment" : "New Department"}</h2>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Academic Subdivision</p>
                   </div>
                 </div>
                 <button onClick={() => setShowDeptModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -630,7 +630,7 @@ export const AdminSchoolsTab: React.FC = () => {
 
               <div className="p-8 space-y-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Segment Name</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Official Segment Name</label>
                   <input
                     type="text"
                     value={deptForm.name}
@@ -640,7 +640,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Internal Reference ID</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Internal Reference ID</label>
                   <input
                     type="text"
                     value={deptForm.code}
@@ -690,8 +690,8 @@ export const AdminSchoolsTab: React.FC = () => {
                     <GraduationCap size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Refine Program" : "Curriculum Registry"}</h2>
-                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Degree Specification</p>
+                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Refine Program" : "Curriculum Registry"}</h2>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Degree Specification</p>
                   </div>
                 </div>
                 <button onClick={() => setShowProgramModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -701,7 +701,7 @@ export const AdminSchoolsTab: React.FC = () => {
 
               <div className="p-8 space-y-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Official Program Title</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Official Program Title</label>
                   <input
                     type="text"
                     value={programForm.name}
@@ -711,7 +711,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Abbreviation / Hash</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Abbreviation / Hash</label>
                   <input
                     type="text"
                     value={programForm.abbr}

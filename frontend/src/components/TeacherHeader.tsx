@@ -311,10 +311,10 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-neutral-900">
-                  Sign Out
+                  Logout
                 </h3>
                 <p className="text-sm text-neutral-400 mt-1 font-medium">
-                  Are you sure you want to log out?
+                  Are you sure you want to logout?
                 </p>
               </div>
               <div className="flex gap-2 pt-1">
@@ -328,7 +328,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
                   className="flex-1 px-4 py-2.5 rounded-lg bg-error-default text-white text-sm font-bold hover:bg-error-dark transition-colors shadow-md shadow-error-default/15"
                   onClick={confirmLogout}
                 >
-                  Log Out
+                  Logout
                 </button>
               </div>
             </motion.div>

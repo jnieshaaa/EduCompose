@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { Download, Loader2, Check } from 'lucide-react';
+import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useNotification } from "../../context/NotificationContext";
+import { motion } from "framer-motion";
 
 export function StudentSettingsTab() {
   const [studentData, setStudentData] = useState<any>(null);
@@ -14,7 +12,6 @@ export function StudentSettingsTab() {
   const [isSaving, setIsSaving] = useState(false);
   const { showNotification } = useNotification();
 
-  // Settings States
   const [preferences, setPreferences] = useState({
     notifyEvaluation: true,
     notifyFeedback: true,
@@ -50,7 +47,6 @@ export function StudentSettingsTab() {
         if (error) throw error;
         setStudentData(data);
 
-        // Load preferences from localStorage if they exist
         const savedPrefs = localStorage.getItem(`student_prefs_${data.id}`);
         if (savedPrefs) {
           setPreferences(JSON.parse(savedPrefs));
@@ -73,16 +69,11 @@ export function StudentSettingsTab() {
     
     setIsSaving(true);
     try {
-      // Simulate API call for saving preferences
-      // In a real app, you would: await supabase.from('students').update({ preferences }).eq('id', studentData.id)
-      
-      // Save to LocalStorage for now to demonstrate persistence
       localStorage.setItem(`student_prefs_${studentData.id}`, JSON.stringify(preferences));
-      
-      await new Promise(resolve => setTimeout(resolve, 800)); // Visual feedback
-      showNotification('success', "Settings saved successfully!");
+      await new Promise(resolve => setTimeout(resolve, 800));
+      showNotification('success', "All settings saved!");
     } catch (err) {
-      showNotification('error', "Failed to save settings. Please try again.");
+      showNotification('error', "Couldn't save settings. Try again!");
     } finally {
       setIsSaving(false);
     }
@@ -105,240 +96,236 @@ export function StudentSettingsTab() {
       dataSharing: true
     };
     setPreferences(defaults);
-    showNotification('info', "Settings reset to defaults.");
+    showNotification('info', "Settings started over.");
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-24">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Opening your profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto w-full pb-10">
-      {/* Profile Information */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-neutral-900 mb-6">Profile Information</h2>
-        <div className="space-y-6">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary text-3xl font-extrabold uppercase shadow-sm">
-              {studentData?.first_name?.[0] || "?"}
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral-900">{studentData?.first_name} {studentData?.last_name}</h3>
-              <p className="text-sm text-neutral-500 mb-3">{studentData?.student_code}</p>
-              <Button variant="outline" size="sm" className="h-8 text-xs" disabled>Change Photo</Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="first-name" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">First Name</Label>
-              <Input id="first-name" value={studentData?.first_name || ""} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="last-name" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Last Name</Label>
-              <Input id="last-name" value={studentData?.last_name || ""} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="student-id" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Student ID</Label>
-              <Input id="student-id" value={studentData?.student_code || ""} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Email Address</Label>
-              <Input id="email" type="email" value={studentData?.email || ""} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="program" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Program</Label>
-              <Input id="program" value={studentData?.programs_lookup?.name || studentData?.programs_lookup?.abbr || "N/A"} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="section" className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Year & Block</Label>
-              <Input id="section" value={studentData?.year && studentData?.block_name ? `${studentData.year} - ${studentData.block_name}` : studentData?.block_name || "N/A"} className="bg-neutral-50 font-medium" readOnly />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Notification Preferences */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h2>
-        <div className="space-y-5">
-          {[
-            { id: 'notifyEvaluation', label: 'Essay Evaluated', sub: 'Notify me when AI evaluation is complete', key: 'notifyEvaluation' },
-            { id: 'notifyFeedback', label: 'Teacher Feedback', sub: 'Notify me when teacher adds feedback', key: 'notifyFeedback' },
-            { id: 'notifyRevision', label: 'Revision Requested', sub: 'Notify me when revision is requested', key: 'notifyRevision' },
-            { id: 'notifyDeadline', label: 'Deadline Reminders', sub: 'Send reminders for upcoming deadlines', key: 'notifyDeadline' },
-            { id: 'notifyEmail', label: 'Email Notifications', sub: 'Also send notifications to my email', key: 'notifyEmail' },
-          ].map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-              <div className="flex-1">
-                <Label htmlFor={item.id} className="font-bold text-neutral-800 cursor-pointer">{item.label}</Label>
-                <p className="text-xs text-neutral-500 mt-0.5">{item.sub}</p>
-              </div>
-              <Switch 
-                id={item.id} 
-                checked={(preferences as any)[item.key]} 
-                onCheckedChange={(val) => handlePreferenceChange(item.key, val)}
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Submission Preferences */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold text-neutral-900 mb-6">Submission</h2>
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label htmlFor="auto-ai-eval" className="font-bold text-neutral-800">Auto AI Evaluation</Label>
-                <p className="text-xs text-neutral-500 mt-0.5">Auto request AI feedback</p>
-              </div>
-              <Switch 
-                id="auto-ai-eval" 
-                checked={preferences.autoAiEval} 
-                onCheckedChange={(val) => handlePreferenceChange('autoAiEval', val)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label htmlFor="allow-resubmit" className="font-bold text-neutral-800">Resubmissions</Label>
-                <p className="text-xs text-neutral-500 mt-0.5">Allow revising by default</p>
-              </div>
-              <Switch 
-                id="allow-resubmit" 
-                checked={preferences.allowResubmit} 
-                onCheckedChange={(val) => handlePreferenceChange('allowResubmit', val)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="default-format" className="text-xs font-bold text-neutral-500 uppercase">Default Format</Label>
-              <select 
-                id="default-format" 
-                value={preferences.defaultFormat}
-                onChange={(e) => handlePreferenceChange('defaultFormat', e.target.value)}
-                className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              >
-                <option value="PDF">PDF Document</option>
-                <option value="DOCX">Microsoft Word</option>
-                <option value="TXT">Plain Text</option>
-              </select>
-            </div>
-          </div>
-        </Card>
-
-        {/* Display Preferences */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold text-neutral-900 mb-6">Display</h2>
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label htmlFor="show-scores" className="font-bold text-neutral-800">Show Scores</Label>
-                <p className="text-xs text-neutral-500 mt-0.5">Show AI scores immediately</p>
-              </div>
-              <Switch 
-                id="show-scores" 
-                checked={preferences.showScores} 
-                onCheckedChange={(val) => handlePreferenceChange('showScores', val)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label htmlFor="detailed-feedback" className="font-bold text-neutral-800">Detailed View</Label>
-                <p className="text-xs text-neutral-500 mt-0.5">Show full breakdown</p>
-              </div>
-              <Switch 
-                id="detailed-feedback" 
-                checked={preferences.detailedFeedback} 
-                onCheckedChange={(val) => handlePreferenceChange('detailedFeedback', val)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dashboard-view" className="text-xs font-bold text-neutral-500 uppercase">Default View</Label>
-              <select 
-                id="dashboard-view" 
-                value={preferences.dashboardView}
-                onChange={(e) => handlePreferenceChange('dashboardView', e.target.value)}
-                className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              >
-                <option value="Overview">Overview</option>
-                <option value="Recent Activity">Recent Activity</option>
-                <option value="Progress Charts">Progress Charts</option>
-              </select>
-            </div>
-          </div>
-        </Card>
+    <div className="space-y-10 max-w-5xl mx-auto w-full pb-20 px-1">
+      {/* Header section */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">My Profile</h1>
+        <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+            <User size={14} className="text-primary/50" />
+            Manage your info and settings
+        </p>
       </div>
 
-      {/* Privacy & Security */}
-      <Card className="p-6">
-        <h2 className="text-xl font-bold text-neutral-900 mb-6">Privacy & Security</h2>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-            <div className="flex-1">
-              <Label htmlFor="data-sharing" className="font-bold text-neutral-800 cursor-pointer">Share Progress with Teacher</Label>
-              <p className="text-xs text-neutral-500 mt-0.5">Allow teachers to view your progress analytics</p>
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left Column: Personal Info */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-8"
+          >
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary text-4xl font-black shadow-lg relative group overflow-hidden">
+                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {studentData?.first_name?.[0] || "?"}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">{studentData?.first_name} {studentData?.last_name}</h3>
+                <p className="text-sm font-bold text-primary flex items-center gap-2">
+                   <ShieldCheck size={14} />
+                   Verified Account
+                </p>
+              </div>
             </div>
-            <Switch 
-              id="data-sharing" 
-              checked={preferences.dataSharing} 
-              onCheckedChange={(val) => handlePreferenceChange('dataSharing', val)}
-            />
-          </div>
 
-          <div className="pt-4 border-t border-neutral-100">
-            <h3 className="text-sm font-bold text-neutral-800 mb-4">Export Data</h3>
-            <Button variant="outline" className="text-neutral-600 border-neutral-200">
-              <Download className="w-4 h-4 mr-2" />
-              Request Account Data Export (JSON)
-            </Button>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My ID Number</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                  {studentData?.student_code || "---"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Email</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600 truncate">
+                  {studentData?.email || "---"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Course</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                  {studentData?.programs_lookup?.name || studentData?.programs_lookup?.abbr || "N/A"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Group</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                  {studentData?.year && studentData?.block_name ? `${studentData.year} - ${studentData.block_name}` : studentData?.block_name || "N/A"}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Preferences Form */}
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-8"
+          >
+            <div className="flex items-center gap-4">
+               <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center text-primary">
+                  <Bell size={20} />
+               </div>
+               <div>
+                  <h2 className="text-xl font-bold text-neutral-900 tracking-tight">When to tell me</h2>
+                  <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Notification Settings</p>
+               </div>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { id: 'notifyEvaluation', label: 'My work is scored', sub: 'Tell me when AI evaluation is done', key: 'notifyEvaluation' },
+                { id: 'notifyFeedback', label: 'Teacher gives tips', sub: 'Tell me when my teacher adds comments', key: 'notifyFeedback' },
+                { id: 'notifyRevision', label: 'I need to fix something', sub: 'Tell me if I need to revise my essay', key: 'notifyRevision' },
+                { id: 'notifyDeadline', label: 'Deadlines are coming', sub: 'Send me reminders for due dates', key: 'notifyDeadline' },
+                { id: 'notifyEmail', label: 'Send to my email too', sub: 'Also send updates to my mailbox', key: 'notifyEmail' },
+              ].map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-5 rounded-3xl hover:bg-neutral-50 transition-all border border-transparent hover:border-neutral-100 group">
+                  <div className="flex-1 pr-4">
+                    <Label htmlFor={item.id} className="text-sm font-bold text-neutral-800 cursor-pointer group-hover:text-primary transition-colors">{item.label}</Label>
+                    <p className="text-[11px] font-medium text-neutral-400 mt-0.5">{item.sub}</p>
+                  </div>
+                  <Switch 
+                    id={item.id} 
+                    checked={(preferences as any)[item.key]} 
+                    onCheckedChange={(val) => handlePreferenceChange(item.key, val)}
+                  />
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
         </div>
-      </Card>
 
-      {/* Action Buttons */}
-      <div className="sticky bottom-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 z-30">
-        <Button 
-          variant="outline" 
+        {/* Right Column: Mini Settings */}
+        <div className="space-y-8">
+          
+          {/* Submission settings */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/20 shadow-xl shadow-primary/5 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-[60px] translate-x-12 -translate-y-12" />
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-3">
+                 <SettingsIcon size={18} className="text-primary" />
+                 <h2 className="text-lg font-bold tracking-tight text-neutral-900">Writing Tips</h2>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 pr-3">
+                    <Label className="text-xs font-bold text-neutral-800">Automatic AI Check</Label>
+                    <p className="text-[10px] text-neutral-400 mt-1">Check my essay right away</p>
+                  </div>
+                  <Switch 
+                    checked={preferences.autoAiEval} 
+                    onCheckedChange={(val) => handlePreferenceChange('autoAiEval', val)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 pr-3">
+                    <Label className="text-xs font-bold text-neutral-800">Allow Resending</Label>
+                    <p className="text-[10px] text-neutral-400 mt-1">Let me fix essays easily</p>
+                  </div>
+                  <Switch 
+                    checked={preferences.allowResubmit} 
+                    onCheckedChange={(val) => handlePreferenceChange('allowResubmit', val)}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label className="text-[9px] font-black text-primary/40 uppercase tracking-widest">Preferred File</Label>
+                  <select 
+                    value={preferences.defaultFormat}
+                    onChange={(e) => handlePreferenceChange('defaultFormat', e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-primary/20 rounded-2xl text-xs font-bold text-neutral-600 outline-none focus:border-primary transition-all appearance-none"
+                  >
+                    <option value="PDF">PDF Document</option>
+                    <option value="DOCX">Microsoft Word</option>
+                    <option value="TXT">Plain Text</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Privacy settings */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-6"
+          >
+             <div className="flex items-center gap-3">
+                 <ShieldCheck size={18} className="text-emerald-500" />
+                 <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Privacy</h2>
+              </div>
+              
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex-1 pr-3">
+                  <Label className="text-xs font-bold text-neutral-800 leading-tight">Let teacher see my scores</Label>
+                </div>
+                <Switch 
+                  checked={preferences.dataSharing} 
+                  onCheckedChange={(val) => handlePreferenceChange('dataSharing', val)}
+                />
+              </div>
+
+              <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-neutral-50 text-neutral-400 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-100 hover:text-neutral-600 transition-all">
+                <Download size={14} />
+                Download My Info
+              </button>
+          </motion.div>
+
+        </div>
+      </div>
+
+      {/* Action Footer */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-10 border-t border-neutral-100">
+        <button 
           onClick={resetToDefaults}
-          disabled={isSaving}
-          className="bg-white/80 backdrop-blur-md border-neutral-200 font-bold"
+          className="flex items-center gap-2 text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-red-500 transition-colors"
         >
-          Reset to Defaults
-        </Button>
-        <Button 
+          <RotateCcw size={14} />
+          Start Over
+        </button>
+
+        <button 
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className="bg-primary hover:bg-primary-600 text-white font-bold px-8 shadow-lg shadow-primary/20"
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-12 py-5 bg-neutral-900 text-white font-bold text-[11px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-neutral-900/20 hover:bg-primary transition-all active:scale-95 disabled:opacity-50"
         >
           {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <>
-              <Check className="w-4 h-4 mr-2" />
-              Save Settings
+              <Check size={16} />
+              Save Everything
             </>
           )}
-        </Button>
+        </button>
       </div>
     </div>
   );
 }
-

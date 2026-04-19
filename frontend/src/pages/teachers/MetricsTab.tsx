@@ -59,7 +59,7 @@ export function MetricsTab() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-error-default">
-          {error || "No metrics data available"}
+          {error || "No data yet"}
         </div>
       </div>
     );
@@ -70,17 +70,17 @@ export function MetricsTab() {
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 pb-2">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">
-            AI Metrics & Performance
+            Performance Overview
           </h1>
           <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
             <TrendingUp size={14} className="text-primary/50" />
-            Visualize NLP-based essay evaluation metrics
+            View how students are doing in their essays
           </p>
         </div>
         <div className="px-5 py-2.5 bg-primary/5 border border-primary/20 rounded-xl">
            <span className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-2">
               <Shield size={14} />
-              AI-Powered Analytics
+               Smart Analysis
            </span>
         </div>
       </div>
@@ -90,7 +90,7 @@ export function MetricsTab() {
         <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Avg Grammar Score</p>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Grammar Average</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
                   {metrics.avgGrammarScore.toFixed(1)}%
@@ -110,7 +110,7 @@ export function MetricsTab() {
         <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Avg Coherence</p>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Coherence Average</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
                   {metrics.avgCoherenceScore.toFixed(1)}%
@@ -130,7 +130,7 @@ export function MetricsTab() {
         <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Vocabulary Index</p>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Word Choice</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
                   {metrics.avgVocabularyLevel.toFixed(1)}<span className="text-sm text-neutral-300">/10</span>
@@ -150,7 +150,7 @@ export function MetricsTab() {
         <Card className="p-5 rounded-3xl border-neutral-100/60 shadow-sm group hover:shadow-md transition-all">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Plagiarism Risk</p>
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Originality Risk</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
                   {metrics.plagiarismRisk.toFixed(1)}%
@@ -174,7 +174,7 @@ export function MetricsTab() {
         <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
-            Average Scores per Section
+            Average per Class
           </h2>
           {metrics.sectionPerformance.length > 0 ? (
             <SectionPerformanceChart data={metrics.sectionPerformance} />
@@ -189,7 +189,7 @@ export function MetricsTab() {
         <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
-            Grammar Error Trends
+            Common Grammar Issues
           </h2>
           {metrics.grammarTrends.length > 0 ? (
             <GrammarTrendChart data={metrics.grammarTrends} />
@@ -222,7 +222,7 @@ export function MetricsTab() {
         <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8">
-            Vocabulary Complexity Index
+            Word Choice Level
           </h2>
           {metrics.vocabularyComplexity.length > 0 ? (
             <VocabularyComplexityChart
@@ -244,7 +244,7 @@ export function MetricsTab() {
         <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm">
           <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8 flex items-center gap-2">
             <TrendingUp size={18} className="text-success-default" />
-            Top-Performing Students
+            Top Students
           </h2>
           {metrics.topPerformers.length > 0 ? (
             <div className="space-y-4">
@@ -260,7 +260,7 @@ export function MetricsTab() {
                     <div>
                       <p className="text-sm font-bold text-neutral-800 tracking-tight">{student.name}</p>
                       <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
-                        {student.essays} essays evaluated
+                        {student.essays} essays
                       </p>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ export function MetricsTab() {
         <Card className="p-8 rounded-3xl border-neutral-100/60 shadow-sm">
           <h2 className="text-base font-bold text-neutral-800 tracking-tight mb-8 flex items-center gap-2">
             <TrendingDown size={18} className="text-error-default" />
-            At-Risk Students
+            Students who need help
           </h2>
           {metrics.atRiskStudents.length > 0 ? (
             <div className="space-y-4">
@@ -311,7 +311,7 @@ export function MetricsTab() {
                     {student.issues.map((issue, i) => (
                       <span
                         key={i}
-                        className="px-2.5 py-1 bg-error-default/10 text-error-default border border-error-default/20 text-[10px] font-bold uppercase rounded-md tracking-wider"
+                        className="px-2.5 py-1 bg-error-default/10 text-error-default border border-error-default/20 text-[10px] font-bold uppercase rounded-md tracking-widest"
                       >
                         {issue}
                       </span>

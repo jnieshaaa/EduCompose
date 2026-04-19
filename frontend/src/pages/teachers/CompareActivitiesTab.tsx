@@ -349,7 +349,7 @@ export function CompareActivitiesTab() {
               Back to List
             </Button>
             <h1 className="text-2xl font-bold text-neutral-900">
-              Comparison History
+              Past Comparisons
             </h1>
             <p className="text-neutral-600 mt-1">
               View past essay comparisons for{" "}
@@ -446,7 +446,7 @@ export function CompareActivitiesTab() {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                Similarity Analysis
+                Similarity Level
               </h2>
               <div className="flex items-center gap-4 mb-4">
                 <Badge
@@ -504,11 +504,10 @@ export function CompareActivitiesTab() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">
-            Compare Similar Essays
+            Compare Essays
           </h1>
           <p className="text-neutral-600 mt-1">
-            Find and compare activities where students have submitted similar
-            essays
+            Find and check for similar essays from students
           </p>
         </div>
         {selectedActivityId && (
@@ -528,7 +527,7 @@ export function CompareActivitiesTab() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">
-              Select Activity with Similar Outputs
+              Select Activity
             </label>
             {isLoadingActivities ? (
               <div className="flex items-center justify-center py-8">
@@ -539,7 +538,7 @@ export function CompareActivitiesTab() {
                 <div className="text-center">
                   <AlertCircle className="w-12 h-12 text-neutral-400 mx-auto mb-2" />
                   <p className="text-neutral-600 font-medium">
-                    No activities with similar outputs found
+                    No similar essays found
                   </p>
                   <p className="text-sm text-neutral-500 mt-1">
                     Activities with duplicate essays will appear here
@@ -606,7 +605,7 @@ export function CompareActivitiesTab() {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Similar Essay Groups
+              Similar Essays
             </h2>
             {isLoadingDuplicates && (
               <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200">

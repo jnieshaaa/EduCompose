@@ -43,12 +43,6 @@ import { EssayResultTranscript } from "./pages/students/EssayResultTranscript.ts
 import HelpPage from "./pages/general/HelpPage.tsx";
 
 // General/Legacy Imports (kept for reference or removal later)
-import Dashboard_v2 from "./pages/Dashboard_v2"; // Kept, but moved under /Teacher
-import ClassManagement from "./pages/ClassManagement"; // Kept, but moved under /Teacher
-import AssignmentManagement from "./pages/AssignmentManagement"; // Kept, but moved under /Teacher
-import Gradebook from "./pages/Gradebook"; // Kept, but moved under /Teacher
-import EssayActivity from "./pages/EssayActivity.tsx"; // Kept, but moved under /Teacher
-import SectionsList from "./pages/SectionsList"; // Kept, but moved under /Teacher
 import AnalysisResults from "./pages/AnalysisResults";
 // import Students from "./pages/Students"; // Legacy, kept for reference
 // import Settings from "./pages/Settings"; // Legacy, kept for reference
@@ -65,7 +59,6 @@ import ErrorPage from "./components/ErrorPage";
 import ClickEffect from "./components/ClickEffect";
 // import IntroModal from "./components/IntroModal";
 import LandingPage from "./pages/LandingPage";
-import About from "./pages/About.tsx";
 import Login from "./pages/students/StudentLogin.tsx";
 import StudentOnboarding from "./pages/students/StudentOnboarding.tsx";
 import EmailConfirmation from "./pages/EmailConfirmation.tsx";
@@ -146,7 +139,6 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         {/* Legacy public analyzer removed; free tier no longer exposed */}
         <Route path="/AnalyzeEssay" element={<Navigate to="/" replace />} />
-        <Route path="/About" element={<About />} />
         <Route path="/Login" element={<Login />} />
         <Route path="/Student/Login" element={<Login />} />
         <Route path="/auth/confirm" element={<EmailConfirmation />} />
@@ -208,16 +200,7 @@ const AppContent: React.FC = () => {
           <Route path="AnalysisResults" element={<AnalysisResults />} />
           <Route path="Help" element={<HelpPage />} />
 
-          {/* Legacy/Detailed Routes (can be removed later if tabs cover them) */}
-          <Route path="Dashboard_v2" element={<Dashboard_v2 />} />
-          <Route path="ClassManagement" element={<ClassManagement />} />
-          <Route
-            path="AssignmentManagement"
-            element={<AssignmentManagement />}
-          />
-          <Route path="Gradebook" element={<Gradebook />} />
-          <Route path="EssayActivity" element={<EssayActivity />} />
-          <Route path="SectionsList" element={<SectionsList />} />
+          {/* Redirect to Dashboard if hitting /Teacher without a sub-path */}
 
           {/* Redirect to Dashboard if hitting /Teacher without a sub-path */}
           <Route index element={<DashboardTab />} />

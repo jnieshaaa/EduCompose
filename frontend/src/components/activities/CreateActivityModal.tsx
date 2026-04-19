@@ -132,7 +132,7 @@ export function CreateActivityModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Create Essay Activity"
+      title="Create Activity"
       size="lg"
     >
       <div className="space-y-6">
@@ -140,7 +140,7 @@ export function CreateActivityModal({
         {/* ─── Section 1: Title ─── */}
         <div>
           <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-            Essay Title <span className="text-tertiary">*</span>
+            Title <span className="text-tertiary">*</span>
           </label>
           <input
             type="text"
@@ -163,7 +163,7 @@ export function CreateActivityModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Course */}
             <div>
-              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">
+              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
                 Course
               </label>
               <select
@@ -182,7 +182,7 @@ export function CreateActivityModal({
 
             {/* Programs */}
             <div>
-              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">
+              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
                 Programs
               </label>
               <div className="border border-neutral-200 rounded-lg bg-white overflow-y-auto max-h-32 p-1.5">
@@ -208,8 +208,8 @@ export function CreateActivityModal({
 
             {/* Sections */}
             <div>
-              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider mb-1 block">
-                Sections / Blocks
+              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
+                Classes
               </label>
               <div className="border border-neutral-200 rounded-lg bg-white overflow-y-auto max-h-32 p-1.5">
                 {filteredSections.length === 0 ? (
@@ -257,7 +257,7 @@ export function CreateActivityModal({
             {rubrics.platform.length > 0 && (
               <div>
                 <div className="px-3.5 py-2 bg-neutral-50/80">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Platform Rubrics</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Platform Rubrics</span>
                 </div>
                 {rubrics.platform.map((rubric) => (
                   <label
@@ -282,7 +282,7 @@ export function CreateActivityModal({
             {rubrics.teacher.length > 0 && (
               <div>
                 <div className="px-3.5 py-2 bg-neutral-50/80 border-t border-neutral-100">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Your Rubrics</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Your Rubrics</span>
                 </div>
                 {rubrics.teacher.map((rubric) => (
                   <label
