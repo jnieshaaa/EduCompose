@@ -72,7 +72,7 @@ class TransformerClaimClassifier:
              os.getenv("HUGGINGFACE_API_TOKEN") or "")
             .strip()
         )
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "taritree/distilbert-base-uncased-finetuned-argumentation").strip()
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "distilbert-base-uncased-finetuned-sst-2-english").strip()
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
@@ -140,7 +140,10 @@ class TransformerClaimClassifier:
             return []
 
         url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
-        headers = {"Authorization": f"Bearer {self.hf_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.hf_token}",
+            "Content-Type": "application/json"
+        }
         
         results = []
         # Process in small batches for API stability
@@ -159,17 +162,22 @@ class TransformerClaimClassifier:
                     # We need to map it back to our format
                     for item in data:
                         # Find highest score
-                        if isinstance(item, list):
-                            best = max(item, key=lambda x: x['score'])
+                        if isinstance(item, list) and len(item) > 0:
+                            best = max(item, key=lambda x: x.get('score', 0))
                             results.append({
-                                "component": best['label'].lower(),
-                                "confidence": best['score']
+                                "component": str(best.get('label', 'unknown')).lower(),
+                                "confidence": float(best.get('score', 0.0))
+                            })
+                        elif isinstance(item, dict) and 'label' in item:
+                            results.append({
+                                "component": str(item.get('label', 'unknown')).lower(),
+                                "confidence": float(item.get('score', 0.0))
                             })
                         else:
                             # Unexpected format fallback
                             results.append({"component": "unknown", "confidence": 0.0})
                 else:
-                    logger.error(f"HF API Error {response.status_code}: {response.text}")
+                    logger.error(f"HF API Error {response.status_code} for URL {url}: {response.text[:200]}")
                     for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
             except Exception as e:
                 logger.error(f"HF API request failed: {e}")
