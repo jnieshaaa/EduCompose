@@ -80,10 +80,10 @@ export function EditActivityModal({
     onClose();
   };
 
-  const handlePreviewRubric = async (id: string) => {
+  const handlePreviewRubric = async (id: string | number) => {
     setIsFetchingPreview(true);
     try {
-      const data = await fetchRubricById(id);
+      const data = await fetchRubricById(Number(id));
       if (data?.fullData) {
         setPreviewRubric(data.fullData);
         setIsPreviewOpen(true);

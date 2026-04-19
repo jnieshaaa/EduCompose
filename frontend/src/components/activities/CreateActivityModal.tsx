@@ -174,10 +174,10 @@ export function CreateActivityModal({
     setIsPreviewOpen(true);
   };
 
-  const handlePreviewExisting = async (id: string) => {
+  const handlePreviewExisting = async (id: string | number) => {
     setIsFetchingPreview(true);
     try {
-      const rubric = await fetchRubricById(parseInt(id));
+      const rubric = await fetchRubricById(Number(id));
       if (rubric && rubric.fullData) {
         setPreviewRubric(rubric.fullData);
         setIsPreviewOpen(true);
