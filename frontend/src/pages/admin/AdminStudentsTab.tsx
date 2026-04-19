@@ -874,7 +874,7 @@ export const AdminStudentsTab: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-neutral-50/50">
-                      <th className="px-8 py-5 w-10">
+                      <th className="pl-8 pr-0 py-5 w-12">
                         <div className="flex items-center justify-center">
                           <input 
                             type="checkbox" 
@@ -884,10 +884,10 @@ export const AdminStudentsTab: React.FC = () => {
                           />
                         </div>
                       </th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Institutional Placement</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Lifecycle Status</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Telemetry Actions</th>
+                      <th className="pl-4 pr-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Placement</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
+                      <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -912,7 +912,7 @@ export const AdminStudentsTab: React.FC = () => {
                     ) : (
                       currentItems.map((student) => (
                         <tr key={student.id} className="group hover:bg-neutral-50/50 transition-all duration-300">
-                          <td className="px-8 py-5">
+                          <td className="pl-8 pr-0 py-5">
                             <div className="flex items-center justify-center">
                               <input 
                                 type="checkbox" 
@@ -922,7 +922,7 @@ export const AdminStudentsTab: React.FC = () => {
                               />
                             </div>
                           </td>
-                          <td className="px-6 py-5">
+                          <td className="pl-4 pr-6 py-5">
                             <div className="flex items-center gap-5">
                          <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                            <User size={20} />
