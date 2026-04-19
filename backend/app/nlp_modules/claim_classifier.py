@@ -134,10 +134,50 @@ class TransformerClaimClassifier:
             logger.error(f"Failed to initialize local model: {e}")
             self._initialized = False
 
+    async def _classify_llm(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Fallback to Gemini for classification if HF fails"""
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
+
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash")
+            
+            prompt = f"""Classify each of the following sentences into one of these argument components:
+            claim, premise, evidence, counterclaim, background.
+            
+            Sentences:
+            {json.dumps(sentences)}
+            
+            Return ONLY a JSON array of objects with 'label' and 'score' (0-1).
+            Example: [{"label": "claim", "score": 0.95}, ...]
+            """
+            
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config={'response_mime_type': 'application/json'}
+            )
+            
+            data = json.loads(response.text)
+            results = []
+            for item in data:
+                results.append({
+                    "component": str(item.get('label', 'unknown')).lower(),
+                    "confidence": float(item.get('score', 0.0))
+                })
+            return results
+        except Exception as e:
+            logger.error(f"Gemini classification fallback failed: {e}")
+            return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
+
     async def _classify_remote(self, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Call Hugging Face Inference API for classification"""
+        """Call Hugging Face Inference API for classification with LLM fallback"""
         if not self.hf_token:
-            return []
+            # Try LLM directly if no token
+            return await self._classify_llm(sentences)
 
         url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
         headers = {
@@ -159,9 +199,7 @@ class TransformerClaimClassifier:
                 if response.status_code == 200:
                     data = response.json()
                     # HF API returns list of lists of dicts (for multi-sentence) or list of dicts
-                    # We need to map it back to our format
                     for item in data:
-                        # Find highest score
                         if isinstance(item, list) and len(item) > 0:
                             best = max(item, key=lambda x: x.get('score', 0))
                             results.append({
@@ -174,8 +212,11 @@ class TransformerClaimClassifier:
                                 "confidence": float(item.get('score', 0.0))
                             })
                         else:
-                            # Unexpected format fallback
                             results.append({"component": "unknown", "confidence": 0.0})
+                elif response.status_code == 404:
+                    logger.warning(f"HF API 404 for {self.hf_repo}. Falling back to LLM.")
+                    llm_results = await self._classify_llm(batch)
+                    results.extend(llm_results)
                 else:
                     logger.error(f"HF API Error {response.status_code} for URL {url}: {response.text[:200]}")
                     for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
