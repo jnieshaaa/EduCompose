@@ -175,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
+      localStorage.removeItem("educompose_last_activity");
       setUser(null);
       
       if (reason) {
@@ -264,16 +265,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  const handleInactivityLogout = useCallback(() => {
+    logout("Session expired due to inactivity.");
+  }, [logout]);
+
+  const handleInactivityWarning = useCallback(() => {
+    showNotification('warning', "Your session will expire in 2 minutes due to inactivity.");
+  }, [showNotification]);
+
   // USE INACTIVITY LOGOUT HOOK
   useInactivityLogout({
     timeout: 30 * 60 * 1000, // 30 mins
     warningTime: 2 * 60 * 1000, // 2 mins warning
-    onLogout: () => {
-      logout("Session expired due to inactivity.");
-    },
-    onWarning: () => {
-      showNotification('warning', "Your session will expire in 2 minutes due to inactivity.");
-    },
+    onLogout: handleInactivityLogout,
+    onWarning: handleInactivityWarning,
     enabled: !!user,
   });
 

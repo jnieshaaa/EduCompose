@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { Plus, Loader2, LayoutGrid, Wand2, Check } from "lucide-react";
+import { Plus, Loader2, LayoutGrid, Wand2, Check, Eye } from "lucide-react";
 import { rubricApi } from "../../api";
+import { fetchRubricById } from "../../services/rubricService";
+import { RubricPreviewModal } from "../rubrics/RubricPreviewModal";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import type { NewActivityForm } from "../../types/activityTypes";
@@ -19,8 +21,8 @@ interface CreateActivityModalProps {
   }[];
   sections: { id: string; name: string; courseId: string; programLoadId: string }[];
   rubrics: {
-    platform: { id: string; name: string }[];
-    teacher: { id: string; name: string }[];
+    platform: { id: string; name: string; description?: string; grading_intensity?: string }[];
+    teacher: { id: string; name: string; description?: string; grading_intensity?: string }[];
   };
   isSubmitting: boolean;
 }
@@ -51,6 +53,11 @@ export function CreateActivityModal({
   const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null);
+
+  // Preview Modal State
+  const [previewRubric, setPreviewRubric] = useState<any>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
 
   // Get current date and time in local timezone for min attribute (YYYY-MM-DDTHH:mm)
   const todayDateTime = useMemo(() => {
@@ -151,9 +158,41 @@ export function CreateActivityModal({
     }
   };
 
+  const handlePreviewSuggestion = (idx: number) => {
+    const suggestion = aiSuggestions[idx];
+    if (!suggestion) return;
+    
+    setPreviewRubric({
+      id: idx,
+      name: suggestion.name,
+      description: suggestion.description,
+      type: suggestion.grading_intensity,
+      criteria: suggestion.criteria,
+      programs: 0,
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+    setIsPreviewOpen(true);
+  };
+
+  const handlePreviewExisting = async (id: string) => {
+    setIsFetchingPreview(true);
+    try {
+      const rubric = await fetchRubricById(parseInt(id));
+      if (rubric && rubric.fullData) {
+        setPreviewRubric(rubric.fullData);
+        setIsPreviewOpen(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch rubric for preview:", error);
+    } finally {
+      setIsFetchingPreview(false);
+    }
+  };
+
   const isFormValid = formData.title.trim() && selectedCourseId && selectedSectionIds.length > 0;
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -259,127 +298,191 @@ export function CreateActivityModal({
           </div>
         </div>
 
-        {/* ─── Section 3: Rubric ─── */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
+        {/* ─── Section 3: Rubric Selection ─── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] block">
-              Rubric
-              <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
+              Grading Rubric
             </label>
             <button
               type="button"
               onClick={handleGenerateRubric}
-              disabled={!formData.title.trim() || isGeneratingRubric}
-              className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider text-primary border border-primary/20 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+              disabled={isGeneratingRubric || !formData.title.trim()}
+              className="text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary-600 disabled:text-neutral-300 flex items-center gap-1.5 transition-colors group"
             >
               {isGeneratingRubric ? (
-                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
-                <Wand2 className="w-2.5 h-2.5" />
+                <Wand2 className="w-3 h-3 group-hover:rotate-12 transition-transform" />
               )}
-              {aiSuggestions.length > 0 ? "Regenerate AI" : "AI Suggested Rubric"}
+              {aiSuggestions.length > 0 ? "Regenerate AI" : "Generate with AI"}
             </button>
           </div>
-          
+
+          {/* AI Suggestions Section */}
           {aiSuggestions.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {aiSuggestions.map((suggestion, idx) => (
-                <div 
-                  key={idx}
-                  onClick={() => {
-                    setSelectedSuggestionIndex(idx);
-                    setFormData(prev => ({ ...prev, rubricId: "ai-suggestion" }));
-                  }}
-                  className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                    selectedSuggestionIndex === idx 
-                      ? "border-primary bg-primary/5 ring-4 ring-primary/5" 
-                      : "border-neutral-100 bg-white hover:border-neutral-200"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">AI Suggestion {idx + 1}</span>
-                    {selectedSuggestionIndex === idx && (
-                      <div className="bg-primary rounded-full p-0.5">
-                        <Check className="w-2 h-2 text-white" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-neutral-100 to-transparent"></div>
+                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">AI Suggested Rubrics</span>
+                <div className="h-px flex-1 bg-gradient-to-r from-neutral-100 via-neutral-100 to-transparent"></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {aiSuggestions.map((suggestion, idx) => (
+                  <div 
+                    key={idx}
+                    onClick={() => {
+                      setSelectedSuggestionIndex(idx);
+                      setFormData(prev => ({ ...prev, rubricId: "ai-suggestion" }));
+                    }}
+                    className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${
+                      selectedSuggestionIndex === idx 
+                        ? "border-primary bg-primary/5 ring-4 ring-primary/5" 
+                        : "border-neutral-100 bg-white hover:border-neutral-200"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight truncate group-hover/card:text-primary transition-colors">AI Suggestion {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreviewSuggestion(idx);
+                          }}
+                          className="p-1 hover:bg-neutral-100 rounded-md text-neutral-400 hover:text-primary transition-all group-hover/card:scale-110 active:scale-95"
+                          title="Preview Rubric"
+                        >
+                          <Eye size={12} />
+                        </button>
                       </div>
-                    )}
+                      {selectedSuggestionIndex === idx && (
+                        <div className="bg-primary rounded-full p-0.5 shadow-sm">
+                          <Check className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <h4 className="text-xs font-bold text-neutral-700 line-clamp-1">{suggestion.name}</h4>
+                    <p className="text-[10px] text-neutral-500 line-clamp-2 mt-1 leading-tight">{suggestion.description}</p>
                   </div>
-                  <h4 className="text-xs font-bold text-neutral-700 line-clamp-1">{suggestion.name}</h4>
-                  <p className="text-[10px] text-neutral-500 line-clamp-2 mt-1 leading-tight">{suggestion.description}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="border border-neutral-200 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
-            {/* None option */}
-            <label className="flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-neutral-50 cursor-pointer transition-colors border-b border-neutral-100">
-              <input
-                type="radio"
-                name="createRubric"
-                checked={formData.rubricId === ""}
-                onChange={() => {
-                  setFormData((prev) => ({ ...prev, rubricId: "" }));
-                  setSelectedSuggestionIndex(null);
-                }}
-                className="w-3.5 h-3.5 text-primary border-neutral-300 focus:ring-primary accent-primary"
-              />
-              <span className="text-xs text-neutral-500">No rubric</span>
-            </label>
-
+          {/* Cards container for platform and teacher rubrics */}
+          <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
             {/* Platform Rubrics */}
             {rubrics.platform.length > 0 && (
-              <div>
-                <div className="px-3.5 py-2 bg-neutral-50/80">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Platform Rubrics</span>
+              <div className="space-y-2">
+                <div className="px-1">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Platform Library</span>
                 </div>
-                {rubrics.platform.map((rubric) => (
-                  <label
-                    key={rubric.id}
-                    className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-primary/[0.03] cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="createRubric"
-                      value={rubric.id}
-                      checked={formData.rubricId === rubric.id}
-                      onChange={(e) => {
-                        setFormData((prev) => ({ ...prev, rubricId: e.target.value }));
+                <div className="grid grid-cols-2 gap-2">
+                  {rubrics.platform.map((rubric) => (
+                    <div 
+                      key={rubric.id}
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, rubricId: rubric.id }));
                         setSelectedSuggestionIndex(null);
                       }}
-                      className="w-3.5 h-3.5 text-primary border-neutral-300 focus:ring-primary accent-primary"
-                    />
-                    <span className="text-xs text-neutral-700">{rubric.name}</span>
-                  </label>
-                ))}
+                      className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${
+                        formData.rubricId === rubric.id && selectedSuggestionIndex === null
+                          ? "border-primary bg-primary/5 ring-4 ring-primary/5" 
+                          : "border-neutral-100 bg-white hover:border-neutral-200"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight truncate group-hover/card:text-primary transition-colors">
+                            {rubric.grading_intensity || "General"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreviewExisting(rubric.id);
+                            }}
+                            disabled={isFetchingPreview}
+                            className="p-1 hover:bg-neutral-100 rounded-md text-neutral-400 hover:text-primary transition-all group-hover/card:scale-110 active:scale-95"
+                            title="Preview Rubric"
+                          >
+                            <Eye size={12} />
+                          </button>
+                        </div>
+                        {formData.rubricId === rubric.id && selectedSuggestionIndex === null && (
+                          <div className="bg-primary rounded-full p-0.5 shadow-sm">
+                            <Check className="w-2 h-2 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-neutral-700 line-clamp-1">{rubric.name}</h4>
+                      <p className="text-[10px] text-neutral-500 line-clamp-2 mt-1 leading-tight">
+                        {rubric.description || "A comprehensive grading rubric for your activity."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Teacher Rubrics */}
             {rubrics.teacher.length > 0 && (
-              <div>
-                <div className="px-3.5 py-2 bg-neutral-50/80 border-t border-neutral-100">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Your Rubrics</span>
+              <div className="space-y-2">
+                <div className="px-1 pt-2 border-t border-neutral-50">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Your Private Rubrics</span>
                 </div>
-                {rubrics.teacher.map((rubric) => (
-                  <label
-                    key={rubric.id}
-                    className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-primary/[0.03] cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="createRubric"
-                      value={rubric.id}
-                      checked={formData.rubricId === rubric.id}
-                      onChange={(e) => {
-                        setFormData((prev) => ({ ...prev, rubricId: e.target.value }));
+                <div className="grid grid-cols-2 gap-2">
+                  {rubrics.teacher.map((rubric) => (
+                    <div 
+                      key={rubric.id}
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, rubricId: rubric.id }));
                         setSelectedSuggestionIndex(null);
                       }}
-                      className="w-3.5 h-3.5 text-primary border-neutral-300 focus:ring-primary accent-primary"
-                    />
-                    <span className="text-xs text-neutral-700">{rubric.name}</span>
-                  </label>
-                ))}
+                      className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${
+                        formData.rubricId === rubric.id && selectedSuggestionIndex === null
+                          ? "border-primary bg-primary/5 ring-4 ring-primary/5" 
+                          : "border-neutral-100 bg-white hover:border-neutral-200"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight truncate group-hover/card:text-primary transition-colors">
+                            {rubric.grading_intensity || "Custom"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreviewExisting(rubric.id);
+                            }}
+                            disabled={isFetchingPreview}
+                            className="p-1 hover:bg-neutral-100 rounded-md text-neutral-400 hover:text-primary transition-all group-hover/card:scale-110 active:scale-95"
+                            title="Preview Rubric"
+                          >
+                            <Eye size={12} />
+                          </button>
+                        </div>
+                        {formData.rubricId === rubric.id && selectedSuggestionIndex === null && (
+                          <div className="bg-primary rounded-full p-0.5 shadow-sm">
+                            <Check className="w-2 h-2 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-neutral-700 line-clamp-1">{rubric.name}</h4>
+                      <p className="text-[10px] text-neutral-500 line-clamp-2 mt-1 leading-tight">
+                        {rubric.description || "Your personalized grading criteria."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {rubrics.platform.length === 0 && rubrics.teacher.length === 0 && !isGeneratingRubric && (
+              <div className="text-center py-6 border-2 border-dashed border-neutral-100 rounded-2xl">
+                <p className="text-xs text-neutral-400 font-medium">No rubrics found. Try generating one with AI!</p>
               </div>
             )}
           </div>
@@ -508,5 +611,28 @@ export function CreateActivityModal({
         </div>
       </div>
     </Modal>
+
+    {/* Rubric Preview Modal */}
+    {previewRubric && (
+      <RubricPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          setPreviewRubric(null);
+        }}
+        rubric={previewRubric}
+      />
+    )}
+
+    {/* Global Fetching Overlay */}
+    {isFetchingPreview && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/5 backdrop-blur-[1px]">
+        <div className="bg-white p-4 rounded-2xl shadow-xl border border-neutral-100 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          <span className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Loading Rubric...</span>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

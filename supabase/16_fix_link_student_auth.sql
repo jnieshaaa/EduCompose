@@ -1,4 +1,6 @@
--- Drop the old mismatched index (integer)
+-- 16_fix_link_student_auth.sql
+-- Corrects link_student_auth to use UUID types for student_id
+
 DROP FUNCTION IF EXISTS public.link_student_auth(integer, uuid);
 DROP FUNCTION IF EXISTS public.link_student_auth_by_email(integer, text);
 
@@ -22,20 +24,17 @@ CREATE OR REPLACE FUNCTION public.link_student_auth_by_email(p_student_id uuid, 
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth
 AS $$
 DECLARE
-  v_auth_user_id uuid;
+  found_uid uuid;
 BEGIN
-  -- Find the auth user id by email
-  SELECT id INTO v_auth_user_id
-  FROM auth.users
-  WHERE email = p_email
-  LIMIT 1;
+  -- Use explicit assignment to avoid SELECT INTO table-creation ambiguity
+  found_uid := (SELECT id FROM auth.users WHERE email = lower(trim(p_email)) LIMIT 1);
 
-  IF v_auth_user_id IS NOT NULL THEN
+  IF found_uid IS NOT NULL THEN
     UPDATE public.students
-    SET auth_user_id = v_auth_user_id
+    SET auth_user_id = found_uid
     WHERE id = p_student_id;
   ELSE
     RAISE EXCEPTION 'Auth user not found for email %', p_email;

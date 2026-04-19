@@ -294,14 +294,15 @@ export const AdminCoursesTab: React.FC = () => {
           <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Courses</h1>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage all courses and curriculum</p>
         </div>
-        <Button
+               <Button
           onClick={() => {
             resetForm();
             setShowCourseModal(true);
           }}
-          className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-6 py-2.5 h-12"
+          className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
         >
-          <Plus size={20} className="mr-2" /> Add Course
+          <Plus size={18} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Add Course</span>
         </Button>
       </div>
 
@@ -738,7 +739,7 @@ export const AdminCoursesTab: React.FC = () => {
                   type="submit"
                   form="course-governance-form"
                   disabled={!courseForm.course_code || !courseForm.course_title || !selectedSchool}
-                  className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[140px]"
+                  className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px]"
                 >
                   {editingCourse ? "Save Changes" : "Save Course"}
                 </Button>

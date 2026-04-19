@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { 
   Users, 
-  UserPlus, 
   Shield, 
   ClipboardCheck, 
   FileText, 
@@ -100,13 +99,6 @@ export function AdminDashboardTab() {
              Manage and monitor your system status
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateUserModal(true)}
-          className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all px-8 h-12 flex items-center gap-3 border-none group"
-        >
-          <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
-          <span className="text-xs font-bold uppercase tracking-widest">Add New User</span>
-        </Button>
       </div>
 
       <AnimatePresence mode="wait">

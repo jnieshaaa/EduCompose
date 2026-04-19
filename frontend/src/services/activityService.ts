@@ -1089,8 +1089,8 @@ export const fetchSections = async (
 
 // Load rubrics for dropdown, separated by platform and teacher rubrics
 export const fetchRubrics = async (): Promise<{
-  platform: { id: string; name: string }[];
-  teacher: { id: string; name: string }[];
+  platform: { id: string; name: string; description?: string; grading_intensity?: string }[];
+  teacher: { id: string; name: string; description?: string; grading_intensity?: string }[];
 }> => {
   try {
     const teacherId = await fetchTeacherId();
@@ -1101,11 +1101,10 @@ export const fetchRubrics = async (): Promise<{
     // First, ensure all platform rubrics are synced to database
     await initializePlatformRubrics();
 
-    // Fetch platform rubrics from database (user_id is null - system/platform rubrics)
-    // Note: We fetch all rubrics and filter in JavaScript to avoid 406 error with .is() filter
+    // Fetch platform rubrics from database
     const { data: allRubricsData, error: allRubricsError } = await supabase
       .from("rubrics")
-      .select("id, name, user_id")
+      .select("id, name, description, grading_intensity, user_id")
       .order("name", { ascending: true });
 
     // Filter platform rubrics (user_id is null) in JavaScript
@@ -1116,7 +1115,7 @@ export const fetchRubrics = async (): Promise<{
     // Fetch teacher rubrics from database
     const { data: teacherData, error: teacherError } = await supabase
       .from("rubrics")
-      .select("id, name")
+      .select("id, name, description, grading_intensity")
       .eq("user_id", teacherId)
       .order("name", { ascending: true });
 
@@ -1128,7 +1127,7 @@ export const fetchRubrics = async (): Promise<{
     }
 
     // If no platform rubrics in database, initialize them from templates
-    let platformRubricsList: { id: string; name: string }[] = [];
+    let platformRubricsList: { id: string; name: string; description?: string; grading_intensity?: string }[] = [];
     if (!platformData || platformData.length === 0) {
       // Initialize all platform rubrics to database
       console.log("No platform rubrics found in database, initializing...");
@@ -1137,7 +1136,7 @@ export const fetchRubrics = async (): Promise<{
       // Fetch again after initialization
       const { data: refreshedAllRubrics } = await supabase
         .from("rubrics")
-        .select("id, name, user_id")
+        .select("id, name, description, grading_intensity, user_id")
         .order("name", { ascending: true });
 
       const refreshedPlatform = (refreshedAllRubrics || []).filter(
@@ -1149,6 +1148,8 @@ export const fetchRubrics = async (): Promise<{
         platformRubricsList = refreshedPlatform.map((r) => ({
           id: String(r.id),
           name: r.name,
+          description: r.description,
+          grading_intensity: r.grading_intensity,
         }));
       } else {
         // Fallback to hardcoded templates if initialization failed
@@ -1157,6 +1158,8 @@ export const fetchRubrics = async (): Promise<{
           platformRubricsList = (platformRubrics || []).map((r) => ({
             id: `platform-${r.id}`, // Prefix to distinguish from database IDs
             name: r.name,
+            description: r.description,
+            grading_intensity: r.type,
           }));
         } catch (importError) {
           console.error("Error importing platform rubrics:", importError);
@@ -1167,6 +1170,8 @@ export const fetchRubrics = async (): Promise<{
       platformRubricsList = (platformData || []).map((r) => ({
         id: String(r.id),
         name: r.name,
+        description: r.description,
+        grading_intensity: r.grading_intensity,
       }));
     }
 
@@ -1177,6 +1182,8 @@ export const fetchRubrics = async (): Promise<{
       teacher: (teacherData || []).map((r) => ({
         id: String(r.id),
         name: r.name,
+        description: r.description,
+        grading_intensity: r.grading_intensity,
       })),
     };
   } catch (err) {

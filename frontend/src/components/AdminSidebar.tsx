@@ -9,9 +9,10 @@ import {
   ChevronRight,
   GraduationCap,
   Archive,
-  UserCog,
   School,
   HelpCircle,
+  Briefcase,
+  Shield,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -77,9 +78,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         path: "/Admin/Dashboard",
       },
       {
-        icon: <UserCog className="w-5 h-5" />,
-        label: "Users",
+        icon: <Shield className="w-5 h-5" />,
+        label: "Admins",
         path: "/Admin/Users",
+      },
+      {
+        icon: <Briefcase className="w-5 h-5" />,
+        label: "Teachers",
+        path: "/Admin/Teachers",
       },
       {
         icon: <GraduationCap className="w-5 h-5" />,

@@ -31,15 +31,31 @@ export function AdminRubricsTab() {
   const loadPlatformRubrics = async () => {
     try {
       setLoading(true);
+      
+      // 1. Get all user IDs that have the 'admin' role
+      const { data: admins } = await supabase
+        .from("users")
+        .select("id")
+        .eq("role", "admin");
+      
+      const adminIds = admins?.map(a => a.id).filter(Boolean) || [];
+
+      if (adminIds.length === 0) {
+        setPlatformRubrics([]);
+        return;
+      }
+
+      // 2. Query rubrics that are STRICTLY created by any admin
       const { data, error } = await supabase
         .from("rubrics")
         .select("*")
-        .is("created_by", null)
+        .in("user_id", adminIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setPlatformRubrics(data || []);
     } catch (err: any) {
+      console.error("Error loading rubrics:", err);
       showNotification('error', "Failed to load rubrics.");
     } finally {
       setLoading(false);
@@ -54,6 +70,17 @@ export function AdminRubricsTab() {
     programs: string[];
   }) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id, auth_user_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
       const { error } = await supabase
         .from("rubrics")
         .insert({
@@ -62,22 +89,12 @@ export function AdminRubricsTab() {
           criteria: rubricData.criteria,
           programs: rubricData.programs,
           grading_intensity: rubricData.gradingIntensity,
-          created_by: null,
-        })
-        .select()
-        .single();
+          user_id: profile.id, // Reference to users.id (bigint)
+        });
 
       if (error) throw error;
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: dbUser } = await supabase.from("users").select("id").eq("auth_user_id", user.id).single();
-          if (dbUser) {
-            await logActivity(dbUser.id, "create_rubric", `Created platform protocol: ${rubricData.name}`);
-          }
-        }
-      } catch (logErr) {}
+      await logActivity(profile.id, "create_rubric", `Created admin rubric: ${rubricData.name}`);
 
       showNotification('success', "Rubric created successfully.");
       await loadPlatformRubrics();
@@ -93,11 +110,21 @@ export function AdminRubricsTab() {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id, auth_user_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (!profile) return;
+
       const { error } = await supabase
         .from("rubrics")
         .delete()
-        .eq("id", rubricId)
-        .is("created_by", null);
+        .eq("id", rubricId);
 
       if (error) throw error;
 
@@ -126,10 +153,10 @@ export function AdminRubricsTab() {
         </div>
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="rounded-2xl bg-primary text-white shadow-2xl shadow-primary/20 hover:scale-[1.05] transition-all px-8 h-14 flex items-center gap-3 border-none group"
+          className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all px-6 h-10 flex items-center gap-2 border-none group"
         >
-          <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-          <span className="text-xs font-bold uppercase tracking-widest">Create Rubric</span>
+          <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Create Rubric</span>
         </Button>
       </div>
 

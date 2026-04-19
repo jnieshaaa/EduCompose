@@ -139,17 +139,17 @@ export function AdminArchiveTab() {
           <Button 
             variant="outline" 
             onClick={() => window.print()}
-            className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
+            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
           >
             <Printer size={16} className="text-neutral-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Print Report</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Print Report</span>
           </Button>
           <Button 
             variant="outline"
-            className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
+            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
           >
             <Download size={16} className="text-neutral-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Export CSV</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Export CSV</span>
           </Button>
         </div>
       </div>
@@ -394,16 +394,16 @@ export function AdminArchiveTab() {
                     variant="outline"
                     onClick={() => setDeleteModalOpen(false)}
                     disabled={isDeleting}
-                    className="flex-1 rounded-2xl h-14 text-xs font-bold uppercase tracking-widest border-neutral-100"
+                    className="flex-1 rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest border-neutral-100"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={confirmDelete}
                     disabled={isDeleting || deleteReason.trim().length === 0}
-                    className="flex-1 rounded-2xl h-14 bg-red-500 text-white shadow-xl shadow-red-500/20 text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-all"
+                    className="flex-1 rounded-xl h-10 bg-red-500 text-white shadow-lg shadow-red-500/20 text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 transition-all"
                   >
-                    {isDeleting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Delete"}
+                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Delete"}
                   </Button>
                 </div>
              </motion.div>

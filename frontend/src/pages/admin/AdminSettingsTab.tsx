@@ -90,10 +90,10 @@ export function AdminSettingsTab() {
            <Button 
              variant="outline" 
              onClick={loadAcademicSettings}
-             className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2"
+             className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2"
            >
-             <RefreshCw size={16} className={`text-neutral-400 ${loadingAcademic ? 'animate-spin' : ''}`} />
-             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Full Sync</span>
+             <RefreshCw size={14} className={`text-neutral-400 ${loadingAcademic ? 'animate-spin' : ''}`} />
+             <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-600">Full Sync</span>
            </Button>
         </div>
       </div>
@@ -223,10 +223,10 @@ export function AdminSettingsTab() {
                     <Button 
                       onClick={handleSaveAcademic} 
                       disabled={savingAcademic}
-                      className="rounded-2xl bg-primary text-white shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all px-10 h-14 flex items-center gap-3 border-none"
+                      className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-8 h-10 flex items-center gap-2 border-none"
                     >
-                      {savingAcademic ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw size={18} />}
-                      <span className="text-xs font-bold uppercase tracking-widest">Save Calendar Settings</span>
+                      {savingAcademic ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw size={16} />}
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Save Calendar</span>
                     </Button>
                   </div>
                 </div>
@@ -287,10 +287,10 @@ export function AdminSettingsTab() {
                   <Button 
                     onClick={handleSaveGeneral} 
                     disabled={saving}
-                    className="rounded-2xl bg-neutral-50 text-neutral-600 hover:bg-primary hover:text-white transition-all px-10 h-14 flex items-center gap-3 border border-neutral-100 outline-none"
+                    className="rounded-xl bg-neutral-50 text-neutral-600 hover:bg-primary hover:text-white transition-all px-8 h-10 flex items-center gap-2 border border-neutral-100 outline-none"
                   >
-                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
-                    <span className="text-xs font-bold uppercase tracking-widest">Save Changes</span>
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />}
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Save Changes</span>
                   </Button>
                 </div>
              </div>
@@ -322,7 +322,7 @@ export function AdminSettingsTab() {
                     />
                   </div>
                 ))}
-                <button className="w-full h-12 mt-4 bg-indigo-50 text-indigo-500 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                <button className="w-full h-10 mt-4 bg-indigo-50 text-indigo-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
                    Test Connection
                 </button>
               </div>

@@ -7,13 +7,11 @@ import {
   Edit2,
   Trash2,
   Key,
-  Filter,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
   Activity,
   ShieldCheck,
-  ChevronDown,
   UserCircle,
   RefreshCw
 } from "lucide-react";
@@ -49,7 +47,7 @@ export function AdminUsersTab() {
   const [resettingPasswordUser, setResettingPasswordUser] =
     useState<UserRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [roleFilter] = useState<string>("admin"); // Forced to admin
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -230,47 +228,30 @@ export function AdminUsersTab() {
       {/* Premium Integrated Header */}
       <div className="flex flex-col sm:flex-row items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Users</h1>
-          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage system access and accounts</p>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Administrators</h1>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage system governance and access</p>
         </div>
         <Button
           onClick={() => setShowCreateUserModal(true)}
-          className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all px-8 h-12 flex items-center gap-2"
+          className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
         >
-          <UserPlus size={18} />
-          <span className="text-xs font-bold uppercase tracking-widest">Add User</span>
+          <UserPlus size={16} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Add Admin</span>
         </Button>
       </div>
 
       {/* Modern Filter Hub */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm flex flex-col md:flex-row gap-6">
         <div className="flex-1 space-y-2">
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search</label>
+          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Admins</label>
           <div className="relative group/search">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-primary transition-colors" size={18} />
             <input
-              placeholder="Search by name, email, or role..."
+              placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-bold placeholder:text-neutral-300 focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
             />
-          </div>
-        </div>
-        <div className="w-full md:w-64 space-y-2">
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Filter by Role</label>
-          <div className="relative group/role">
-            <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/role:text-primary transition-colors" />
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full h-12 pl-12 pr-10 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-[11px] font-bold uppercase tracking-widest appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
-            >
-              <option value="all">All Users</option>
-              <option value="teacher">Instructors</option>
-              <option value="student">Students</option>
-              <option value="admin">Admins</option>
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -481,6 +462,7 @@ export function AdminUsersTab() {
       {/* Global Modals */}
       <CreateUserModal
         isOpen={showCreateUserModal}
+        restrictedRole="admin"
         onClose={() => { setShowCreateUserModal(false); loadUsers(); }}
       />
 

@@ -289,10 +289,10 @@ export const AdminPendingStudentsTab: React.FC = () => {
             <Button 
                onClick={() => enrollAllInBlock(viewDetailBlock)} 
                disabled={isProcessing} 
-               className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 px-8 h-12 flex items-center gap-2"
+               className="rounded-xl bg-primary text-white shadow-xl shadow-primary/20 px-8 h-10 flex items-center gap-2"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck size={18} />}
-              <span className="text-xs font-bold uppercase tracking-widest">Approve All</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Approve All</span>
             </Button>
           ) : (
             <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
@@ -359,17 +359,17 @@ export const AdminPendingStudentsTab: React.FC = () => {
              placeholder="Search by block or teacher..." 
              value={searchTerm} 
              onChange={(e) => setSearchTerm(e.target.value)} 
-             className="w-full h-12 pl-11 pr-4 bg-white border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+             className="w-full h-10 pl-11 pr-4 bg-white border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
           />
         </div>
         <Button 
            variant="outline" 
            onClick={loadPendingBlocks} 
            disabled={loading} 
-           className="rounded-2xl border-neutral-100 bg-white shadow-sm h-12 px-6 flex items-center gap-2 group"
+           className="rounded-xl border-neutral-100 bg-white shadow-sm h-10 px-6 flex items-center gap-2 group"
         >
           <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-          <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Refresh</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Refresh</span>
         </Button>
       </div>
 

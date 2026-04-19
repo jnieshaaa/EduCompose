@@ -52,6 +52,7 @@ export function useInactivityLogout({
     const wasWarningShown = warningShownRef.current;
     clearTimers();
     lastActivityRef.current = Date.now();
+    localStorage.setItem("educompose_last_activity", lastActivityRef.current.toString());
     warningShownRef.current = false;
 
     // If warning was shown and timer is being reset, notify that warning should be dismissed
@@ -110,30 +111,43 @@ export function useInactivityLogout({
       "keydown",
     ];
 
-    // Add event listeners with throttling
-    const throttledHandleActivity = (() => {
-      let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
-      return () => {
-        if (throttleTimeout) return;
-        throttleTimeout = setTimeout(() => {
-          handleActivity();
-          throttleTimeout = null;
-        }, 1000); // Throttle to once per second
-      };
-    })();
+    // Throttled function to reset the timer
+    const throttledReset = () => {
+      handleActivity();
+    };
 
     events.forEach((event) => {
-      document.addEventListener(event, throttledHandleActivity, { passive: true });
+      document.addEventListener(event, throttledReset, { passive: true });
     });
+
+    // Cross-tab synchronization logic
+    const STORAGE_KEY = "educompose_last_activity";
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        const remoteActivity = parseInt(e.newValue);
+        if (!isNaN(remoteActivity)) {
+          // Sync internal state with other tab's activity
+          lastActivityRef.current = remoteActivity;
+          resetTimer();
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
 
     // Also track visibility changes (when user switches tabs/windows)
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        // User returned to the tab, check if we should reset timer
-        const timeSinceLastActivity = Date.now() - lastActivityRef.current;
-        if (timeSinceLastActivity >= 1000) {
-          resetTimer();
+        // When coming back to a tab, check if we've been active elsewhere
+        const savedActivity = localStorage.getItem(STORAGE_KEY);
+        if (savedActivity) {
+          const parsed = parseInt(savedActivity);
+          if (!isNaN(parsed) && parsed > lastActivityRef.current) {
+             lastActivityRef.current = parsed;
+          }
         }
+        resetTimer();
       }
     };
 
@@ -143,8 +157,9 @@ export function useInactivityLogout({
     return () => {
       clearTimers();
       events.forEach((event) => {
-        document.removeEventListener(event, throttledHandleActivity);
+        document.removeEventListener(event, throttledReset);
       });
+      window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [enabled, resetTimer, handleActivity, clearTimers]);

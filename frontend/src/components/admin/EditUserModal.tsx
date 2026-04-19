@@ -258,14 +258,14 @@ export default function EditUserModal({
         </form>
 
         <div className="px-8 py-6 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100">
-          <Button variant="outline" onClick={onClose} disabled={isLoading} className="rounded-2xl border-neutral-200 px-6">
+          <Button variant="outline" onClick={onClose} disabled={isLoading} className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-bold uppercase tracking-widest">
             Cancel
           </Button>
           <Button 
             type="submit"
             form="edit-identity-form"
             disabled={isLoading} 
-            className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11"
+            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 text-[10px] font-bold uppercase tracking-widest"
           >
             {isLoading ? "Saving..." : "Save Changes"}
           </Button>

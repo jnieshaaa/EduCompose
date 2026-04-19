@@ -143,7 +143,7 @@ export default function ResetPasswordModal({
                 variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
-                className="flex-1 rounded-2xl border-neutral-200 h-11"
+                className="flex-1 rounded-xl border-neutral-200 h-10 text-[10px] uppercase font-bold tracking-widest"
               >
                 Cancel
               </Button>
@@ -151,7 +151,7 @@ export default function ResetPasswordModal({
                 type="submit"
                 form="reset-secret-form"
                 disabled={isLoading}
-                className="flex-[2] rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-200 h-11 font-bold uppercase text-[11px] tracking-widest"
+                className="flex-[2] rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-200 h-10 font-bold uppercase text-[10px] tracking-widest"
               >
                 {isLoading ? "Resetting..." : "Reset Password"}
               </Button>

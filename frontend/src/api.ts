@@ -283,6 +283,79 @@ export const authApi = {
       throw err;
     }
   },
+
+  provisionUserV2: async (payload: {
+    email: string;
+    role: "admin" | "teacher" | "student";
+    first_name: string;
+    last_name: string;
+    middle_name?: string;
+    suffix?: string;
+    code?: string;
+    birthday?: string;
+    password?: string;
+  }) => {
+    try {
+      const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const normalizedEmail = payload.email.trim().toLowerCase();
+
+      const { data: authId, error: provisionError } = await supabase.rpc(
+        "create_auth_account_v1",
+        {
+          p_email: normalizedEmail,
+          p_password: tempPassword,
+          p_meta: {
+            first_name: payload.first_name, 
+            last_name: payload.last_name, 
+            role: payload.role, 
+            middle_name: payload.middle_name || null,
+            suffix: payload.suffix || null
+          }
+        }
+      );
+
+      if (provisionError) {
+        throw new Error(`Provisioning Error: ${provisionError.message}`);
+      }
+
+      // Step 2: Direct update to public.users for extra metadata
+      // The trigger handle_new_user will have created the record already
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({
+          code: payload.code || null,
+          birthday: payload.birthday || null,
+          suffix: payload.suffix || null,
+          middle_name: payload.middle_name || null
+        })
+        .eq("auth_user_id", authId);
+
+      if (updateError) {
+        console.warn("Metadata update error (retrying...):", updateError.message);
+        // Sometimes the trigger is a few milliseconds behind, let's wait and retry once
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await supabase
+          .from("users")
+          .update({
+            code: payload.code || null,
+            birthday: payload.birthday || null,
+            suffix: payload.suffix || null,
+            middle_name: payload.middle_name || null
+          })
+          .eq("auth_user_id", authId);
+      }
+
+      return {
+        success: true,
+        auth_id: authId as string,
+        temp_password: tempPassword,
+        email: normalizedEmail
+      };
+    } catch (err: any) {
+      console.error("Supabase provisioning v2 error:", err);
+      throw err;
+    }
+  },
 };
 
 // User API

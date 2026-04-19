@@ -332,7 +332,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             variant="outline" 
             onClick={onClose} 
             disabled={loading}
-            className="rounded-2xl border-neutral-200 px-6"
+            className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-bold uppercase tracking-widest"
           >
             Cancel
           </Button>
@@ -340,7 +340,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             type="submit"
             form="modify-registry-form"
             disabled={loading}
-            className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11 min-w-[140px]"
+            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px] text-[10px] font-bold uppercase tracking-widest"
           >
             {loading ? "Saving..." : "Save Changes"}
           </Button>

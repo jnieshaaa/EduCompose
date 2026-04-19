@@ -9,6 +9,7 @@ interface CreateUserModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   defaultRole?: "admin" | "teacher" | "student";
+  restrictedRole?: "admin" | "teacher" | "student";
 }
 
 export default function CreateUserModal({
@@ -16,9 +17,10 @@ export default function CreateUserModal({
   onClose,
   onSuccess,
   defaultRole = "teacher",
+  restrictedRole,
 }: CreateUserModalProps) {
   const [role, setRole] = useState<"admin" | "teacher" | "student">(
-    defaultRole,
+    restrictedRole || defaultRole
   );
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -66,18 +68,16 @@ export default function CreateUserModal({
     setIsLoading(true);
 
     try {
-      await authApi.createUser({
+      await authApi.provisionUserV2({
         email: email.trim(),
         password: password.trim(),
-        role,
+        role: (restrictedRole || role) as "admin" | "teacher" | "student",
         first_name: firstName.trim(),
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim(),
-        title: title || undefined,
-        nickname: nickname.trim() || undefined,
       });
 
-      setSuccess(`Account created successfully for ${role}!`);
+      setSuccess(`Account created successfully for ${role}! A confirmation email has been sent.`);
 
       setFirstName("");
       setMiddleName("");
@@ -92,7 +92,7 @@ export default function CreateUserModal({
         onClose();
         if (onSuccess) onSuccess();
         setSuccess("");
-      }, 1500);
+      }, 2000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message || "Failed to create account. Please try again.");
@@ -117,8 +117,12 @@ export default function CreateUserModal({
               <UserPlus size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Create Account</h2>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Create a new user account</p>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">
+                {restrictedRole === 'admin' ? 'Create Administrator' : 'Create Account'}
+              </h2>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">
+                {restrictedRole === 'admin' ? 'Strategic platform management' : 'Create a new user account'}
+              </p>
             </div>
           </div>
           <button
@@ -144,62 +148,67 @@ export default function CreateUserModal({
             )}
           </AnimatePresence>
 
-          {/* Role Selection */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Role</label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { id: 'student', icon: GraduationCap, label: 'Student' },
-                { id: 'teacher', icon: Briefcase, label: 'Teacher' },
-                { id: 'admin', icon: Shield, label: 'Admin' }
-              ].map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setRole(r.id as any)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all ${
-                    role === r.id
-                      ? "border-primary bg-primary/5 text-primary shadow-sm"
-                      : "border-neutral-100 bg-white text-neutral-400 hover:border-neutral-200"
-                  }`}
-                >
-                  <r.icon size={20} />
-                  <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Title</label>
-              <select
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
-              >
-                <option value="">None</option>
-                <option value="Mr.">Mr.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Dr.">Dr.</option>
-                <option value="Prof.">Prof.</option>
-              </select>
-            </div>
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
-              <div className="relative group">
-                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="e.g. Antopina"
-                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
-                />
+          {/* Role Selection (Only if not restricted) */}
+          {!restrictedRole && (
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Role</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'student', icon: GraduationCap, label: 'Student' },
+                  { id: 'teacher', icon: Briefcase, label: 'Teacher' },
+                  { id: 'admin', icon: Shield, label: 'Admin' }
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRole(r.id as any)}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all ${
+                      role === r.id
+                        ? "border-primary bg-primary/5 text-primary shadow-sm"
+                        : "border-neutral-100 bg-white text-neutral-400 hover:border-neutral-200"
+                    }`}
+                  >
+                    <r.icon size={20} />
+                    <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Optional Identity Cluster (Hide for Admin) */}
+          {restrictedRole !== 'admin' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+                <select
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                >
+                  <option value="">None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
+                <div className="relative group">
+                  <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
+                  <input
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="e.g. Antopina"
+                    className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Name Cluster */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -292,7 +301,7 @@ export default function CreateUserModal({
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="rounded-2xl border-neutral-200 px-6"
+              className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-bold uppercase tracking-widest"
             >
               Cancel
             </Button>
@@ -300,7 +309,7 @@ export default function CreateUserModal({
                 type="submit"
                 form="provision-user-form"
                 disabled={isLoading}
-                className="rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-11"
+                className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 text-[10px] font-bold uppercase tracking-widest"
             >
               {isLoading ? "Creating..." : "Create Account"}
             </Button>

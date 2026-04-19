@@ -42,6 +42,7 @@ interface Student {
   first_name: string;
   middle_name?: string;
   last_name: string;
+  suffix?: string;
   email: string;
   year: number;
   block_name: string;
@@ -636,20 +637,20 @@ export const AdminStudentsTab: React.FC = () => {
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage all enrolled students</p>
         </div>
         <div className="flex gap-3">
-          <Button 
+                   <Button 
             variant="outline"
             onClick={loadStudents}
-            className="rounded-2xl bg-white shadow-sm border border-neutral-100 hover:bg-neutral-50 px-5 h-12 flex items-center gap-2 group"
+            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
           >
-            <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-            <span className="text-xs font-bold uppercase tracking-widest text-neutral-600">Sync Data</span>
+            <RefreshCw className={`w-3.5 h-3.5 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Sync Data</span>
           </Button>
           <Button 
             onClick={() => setIsEnrollModalOpen(true)}
-            className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all px-6 h-12 flex items-center gap-2"
+            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
           >
-            <UserPlus size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">Add Student</span>
+            <UserPlus size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Add Student</span>
           </Button>
         </div>
       </div>
@@ -929,11 +930,13 @@ export const AdminStudentsTab: React.FC = () => {
                           </td>
                           <td className="px-4 py-5">
                             <div className="flex items-center gap-5">
-                         <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                           <User size={20} />
-                         </div>
-                         <div>
-                                <div className="text-sm font-bold text-neutral-900 tracking-tight">{student.last_name}, {student.first_name}</div>
+                              <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                <User size={20} />
+                              </div>
+                              <div>
+                                <div className="text-sm font-bold text-neutral-900 tracking-tight">
+                                  {student.last_name}, {student.first_name} {student.suffix || ""}
+                                </div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{student.student_code} • {student.email}</div>
                               </div>
                             </div>
@@ -944,7 +947,9 @@ export const AdminStudentsTab: React.FC = () => {
                                 <Layers size={14} />
                               </div>
                               <div>
-                                <div className="text-xs font-bold text-neutral-900 tracking-tight">{student.programs_lookup?.abbr} {student.year}{student.block_name}</div>
+                                <div className="text-xs font-bold text-neutral-900 tracking-tight">
+                                  {student.programs_lookup?.abbr} {student.year}-{student.block_name}
+                                </div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                                   {student.programs_lookup?.departments?.name}
                                 </div>
