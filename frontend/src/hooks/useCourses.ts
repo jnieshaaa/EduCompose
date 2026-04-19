@@ -36,7 +36,7 @@ const getTeacherInfo = async () => {
   }
 };
 
-export function useCourses(showArchived: boolean = false, ay?: string, term?: string) {
+export function useCourses(showArchived: boolean = false, ay?: string, term?: string, activeTab?: string) {
   const [searchParams] = useSearchParams();
   const { showError, showSuccess, showWarning, AlertComponent } = useAlert();
   const { currentAY, currentSemester, isLoading: isLoadingAcademic } = useAcademicContext();
@@ -56,6 +56,8 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
   const [programsLookup, setProgramsLookup] = useState<any[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const [selectedProgId, setSelectedProgId] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
 
   const fetchCourses = async () => {
     if (isLoadingAcademic) return;
@@ -64,17 +66,21 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     setLoadError(null);
     try {
       const info = await getTeacherInfo();
-      if (!info || !info.school_id) {
+      
+      // Strict guard against missing school/auth data
+      if (!info || !info.school_id || String(info.school_id) === "undefined") {
+        console.warn("Teacher identity sync in progress or missing school_id...");
         setIsLoading(false);
         return;
       }
+
       setTeacherInfo(info);
       
       // Fetch metadata for filters if not already fetched
       if (departments.length === 0) {
         const { data: depts } = await supabase
           .from("departments")
-          .select("*")
+          .select("id, name, code")
           .eq("school_id", info.school_id)
           .order("name");
         setDepartments(depts || []);
@@ -82,23 +88,22 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         if (depts && depts.length > 0) {
           const { data: progs } = await supabase
             .from("programs_lookup")
-            .select("*")
+            .select("id, name, abbr, department_id")
             .in("department_id", depts.map(d => d.id))
             .order("name");
           setProgramsLookup(progs || []);
         }
       }
 
-      // 1. Fetch Teacher's personal loads from teacher_course_loads
-      let query = supabase
+      // 1. Fetch Teacher's personal loads
+      let myQuery = supabase
         .from("teacher_course_loads")
         .select(`
           course_id,
           academic_year,
           term,
           courses (
-            *,
-            schools(name),
+            id, course_code, course_title, units, department_id, program_id, user_id,
             departments(name, code),
             programs_lookup(name, abbr)
           )
@@ -106,34 +111,17 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .eq("teacher_id", info.auth_user_id);
 
       if (!showArchived) {
-        // Filter by current AY and Term
-        if (currentAY) query = query.eq("academic_year", currentAY);
-        if (currentSemester) query = query.eq("term", currentSemester);
-      } else {
-        // Archive view: apply specific filters
-        if (ay && ay !== "all") {
-          query = query.eq("academic_year", ay);
-        }
-        if (term && term !== "all") {
-          query = query.eq("term", term);
-        }
-
-        // ALWAYS exclude current when archiving if context is available
-        if (currentAY && currentSemester) {
-          query = query.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
-        }
+        if (currentAY) myQuery = myQuery.eq("academic_year", currentAY);
+        if (currentSemester) myQuery = myQuery.eq("term", currentSemester);
       }
 
-      const { data: loadsData, error: loadsError } = await query;
+      const { data: loadsData } = await myQuery;
 
-      if (loadsError) throw loadsError;
-
-      // 2. Fetch Department Courses (Self + Dept + General)
-      const { data: deptData, error: deptError } = await supabase
+      // 2. Fetch Department Courses (Broad)
+      const { data: deptData } = await supabase
         .from("courses")
         .select(`
           *,
-          schools(name),
           departments(name, code),
           programs_lookup(name, abbr)
         `)
@@ -141,25 +129,19 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .or(`department_id.eq.${info.department_id},department_id.is.null`)
         .order("course_code", { ascending: true });
 
-      if (deptError) throw deptError;
-
-      // 3. Fetch All School Courses
-      const { data: schoolData, error: schoolError } = await supabase
+      // 3. Fetch School Courses (Broad)
+      const { data: schoolData } = await supabase
         .from("courses")
         .select(`
           *,
-          schools(name),
           departments(name, code),
           programs_lookup(name, abbr)
         `)
         .eq("school_id", info.school_id)
         .order("course_code", { ascending: true });
 
-      if (schoolError) throw schoolError;
-
       const normalizeCourse = (c: any): Course => ({
         ...c,
-        schools: Array.isArray(c.schools) ? c.schools[0] : c.schools,
         departments: Array.isArray(c.departments) ? c.departments[0] : c.departments,
         programs_lookup: Array.isArray(c.programs_lookup) ? c.programs_lookup[0] : c.programs_lookup
       });
@@ -169,7 +151,6 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         academic_year: l.academic_year,
         term: l.term
       })) as unknown as Course[];
-
       setMyCourses(userLoads.filter(c => c && c.id));
       setDepartmentCourses(((deptData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
       setSchoolCourses(((schoolData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
@@ -185,11 +166,16 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     fetchCourses();
   }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedDeptId, selectedProgId, activeTab]);
+
   const myLoadsIds = useMemo(() => new Set(myCourses.map(c => c.id)), [myCourses]);
 
   const filteredMyCourses = useMemo(() => {
     return myCourses.filter((course) => {
-      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = !searchQuery || course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
       const matchesProg = !selectedProgId || course.program_id === selectedProgId;
@@ -199,7 +185,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
 
   const filteredDepartmentCourses = useMemo(() => {
     return departmentCourses.filter((course) => {
-      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = !searchQuery || course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
       const matchesProg = !selectedProgId || course.program_id === selectedProgId;
@@ -209,7 +195,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
 
   const filteredSchoolCourses = useMemo(() => {
     return schoolCourses.filter((course) => {
-      const matchesSearch = course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = !searchQuery || course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.course_title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = !selectedDeptId || course.department_id === selectedDeptId;
       const matchesProg = !selectedProgId || course.program_id === selectedProgId;
@@ -266,10 +252,14 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     }
   };
 
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+
   const handleToggleLoad = async (courseId: string, isCurrentlyAdded: boolean) => {
     try {
-      if (!teacherInfo) return;
+      if (!teacherInfo || togglingIds.has(courseId)) return;
       
+      setTogglingIds(prev => new Set(prev).add(courseId));
+
       if (isCurrentlyAdded) {
         const { error } = await supabase
           .from("teacher_course_loads")
@@ -317,6 +307,12 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     } catch (err: any) {
       console.error("Error toggling load:", err);
       showError(`Operation failed: ${err.message}`);
+    } finally {
+      setTogglingIds(prev => {
+        const next = new Set(prev);
+        next.delete(courseId);
+        return next;
+      });
     }
   };
 
@@ -361,6 +357,10 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
     handleCreateCourse,
     handleDeleteCourse,
     handleToggleLoad,
+    togglingIds,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
     AlertComponent,
   };
 }

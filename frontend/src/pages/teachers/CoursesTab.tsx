@@ -14,6 +14,7 @@ export function CoursesTab() {
   const secureParams = readSecureParams(window.location.search);
   const deepCourseId = secureParams?.courseId || searchParams.get("courseId");
 
+  const [activeTab, setActiveTab] = useState<"my" | "dept" | "school">("my");
   const {
     teacherInfo,
     myCourses,
@@ -35,10 +36,13 @@ export function CoursesTab() {
     handleCreateCourse,
     handleDeleteCourse,
     handleToggleLoad,
+    togglingIds,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
     AlertComponent
-  } = useCourses();
+  } = useCourses(false, undefined, undefined, activeTab);
 
-  const [activeTab, setActiveTab] = useState<"my" | "dept" | "school">("my");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
@@ -125,8 +129,8 @@ export function CoursesTab() {
             }`}
           >
             {tab === 'my' && `My Loads (${myCourses.length})`}
-            {tab === 'dept' && `Department catalog (${departmentCourses.length})`}
-            {tab === 'school' && `${schoolCode} catalog (${schoolCourses.length})`}
+            {tab === 'dept' && `Department catalog`}
+            {tab === 'school' && `${schoolCode} catalog`}
           </button>
         ))}
       </div>
@@ -244,8 +248,11 @@ export function CoursesTab() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {getActiveCourses().map((course: Course) => {
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {getActiveCourses()
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((course: Course) => {
             const isMyCourse = course.user_id === teacherInfo?.auth_user_id;
             const isAdded = myLoadsIds.has(course.id);
 
@@ -285,13 +292,23 @@ export function CoursesTab() {
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleLoad(course.id, isAdded); }}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm ${
-                          isAdded 
-                            ? "bg-neutral-50 text-neutral-400 hover:bg-error-default/5 hover:text-error-default" 
-                            : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
+                        disabled={togglingIds.has(course.id)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 ${
+                          togglingIds.has(course.id)
+                            ? "bg-neutral-100 text-neutral-300 cursor-not-allowed"
+                            : isAdded 
+                              ? "bg-neutral-50 text-neutral-400 hover:bg-error-default/5 hover:text-error-default" 
+                              : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
                         }`}
                       >
-                        {isAdded ? "Remove" : "Add to Load"}
+                        {togglingIds.has(course.id) ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          isAdded ? "Remove" : "Add to Load"
+                        )}
                       </button>
                     )}
                   </div>
@@ -327,7 +344,43 @@ export function CoursesTab() {
               </div>
             );
           })}
-        </div>
+          </div>
+
+          {/* Pagination Controls */}
+          {getActiveCourses().length > itemsPerPage && (
+            <div className="flex items-center justify-between pt-10 pb-12 border-t border-neutral-50 mt-10">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Navigation Hub</span>
+                <span className="text-xs font-black text-neutral-900">
+                  Page {currentPage} of {Math.ceil(getActiveCourses().length / itemsPerPage)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 bg-white border border-neutral-100 rounded-xl text-[10px] font-black uppercase text-neutral-400 hover:text-primary disabled:opacity-30 transition-all shadow-sm"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={currentPage >= Math.ceil(getActiveCourses().length / itemsPerPage)}
+                  onClick={() => {
+                    setCurrentPage(prev => prev + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase hover:shadow-lg hover:shadow-primary/20 disabled:opacity-30 transition-all shadow-sm"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add Course Modal */}

@@ -84,9 +84,11 @@ export const AdminStudentsTab: React.FC = () => {
 
   const [departments, setDepartments] = useState<any[]>([]);
   const [allPrograms, setAllPrograms] = useState<any[]>([]);
+  const [totalStudentsCount, setTotalStudentsCount] = useState(0);
   const [deptFilter, setDeptFilter] = useState("");
   const [progFilter, setProgFilter] = useState("");
   const [blockFilter, setBlockFilter] = useState("");
+  const [availableBlocks, setAvailableBlocks] = useState<string[]>([]);
 
   const [confirmingAction, setConfirmingAction] = useState<{
     type: "delete" | "resend" | "provision" | "bulk_delete" | "bulk_provision" | "bulk_resend";
@@ -171,8 +173,10 @@ export const AdminStudentsTab: React.FC = () => {
   const loadStudents = useCallback(async () => {
     try {
       setLoading(true);
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from("students")
         .select(`
           *,
@@ -187,26 +191,61 @@ export const AdminStudentsTab: React.FC = () => {
               code
             )
           )
-        `)
-        .order("last_name", { ascending: true });
+        `, { count: "exact" });
+
+      if (searchTerm) {
+        query = query.or(`student_code.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+      }
+
+      if (progFilter) {
+        query = query.eq("program_id", progFilter);
+      }
+
+      if (blockFilter) {
+        query = query.eq("block_name", blockFilter);
+      }
+
+      // Handle Department Filter
+      if (deptFilter && !progFilter) {
+        // Get all program IDs for this department first to filter students
+        const { data: deptProgs } = await supabase
+          .from("programs_lookup")
+          .select("id")
+          .or(`department_id.eq.${deptFilter},department_id.in.(select id from departments where code='${deptFilter}')`);
+        
+        if (deptProgs && deptProgs.length > 0) {
+          query = query.in("program_id", deptProgs.map(p => p.id));
+        }
+      }
+
+      const { data, error: fetchError, count } = await query
+        .order("last_name", { ascending: true })
+        .range(from, to);
 
       if (fetchError) throw fetchError;
       setStudents(data || []);
+      setTotalStudentsCount(count || 0);
     } catch (err: any) {
       showNotification('error', err instanceof Error ? err.message : "Registry connection failed.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, itemsPerPage, searchTerm, deptFilter, progFilter, blockFilter, showNotification]);
 
   const fetchFiltersData = useCallback(async () => {
     try {
-      const [deptsRes, progsRes] = await Promise.all([
+      const [deptsRes, progsRes, blocksRes] = await Promise.all([
         supabase.from("departments").select("*").order("name"),
-        supabase.from("programs_lookup").select("*").order("name")
+        supabase.from("programs_lookup").select("*").order("name"),
+        supabase.from("students").select("block_name")
       ]);
       setDepartments(deptsRes.data || []);
       setAllPrograms(progsRes.data || []);
+      
+      const uniqueBlocks = Array.from(new Set(
+        (blocksRes.data || []).map(s => s.block_name).filter(Boolean)
+      )).sort();
+      setAvailableBlocks(uniqueBlocks);
     } catch (err) {
       console.error("Error fetching filter data:", err);
     }
@@ -542,48 +581,14 @@ export const AdminStudentsTab: React.FC = () => {
     setIsBulkProcessing(false);
   };
 
-  const filteredStudents = students.filter((s) => {
-    const fullSearch =
-      `${s.first_name || ""} ${s.last_name || ""} ${s.student_code || ""} ${s.email || ""}`.toLowerCase();
-    
-    if (searchTerm && !fullSearch.includes(searchTerm.toLowerCase())) return false;
-    
-    if (deptFilter) {
-      const deptCode = s.programs_lookup?.departments?.code;
-      const deptId = s.programs_lookup?.departments?.id;
-      if (deptCode !== deptFilter && deptId !== deptFilter) return false;
-    }
-    
-    if (progFilter && s.program_id !== progFilter) return false;
-    if (blockFilter && s.block_name !== blockFilter) return false;
-
-    return true;
-  });
-
-  const availableBlocks = Array.from(new Set(
-    students
-      .filter(s => {
-        if (deptFilter) {
-          const deptCode = s.programs_lookup?.departments?.code;
-          const deptId = s.programs_lookup?.departments?.id;
-          if (deptCode !== deptFilter && deptId !== deptFilter) return false;
-        }
-        if (progFilter && s.program_id !== progFilter) return false;
-        return true;
-      })
-      .map(s => s.block_name)
-      .filter(Boolean)
-  )).sort();
-
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds(new Set());
   }, [searchTerm, deptFilter, progFilter, blockFilter]);
 
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  // With Server-side pagination, filteredStudents is effectively the students state
+  const totalPages = Math.ceil(totalStudentsCount / itemsPerPage);
+  const currentItems = students;
 
   const getPageNumbers = () => {
     const pages = [];
@@ -984,12 +989,12 @@ export const AdminStudentsTab: React.FC = () => {
               </div>
 
               {/* High-Density Pagination Console */}
-              {!loading && filteredStudents.length > 0 && (
+              {!loading && totalStudentsCount > 0 && (
                 <div className="px-8 py-8 bg-white border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Viewing Data Window</span>
                     <span className="text-sm font-black text-neutral-900">
-                      {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredStudents.length)} <span className="text-neutral-300 mx-1">/</span> {filteredStudents.length.toLocaleString()}
+                      {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalStudentsCount)} <span className="text-neutral-300 mx-1">/</span> {totalStudentsCount.toLocaleString()}
                     </span>
                   </div>
 

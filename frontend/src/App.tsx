@@ -56,6 +56,9 @@ import { EssayManagementTab } from "./pages/teachers/EssayManagementTab.tsx";
 import { ActivitiesTab } from "./pages/teachers/ActivitiesTab.tsx";
 import { CompareActivitiesTab } from "./pages/teachers/CompareActivitiesTab.tsx";
 import { ArchivePage } from "./pages/teachers/ArchivePage.tsx";
+import Maintenance from "./pages/Maintenance.tsx";
+import { supabase } from "./lib/supabaseClient";
+import { useAuth } from "./contexts/AuthContext";
 
 // General/Utility Imports
 import ErrorPage from "./components/ErrorPage";
@@ -96,12 +99,47 @@ const AppContent: React.FC = () => {
 
   // const handleClose = () => setShowIntro(false);
 
+  const [maintenanceSettings, setMaintenanceSettings] = React.useState<any>(null);
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const checkMaintenance = async () => {
+      const { data } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "maintenance_mode")
+        .single();
+      
+      if (data) {
+        setMaintenanceSettings(data.value);
+      }
+    };
+
+    checkMaintenance();
+    
+    const channel = supabase
+      .channel('system_settings_changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_settings' }, (payload) => {
+        if (payload.new && payload.new.key === 'maintenance_mode') {
+          setMaintenanceSettings(payload.new.value);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <>
       <ClickEffect />
-      {/* <IntroModal isOpen={showIntro} onClose={handleClose} /> */}
+      {maintenanceSettings && !location.pathname.includes("/Maintenance") && (
+        <MaintenanceInterceptor settings={maintenanceSettings} />
+      )}
 
       <Routes>
+        <Route path="/Maintenance" element={<Maintenance />} />
         {/* ======================================================= */}
         {/* 1. General Routes (No Layout / Public Access) */}
         {/* ======================================================= */}
@@ -257,6 +295,31 @@ const AppContent: React.FC = () => {
       <HelpModal />
     </>
   );
+};
+
+// Helper component to handle conditional redirect based on role
+const MaintenanceInterceptor: React.FC<{ settings: any }> = ({ settings }) => {
+  const { user } = useAuth();
+
+  // Automatic bypass for local development
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocal) return null;
+
+  // 1. If global maintenance is on, everyone except Admin sees it
+  if (settings.global && user?.role !== 'admin') {
+    return <Navigate to="/Maintenance" state={{ role: 'global' }} replace />;
+  }
+
+  // 2. Specific role maintenance
+  if (user?.role === 'teacher' && settings.teacher) {
+    return <Navigate to="/Maintenance" state={{ role: 'teacher' }} replace />;
+  }
+
+  if (user?.role === 'student' && settings.student) {
+    return <Navigate to="/Maintenance" state={{ role: 'student' }} replace />;
+  }
+
+  return null;
 };
 
 const App: React.FC = () => (

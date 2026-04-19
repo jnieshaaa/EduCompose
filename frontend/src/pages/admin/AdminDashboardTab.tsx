@@ -19,8 +19,12 @@ import {
   AlertCircle,
   History as HistoryIcon,
   ShieldCheck,
-  BookOpen
+  BookOpen,
+  Power,
+  ShieldAlert,
+  Construction
 } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
 import { adminApi } from "../../api";
 import CreateUserModal from "../../components/admin/CreateUserModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,8 +48,11 @@ export function AdminDashboardTab() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [maintSettings, setMaintSettings] = useState<any>(null);
+
   useEffect(() => {
     loadStats();
+    fetchMaintSettings();
   }, []);
 
   const loadStats = async () => {
@@ -58,6 +65,18 @@ export function AdminDashboardTab() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMaintSettings = async () => {
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'maintenance_mode').single();
+    if (data) setMaintSettings(data.value);
+  };
+
+  const toggleMaintenance = async (role: string) => {
+    if (!maintSettings) return;
+    const newSettings = { ...maintSettings, [role]: !maintSettings[role] };
+    const { error } = await supabase.from('system_settings').update({ value: newSettings }).eq('key', 'maintenance_mode');
+    if (!error) setMaintSettings(newSettings);
   };
 
   const statCards = stats ? [
@@ -348,13 +367,85 @@ export function AdminDashboardTab() {
 
       <CreateUserModal
         isOpen={showCreateUserModal}
-        onClose={() => {
-          setShowCreateUserModal(false);
-          loadStats();
-        }}
+        onClose={() => setShowCreateUserModal(false)}
+        onSuccess={loadStats}
+      />
+
+      {/* System Status & Control */}
+      {!loading && maintSettings && (
+        <section className="space-y-6 mt-20">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-2xl bg-neutral-900 flex items-center justify-center text-white">
+               <ShieldCheck size={20} />
+             </div>
+             <div>
+               <h3 className="text-sm font-black text-neutral-900 uppercase tracking-widest leading-none mb-1">Infrastructure Override</h3>
+               <p className="text-[10px] font-bold text-neutral-400">Manage live environment visibility and maintenance nodes</p>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MaintenanceToggle 
+              label="Global Lock" 
+              isActive={maintSettings.global} 
+              onToggle={() => toggleMaintenance('global')}
+              isDangerous
+            />
+            <MaintenanceToggle 
+              label="Teacher Portal" 
+              isActive={maintSettings.teacher} 
+              onToggle={() => toggleMaintenance('teacher')}
+            />
+            <MaintenanceToggle 
+              label="Student Portal" 
+              isActive={maintSettings.student} 
+              onToggle={() => toggleMaintenance('student')}
+            />
+            <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 flex flex-col justify-between overflow-hidden relative group">
+              <div className="space-y-1 relative z-10">
+                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Admin Access</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success-default" />
+                  <p className="text-xs font-black text-neutral-900">Always Bypassed</p>
+                </div>
+              </div>
+              <ShieldAlert className="absolute -bottom-4 -right-4 w-16 h-16 text-neutral-200 opacity-20" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <CreateUserModal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        onSuccess={loadStats}
       />
     </div>
   );
 }
+
+const MaintenanceToggle = ({ label, isActive, onToggle, isDangerous = false }: any) => (
+  <button
+    onClick={onToggle}
+    className={`p-6 rounded-[2rem] border transition-all text-left flex flex-col justify-between gap-4 group ${
+      isActive 
+        ? isDangerous ? "bg-error-default/5 border-error-default/20 text-error-default" : "bg-amber-500/5 border-amber-500/20 text-amber-600"
+        : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
+    }`}
+  >
+    <div className="flex items-center justify-between w-full">
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isActive ? "bg-white/50" : "bg-neutral-50"}`}>
+        {isActive ? <Power size={14} /> : <Construction size={14} />}
+      </div>
+      <div className={`w-10 h-5 rounded-full relative transition-all ${isActive ? (isDangerous ? "bg-error-default" : "bg-amber-500") : "bg-neutral-200"}`}>
+        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isActive ? "left-6" : "left-1"}`} />
+      </div>
+    </div>
+    <div className="space-y-0.5">
+      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Override</p>
+      <p className={`text-sm font-black transition-colors ${isActive ? "text-neutral-900" : "text-neutral-400"}`}>{label}</p>
+    </div>
+  </button>
+);
 
 

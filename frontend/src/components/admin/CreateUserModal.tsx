@@ -7,12 +7,14 @@ import { motion, AnimatePresence } from "framer-motion";
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   defaultRole?: "admin" | "teacher" | "student";
 }
 
 export default function CreateUserModal({
   isOpen,
   onClose,
+  onSuccess,
   defaultRole = "teacher",
 }: CreateUserModalProps) {
   const [role, setRole] = useState<"admin" | "teacher" | "student">(
@@ -88,6 +90,7 @@ export default function CreateUserModal({
 
       setTimeout(() => {
         onClose();
+        if (onSuccess) onSuccess();
         setSuccess("");
       }, 1500);
     } catch (err: unknown) {
