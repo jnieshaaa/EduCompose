@@ -9,7 +9,6 @@ interface AddStudentDialogProps {
   blockId: string;
   onSuccess?: () => void;
   availablePrograms?: any[];
-  availableSections?: any[];
 }
 
 export function AddStudentDialog({
@@ -18,7 +17,6 @@ export function AddStudentDialog({
   blockId,
   onSuccess,
   availablePrograms = [],
-  availableSections = [],
 }: AddStudentDialogProps) {
   const { handleCreateStudent } = useStudents(blockId);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +59,9 @@ export function AddStudentDialog({
         last_name: "",
         email: "",
         birthday: "",
+        program_id: "",
+        year: 1,
+        block_name: "",
       });
       if (onSuccess) onSuccess();
       onClose();

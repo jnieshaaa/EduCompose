@@ -173,7 +173,6 @@ export function StudentsTab() {
         blockId={urlBlockId || ""}
         onSuccess={refreshStudents}
         availablePrograms={availablePrograms}
-        availableSections={availableSections}
       />
 
       {/* Edit Student Dialog */}
