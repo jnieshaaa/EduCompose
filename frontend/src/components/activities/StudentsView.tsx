@@ -5,7 +5,6 @@ import {
   MoreVertical,
   Eye,
   CheckCircle2,
-  XCircle,
   Trash2,
   Loader2,
   ArrowLeft,
@@ -324,7 +323,7 @@ export function StudentsView({
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-300 border border-neutral-100">
-                            <XCircle size={10} /> Pending
+                             No Submission
                           </span>
                         )}
                       </TableCell>
@@ -358,91 +357,98 @@ export function StudentsView({
                         )}
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="p-2 text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50 rounded-xl transition-all">
-                              <MoreVertical size={15} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl border-neutral-100 shadow-xl">
-                            <DropdownMenuItem
-                              className="text-xs font-medium cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAllowResubmission(student.id);
-                              }}
-                              disabled={isAllowingResubmission === student.id}
-                            >
-                              {isAllowingResubmission === student.id ? <Loader2 size={13} className="mr-2 animate-spin" /> : <CheckCircle2 size={13} className="mr-2" />}
-                              Let student resubmit
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              className="text-xs font-medium cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (student.status === "submitted") {
-                                  setSelectedStudentForView({ id: student.id, name: student.name });
-                                  setIsViewEssayModalOpen(true);
-                                }
-                              }}
-                              disabled={student.status !== "submitted"}
-                            >
-                              <FileText size={13} className="mr-2" /> View Essay
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              className="text-xs font-medium cursor-pointer"
+                        <div className="flex items-center justify-end gap-1">
+                          {isSubmitted && !isGrading && (
+                            <button
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                if (student.status === "submitted") {
-                                  if (isGrading) return;
-                                  if (isGraded) {
-                                    const analysisData = await fetchEssayAnalysis(student.id, activity.id);
-                                    if (analysisData) {
-                                      navigate(buildSecureUrl('/Teacher/AnalysisResults', {
-                                        s: student.id,
-                                        a: activity.id,
-                                        activityId: activity.id,
-                                        activityTitle: activity.title,
-                                        programSection: courseSection,
-                                        programName: courseName,
-                                        studentName: student.name,
-                                      }), { state: { ...analysisData, studentId: student.id, studentName: student.name, activityId: activity.id } });
-                                    }
-                                  } else {
-                                    setGradingStudents((prev) => new Map(prev).set(student.id, { progress: 0, step: "Starting..." }));
-                                    const result = await gradeEssay(student.id, student.name, activity.id, (progress, step) => {
-                                      setGradingStudents((prev) => new Map(prev).set(student.id, { progress, step }));
-                                    });
-                                    setGradingStudents((prev) => {
-                                      const n = new Map(prev); n.delete(student.id); return n;
-                                    });
-                                    if (result.success) {
-                                      setGradedStudents((prev) => new Set(prev).add(student.id));
-                                      if (onRefresh) await onRefresh();
-                                    }
+                                if (isGraded) {
+                                  const analysisData = await fetchEssayAnalysis(student.id, activity.id);
+                                  if (analysisData) {
+                                    navigate(buildSecureUrl('/Teacher/AnalysisResults', {
+                                      s: student.id,
+                                      a: activity.id,
+                                      activityId: activity.id,
+                                      activityTitle: activity.title,
+                                      programSection: courseSection,
+                                      programName: courseName,
+                                      studentName: student.name,
+                                      studentId: student.id,
+                                    }), { state: { ...analysisData, studentId: student.id, studentName: student.name, activityId: activity.id } });
+                                  }
+                                } else {
+                                  setGradingStudents((prev) => new Map(prev).set(student.id, { progress: 0, step: "Starting..." }));
+                                  const result = await gradeEssay(student.id, student.name, activity.id, (progress, step) => {
+                                    setGradingStudents((prev) => new Map(prev).set(student.id, { progress, step }));
+                                  });
+                                  setGradingStudents((prev) => {
+                                    const n = new Map(prev); n.delete(student.id); return n;
+                                  });
+                                  if (result.success) {
+                                    setGradedStudents((prev) => new Set(prev).add(student.id));
+                                    if (onRefresh) await onRefresh();
                                   }
                                 }
                               }}
-                              disabled={student.status !== "submitted" || isGrading}
+                              className={`p-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                                isGraded 
+                                  ? "bg-neutral-50 text-neutral-600 hover:bg-neutral-100 border border-neutral-200" 
+                                  : "bg-primary text-white hover:scale-[1.02] active:scale-[0.98] shadow-primary/10"
+                              }`}
+                              title={isGraded ? "View Evaluation" : "Grade Now"}
                             >
-                               {isGrading ? <Loader2 size={13} className="mr-2 animate-spin" /> : isGraded ? <Eye size={13} className="mr-2" /> : <Edit size={13} className="mr-2" />}
-                               {isGraded ? "View Grade" : "Grade Now"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                               className="text-xs font-medium text-error-default cursor-pointer"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 setSelectedStudentForDelete({ id: student.id, name: student.name });
-                                 setIsDeleteModalOpen(true);
-                               }}
-                               disabled={student.status !== "submitted"}
-                            >
-                              <Trash2 size={13} className="mr-2" /> Delete Essay
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {isGraded ? <Eye size={12} /> : <Edit size={12} />}
+                              {isGraded ? "View" : "Grade"}
+                            </button>
+                          )}
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="p-2 text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50 rounded-xl transition-all">
+                                <MoreVertical size={15} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl border-neutral-100 shadow-xl">
+                              <DropdownMenuItem
+                                className="text-xs font-medium cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAllowResubmission(student.id);
+                                }}
+                                disabled={isAllowingResubmission === student.id}
+                              >
+                                {isAllowingResubmission === student.id ? <Loader2 size={13} className="mr-2 animate-spin" /> : <CheckCircle2 size={13} className="mr-2" />}
+                                Let student resubmit
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                className="text-xs font-medium cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (student.status === "submitted") {
+                                    setSelectedStudentForView({ id: student.id, name: student.name });
+                                    setIsViewEssayModalOpen(true);
+                                  }
+                                }}
+                                disabled={student.status !== "submitted"}
+                              >
+                                <FileText size={13} className="mr-2" /> View Essay
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                 className="text-xs font-medium text-error-default cursor-pointer"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setSelectedStudentForDelete({ id: student.id, name: student.name });
+                                   setIsDeleteModalOpen(true);
+                                 }}
+                                 disabled={student.status !== "submitted"}
+                              >
+                                <Trash2 size={13} className="mr-2" /> Delete Essay
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

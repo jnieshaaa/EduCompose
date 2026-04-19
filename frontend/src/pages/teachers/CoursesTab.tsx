@@ -60,11 +60,18 @@ export function CoursesTab() {
 
   // Handle deep-link to course
   useEffect(() => {
-    if (deepCourseId && !selectedCourse && myCourses.length > 0) {
-      const course = myCourses.find(c => String(c.id) === String(deepCourseId));
-      if (course) setSelectedCourse(course);
+    if (deepCourseId) {
+      if (myCourses.length > 0) {
+        const course = myCourses.find(c => String(c.id) === String(deepCourseId));
+        if (course) {
+          // Use functional update to avoid dependency on selectedCourse
+          setSelectedCourse(prev => prev?.id === course.id ? prev : course);
+        }
+      }
+    } else {
+      setSelectedCourse(null);
     }
-  }, [deepCourseId, myCourses, selectedCourse]);
+  }, [deepCourseId, myCourses]);
 
   const [newCourse, setNewCourse] = useState<Partial<Course>>({
     course_code: "",

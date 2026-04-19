@@ -242,7 +242,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
           <div className='hidden md:flex ml-3 flex-col text-left'>
             <p className='font-bold text-sm text-neutral-800 whitespace-nowrap truncate max-w-[140px] tracking-tight'>{displayName}</p>
-            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Teacher Account</p>
+            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Teacher</p>
           </div>
 
           <AnimatePresence>

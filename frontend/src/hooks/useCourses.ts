@@ -103,7 +103,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
           academic_year,
           term,
           courses (
-            id, course_code, course_title, units, department_id, program_id, user_id,
+            id, school_id, course_code, course_title, units, department_id, program_id, user_id,
             departments(name, code),
             programs_lookup(name, abbr)
           )

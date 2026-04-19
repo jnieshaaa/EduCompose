@@ -680,9 +680,11 @@ export const ocrApi = {
     formData.append("file", file);
 
     const token = localStorage.getItem("auth_token");
-    const baseUrl = API_BASE_URL.rstrip ? (API_BASE_URL as any).rstrip("/") : API_BASE_URL.replace(/\/$/, "");
+    // Fix: Javascript doesn't have rstrip. Using replace for trailing slash removal.
+    const baseUrl = API_BASE_URL.replace(/\/$/, "");
     
-    const response = await fetch(`${baseUrl}/ocr/extract-text`, {
+    // Add trailing slash to the endpoint to avoid redirects which can cause CORS issues
+    const response = await fetch(`${baseUrl}/ocr/extract-text/`, {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -1058,6 +1060,23 @@ export const adminApi = {
         abbr: string;
       };
     }[];
+  },
+};
+
+// Rubric API
+export const rubricApi = {
+  generateRubrics: async (title: string, description?: string) => {
+    return apiRequest<{
+      suggestions: {
+        name: string;
+        description: string;
+        grading_intensity: "Basic" | "Professional" | "Advanced" | "Technical";
+        criteria: import("./components/rubrics/types").CriteriaRow[];
+      }[];
+    }>("/rubrics/generate", {
+      method: "POST",
+      body: JSON.stringify({ title, description }),
+    });
   },
 };
 

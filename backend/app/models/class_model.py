@@ -1,16 +1,16 @@
-"""
-Class Model
-Class/Course model
-"""
+import uuid
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
 
+def generate_uuid():
+    return str(uuid.uuid4())
+
 class Class(Base):
     __tablename__ = "classes"
     
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=generate_uuid)
     name = Column(String, nullable=False)
     description = Column(Text)
     teacher_id = Column(String, ForeignKey("users.id"))

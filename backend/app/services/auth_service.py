@@ -466,6 +466,7 @@ class AuthService:
                     # Create user if it doesn't exist
                     username = self._generate_username_from_email(email_normalized, db)
                     user = User(
+                        id=auth_user_id,
                         email=email_normalized,
                         username=username,
                         full_name=full_name,

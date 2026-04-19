@@ -4,6 +4,7 @@ import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
 import { useAcademicContext } from "./useAcademicContext";
 import { sendStudentWelcomeEmail } from "../services/emailService";
+import { createNotification } from "../services/notificationService";
 
 export function useStudents(blockId?: string, ay?: string, term?: string, showArchived: boolean = false) {
   const [students, setStudents] = useState<Student[]>([]);
@@ -226,7 +227,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) throw new Error("Not authenticated");
 
-      // 1. Global Uniqueness Check
+      // 1. Global Uniqueness Check (against active students)
       const { data: existingData, error: checkError } = await supabase
         .from("students")
         .select(`
@@ -236,9 +237,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
           programs_lookup (
             abbr,
             departments (code)
-          ),
-          block_students (
-            blocks (name, year)
           )
         `)
         .or(`student_code.eq.${dataToUse.student_code}${dataToUse.email ? `,email.eq.${dataToUse.email}` : ""}`)
@@ -247,14 +245,20 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       if (checkError) console.error("Check error:", checkError);
 
       if (existingData && existingData.length > 0) {
-        const existingStudent = existingData[0];
-        const prog = (existingStudent.programs_lookup as any)?.abbr || "???";
-        const dept = (existingStudent.programs_lookup as any)?.departments?.code || "???";
-        const blockObj = (existingStudent.block_students as any[])?.[0]?.blocks;
-        const blockName = blockObj ? `${blockObj.year}${blockObj.name}` : "No Block";
-        
-        const field = existingStudent.student_code === dataToUse.student_code ? "Student ID" : "Email";
-        throw new Error(`${field} already exists in ${dept} > ${prog} ${blockName}`);
+        const field = existingData[0].student_code === dataToUse.student_code ? "Student ID" : "Email";
+        throw new Error(`${field} already exists in active student list.`);
+      }
+
+      // 1b. Check against PENDING registrations
+      const { data: pendingExists } = await supabase
+        .from("pending_student_registrations")
+        .select("id")
+        .eq("student_code", dataToUse.student_code)
+        .eq("processed", false)
+        .maybeSingle();
+      
+      if (pendingExists) {
+        throw new Error(`Student ${dataToUse.student_code} is already in the pending approval list.`);
       }
 
       // 2. Cross-role email conflict check (users table)
@@ -283,47 +287,64 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         }
       }
 
-      let finalStudentData = { ...dataToUse, teacher_id: userData.user.id };
+      let finalPendingData: any = {
+        teacher_id: userData.user.id,
+        student_code: dataToUse.student_code,
+        first_name: dataToUse.first_name,
+        last_name: dataToUse.last_name,
+        middle_name: dataToUse.middle_name || null,
+        email: dataToUse.email,
+        birthday: dataToUse.birthday || null,
+        program_id: dataToUse.program_id,
+        year: dataToUse.year || 1,
+        block_name: dataToUse.block_name || "",
+        academic_year: currentAY,
+        term: currentSemester
+      };
 
       if (blockId) {
-        // Auto-fill from block if provided
+        // Resolve more info from block
         const { data: bData } = await supabase
           .from("blocks")
-          .select(`name, year, teacher_program_loads!fk_block_program_load (program_id)`)
+          .select(`
+            name, 
+            year, 
+            teacher_program_loads!fk_block_program_load (
+              program_id,
+              teacher_course_loads (id, course_id, academic_year, term)
+            )
+          `)
           .eq("id", blockId)
           .single();
         
         if (bData) {
           const tpl = bData.teacher_program_loads as any;
-          finalStudentData.program_id = tpl.program_id;
-          finalStudentData.year = bData.year;
-          finalStudentData.block_name = bData.name;
+          finalPendingData.program_id = tpl.program_id;
+          finalPendingData.year = bData.year;
+          finalPendingData.block_name = bData.name;
+          finalPendingData.course_id = tpl.teacher_course_loads?.course_id;
+          finalPendingData.academic_year = tpl.teacher_course_loads?.academic_year;
+          finalPendingData.term = tpl.teacher_course_loads?.term;
         }
       }
 
-      const { data: newS, error } = await supabase
-        .from("students")
-        .insert(finalStudentData)
+      const { data: newP, error } = await supabase
+        .from("pending_student_registrations")
+        .insert(finalPendingData)
         .select()
         .single();
 
       if (error) throw error;
 
-      if (blockId) {
-        await supabase.from("block_students").insert({
-          block_id: blockId,
-          student_id: newS.id
-        });
-      }
-
-      // 4. Send Welcome Email with temp password (frontend-only, via EmailJS)
-      if (newS.email) {
+      // 4. Send Notification Email with their birthday as password
+      if (newP.email) {
         try {
-          const temp_password = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+          // Format password as birthday (standardized)
+          const temp_password = newP.birthday || "Student2024!";
           await sendStudentWelcomeEmail({
-            to_name: `${newS.first_name} ${newS.last_name}`,
-            to_email: newS.email,
-            student_code: newS.student_code,
+            to_name: `${newP.first_name} ${newP.last_name}`,
+            to_email: newP.email,
+            student_code: newP.student_code,
             temp_password,
           });
         } catch (emailErr) {
@@ -331,8 +352,32 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         }
       }
 
-      setStudents(prev => [newS, ...prev]);
-      showSuccess("Student added successfully!");
+      // 5. Notify Admins
+      try {
+        const { data: admins } = await supabase
+          .from("users")
+          .select("auth_user_id")
+          .eq("role", "admin");
+
+        if (admins && admins.length > 0) {
+          const teacherName = userData.user.user_metadata?.first_name 
+            ? `${userData.user.user_metadata.first_name} ${userData.user.user_metadata.last_name || ""}`
+            : "A teacher";
+
+          for (const admin of admins) {
+            await createNotification({
+              user_id: admin.auth_user_id,
+              type: "info",
+              title: "Pending Student Registration",
+              message: `${teacherName} submitted ${newP.first_name} ${newP.last_name} (${newP.student_code}) for approval.`,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error("Failed to notify admins:", notifErr);
+      }
+
+      showSuccess("Registration submitted for Admin approval!");
       setIsAddDialogOpen(false);
       setNewStudent({
         student_code: "",
@@ -341,7 +386,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         last_name: "",
         email: "",
       });
-      return newS;
+      return newP;
     } catch (err: any) {
       showError(err.message || "Failed to create student.");
       throw err;

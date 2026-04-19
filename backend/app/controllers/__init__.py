@@ -10,6 +10,7 @@ from .essay_controller import essays_router
 from .analysis_controller import analysis_router
 from .kg_controller import kg_router
 from .ocr_controller import ocr_router
+from .rubric_controller import rubrics_router
 
 __all__ = [
     "auth_router",

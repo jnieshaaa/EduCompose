@@ -27,6 +27,12 @@ export function EditStudentDialog({
   if (!editingStudent) return null;
 
   const handleSubmit = () => {
+    const studentCodeRegex = /^\d{3}-\d{4}$/;
+    if (!studentCodeRegex.test(editingStudent.student_code)) {
+      // alert("Student ID must be in XXX-XXXX format (e.g., 123-4567)");
+      return;
+    }
+
     if (!editingStudent.first_name || !editingStudent.last_name || !editingStudent.email || !editingStudent.student_code || !editingStudent.birthday) {
       // Small simple validation since this component is simpler
       return;
@@ -46,9 +52,17 @@ export function EditStudentDialog({
               <Label>Student ID / Code*</Label>
               <Input
                 required
-                className="mt-1"
+                className="mt-1 font-mono"
+                placeholder="123-4567"
+                maxLength={8}
                 value={editingStudent.student_code}
-                onChange={(val) => onStudentChange({ ...editingStudent, student_code: val })}
+                onChange={(val) => {
+                  let formatted = val.replace(/[^0-9]/g, "");
+                  if (formatted.length > 3) {
+                    formatted = formatted.slice(0, 3) + "-" + formatted.slice(3, 7);
+                  }
+                  onStudentChange({ ...editingStudent, student_code: formatted });
+                }}
               />
             </div>
             <div>

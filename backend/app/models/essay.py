@@ -1,16 +1,16 @@
-"""
-Essay Model
-Essay submission model
-"""
+import uuid
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .base import Base
 
+def generate_uuid():
+    return str(uuid.uuid4())
+
 class Essay(Base):
     __tablename__ = "essays"
     
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=generate_uuid)
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     student_id = Column(String, ForeignKey("students.id"))  # uuid

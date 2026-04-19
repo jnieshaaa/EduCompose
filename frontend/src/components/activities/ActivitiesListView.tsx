@@ -93,7 +93,7 @@ export function ActivitiesListView({
         {!isReadOnly && (
           <button
             onClick={onCreateActivity}
-            className="flex items-center gap-2 bg-primary text-sm font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="flex items-center gap-2 bg-primary text-white font-bold text-sm uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             <Plus size={18} /> New Activity
           </button>

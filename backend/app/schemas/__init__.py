@@ -34,6 +34,7 @@ from .analysis_schemas import (
     AIDetectionResponse,
 )
 from .comparison import ComparisonAnalysisRequest, ComparisonAnalysisResponse
+from .rubric_schemas import RubricGenerateRequest, RubricGenerateResponse, GeneratedRubric
 
 __all__ = [
     "EmailVerificationRequest",
@@ -69,4 +70,7 @@ __all__ = [
     "AIDetectionResponse",
     "ComparisonAnalysisRequest",
     "ComparisonAnalysisResponse",
+    "RubricGenerateRequest",
+    "RubricGenerateResponse",
+    "GeneratedRubric",
 ]

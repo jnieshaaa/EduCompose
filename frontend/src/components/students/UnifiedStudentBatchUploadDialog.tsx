@@ -201,8 +201,8 @@ export function UnifiedStudentBatchUploadDialog({
       `Year Level:,1\n` +                 // Row 2: Label and Value
       `Block Name:,A\n` +                  // Row 3: Label and Value
       `Student ID,First Name,Middle Name,Last Name,Email,Birthday\n` + // Row 4: Headers
-      `2023-0001,John,Quincy,Doe,john.doe@email.com,2001-01-01\n` +
-      `2023-0002,Jane,,Smith,jane.smith@email.com,2002-12-31`;
+      `123-4567,John,Quincy,Doe,john.doe@email.com,2001-01-01\n` +
+      `123-4568,Jane,,Smith,jane.smith@email.com,2002-12-31`;
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");

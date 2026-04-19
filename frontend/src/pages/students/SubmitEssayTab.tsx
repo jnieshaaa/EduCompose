@@ -568,22 +568,22 @@ export function SubmitEssayTab() {
                     <motion.div 
                       initial={{ scale: 0.98, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="bg-emerald-500 p-10 rounded-[2.5rem] text-white shadow-2xl shadow-emerald-500/20 relative overflow-hidden"
+                      className="bg-emerald-500 py-4 px-6 rounded-[1.2rem] text-white shadow-xl shadow-emerald-500/10 relative overflow-hidden"
                     >
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] translate-x-32 -translate-y-32" />
-                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                         <div className="flex items-center gap-6">
-                            <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center backdrop-blur-md">
-                               <CheckCircle size={40} className="text-white" />
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-[60px] translate-x-24 -translate-y-24" />
+                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                         <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                               <CheckCircle size={24} className="text-white" />
                             </div>
-                            <div className="space-y-1">
-                               <h2 className="text-2xl font-black tracking-tight">Sent Successfully!</h2>
-                               <p className="text-white/70 font-medium text-sm">Your teacher will evaluate your work soon.</p>
+                            <div className="space-y-0.5">
+                               <h2 className="text-base font-semibold tracking-tight">Sent Successfully!</h2>
+                               <p className="text-white/80 font-normal text-[10px]">Your teacher will evaluate your work soon.</p>
                             </div>
                          </div>
                          <div className="text-right shrink-0">
-                            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Time of Submission</p>
-                            <p className="text-lg font-bold">{submissionDate}</p>
+                            <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mb-0.5">Time of Submission</p>
+                            <p className="text-base font-semibold">{submissionDate}</p>
                          </div>
                       </div>
                     </motion.div>
@@ -629,20 +629,20 @@ export function SubmitEssayTab() {
                     )}
 
                     {!essayScore && (
-                      <div className="bg-white p-10 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 flex flex-col items-center text-center">
-                        <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mb-6 text-neutral-200">
-                          <Clock size={32} />
+                      <div className="bg-white py-8 px-6 rounded-[1.5rem] border border-neutral-100 shadow-lg shadow-neutral-900/5 flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-neutral-50 rounded-xl flex items-center justify-center mb-4 text-neutral-200">
+                          <Clock size={24} />
                         </div>
-                        <h3 className="text-lg font-bold text-neutral-900 mb-2">Evaluation is pending</h3>
-                        <p className="text-sm font-medium text-neutral-400 max-w-xs leading-relaxed">
+                        <h3 className="text-base font-bold text-neutral-900 mb-1">Evaluation is pending</h3>
+                        <p className="text-xs font-medium text-neutral-400 max-w-xs leading-relaxed">
                           Your score will appear here once the AI or your teacher completes the review.
                         </p>
                         
-                        <div className="mt-10 pt-8 border-t border-neutral-50 w-full">
+                        <div className="mt-6 pt-6 border-t border-neutral-50 w-full">
                            <button 
                             disabled={isResubmitRequested || requestingResubmission}
                             onClick={handleRequestResubmission}
-                            className="text-primary text-[10px] font-black uppercase tracking-widest hover:underline transition-all disabled:opacity-30 disabled:no-underline"
+                            className="text-primary text-[9px] font-bold uppercase tracking-widest hover:underline transition-all disabled:opacity-30 disabled:no-underline"
                            >
                               {requestingResubmission ? 'Sending...' : isResubmitRequested ? 'Request Sent' : 'Ask to fix it (Resubmit)'}
                            </button>

@@ -141,7 +141,7 @@ export function EssaysTab() {
         const program = student?.student_programs?.[0]?.programs?.name || "No Program";
         const section = (e.blocks as any)?.section_name || "No Section";
         
-        const statusDisplay = e.status === 'analyzed' ? 'Graded' : (e.status === 'submitted' ? 'Pending' : 'Grading');
+        const statusDisplay = e.status === 'analyzed' ? 'Graded' : (e.status === 'submitted' ? 'Submitted' : 'Grading');
         
         return {
           id: e.id,
@@ -221,7 +221,7 @@ export function EssaysTab() {
     switch (status) {
       case 'Graded': return 'bg-green-600 text-white';
       case 'Grading': return 'bg-blue-600 text-white';
-      case 'Pending': return 'bg-amber-600 text-white';
+      case 'Submitted': return 'bg-amber-600 text-white';
       default: return 'bg-neutral-600 text-white';
     }
   };
@@ -444,7 +444,7 @@ export function EssaysTab() {
                           View Grade
                         </DropdownMenuItem>
 
-                        {(essay.status === 'Pending' || essay.status === 'In Progress') && (
+                        {(essay.status === 'Submitted' || essay.status === 'Grading') && (
                           <DropdownMenuItem 
                             className="cursor-pointer"
                             onClick={() => handleTriggerAI(essay.id, essay.studentId, essay.studentName, essay.activityId, essay.activityTitle)}

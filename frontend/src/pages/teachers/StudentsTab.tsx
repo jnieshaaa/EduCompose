@@ -172,6 +172,8 @@ export function StudentsTab() {
         onClose={() => setIsAddDialogOpen(false)}
         blockId={urlBlockId || ""}
         onSuccess={refreshStudents}
+        availablePrograms={availablePrograms}
+        availableSections={availableSections}
       />
 
       {/* Edit Student Dialog */}

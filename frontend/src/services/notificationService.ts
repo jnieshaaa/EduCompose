@@ -150,3 +150,33 @@ const formatTimestamp = (timestamp: string | Date): string => {
 
   return date.toLocaleDateString();
 };
+
+// Create a new notification
+export const createNotification = async (
+  notification: any // Using any for flexibility with database fields
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .insert([
+        {
+          user_id: notification.user_id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          related_id: notification.relatedId,
+          read: false,
+        },
+      ]);
+
+    if (error) {
+      console.error("Error creating notification:", error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Error creating notification:", err);
+    return false;
+  }
+};

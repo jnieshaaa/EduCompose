@@ -9,8 +9,11 @@ import {
   ClipboardList,
   Loader2,
   AlertCircle,
-  Search
+  Search,
+  Eye
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { buildSecureUrl } from "../../utils/secureUrl";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -62,6 +65,7 @@ type PendingUpload = {
 };
 
 export function EssayManagementTab() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showNotification } = useNotification();
   
@@ -784,9 +788,30 @@ export function EssayManagementTab() {
                             </TableCell>
                             <TableCell className="py-4 text-right pr-6">
                               {sub ? (
-                                <div className="flex items-center justify-end gap-2 text-primary font-medium text-sm">
-                                  <FileText className="w-4 h-4" />
-                                  <span className="truncate max-w-[150px]" title={sub.fileName}>{sub.fileName}</span>
+                                <div className="flex items-center justify-end gap-3 text-primary font-medium text-sm">
+                                  <div className="flex flex-col items-end">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="w-3.5 h-3.5" />
+                                      <span className="truncate max-w-[120px] text-xs" title={sub.fileName}>{sub.fileName}</span>
+                                    </div>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 px-3 border-primary/20 hover:bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest"
+                                    onClick={() => {
+                                      const url = buildSecureUrl("/Teacher/Evaluation", {
+                                        studentId: student.id,
+                                        activityId: activeActivityId || '',
+                                        activityTitle: sub.fileName,
+                                        studentName: student.name
+                                      });
+                                      navigate(url);
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3 mr-1.5" />
+                                    Grade
+                                  </Button>
                                 </div>
                               ) : (
                                 <span className="text-neutral-300">---</span>

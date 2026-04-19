@@ -253,6 +253,12 @@ const Login: React.FC = () => {
       return;
     }
 
+    const studentCodeRegex = /^\d{3}-\d{4}$/;
+    if (!studentCodeRegex.test(studentCode.trim())) {
+      setError("Student code must be in XXX-XXXX format (e.g., 123-4567)");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -426,12 +432,17 @@ const Login: React.FC = () => {
               id="studentCode"
               type="text"
               value={studentCode}
+              maxLength={8}
               onChange={(e) => {
-                setStudentCode(e.target.value);
+                let val = e.target.value.replace(/[^0-9]/g, "");
+                if (val.length > 3) {
+                  val = val.slice(0, 3) + "-" + val.slice(3, 7);
+                }
+                setStudentCode(val);
                 setError("");
               }}
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-              placeholder="Enter your student code"
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all font-mono"
+              placeholder="123-4567"
             />
           </div>
         </div>

@@ -21,6 +21,7 @@ interface InputProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onFocus?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  maxLength?: number;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -40,6 +41,7 @@ const Input: React.FC<InputProps> = ({
   onKeyDown,
   onFocus,
   onBlur,
+  maxLength,
 }) => {
   const baseClasses =
     "w-full px-3 py-2 border rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200";
@@ -92,6 +94,7 @@ const Input: React.FC<InputProps> = ({
           rows={rows}
           className={inputClasses}
           readOnly={readOnly}
+          maxLength={maxLength}
         />
       ) : (
         <input
@@ -107,6 +110,7 @@ const Input: React.FC<InputProps> = ({
           required={required}
           className={inputClasses}
           readOnly={readOnly}
+          maxLength={maxLength}
         />
       )}
 

@@ -11,7 +11,8 @@ from .controllers import (
     essays_router,
     analysis_router,
     kg_router,
-    ocr_router
+    ocr_router,
+    rubrics_router
 )
 
 app = FastAPI(
@@ -45,6 +46,16 @@ if frontend_url:
         clean_url = url.strip().rstrip("/")
         if clean_url and clean_url not in allowed_origins:
             allowed_origins.append(clean_url)
+            # Add variant with slash
+            allowed_origins.append(f"{clean_url}/")
+
+# Standard development variants
+allowed_origins.extend([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+])
 
 # Allow all in production/railway if needed for debugging CORS issues
 if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
@@ -72,9 +83,10 @@ if is_railway and not strict_cors:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=False, # Must be False for wildcard origins
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 else:
     app.add_middleware(
@@ -97,6 +109,7 @@ app.include_router(essays_router, prefix="/api/essays", tags=["Essays"])
 app.include_router(analysis_router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(kg_router, prefix="/api/kg", tags=["Knowledge Graph"])
 app.include_router(ocr_router, prefix="/api/ocr", tags=["OCR"])
+app.include_router(rubrics_router, prefix="/api/rubrics", tags=["Rubrics"])
 
 @app.on_event("startup")
 async def startup_event():

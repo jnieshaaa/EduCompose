@@ -145,11 +145,6 @@ export function CourseSectionsView({
       );
 
       setProgramLoads(mappedLoads);
-
-      if (urlProgramLoadId) {
-        const found = mappedLoads.find((l) => l.id === urlProgramLoadId);
-        if (found) setSelectedProgramLoad(found);
-      }
     } catch (err) {
       console.error(err);
       showError("Failed to load programs.");
@@ -230,6 +225,19 @@ export function CourseSectionsView({
   useEffect(() => {
     fetchBlocks();
   }, [fetchBlocks]);
+
+  useEffect(() => {
+    if (urlProgramLoadId) {
+      if (programLoads.length > 0) {
+        const found = programLoads.find((l) => l.id === urlProgramLoadId);
+        if (found) {
+          setSelectedProgramLoad(prev => prev?.id === found.id ? prev : found);
+        }
+      }
+    } else {
+      setSelectedProgramLoad(null);
+    }
+  }, [urlProgramLoadId, programLoads]);
 
   const handleProgramClick = (load: TeacherProgramLoad) => {
     setSelectedProgramLoad(load);
@@ -655,6 +663,7 @@ export function CourseSectionsView({
                       const alreadyAddedIds = new Set(programLoads.map((p) => p.program_id));
                       const filtered = availablePrograms.filter((p) => {
                         if (course.program_id) return p.id === course.program_id;
+                        if (course.department_id) return p.department_id === course.department_id;
                         return !selectedDept || p.department_id === selectedDept;
                       });
 

@@ -55,5 +55,11 @@ export type NewActivityForm = {
   minWordCount: number;
   academicYear?: string;
   term?: string;
+  suggestedRubric?: {
+    name: string;
+    description: string;
+    grading_intensity: "Basic" | "Professional" | "Advanced" | "Technical";
+    criteria: any[];
+  };
 };
 

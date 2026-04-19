@@ -477,7 +477,30 @@ export const createActivity = async (
 
     // Handle rubric ID - ensure platform rubrics exist in database
     let rubricId: number | null = null;
-    if (activity.rubricId) {
+
+    if (activity.suggestedRubric) {
+      // 1. Save the AI suggested rubric first
+      const teacherNumericId = await fetchTeacherId();
+      if (teacherNumericId) {
+        const { data: newRubric, error: rubricError } = await supabase
+          .from("rubrics")
+          .insert({
+            name: activity.suggestedRubric.name,
+            description: activity.suggestedRubric.description,
+            criteria: activity.suggestedRubric.criteria,
+            grading_intensity: activity.suggestedRubric.grading_intensity,
+            user_id: teacherNumericId,
+          })
+          .select("id")
+          .single();
+        
+        if (rubricError) {
+          console.error("Error saving suggested rubric:", rubricError);
+        } else if (newRubric) {
+          rubricId = newRubric.id;
+        }
+      }
+    } else if (activity.rubricId) {
       if (activity.rubricId.startsWith("platform-")) {
         // Template rubric - ensure it exists in database, then use its ID
         const numericId = activity.rubricId.replace("platform-", "");
@@ -1236,7 +1259,7 @@ export const fetchStudentsByCourseAndSection = async (
     >();
 
     if (activityId) {
-      const activityDbId = activityId;
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
       if (activityDbId) {
         const studentIds = studentsData.map((s) => s.id);
         const { data: essaysData, error: essaysError } = await supabase

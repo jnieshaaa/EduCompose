@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { FileParserService } from "./FileParserService";
+import { createNotification } from "./notificationService";
 
 export type UnifiedUploadResult = {
   success: boolean;
@@ -113,29 +114,20 @@ export class UnifiedStudentUploadService {
           continue;
         }
 
-        // C. Check if teacher_program_load exists, create if not
+        // C. Check if teacher_program_load exists
+        // STRICT MODE: We don't auto-create program loads during student upload
+        // Teachers should explicitly assign programs to their subjects first
         let { data: progLoad } = await supabase
           .from("teacher_program_loads")
           .select("id")
           .eq("course_load_id", loadData.id)
           .eq("program_id", prog.id)
           .maybeSingle();
-        
-        if (!progLoad) {
-          const { data: newPL, error: plError } = await supabase
-            .from("teacher_program_loads")
-            .insert({ course_load_id: loadData.id, program_id: prog.id })
-            .select()
-            .single();
-          
-          if (plError || !newPL) {
-            errors.push(`Failed to link program ${progAbbr} to course load: ${plError?.message}`);
-            continue;
-          }
-          progLoad = newPL;
-        }
 
-        if (!progLoad) continue;
+        if (!progLoad) {
+          errors.push(`Row ${totalRows + 2}: Program "${progAbbr}" is not assigned to this subject. Please assign the program to your subject first before uploading students.`);
+          continue;
+        }
 
         // D. Resolve or Create Block
         let { data: block, error: bError } = await supabase
@@ -190,6 +182,13 @@ export class UnifiedStudentUploadService {
 
             if (!studentCode || !firstName || !lastName || !email) {
               errors.push(`Row ${totalRows + 4}: Missing required student data (ID, Name, or Email)`);
+              continue;
+            }
+
+            // Student Code Format Validation: XXX-XXXX
+            const studentCodeRegex = /^\d{3}-\d{4}$/;
+            if (!studentCodeRegex.test(studentCode)) {
+              errors.push(`Row ${totalRows + 4}: Invalid Student ID format "${studentCode}". Expected XXX-XXXX (e.g., 123-4567).`);
               continue;
             }
 
@@ -248,11 +247,39 @@ export class UnifiedStudentUploadService {
             errors.push(`Row ${totalRows + 4}: ${err.message || "Unknown error"}`);
           }
         }
+
+        // F. Notify Admins about new pending students
+        if (importedCount > 0) {
+          try {
+            const { data: admins } = await supabase
+              .from("users")
+              .select("auth_user_id")
+              .eq("role", "admin");
+
+            if (admins && admins.length > 0) {
+              const { data: teacherData } = await supabase.auth.getUser();
+              const teacherName = teacherData.user?.user_metadata?.first_name 
+                ? `${teacherData.user.user_metadata.first_name} ${teacherData.user.user_metadata.last_name || ""}`
+                : "A teacher";
+
+              for (const admin of admins) {
+                await createNotification({
+                  user_id: admin.auth_user_id,
+                  type: "info",
+                  title: "Pending Student Approvals",
+                  message: `${teacherName} has submitted ${importedCount} students for approval.`,
+                });
+              }
+            }
+          } catch (notifErr) {
+            console.error("Failed to notify admins:", notifErr);
+          }
+        }
       }
 
       return {
         success: true,
-        message: `Processed ${totalRows} rows. ${importedCount} students added to pending for Admin approval.`,
+        message: `Success! ${importedCount} students were submitted for approval. They will appear in your list once an Admin approves them.`,
         totalRows,
         imported: importedCount, 
         importedCount,
