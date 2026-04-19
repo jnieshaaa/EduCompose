@@ -152,7 +152,7 @@ class TransformerClaimClassifier:
             {json.dumps(sentences)}
             
             Return ONLY a JSON array of objects with 'label' and 'score' (0-1).
-            Example: [{"label": "claim", "score": 0.95}, ...]
+            Example: [{{"label": "claim", "score": 0.95}}, ...]
             """
             
             response = client.models.generate_content(
