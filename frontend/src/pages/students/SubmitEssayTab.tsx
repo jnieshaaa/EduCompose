@@ -524,9 +524,9 @@ export function SubmitEssayTab() {
                                    <Upload className="w-8 h-8 text-primary" />
                                 </div>
                                 <p className="mb-1 text-sm font-bold text-neutral-900">Drop your file here</p>
-                                <p className="text-xs font-medium text-neutral-400">PDF, Word, or TXT up to 10MB</p>
+                                <p className="text-xs font-medium text-neutral-400">PDF or Word up to 10MB</p>
                               </div>
-                              <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" />
+                              <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.doc" />
                            </label>
                          ) : (
                            <div className="p-8 bg-primary/5 rounded-[2rem] border-2 border-primary/20 flex items-center justify-between animate-in zoom-in-95 duration-300">

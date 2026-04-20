@@ -3052,10 +3052,22 @@ export const fetchDuplicateEssays = async (
        if (e.block_id && !blockIds.includes(e.block_id)) blockIds.push(e.block_id);
     });
 
+    // Fallback: If any student has no block associated via their essay, try to fetch their enrollment
+    const { data: studentBlocks } = await supabase
+      .from("block_students")
+      .select("student_id, block_id")
+      .in("student_id", studentIds);
+
+    const studentBlockMap = new Map();
+    studentBlocks?.forEach(sb => {
+      studentBlockMap.set(String(sb.student_id), sb.block_id);
+      if (!blockIds.includes(sb.block_id)) blockIds.push(sb.block_id);
+    });
+
     // Fetch students
     const { data: studentsData } = await supabase
       .from("students")
-      .select("id, first_name, middle_name, last_name")
+      .select("id, first_name, middle_name, last_name, program_id, year, block_name")
       .in("id", studentIds);
       
     // Fetch blocks with their program_load_id
@@ -3073,6 +3085,11 @@ export const fetchDuplicateEssays = async (
       .in("id", loadIds);
       
     const programIds = [...new Set(loadsData?.map(l => l.program_id).filter(Boolean))];
+    
+    // Add programs directly attached to students
+    studentsData?.forEach(s => {
+      if (s.program_id && !programIds.includes(s.program_id)) programIds.push(s.program_id);
+    });
     
     // Fetch programs
     const { data: programsData } = await supabase
@@ -3123,15 +3140,25 @@ export const fetchDuplicateEssays = async (
       const title = meta?.title || fallback?.title || "Untitled";
       const submittedAt = meta?.submitted_at || fallback?.submitted_at || new Date().toISOString();
       const studentId = meta?.student_id || result.student_id;
-      const blockId = meta?.block_id || fallback?.block_id;
+      // Use essay block, or fallback essay block, or finally the student's enrolled block
+      const blockId = meta?.block_id || fallback?.block_id || studentBlockMap.get(String(studentId));
 
       const student = studentsMap.get(String(studentId));
       const block = blocksMap.get(String(blockId));
-      const program = block?.program;
+      
+      const program = block?.program || (student?.program_id ? programsMap.get(String(student.program_id)) : null);
 
       if (!student) {
         console.log(`[fetchDuplicateEssays] Skipped essay ${result.essay_id}: Missing student metadata.`);
         continue;
+      }
+
+      // Fallback section name to student direct table columns
+      let resolvedSectionName = "Unknown";
+      if (block?.name) {
+        resolvedSectionName = block.year ? `${block.year}${block.name}` : block.name;
+      } else if (student?.block_name) {
+        resolvedSectionName = student.year ? `${student.year}${student.block_name}` : student.block_name;
       }
 
       const essayInfo = {
@@ -3139,9 +3166,7 @@ export const fetchDuplicateEssays = async (
         studentId: String(student.id),
         studentName: buildFullNameFromObject(student, "Unknown"),
         programName: program?.abbr || program?.name || "Unknown",
-        sectionName: block?.year
-          ? `${block.year}${block.name}`
-          : block?.name || "Unknown",
+        sectionName: resolvedSectionName,
         title: title,
         submittedAt: submittedAt,
       };

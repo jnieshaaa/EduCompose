@@ -3,8 +3,7 @@ import {
   FileText,
   Users,
   Search,
-  // ChevronDown,
-  // X,
+  ChevronRight,
   Eye,
   AlertCircle,
   CheckCircle2,
@@ -53,25 +52,10 @@ export function CompareActivitiesTab() {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>(
     []
   );
-  const [allStudents, setAllStudents] = useState<
-    Array<{
-      id: string;
-      studentId: string;
-      essayId: string;
-      name: string;
-      programName: string;
-      sectionName: string;
-      hasEssay: boolean;
-    }>
-  >([]);
+
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
-    new Set()
-  );
-  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+
   const [viewingEssayStudentId, setViewingEssayStudentId] = useState<{
     id: string;
     name: string;
@@ -112,27 +96,19 @@ export function CompareActivitiesTab() {
   useEffect(() => {
     if (!selectedActivityId) {
       setDuplicateGroups([]);
-      setAllStudents([]);
       return;
     }
 
     const loadData = async () => {
       setIsLoadingDuplicates(true);
-      setIsLoadingStudents(true);
       try {
-        const [duplicates, students] = await Promise.all([
-          fetchDuplicateEssays(selectedActivityId),
-          fetchStudentsForActivity(selectedActivityId),
-        ]);
+        const duplicates = await fetchDuplicateEssays(selectedActivityId);
         setDuplicateGroups(duplicates);
-        setAllStudents(students);
       } catch (error) {
         console.error("Error loading data:", error);
         setDuplicateGroups([]);
-        setAllStudents([]);
       } finally {
         setIsLoadingDuplicates(false);
-        setIsLoadingStudents(false);
       }
     };
 
@@ -162,46 +138,12 @@ export function CompareActivitiesTab() {
     return activitiesWithDuplicates.find((a) => a.id === selectedActivityId);
   }, [activitiesWithDuplicates, selectedActivityId]);
 
-  // Filter students based on search
-  const filteredStudents = useMemo(() => {
-    const query = studentSearchQuery.toLowerCase();
-    return allStudents.filter(
-      (student) =>
-        student.name.toLowerCase().includes(query) ||
-        student.programName.toLowerCase().includes(query) ||
-        student.sectionName.toLowerCase().includes(query)
-    );
-  }, [allStudents, studentSearchQuery]);
 
-  const handleOpenStudentModal = () => {
-    setSelectedStudents(new Set());
-    setStudentSearchQuery("");
-    setIsStudentModalOpen(true);
-  };
 
-  const handleToggleStudent = (studentId: string) => {
-    setSelectedStudents((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(studentId)) {
-        newSet.delete(studentId);
-      } else {
-        newSet.add(studentId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleCompareStudents = async () => {
-    if (selectedStudents.size < 2) {
-      showNotification('warning', "Please select at least 2 students to compare");
-      return;
-    }
-
-    setIsComparing(true);
-    setIsStudentModalOpen(false);
-
+  const handleViewDuplicateGroup = async (group: DuplicateEssayGroup) => {
     try {
-      const studentIdsArray = Array.from(selectedStudents);
+      setIsComparing(true);
+      const studentIdsArray = group.essays.map(e => e.studentId);
 
       // Fetch essay texts for selected students
       const essayData = await fetchEssayTextsForStudents(
@@ -210,50 +152,25 @@ export function CompareActivitiesTab() {
       );
 
       if (essayData.length < 2) {
-        showNotification('error', "Could not fetch essays for selected students. Please ensure they have submitted essays.");
+        showNotification('error', "Could not fetch full essays for these students to view side-by-side.");
         setIsComparing(false);
         return;
       }
 
-      // Extract texts and names
-      const essayTexts = essayData.map((e) => e.text);
-      const studentNames = essayData.map((e) => e.studentName);
-
-      // Call LLM analysis
-      const analysisResult = await analyzeEssaySimilarity(
-        essayTexts,
-        studentNames
-      );
-
-      // Create comparison result
+      // Create comparison result omitting the AI analysis
       const result: ComparisonResult = {
-        insights: analysisResult.insights,
-        similarityScore: analysisResult.similarityScore,
-        highlights: analysisResult.highlights,
+        insights: "Identical submissions detected by EduCompose Integrity System.",
+        similarityScore: 1.00, // It's essentially 100% since they tripped the duplicate detector
+        highlights: [], // We omit LLM highlights
         studentEssays: essayData,
       };
 
       setComparisonResult(result);
       setViewMode("comparison");
 
-      // Save to database
-      try {
-        await saveComparisonAnalysis({
-          activityId: selectedActivityId,
-          studentIds: studentIdsArray,
-          essayIds: essayData.map((e) => e.essayId),
-          insights: analysisResult.insights,
-          highlights: analysisResult.highlights,
-          similarityScore: analysisResult.similarityScore,
-          createdAt: new Date().toISOString(),
-        } as ComparisonAnalysis);
-      } catch (error) {
-        console.error("Error saving comparison:", error);
-        // Continue even if save fails
-      }
     } catch (error) {
-      console.error("Error comparing essays:", error);
-      showNotification('error', "Failed to compare essays. Please try again.");
+      console.error("Error viewing essays:", error);
+      showNotification('error', "Failed to load the essays side-by-side. Please try again.");
     } finally {
       setIsComparing(false);
     }
@@ -438,31 +355,18 @@ export function CompareActivitiesTab() {
           </Button>
         </div>
 
-        {/* LLM Insights */}
-        <Card className="p-6">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Sparkles className="w-6 h-6 text-primary" />
+        {/* Simple Warning Banner instead of AI insights */}
+        <Card className="p-6 bg-red-50 border-red-100">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-red-100 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                Similarity Level
+              <h2 className="text-xl font-semibold text-red-900 mb-2">
+                Plagiarism Alert
               </h2>
-              <div className="flex items-center gap-4 mb-4">
-                <Badge
-                  className={
-                    comparisonResult.similarityScore > 0.7
-                      ? "bg-red-500 text-red-700 border-red-200 text-lg px-4 py-1"
-                      : comparisonResult.similarityScore > 0.5
-                      ? "bg-yellow-500 text-yellow-700 border-yellow-200 text-lg px-4 py-1"
-                      : "bg-green-500 text-green-700 border-green-200 text-lg px-4 py-1"
-                  }
-                >
-                  {(comparisonResult.similarityScore * 100).toFixed(0)}% Similar
-                </Badge>
-              </div>
-              <p className="text-neutral-700 whitespace-pre-wrap">
-                {comparisonResult.insights}
+              <p className="text-red-700 whitespace-pre-wrap">
+                These students have submitted highly identical written works. Their essays are displayed below for comparison.
               </p>
             </div>
           </div>
@@ -504,22 +408,12 @@ export function CompareActivitiesTab() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">
-            Compare Essays
+            Duplicate Detection
           </h1>
           <p className="text-neutral-600 mt-1">
             Find and check for similar essays from students
           </p>
         </div>
-        {selectedActivityId && (
-          <Button
-            variant="outline"
-            onClick={handleViewHistory}
-            className="flex items-center gap-2"
-          >
-            <History className="w-4 h-4" />
-            History
-          </Button>
-        )}
       </div>
 
       {/* Activity Selection */}
@@ -587,13 +481,6 @@ export function CompareActivitiesTab() {
                     )}
                   </div>
                 </div>
-                <Button
-                  onClick={handleOpenStudentModal}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Compare Any Students
-                </Button>
               </div>
             </div>
           )}
@@ -672,11 +559,11 @@ export function CompareActivitiesTab() {
                       </div>
                     </div>
                     <Button
-                      onClick={handleOpenStudentModal}
+                      onClick={() => handleViewDuplicateGroup(group)}
                       className="flex items-center gap-2"
                     >
-                      <FileText className="w-4 h-4" />
-                      Select Students
+                      View Essays
+                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -686,143 +573,7 @@ export function CompareActivitiesTab() {
         </Card>
       )}
 
-      {/* Student Selection Modal */}
-      <Modal
-        isOpen={isStudentModalOpen}
-        onClose={() => setIsStudentModalOpen(false)}
-        title="Select Students to Compare"
-        size="lg"
-        contentClassName="flex flex-col overflow-hidden p-0"
-      >
-        <div className="flex flex-col flex-1 overflow-hidden px-6 pb-6">
-          {/* Search Bar */}
-          <div className="mb-4 pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <Input
-                type="search"
-                placeholder="Search students by name, program, or section..."
-                value={studentSearchQuery}
-                onChange={setStudentSearchQuery}
-                className="pl-10"
-              />
-            </div>
-            <p className="text-sm text-neutral-500 mt-2">
-              Select 2 or more students to compare their essays
-            </p>
-          </div>
 
-          {/* Student List */}
-          <div className="border border-neutral-300 rounded-lg overflow-hidden flex-1 overflow-y-auto max-h-96">
-            {isLoadingStudents ? (
-              <div className="p-8 text-center text-neutral-500">
-                <p>Loading students...</p>
-              </div>
-            ) : filteredStudents.length === 0 ? (
-              <div className="p-8 text-center text-neutral-500">
-                <p>No students found matching your search</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-neutral-200">
-                {filteredStudents.map((student) => {
-                  const isSelected = selectedStudents.has(student.studentId);
-                  return (
-                    <div
-                      key={student.studentId}
-                      className={`p-4 hover:bg-neutral-50 transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-primary/5 border-l-4 border-l-primary"
-                          : ""
-                      }`}
-                      onClick={() => handleToggleStudent(student.studentId)}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() =>
-                              handleToggleStudent(student.studentId)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            className="mt-1 w-4 h-4 text-primary border-neutral-300 rounded focus:ring-primary"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-neutral-900">
-                                {student.name}
-                              </span>
-                              {isSelected && (
-                                <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
-                                  Selected
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-neutral-600">
-                              <span>{student.programName}</span>
-                              <span>•</span>
-                              <span>{student.sectionName}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {student.hasEssay && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e?.stopPropagation();
-                              handleViewEssay(student.studentId, student.name);
-                            }}
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            View
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 mt-4 border-t border-neutral-200">
-            <div className="text-sm text-neutral-600">
-              {selectedStudents.size > 0 ? (
-                <span className="font-medium text-primary">
-                  {selectedStudents.size} student
-                  {selectedStudents.size > 1 ? "s" : ""} selected
-                </span>
-              ) : (
-                <span>Select at least 2 students to compare</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsStudentModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCompareStudents}
-                disabled={selectedStudents.size < 2 || isComparing}
-              >
-                {isComparing ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>Compare ({selectedStudents.size})</>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Modal>
 
       {/* View Essay Modal */}
       {viewingEssayStudentId && (

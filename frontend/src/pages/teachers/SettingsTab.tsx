@@ -9,6 +9,7 @@ import {
   Upload,
   Loader2,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import { useAlert } from "../../hooks/useAlert";
 import {
@@ -33,6 +34,7 @@ import { AIAssessmentSettingsComponent } from "../../components/settings/AIAsses
 import { ThresholdSettingsComponent } from "../../components/settings/ThresholdSettings";
 import { RubricDefaultsComponent } from "../../components/settings/RubricDefaults";
 import { DataManagement } from "../../components/settings/DataManagement";
+import { ChangePassword } from "../../components/settings/ChangePassword";
 
 export function SettingsTab() {
   const { showSuccess, showError, AlertComponent } = useAlert();
@@ -262,6 +264,7 @@ export function SettingsTab() {
 
       const sectionIds = [
         "profile",
+        "security",
         "ai-assessment",
         "thresholds",
         "rubric",
@@ -314,6 +317,7 @@ export function SettingsTab() {
 
   const settingsNavigation = [
     { id: "profile", name: "Profile", icon: User },
+    { id: "security", name: "Security", icon: Lock },
     { id: "ai-assessment", name: "AI Grading", icon: Settings },
     { id: "thresholds", name: "Grading Targets", icon: AlertTriangle },
     { id: "rubric", name: "Default Rubric", icon: BookOpen },
@@ -390,6 +394,8 @@ export function SettingsTab() {
               onProfileChange={handleProfileChange}
               onSaveProfile={handleSaveProfile}
             />
+
+            <ChangePassword id="security" />
 
             <AIAssessmentSettingsComponent
               id="ai-assessment"

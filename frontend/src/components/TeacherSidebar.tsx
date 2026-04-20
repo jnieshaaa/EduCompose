@@ -56,7 +56,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
       },
       {
         icon: <GitCompare className="w-5 h-5" />,
-        label: "Compare Essays",
+        label: "Duplicate Detection",
         path: "/Teacher/CompareActivities",
       },
       {

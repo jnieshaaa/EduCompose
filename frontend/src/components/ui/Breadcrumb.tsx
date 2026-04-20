@@ -22,7 +22,7 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   
   // Essay section
   "/Teacher/Activities": { label: "Activities", icon: <BookOpen className="w-4 h-4" /> },
-  "/Teacher/CompareActivities": { label: "Compare Essays", icon: <GitCompare className="w-4 h-4" /> },
+  "/Teacher/CompareActivities": { label: "Duplicate Detection", icon: <GitCompare className="w-4 h-4" /> },
   "/Teacher/Essays": { label: "Submissions", icon: <FileText className="w-4 h-4" /> },
   "/Teacher/EssayManagement": { label: "Essay Management", icon: <FileText className="w-4 h-4" /> },
   "/Teacher/AnalysisResults": { label: "Analysis Results", icon: <FileText className="w-4 h-4" /> },

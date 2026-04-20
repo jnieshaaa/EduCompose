@@ -2,15 +2,23 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw } from 'lucide-react';
+import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
+import { ChangePassword } from "../../components/settings/ChangePassword";
 
 export function StudentSettingsTab() {
   const [studentData, setStudentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { showNotification } = useNotification();
+  
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    nickname: ""
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [preferences, setPreferences] = useState({
     notifyEvaluation: true,
@@ -46,6 +54,11 @@ export function StudentSettingsTab() {
 
         if (error) throw error;
         setStudentData(data);
+        setProfile({
+          firstName: data.first_name || "",
+          lastName: data.last_name || "",
+          nickname: data.nickname || ""
+        });
 
         const savedPrefs = localStorage.getItem(`student_prefs_${data.id}`);
         if (savedPrefs) {
@@ -64,13 +77,67 @@ export function StudentSettingsTab() {
     setPreferences(prev => ({ ...prev, [key]: value }));
   };
 
+  const sanitizeName = (value: string) => {
+    let clean = value.replace(/[^A-Za-z]/g, "");
+    if (clean.length > 0) {
+      clean = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    }
+    return clean;
+  };
+
+  const validateNames = () => {
+    const newErrors: Record<string, string> = {};
+    if (!profile.firstName || profile.firstName.length < 3) {
+      newErrors.firstName = "Min 3 letters";
+    }
+    if (!profile.lastName || profile.lastName.length < 3) {
+      newErrors.lastName = "Min 3 letters";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSaveSettings = async () => {
     if (!studentData) return;
+    if (!validateNames()) {
+      showNotification('error', "Please fix profile errors first.");
+      return;
+    }
     
     setIsSaving(true);
     try {
       localStorage.setItem(`student_prefs_${studentData.id}`, JSON.stringify(preferences));
-      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const { error } = await supabase
+        .from("students")
+        .update({
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          nickname: profile.nickname
+        })
+        .eq("id", studentData.id);
+
+      if (error) throw error;
+      
+      // Sync auth user meta too
+      await supabase.auth.updateUser({
+        data: {
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          nickname: profile.nickname
+        }
+      });
+
+      // Also update public.users if exists
+      await supabase
+        .from("users")
+        .update({
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          nickname: profile.nickname
+        })
+        .eq("auth_user_id", studentData.auth_user_id);
+        
       showNotification('success', "All settings saved!");
     } catch (err) {
       showNotification('error', "Couldn't save settings. Try again!");
@@ -146,26 +213,72 @@ export function StudentSettingsTab() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
               <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1 flex justify-between">
+                  <span>First Name</span>
+                  {errors.firstName && <span className="text-red-500 normal-case tracking-normal">{errors.firstName}</span>}
+                </Label>
+                <input
+                  type="text"
+                  value={profile.firstName}
+                  onChange={(e) => {
+                    setProfile(prev => ({ ...prev, firstName: sanitizeName(e.target.value) }));
+                    if (errors.firstName) setErrors(prev => ({ ...prev, firstName: '' }));
+                  }}
+                  className={`w-full px-5 py-4 bg-neutral-50 rounded-2xl border text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20 ${errors.firstName ? 'border-red-500' : 'border-neutral-50'}`}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1 flex justify-between">
+                  <span>Last Name</span>
+                  {errors.lastName && <span className="text-red-500 normal-case tracking-normal">{errors.lastName}</span>}
+                </Label>
+                <input
+                  type="text"
+                  value={profile.lastName}
+                  onChange={(e) => {
+                    setProfile(prev => ({ ...prev, lastName: sanitizeName(e.target.value) }));
+                    if (errors.lastName) setErrors(prev => ({ ...prev, lastName: '' }));
+                  }}
+                  className={`w-full px-5 py-4 bg-neutral-50 rounded-2xl border text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20 ${errors.lastName ? 'border-red-500' : 'border-neutral-50'}`}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1 flex justify-between">
+                  <span>Nickname</span>
+                  {errors.nickname && <span className="text-red-500 normal-case tracking-normal">{errors.nickname}</span>}
+                </Label>
+                <input
+                  type="text"
+                  value={profile.nickname}
+                  placeholder="Optional"
+                  onChange={(e) => {
+                    setProfile(prev => ({ ...prev, nickname: sanitizeName(e.target.value) }));
+                    if (errors.nickname) setErrors(prev => ({ ...prev, nickname: '' }));
+                  }}
+                  className={`w-full px-5 py-4 bg-neutral-50 rounded-2xl border text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20 ${errors.nickname ? 'border-red-500' : 'border-neutral-50'}`}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My ID Number</Label>
-                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
                   {studentData?.student_code || "---"}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="col-span-1 md:col-span-2 space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Email</Label>
-                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600 truncate">
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 truncate cursor-not-allowed">
                   {studentData?.email || "---"}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Course</Label>
-                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
                   {studentData?.programs_lookup?.name || studentData?.programs_lookup?.abbr || "N/A"}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Group</Label>
-                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600">
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
                   {studentData?.year && studentData?.block_name ? `${studentData.year} - ${studentData.block_name}` : studentData?.block_name || "N/A"}
                 </div>
               </div>
@@ -209,6 +322,17 @@ export function StudentSettingsTab() {
                   />
                 </div>
               ))}
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5"
+          >
+            <div className="p-2">
+              <ChangePassword id="student-password" />
             </div>
           </motion.div>
 
