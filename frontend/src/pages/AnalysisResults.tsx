@@ -349,13 +349,13 @@ const AnalysisResults: React.FC = () => {
           timestamp: Date.now(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      } catch (storageError) {
-        console.warn('Failed to save analysis to localStorage:', storageError);
+      } catch {
+        // console.warn('Failed to save analysis to localStorage:', storageError);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to analyze essay';
       setError(errorMessage);
-      console.error('Error analyzing essay:', err);
+      // console.error('Error analyzing essay:', err);
     } finally {
       setLoading(false);
     }
@@ -432,7 +432,7 @@ const AnalysisResults: React.FC = () => {
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis results';
             setError(errorMessage);
-            console.error('Error loading analysis from ref token:', err);
+            // console.error('Error loading analysis from ref token:', err);
           } finally {
             setLoading(false);
           }
@@ -466,8 +466,8 @@ const AnalysisResults: React.FC = () => {
             localStorage.removeItem(STORAGE_KEY);
           }
         }
-      } catch (storageError) {
-        console.warn('Failed to load analysis from localStorage:', storageError);
+      } catch {
+        // console.warn('Failed to load analysis from localStorage:', storageError);
       }
 
       // Use mock data for preview
@@ -506,7 +506,7 @@ const AnalysisResults: React.FC = () => {
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis results';
           setError(errorMessage);
-          console.error('Error loading analysis from notification:', err);
+          // console.error('Error loading analysis from notification:', err);
         } finally {
           setLoading(false);
         }
@@ -530,10 +530,10 @@ const AnalysisResults: React.FC = () => {
           );
           if (resolvedEssayId) {
             setEssayId(resolvedEssayId);
-            console.log(`Derived essayId: ${resolvedEssayId} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
+            // console.log(`Derived essayId: ${resolvedEssayId} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
           }
-        } catch (err) {
-          console.warn('Could not derive essayId from studentId and activityId:', err);
+        } catch {
+          // console.warn('Could not derive essayId from studentId and activityId:');
         }
       };
       deriveEssayId();
@@ -559,8 +559,8 @@ const AnalysisResults: React.FC = () => {
             timestamp: Date.now(),
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-        } catch (storageError) {
-          console.warn('Failed to save analysis to localStorage:', storageError);
+        } catch {
+          // console.warn('Failed to save analysis to localStorage:', storageError);
         }
       }
     } else if (state?.text) {
@@ -638,8 +638,8 @@ const AnalysisResults: React.FC = () => {
             );
           }
         }
-      } catch (err) {
-        console.warn('Error loading saved AI detection result:', err);
+      } catch {
+        // console.warn('Error loading saved AI detection result:');
       }
     };
 
@@ -655,8 +655,8 @@ const AnalysisResults: React.FC = () => {
       try {
         const groups = await fetchDuplicateEssays(activityId);
         setDuplicateGroups(groups);
-      } catch (err) {
-        console.warn('Error loading duplicate essays:', err);
+      } catch {
+        // console.warn('Error loading duplicate essays:');
       } finally {
         setIsLoadingDuplicates(false);
       }
@@ -724,8 +724,8 @@ const AnalysisResults: React.FC = () => {
               currentEssayId = essayData.id;
             }
           }
-        } catch (err) {
-          console.warn('Could not derive essayId for saving plagiarism result:', err);
+        } catch {
+          // console.warn('Could not derive essayId for saving plagiarism result:');
         }
       }
 
@@ -735,24 +735,24 @@ const AnalysisResults: React.FC = () => {
           const saveResult = await savePlagiarismResult(currentEssayId, result);
           if (saveResult.success) {
             plagiarismResultSavedRef.current = true;
-            console.log('Saved plagiarism result on exit for essayId:', currentEssayId);
+            // console.log('Saved plagiarism result on exit for essayId:', currentEssayId);
           } else {
-            console.warn('Failed to save plagiarism result on exit:', saveResult.error);
+            // console.warn('Failed to save plagiarism result on exit:', saveResult.error);
           }
-        } catch (err) {
-          console.warn('Error saving plagiarism result on exit:', err);
+        } catch {
+          // console.warn('Error saving plagiarism result on exit:');
         }
       } else if (currentStudentId && currentActivityId) {
         try {
           const saveResult = await savePlagiarismResult(currentStudentId, currentActivityId, result);
           if (saveResult.success) {
             plagiarismResultSavedRef.current = true;
-            console.log('Saved plagiarism result on exit for studentId:', currentStudentId, 'activityId:', currentActivityId);
+            // console.log('Saved plagiarism result on exit for studentId:', currentStudentId, 'activityId:', currentActivityId);
           } else {
-            console.warn('Failed to save plagiarism result on exit:', saveResult.error);
+            // console.warn('Failed to save plagiarism result on exit:', saveResult.error);
           }
-        } catch (err) {
-          console.warn('Error saving plagiarism result on exit:', err);
+        } catch {
+          // console.warn('Error saving plagiarism result on exit:');
         }
       }
     };
@@ -784,8 +784,8 @@ const AnalysisResults: React.FC = () => {
       // Save on unmount (synchronous save attempt)
       if (!plagiarismResultSavedRef.current && !isPreviewMode && plagiarismResultRef.current) {
         // Use a synchronous-like approach for unmount
-        savePlagiarismOnExit().catch(err => {
-          console.warn('Error saving plagiarism result on unmount:', err);
+        savePlagiarismOnExit().catch(() => {
+          // console.warn('Error saving plagiarism result on unmount:');
         });
       }
     };
@@ -847,7 +847,7 @@ const AnalysisResults: React.FC = () => {
           
           if (!error && analysisData?.original_text) {
             textToCheck = analysisData.original_text;
-            console.log(`Using original_text from Supabase for essay_id: ${currentEssayId}`);
+            // console.log(`Using original_text from Supabase for essay_id: ${currentEssayId}`);
           }
         } catch (err) {
           console.warn('Could not fetch original_text from Supabase, using provided text:', err);
@@ -895,7 +895,7 @@ const AnalysisResults: React.FC = () => {
               
               if (!error && analysisData?.original_text) {
                 textToCheck = analysisData.original_text;
-                console.log(`Using original_text from Supabase for studentId: ${currentStudentId}, activityId: ${currentActivityId}`);
+                // console.log(`Using original_text from Supabase for studentId: ${currentStudentId}, activityId: ${currentActivityId}`);
               }
             }
           }
@@ -915,50 +915,50 @@ const AnalysisResults: React.FC = () => {
       // Save plagiarism result to Supabase only if user is authenticated
       // Skip saving if user is not logged in to avoid unnecessary costs
       if (!isAuthenticated) {
-        console.log('Plagiarism check completed. Results not saved (user not authenticated).');
+        // console.log('Plagiarism check completed. Results not saved (user not authenticated).');
         return;
       }
       
       // Save plagiarism result to Supabase if essayId is available, or studentId and activityId
       if (derivedEssayId) {
         try {
-          console.log('Saving plagiarism result for essayId:', derivedEssayId);
+          // console.log('Saving plagiarism result for essayId:', derivedEssayId);
           const saveResult = await savePlagiarismResult(derivedEssayId, result);
           if (saveResult.success) {
-            console.log('Successfully saved plagiarism result for essayId:', derivedEssayId);
+            // console.log('Successfully saved plagiarism result for essayId:', derivedEssayId);
             plagiarismResultSavedRef.current = true; // Mark as saved
           } else {
-            console.error('Failed to save plagiarism result for essayId:', derivedEssayId, saveResult.error);
+            // console.error('Failed to save plagiarism result for essayId:', derivedEssayId, saveResult.error);
             // Show a non-blocking warning to the user
             setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveResult.error}`);
           }
-        } catch (saveErr) {
-          console.error('Error saving plagiarism result for essayId:', derivedEssayId, saveErr);
-          setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
+        } catch {
+          // console.error('Error saving plagiarism result for essayId:');
+          setPlagiarismError(`Plagiarism check completed, but failed to save results.`);
         }
       } else if (currentStudentId && currentActivityId) {
         try {
-          console.log('Saving plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
+          // console.log('Saving plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
           const saveResult = await savePlagiarismResult(currentStudentId, currentActivityId, result);
           if (saveResult.success) {
-            console.log('Successfully saved plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
+            // console.log('Successfully saved plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId);
             plagiarismResultSavedRef.current = true; // Mark as saved
           } else {
-            console.error('Failed to save plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId, saveResult.error);
+            // console.error('Failed to save plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId, saveResult.error);
             setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveResult.error}`);
           }
-        } catch (saveErr) {
-          console.error('Error saving plagiarism result for studentId:', currentStudentId, 'activityId:', currentActivityId, saveErr);
-          setPlagiarismError(`Plagiarism check completed, but failed to save results: ${saveErr instanceof Error ? saveErr.message : 'Unknown error'}`);
+        } catch {
+          // console.error('Error saving plagiarism result for studentId:');
+          setPlagiarismError(`Plagiarism check completed, but failed to save results.`);
         }
       } else {
         // When no IDs are available, just show the result without saving
-        console.log('Plagiarism check completed. Results not saved (no identifiers available).');
+        // console.log('Plagiarism check completed. Results not saved (no identifiers available).');
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to check for plagiarism';
+    } catch {
+      const errorMessage = 'Failed to check for plagiarism';
       setPlagiarismError(errorMessage);
-      console.error('Error checking plagiarism:', err);
+      // console.error('Error checking plagiarism:');
     } finally {
       setIsCheckingPlagiarism(false);
     }
@@ -986,7 +986,7 @@ const AnalysisResults: React.FC = () => {
       }
 
       if (!isAuthenticated) {
-        console.log('AI detection completed. Results not saved (user not authenticated).');
+        // console.log('AI detection completed. Results not saved (user not authenticated).');
         return;
       }
 
@@ -1002,12 +1002,12 @@ const AnalysisResults: React.FC = () => {
           setAiDetectionError(`AI detection completed, but failed to save results: ${saveResult.error}`);
         }
       } else {
-        console.log('AI detection completed. Results not saved (no identifiers available).');
+        // console.log('AI detection completed. Results not saved (no identifiers available).');
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to check AI detection';
+    } catch {
+      const errorMessage = 'Failed to check AI detection';
       setAiDetectionError(errorMessage);
-      console.error('Error checking AI detection:', err);
+      // console.error('Error checking AI detection:');
     } finally {
       setIsCheckingAIDetection(false);
     }

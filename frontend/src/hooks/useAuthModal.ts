@@ -98,7 +98,7 @@ export function useAuthModal(onClose: () => void) {
       }
 
       if (data.session && data.user) {
-        console.log("Login successful. Checking roles for Auth ID:", data.user.id);
+        // console.log("Login successful. Checking roles for Auth ID:", data.user.id);
 
         // Fetch role from the public 'users' table (source of truth)
         const { data: userData } = await supabase
@@ -107,7 +107,7 @@ export function useAuthModal(onClose: () => void) {
           .eq("auth_user_id", data.user.id)
           .maybeSingle();
 
-        console.log("Database lookup (users table):", userData);
+        // console.log("Database lookup (users table):", userData);
 
         let role = "teacher"; // Default
         let firstName = data.user.email?.split("@")[0] || "User";
@@ -118,7 +118,7 @@ export function useAuthModal(onClose: () => void) {
           firstName = userData.first_name || firstName;
           lastName = userData.last_name || "";
         } else {
-          console.log("User not found in 'users' table. Checking 'students' table...");
+          // console.log("User not found in 'users' table. Checking 'students' table...");
           // If not in users table, check if it's a student
           const { data: studentData } = await supabase
             .from("students")
@@ -126,7 +126,7 @@ export function useAuthModal(onClose: () => void) {
             .eq("auth_user_id", data.user.id)
             .maybeSingle();
           
-          console.log("Database lookup (students table):", studentData);
+          // console.log("Database lookup (students table):", studentData);
           
           if (studentData) {
             role = "student";
@@ -135,11 +135,11 @@ export function useAuthModal(onClose: () => void) {
           }
         }
 
-        console.log("Final determined role:", role);
+        // console.log("Final determined role:", role);
 
         // Block students from logging in via the Teacher/Admin portal
         if (role === "student") {
-          console.log("BLOCKING LOGIN: Student attempted to access teacher portal.");
+          // console.log("BLOCKING LOGIN: Student attempted to access teacher portal.");
           await supabase.auth.signOut();
           setLoginError(
             "Student accounts must use the Student Login page."
@@ -281,17 +281,17 @@ export function useAuthModal(onClose: () => void) {
 
       if (insertError) throw insertError;
 
-      console.log("Sending verification email...");
+      // console.log("Sending verification email...");
       await sendSignupCodeEmail({
         toEmail: signupEmail.trim(),
         code,
       });
 
-      console.log("Signup initialization successful. Moving to confirmation step.");
+      // console.log("Signup initialization successful. Moving to confirmation step.");
       setSignupStep("accountCreated");
       startResendTimer();
     } catch (err: unknown) {
-      console.error("Signup error:", err);
+      // console.error("Signup error:", err);
       const message = err instanceof Error ? err.message : String(err);
       setSignupError(message || "Registration failed. Please try again.");
     } finally {

@@ -126,7 +126,6 @@ export async function openGoogleDrivePicker(
               name: doc.name,
               mimeType: doc.mimeType,
             };
-            console.log("Picked file from Google Drive:", pickedFile);
             if (onPicked) onPicked(pickedFile);
             resolve(pickedFile);
           } else if (data.action === "cancel") {

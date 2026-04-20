@@ -131,16 +131,16 @@ export function EssayTextDisplay({
           error.offset < 0 ||
           error.offset >= originalText.length
         ) {
-          console.log("Filtered out (invalid offset/length):", error);
+          // console.log("Filtered out (invalid offset/length):", error);
           return false;
         }
         if (error.offset + error.errorLength > originalText.length) {
-          console.log(
-            "Filtered out (exceeds length):",
-            error,
-            "text length:",
-            originalText.length,
-          );
+          // console.log(
+          //   "Filtered out (exceeds length):",
+          //   error,
+          //   "text length:",
+          //   originalText.length,
+          // );
           return false;
         }
         const textAtOffset = originalText.slice(
@@ -149,7 +149,7 @@ export function EssayTextDisplay({
         );
         // Allow whitespace-only errors (e.g., multiple spaces, tabs) but ensure there's actual content
         if (textAtOffset.length === 0) {
-          console.log("Filtered out (empty text at offset):", error);
+          // console.log("Filtered out (empty text at offset):", error);
           return false;
         }
         return true;

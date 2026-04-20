@@ -178,7 +178,7 @@ const Login: React.FC = () => {
       });
 
       if (signUpError?.message?.includes("already registered")) {
-        console.log("[Verification] User already registered, attempting sign in...");
+        // console.log("[Verification] User already registered, attempting sign in...");
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: pendingStudent.email,
           password: finalPassword

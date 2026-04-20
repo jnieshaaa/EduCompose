@@ -340,7 +340,7 @@ const AnalyzeEssay: React.FC = () => {
                                   file
                                 );
                                 // Debug log to check what we're receiving
-                                console.log("OCR Result:", result);
+                                // console.log("OCR Result:", result);
 
                                 // Ensure word_count is calculated if missing or 0 but text exists
                                 if (result.text && result.text.trim()) {
