@@ -496,18 +496,29 @@ class CopyscapeService:
                     except (ValueError, TypeError):
                         return None
 
-                ai_score = (
-                    _to_float(details.get("ai_score"))
+                # Copyscape tags are typically lowercase without underscores (e.g., <aiscore>)
+                ai_score_raw = (
+                    _to_float(details.get("aiscore"))
+                    or _to_float(details.get("ai_score"))
                     or _to_float(details.get("score"))
+                    or _to_float(details.get("aiprobability"))
                     or _to_float(details.get("probability"))
                     or _to_float(details.get("ai_probability"))
                     or 0.0
                 )
 
-                confidence = (
+                # Copyscape returns aiscore as a decimal between 0 and 1 (e.g. 0.998)
+                # We normalize to 0-100 for consistency in the UI
+                ai_score = ai_score_raw * 100.0 if ai_score_raw <= 1.0 and ai_score_raw > 0 else ai_score_raw
+
+                confidence_raw = (
                     _to_float(details.get("confidence"))
+                    or _to_float(details.get("confidencescore"))
                     or _to_float(details.get("confidence_score"))
                 )
+                
+                # Normalize confidence to 0-100 if it's in 0-1 range
+                confidence = confidence_raw * 100.0 if confidence_raw is not None and confidence_raw <= 1.0 and confidence_raw > 0 else confidence_raw
 
                 verdict = details.get("verdict") or details.get("classification") or ""
                 verdict_lower = verdict.lower()

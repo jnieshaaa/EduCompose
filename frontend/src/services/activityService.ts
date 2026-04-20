@@ -1645,37 +1645,35 @@ export const fetchCourseSectionCounts = async (
   activityId: string,
 ): Promise<{ studentCount: number; submissionCount: number }> => {
   try {
-    // Count students for this block
-    const { count: studentCount, error: studentsCountError } = await supabase
+    // 1. Get all student IDs for this block
+    const { data: bStudents, error: sErr } = await supabase
       .from("block_students")
-      .select("*", { count: "exact", head: true })
+      .select("student_id")
       .eq("block_id", sectionId);
 
-    if (studentsCountError) {
-      console.error("Error counting students:", studentsCountError);
-    }
+    if (sErr) throw sErr;
+    const studentIds = bStudents?.map(bs => bs.student_id) || [];
+    const studentCount = studentIds.length;
 
-    // Activity ID is now a UUID string
-    const activityDbId = activityId;
-    if (!activityDbId) {
-      return { studentCount: studentCount || 0, submissionCount: 0 };
-    }
-
-    // Count submissions for this activity and section
-    const { count: submissionCount, error: submissionsCountError } =
-      await supabase
+    // 2. Count submissions for this activity by these students
+    let submissionCount = 0;
+    if (studentIds.length > 0) {
+      const { count, error: countErr } = await supabase
         .from("essays")
         .select("*", { count: "exact", head: true })
-        .eq("activity_id", activityDbId)
-        .eq("block_id", sectionId);
+        .eq("activity_id", activityId)
+        .in("student_id", studentIds);
 
-    if (submissionsCountError) {
-      console.error("Error counting submissions:", submissionsCountError);
+      if (countErr) {
+        console.error("Error counting submissions:", countErr);
+      } else {
+        submissionCount = count || 0;
+      }
     }
 
     return {
-      studentCount: studentCount || 0,
-      submissionCount: submissionCount || 0,
+      studentCount,
+      submissionCount,
     };
   } catch (err) {
     console.error("Unexpected error fetching counts:", err);
