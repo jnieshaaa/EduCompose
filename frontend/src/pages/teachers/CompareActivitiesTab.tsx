@@ -1,28 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  FileText,
   Users,
-  Search,
   ChevronRight,
-  Eye,
   AlertCircle,
   CheckCircle2,
   ArrowLeft,
   History,
-  Sparkles,
 } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
-import Modal from "../../components/ui/Modal";
 import {
   fetchActivitiesWithDuplicates,
   fetchDuplicateEssays,
-  fetchStudentsForActivity,
   fetchEssayTextsForStudents,
-  analyzeEssaySimilarity,
-  saveComparisonAnalysis,
   fetchComparisonHistory,
   type DuplicateEssayGroup,
   type ComparisonAnalysis,
@@ -65,7 +56,6 @@ export function CompareActivitiesTab() {
   // Comparison state
   const [comparisonResult, setComparisonResult] =
     useState<ComparisonResult | null>(null);
-  const [isComparing, setIsComparing] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "comparison" | "history">(
     "list"
   );
@@ -142,7 +132,6 @@ export function CompareActivitiesTab() {
 
   const handleViewDuplicateGroup = async (group: DuplicateEssayGroup) => {
     try {
-      setIsComparing(true);
       const studentIdsArray = group.essays.map(e => e.studentId);
 
       // Fetch essay texts for selected students
@@ -153,7 +142,6 @@ export function CompareActivitiesTab() {
 
       if (essayData.length < 2) {
         showNotification('error', "Could not fetch full essays for these students to view side-by-side.");
-        setIsComparing(false);
         return;
       }
 
@@ -171,23 +159,12 @@ export function CompareActivitiesTab() {
     } catch (error) {
       console.error("Error viewing essays:", error);
       showNotification('error', "Failed to load the essays side-by-side. Please try again.");
-    } finally {
-      setIsComparing(false);
     }
-  };
-
-  const handleViewEssay = (studentId: string, studentName: string) => {
-    setViewingEssayStudentId({ id: studentId, name: studentName });
-    setIsViewEssayModalOpen(true);
   };
 
   const handleBackToList = () => {
     setViewMode("list");
     setComparisonResult(null);
-  };
-
-  const handleViewHistory = async () => {
-    setViewMode("history");
   };
 
   const handleViewHistoryComparison = async (
