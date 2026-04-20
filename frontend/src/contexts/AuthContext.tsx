@@ -249,7 +249,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem("user", JSON.stringify(mappedUser));
             setUser(mappedUser);
           } else if (mapError) {
-            console.warn("Auth state change error (possibly timeout). Skipping state update.");
+            // console.warn("Auth state change error (possibly timeout). Skipping state update.");
           } else {
             // No user and no error -> Record truly missing
             await logout("Account database record not found.");

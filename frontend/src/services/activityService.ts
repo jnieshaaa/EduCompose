@@ -2538,15 +2538,7 @@ export const fetchEssayAnalysis = async (
       (
         analysis as import("../types/Essay").TextAnalysisResponse
       ).rubric_scores = analysisData.rubric_scores;
-      console.log(
-        "[fetchEssayAnalysis] Found rubric_scores:",
-        analysisData.rubric_scores,
-      );
     } else {
-      console.log(
-        "[fetchEssayAnalysis] No rubric_scores in analysis data. Analysis data keys:",
-        Object.keys(analysisData),
-      );
       // If rubric_scores is missing but we have a rubric_id, try to fetch it from the activity
       if (analysisData.activity_id) {
         const { data: activity } = await supabase
@@ -2556,10 +2548,7 @@ export const fetchEssayAnalysis = async (
           .single();
 
         if (activity?.rubric_id) {
-          console.log(
-            "[fetchEssayAnalysis] Activity has rubric_id but analysis missing rubric_scores. Rubric ID:",
-            activity.rubric_id,
-          );
+          // Rubric found but no scores in analysis
         }
       }
     }
@@ -2947,7 +2936,7 @@ export const fetchDuplicateEssays = async (
       }
     }
 
-    console.log(`[fetchDuplicateEssays] Searching for duplicates across ${activityIds.length} related activities for course(s): ${courseIds || 'none'}`);
+    // console.log(`[fetchDuplicateEssays] Searching for duplicates across ${activityIds.length} related activities for course(s): ${courseIds || 'none'}`);
 
     const { data: analysisResults, error } = await supabase
       .from("essay_analysis_results")
@@ -2992,9 +2981,7 @@ export const fetchDuplicateEssays = async (
     }
 
     if (!analysisResults || analysisResults.length === 0) {
-      console.log(
-        `[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`,
-      );
+      // console.log(`[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`);
       // Try fallback: fetch from essays table if essay_analysis_results doesn't exist
       const { data: essaysData, error: essaysError } = await supabase
         .from("essays")
@@ -3035,15 +3022,11 @@ export const fetchDuplicateEssays = async (
       }
 
       if (!essaysData || essaysData.length === 0) {
-        console.log(
-          `[fetchDuplicateEssays] No essays found for activity ${activityDbId}`,
-        );
+        // console.log(`[fetchDuplicateEssays] No essays found for activity ${activityDbId}`);
         return [];
       }
 
-      console.log(
-        `[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`,
-      );
+      // console.log(`[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`);
 
       // Try to use essays.content if available
       type EssayWithNested = {

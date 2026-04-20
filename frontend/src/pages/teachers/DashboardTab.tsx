@@ -351,7 +351,7 @@ export function DashboardTab() {
         });
 
         setData({
-          totalPrograms: [...new Set(teacherLoads.map(l => l.program_id))].length,
+          totalPrograms: allCourses.length,
           totalSections: activeSectionIds.length, totalStudents, essaysSubmitted, essaysEvaluated: evaluatedCount, pendingReviews: pendingCount,
           performanceMetrics: {
             avgScore: { value: evaluatedCount ? `${(performanceEssays.reduce((a,b)=>a+(b.overall_score||0),0)/evaluatedCount).toFixed(1)}%` : "0%", trend: "+2.1%", status: "up" },
@@ -450,20 +450,20 @@ export function DashboardTab() {
                  </div>
               </div>
               <div className="flex-1 p-6">
-                 {perfActivityChart.rows.length > 0 ? (
-                   <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={perfActivityChart.rows}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="activityTitle" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-                          <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontSize: '11px', fontWeight: 'bold' }} />
-                          {perfActivityChart.series.map((s, i) => (
-                            <Line key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                   </div>
+                  {perfActivityChart.rows.length > 0 ? (
+                    <div className="w-full relative block" style={{ minWidth: 0 }}>
+                       <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                         <LineChart data={perfActivityChart.rows}>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                           <XAxis dataKey="activityTitle" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
+                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
+                           <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontSize: '11px', fontWeight: 'bold' }} />
+                           {perfActivityChart.series.map((s, i) => (
+                             <Line key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                           ))}
+                         </LineChart>
+                       </ResponsiveContainer>
+                    </div>
                  ) : (
                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
                       <TrendingUp size={48} className="text-neutral-200 mb-4" />

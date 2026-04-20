@@ -530,10 +530,9 @@ const AnalysisResults: React.FC = () => {
           );
           if (resolvedEssayId) {
             setEssayId(resolvedEssayId);
-            // console.log(`Derived essayId: ${resolvedEssayId} from studentId: ${state.studentId}, activityId: ${state.activityId}`);
           }
         } catch {
-          // console.warn('Could not derive essayId from studentId and activityId:');
+          // Fallback silently if essayId cannot be derived
         }
       };
       deriveEssayId();

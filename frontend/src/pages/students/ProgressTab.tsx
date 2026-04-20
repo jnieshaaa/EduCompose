@@ -237,8 +237,8 @@ export function ProgressTab() {
           )}
         </div>
         <div className="p-6">
-           <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+           <div className="h-[300px] w-full relative" style={{ minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
                 <LineChart data={scoresTrendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="essay" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
@@ -258,7 +258,7 @@ export function ProgressTab() {
               <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Clean Writing</h2>
               <p className="text-xs text-neutral-500 font-medium mb-4">You want this bar to go down (less mistakes!)</p>
               <div className="h-[200px] w-full mt-4">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
                     <BarChart data={grammarErrorsData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="essay" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
@@ -276,7 +276,7 @@ export function ProgressTab() {
               <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Word Power</h2>
               <p className="text-xs text-neutral-500 font-medium mb-4">How complex and varied your words are</p>
               <div className="h-[200px] w-full mt-4">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
                     <LineChart data={vocabularyGrowthData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="essay" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />

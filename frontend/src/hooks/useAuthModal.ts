@@ -98,16 +98,12 @@ export function useAuthModal(onClose: () => void) {
       }
 
       if (data.session && data.user) {
-        // console.log("Login successful. Checking roles for Auth ID:", data.user.id);
-
         // Fetch role from the public 'users' table (source of truth)
         const { data: userData } = await supabase
           .from("users")
           .select("role, first_name, last_name")
           .eq("auth_user_id", data.user.id)
           .maybeSingle();
-
-        // console.log("Database lookup (users table):", userData);
 
         let role = "teacher"; // Default
         let firstName = data.user.email?.split("@")[0] || "User";
@@ -118,15 +114,12 @@ export function useAuthModal(onClose: () => void) {
           firstName = userData.first_name || firstName;
           lastName = userData.last_name || "";
         } else {
-          // console.log("User not found in 'users' table. Checking 'students' table...");
           // If not in users table, check if it's a student
           const { data: studentData } = await supabase
             .from("students")
             .select("id, first_name, last_name")
             .eq("auth_user_id", data.user.id)
             .maybeSingle();
-          
-          // console.log("Database lookup (students table):", studentData);
           
           if (studentData) {
             role = "student";
@@ -135,11 +128,8 @@ export function useAuthModal(onClose: () => void) {
           }
         }
 
-        // console.log("Final determined role:", role);
-
         // Block students from logging in via the Teacher/Admin portal
         if (role === "student") {
-          // console.log("BLOCKING LOGIN: Student attempted to access teacher portal.");
           await supabase.auth.signOut();
           setLoginError(
             "Student accounts must use the Student Login page."
