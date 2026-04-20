@@ -149,6 +149,7 @@ const Login: React.FC = () => {
 
     setIsVerifying(true);
     try {
+      // Step 1: Verify the OTP code
       const { data: isValid, error: rpcError } = await supabase.rpc(
         "verify_signup_code",
         {
@@ -164,62 +165,65 @@ const Login: React.FC = () => {
       }
 
       const finalPassword = pendingPassword || pendingStudent.birthday || "EduCompose2025!";
-      
-      let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: pendingStudent.email,
-        password: finalPassword,
-        options: {
-          data: {
-            role: "student",
-            first_name: pendingStudent.first_name,
-            last_name: pendingStudent.last_name,
-          }
+      const normalizedEmail = pendingStudent.email.trim().toLowerCase();
+
+      // Step 2: Use the existing admin_provision_student RPC (SECURITY DEFINER,
+      // now granted to anon) to create a CONFIRMED auth user with proper identities.
+      // This avoids supabase.auth.signUp() which creates unconfirmed users.
+      const { data: authUserId, error: provisionError } = await supabase.rpc(
+        "admin_provision_student",
+        {
+          p_email: normalizedEmail,
+          p_password: finalPassword,
+          p_first_name: pendingStudent.first_name,
+          p_last_name: pendingStudent.last_name,
+          p_student_code: pendingStudent.student_code,
+          p_middle_name: pendingStudent.middle_name || null,
         }
+      );
+
+      if (provisionError) throw provisionError;
+      if (!authUserId) throw new Error("Failed to provision auth account.");
+
+      // Step 3: Link the new auth user to the student record
+      const { error: linkError } = await supabase.rpc("link_student_auth", {
+        p_student_id: pendingStudent.student_id,
+        p_auth_user_id: authUserId as string,
       });
 
-      if (signUpError?.message?.includes("already registered")) {
-        // console.log("[Verification] User already registered, attempting sign in...");
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: pendingStudent.email,
-          password: finalPassword
-        });
-        
-        if (signInError) {
-          if (signInError.message.toLowerCase().includes("invalid login credentials")) {
-            throw new Error("Account exists, but password doesn't match. Please go back to Login and use the correct password, or click 'Forgot password'.");
-          }
-          throw signInError;
+      if (linkError) throw linkError;
+
+      // Step 4: Sign in with the now-confirmed credentials
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: finalPassword,
+      });
+
+      if (signInError) {
+        if (signInError.message.toLowerCase().includes("invalid login credentials")) {
+          throw new Error(
+            "Account setup succeeded but login failed. Please go back to Login and try with your password, or use 'Forgot password'."
+          );
         }
-        signUpData = signInData;
-        signUpError = null;
+        throw signInError;
       }
 
-      if (signUpError) throw signUpError;
-      if (!signUpData.user) throw new Error("Could not create or find user");
-
-      const authUserId = signUpData.user.id;
-
-      const { error: updateError } = await supabase.rpc("link_student_auth", {
-        p_student_id: pendingStudent.student_id,
-        p_auth_user_id: authUserId
-      });
-        
-      if (updateError) throw updateError;
+      if (!signInData.user) throw new Error("Could not sign in after verification.");
 
       showNotification('success', "Email verified successfully!");
 
-      // Sign the user directly into the context
-      if (signUpData.session) {
-        login(signUpData.session.access_token, {
+      // Step 5: Log the user into the app context
+      if (signInData.session) {
+        login(signInData.session.access_token, {
           id: pendingStudent.student_id,
-          auth_id: authUserId,
-          email: pendingStudent.email.trim().toLowerCase() || signUpData.user.email || "",
+          auth_id: authUserId as string,
+          email: normalizedEmail,
           username: pendingStudent.student_code,
           first_name: pendingStudent.first_name,
           last_name: pendingStudent.last_name,
           role: "student",
           is_active: pendingStudent.is_active,
-          email_verified: !!signUpData.user.email_confirmed_at,
+          email_verified: true,
         });
       }
 
@@ -230,9 +234,17 @@ const Login: React.FC = () => {
         localStorage.removeItem("rememberedStudentCode");
       }
 
-      // Automatically push to Onboarding
-      navigate("/Student/Onboarding", { state: { student: { ...pendingStudent, id: pendingStudent.student_id, auth_user_id: authUserId } } });
-      
+      // Navigate to Onboarding
+      navigate("/Student/Onboarding", {
+        state: {
+          student: {
+            ...pendingStudent,
+            id: pendingStudent.student_id,
+            auth_user_id: authUserId as string,
+          },
+        },
+      });
+
     } catch (err: any) {
       console.error(err);
       showNotification('error', err.message || "Verification failed. Please try again.");

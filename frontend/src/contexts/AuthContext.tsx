@@ -219,9 +219,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (!mappedUser) {
-        // Record truly missing
-        console.error("Authenticated but record not found in database. Signing out...");
-        await logout("Account record no longer exists. Please sign up again.");
+        // DB record missing — could be a mid-signup state or a deleted account.
+        // Don't force signOut() (causes 403 on expired tokens & breaks signup flows).
+        // Just clear local state so the user sees the login screen naturally.
+        console.warn("Session exists but no DB record found. Clearing local state.");
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        setUser(null);
         return;
       }
       
@@ -237,22 +241,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AuthContext] onAuthStateChange:", event, session?.user?.email);
+
       if (event === "SIGNED_OUT" || !session) {
         setUser(null);
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session.user) {
+          console.log("[AuthContext] Looking up DB record for:", session.user.id, "role hint:", session.user.user_metadata?.role);
           const { user: mappedUser, error: mapError } = await mapSupabaseUser(session.user);
+          console.log("[AuthContext] DB lookup result — mappedUser:", mappedUser, "error:", mapError);
+
           if (mappedUser) {
             localStorage.setItem("auth_token", session.access_token);
             localStorage.setItem("user", JSON.stringify(mappedUser));
             setUser(mappedUser);
           } else if (mapError) {
-            // console.warn("Auth state change error (possibly timeout). Skipping state update.");
+            console.warn("[AuthContext] DB lookup error (possibly timeout). Skipping state update.", mapError);
           } else {
-            // No user and no error -> Record truly missing
-            await logout("Account database record not found.");
+            // No record found in DB — but this can be a NEW teacher/student mid-signup.
+            // Check if the signup flow is in progress (gives it time to create the record).
+            // We do NOT auto-logout here to avoid killing the signup flow.
+            // The login() call in the signup flow will call checkAuth() after inserting the record.
+            console.warn("[AuthContext] SIGNED_IN but no DB record found for:", session.user.email, "— allowing signup flow to proceed.");
           }
         }
       }

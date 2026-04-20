@@ -31,7 +31,9 @@ import {
   fetchCourses,
   fetchSections,
   fetchTeacherProgramLoads,
+  fetchTeacherActivities,
 } from "../../services/activityService";
+import type { EssayActivity } from "../../types/activityTypes";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
 import { useAuth } from "../../contexts/AuthContext";
 import { motion } from "framer-motion";
@@ -67,21 +69,6 @@ const formatTimeAgo = (timestamp: string | Date): string => {
   }
 
   return date.toLocaleDateString();
-};
-
-/** essay_activities.course_id / block_id are string[] in the live schema — normalize for lookups. */
-const normalizeIdList = (value: unknown): string[] => {
-  if (value == null) return [];
-  if (Array.isArray(value)) {
-    return value
-      .filter((v) => v != null && v !== "")
-      .map((v) => String(v));
-  }
-  if (typeof value === "string" || typeof value === "number") {
-    const s = String(value);
-    return s ? [s] : [];
-  }
-  return [];
 };
 
 interface DashboardData {
@@ -134,6 +121,8 @@ interface DashboardData {
     message: string;
     count: number;
   }>;
+  activities: EssayActivity[];
+  totalActivities: number;
 }
 
 const PERF_LINE_COLORS = ["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#9333ea", "#0891b2", "#ea580c"];
@@ -204,7 +193,7 @@ const buildPerformanceActivityLines = (
   });
   const series = blockKeys.map((bk, i) => ({
     dataKey: `b_${bk}`,
-    label: bk === "__na" ? "Unassigned" : blockNameById.get(bk) ?? `Block ${bk.slice(0, 6)}…`,
+    label: bk === "__na" ? "Unassigned" : blockNameById.get(bk) ?? `Block ${bk.slice(0, 6)}...`,
     color: PERF_LINE_COLORS[i % PERF_LINE_COLORS.length],
   }));
   return { rows, series };
@@ -222,8 +211,6 @@ interface EssayRow {
   coherence_score: number | null;
   argument_strength_score: number | null;
 }
-
-
 
 interface StudentNameRow {
   id: string | number;
@@ -261,13 +248,12 @@ export function DashboardTab() {
 
   const displayPerformanceMetrics = useMemo(() => {
     if (!data) return [];
-    const base = [
+    return [
       { label: "Average Grade", value: data.performanceMetrics.avgScore.value, trend: data.performanceMetrics.avgScore.trend, status: data.performanceMetrics.avgScore.status, icon: Zap },
       { label: "Grammar", value: data.performanceMetrics.grammarAccuracy.value, trend: data.performanceMetrics.grammarAccuracy.trend, status: data.performanceMetrics.grammarAccuracy.status, icon: CheckCircle },
       { label: "Structure & Clarity", value: data.performanceMetrics.coherenceScore.value, trend: data.performanceMetrics.coherenceScore.trend, status: data.performanceMetrics.coherenceScore.status, icon: Activity },
       { label: "Word Choice", value: data.performanceMetrics.vocabularyComplexity.value, trend: data.performanceMetrics.vocabularyComplexity.trend, status: data.performanceMetrics.vocabularyComplexity.status, icon: BookOpen },
     ];
-    return base;
   }, [data]);
 
   useEffect(() => {
@@ -277,38 +263,34 @@ export function DashboardTab() {
         const teacherId = await fetchTeacherUUID();
         if (!teacherId) throw new Error("Teacher ID not available");
 
-        const { data: teacherActivities, error: activitiesError } = await supabase
-          .from("essay_activities")
-          .select("id, course_id, block_id, title")
-          .eq("teacher_id", teacherId);
-        if (activitiesError) throw activitiesError;
-
-        const typedActivities = (teacherActivities as any[] | null) || [];
-        const activityMetaById = new Map();
-        for (const a of typedActivities) {
-          activityMetaById.set(String(a.id), {
-            courseIds: normalizeIdList(a.course_id),
-            blockIds: normalizeIdList(a.block_id),
-            title: (a.title ?? "").trim() || "Activity",
-          });
-        }
-        const activityIdsArray = typedActivities.map(a => String(a.id));
-
-        const [allCourses, allSections, essaysData, teacherLoads] = await Promise.all([
-          fetchCourses(), fetchSections(),
-          activityIdsArray.length > 0 
-            ? supabase.from("essays").select("id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score").in("activity_id", activityIdsArray).then(({data}) => data as EssayRow[])
-            : Promise.resolve([] as EssayRow[]),
+        const [allCourses, allSections, activities, teacherLoads] = await Promise.all([
+          fetchCourses(),
+          fetchSections(),
+          fetchTeacherActivities(),
           fetchTeacherProgramLoads()
         ]);
 
-        const activeSectionIds = [...new Set(typedActivities.flatMap(a => normalizeIdList(a.block_id)))];
+        const activityMetaById = new Map();
+        for (const a of activities) {
+          activityMetaById.set(String(a.id), {
+            courseIds: a.courseIds || [],
+            blockIds: a.blockIds || [],
+            title: a.title,
+          });
+        }
+        const activityIdsArray = activities.map(a => a.id);
 
-        const [blockStudentsRows] = await Promise.all([
-          activeSectionIds.length > 0
-            ? supabase.from("block_students").select("student_id, block_id").in("block_id", activeSectionIds).then(({data}) => data || [])
-            : Promise.resolve([]),
-        ]);
+        const { data: essaysDataRows } = await (activityIdsArray.length > 0 
+          ? supabase.from("essays").select("id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score").in("activity_id", activityIdsArray)
+          : Promise.resolve({ data: [] as EssayRow[] }));
+        
+        const essaysData = (essaysDataRows as EssayRow[]) || [];
+
+        const activeSectionIds = [...new Set(activities.flatMap(a => a.blockIds || []))];
+
+        const { data: blockStudentsRows } = await (activeSectionIds.length > 0
+          ? supabase.from("block_students").select("student_id, block_id").in("block_id", activeSectionIds)
+          : Promise.resolve({ data: [] }));
 
         const loadIdToProgramId = new Map(teacherLoads.map(l => [l.id, l.program_id]));
         const performanceFilterPrograms = [...new Map(teacherLoads.map(l => [l.program_id, { id: l.program_id, label: l.program_name }])).values()].sort((a,b) => a.label.localeCompare(b.label));
@@ -318,18 +300,18 @@ export function DashboardTab() {
 
         const uniqueStudentIds = new Set((blockStudentsRows || []).map(e => String(e.student_id)));
         const totalStudents = uniqueStudentIds.size;
-        const essaysSubmitted = (essaysData || []).length;
-        const evaluatedCount = (essaysData || []).filter(e => e.status === "analyzed" || e.status === "reviewed").length;
-        const pendingCount = (essaysData || []).filter(e => e.status === "submitted").length;
+        const essaysSubmitted = essaysData.length;
+        const evaluatedCount = essaysData.filter(e => e.status === "analyzed" || e.status === "reviewed").length;
+        const pendingCount = essaysData.filter(e => e.status === "submitted").length;
 
-        const allEssayStudentIds = [...new Set((essaysData || []).map(e => String(e.student_id)))];
-        let studentMap = new Map();
+        const allEssayStudentIds = [...new Set(essaysData.map(e => String(e.student_id)))];
+        const studentMap = new Map();
         if (allEssayStudentIds.length > 0) {
           const { data: students } = await supabase.from("students").select("id, first_name, middle_name, last_name").in("id", allEssayStudentIds);
           (students as StudentNameRow[] || []).forEach(s => studentMap.set(String(s.id), buildFullNameFromObject(s)));
         }
 
-        const recentActivity = (essaysData || []).sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).slice(0, 30).map(e => {
+        const recentActivity = essaysData.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).slice(0, 30).map(e => {
           const meta = activityMetaById.get(String(e.activity_id));
           return {
             essayId: e.id, student: studentMap.get(String(e.student_id)) || "Unknown", action: e.status === 'submitted' ? "Submitted" : "Analyzed",
@@ -338,9 +320,9 @@ export function DashboardTab() {
           } as DashboardData["recentActivity"][0];
         });
 
-        const performanceEssays = (essaysData || []).filter(e => e.overall_score != null).map(e => {
+        const performanceEssays = essaysData.filter(e => e.overall_score != null).map(e => {
           const meta = activityMetaById.get(String(e.activity_id));
-          const bid = meta?.blockIds[0];
+          const bid = meta?.blockIds?.[0];
           const sec = bid ? allSections.find(x => x.id === bid) : undefined;
           return {
             submitted_at: e.submitted_at, overall_score: e.overall_score, grammar_score: e.grammar_score, coherence_score: e.coherence_score,
@@ -352,18 +334,32 @@ export function DashboardTab() {
 
         setData({
           totalPrograms: allCourses.length,
-          totalSections: activeSectionIds.length, totalStudents, essaysSubmitted, essaysEvaluated: evaluatedCount, pendingReviews: pendingCount,
+          totalSections: activeSectionIds.length,
+          totalStudents,
+          essaysSubmitted,
+          essaysEvaluated: evaluatedCount,
+          pendingReviews: pendingCount,
           performanceMetrics: {
             avgScore: { value: evaluatedCount ? `${(performanceEssays.reduce((a,b)=>a+(b.overall_score||0),0)/evaluatedCount).toFixed(1)}%` : "0%", trend: "+2.1%", status: "up" },
             grammarAccuracy: { value: evaluatedCount ? `${(performanceEssays.reduce((a,b)=>a+(b.grammar_score||0),0)/evaluatedCount).toFixed(1)}%` : "0%", trend: "+1.2%", status: "up" },
             coherenceScore: { value: evaluatedCount ? `${(performanceEssays.reduce((a,b)=>a+(b.coherence_score||0),0)/evaluatedCount).toFixed(1)}%` : "0%", trend: "-0.5%", status: "down" },
             vocabularyComplexity: { value: "Advanced", trend: "Steady", status: "neutral" }
           },
-          recentActivity, activityFilterCourses: allCourses.filter(c => [...new Set(typedActivities.flatMap(a => normalizeIdList(a.course_id)))].includes(c.id)).map(c => ({id: c.id, label: c.course_title})),
+          recentActivity,
+          activityFilterCourses: allCourses.filter(c => [...new Set(activities.flatMap(a => a.courseIds || []))].includes(c.id)).map(c => ({id: c.id, label: c.course_title})),
           activityFilterBlocks: allSections.filter(s => activeSectionIds.includes(s.id)).map(s => ({id: s.id, name: s.name, courseId: (allCourses.find(c => c.id === s.programLoadId))?.id || "" })),
-          performanceFilterPrograms, performanceFilterBlocks, performanceEssays, alerts: []
+          performanceFilterPrograms,
+          performanceFilterBlocks,
+          performanceEssays,
+          activities,
+          totalActivities: activities.length,
+          alerts: []
         });
-      } catch (err: any) { console.error("Dashboard data load error:", err); } finally { setLoading(false); }
+      } catch (err: any) { 
+        console.error("Dashboard data load error:", err); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     loadDashboardData();
   }, [user]);
@@ -377,7 +373,6 @@ export function DashboardTab() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Premium Welcome Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 pb-2">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight sm:text-3xl">Overview</h1>
@@ -393,11 +388,10 @@ export function DashboardTab() {
         </div>
       </div>
 
-      {/* Hero Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { label: "Subjects", value: data?.totalPrograms || 0, sub: "Your Courses", icon: Layers, color: "text-blue-500", bg: "bg-blue-50" },
-          { label: "My Classes", value: data?.totalSections || 0, sub: "Active Classes", icon: Users, color: "text-emerald-500", bg: "bg-emerald-50" },
+          { label: "Activities", value: data?.totalActivities || 0, sub: "Created Activities", icon: Zap, color: "text-emerald-500", bg: "bg-emerald-50" },
           { label: "Essays", value: data?.essaysSubmitted || 0, sub: `${data?.pendingReviews} Pending`, icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
           { label: "Graded", value: data?.essaysEvaluated || 0, sub: "Total graded", icon: BookOpen, color: "text-amber-500", bg: "bg-amber-50" },
         ].map((stat, i) => (
@@ -418,9 +412,7 @@ export function DashboardTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Performance Column */}
         <div className="lg:col-span-2 space-y-8">
-           {/* Dynamic Performance Metrics */}
            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {displayPerformanceMetrics.map((m, i) => (
                 <div key={i} className="bg-white p-4 rounded-2xl border border-neutral-50 shadow-sm">
@@ -437,7 +429,6 @@ export function DashboardTab() {
               ))}
            </div>
 
-           {/* Performance Visualization Card */}
             <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col min-h-[450px]">
               <div className="px-6 py-5 border-b border-neutral-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-50/20">
                   <div>
@@ -465,14 +456,61 @@ export function DashboardTab() {
                        </ResponsiveContainer>
                     </div>
                  ) : (
-                   <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                      <TrendingUp size={48} className="text-neutral-200 mb-4" />
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                       <TrendingUp size={48} className="text-neutral-200 mb-4" />
                        <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-300">Not enough data for the graph yet</p>
-                   </div>
+                    </div>
                  )}
               </div>
            </div>
  
+           <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 py-5 border-b border-neutral-50 flex items-center justify-between bg-neutral-50/20">
+                  <div>
+                    <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">My Activities</h2>
+                    <p className="text-xs text-neutral-500 font-medium">List of activities you've created</p>
+                  </div>
+                  <button onClick={() => navigate('/Teacher/Activities')} className="text-[10px] font-bold text-primary uppercase hover:underline">View All</button>
+              </div>
+              <div className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-50">
+                          <th className="px-6 py-4 text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Activity Name</th>
+                          <th className="px-6 py-4 text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Submissions</th>
+                          <th className="px-6 py-4 text-[10px] font-bold text-neutral-300 uppercase tracking-widest text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-50">
+                        {!data?.activities || data.activities.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-10 text-center text-neutral-400 text-xs">No activities created yet</td>
+                          </tr>
+                        ) : (
+                          data.activities.slice(0, 5).map((act) => (
+                            <tr key={act.id} className="hover:bg-neutral-50/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <p className="text-sm font-bold text-neutral-700 group-hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/Teacher/Activities?activityId=${act.id}`)}>{act.title}</p>
+                                <p className="text-[10px] text-neutral-400 font-medium uppercase mt-0.5">{act.createdAt}</p>
+                              </td>
+                              <td className="px-6 py-4 text-sm font-bold text-neutral-600">
+                                {act.submissionCount}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button onClick={() => navigate(`/Teacher/Activities?activityId=${act.id}`)} className="p-2 text-neutral-300 hover:text-primary transition-colors">
+                                  <ArrowRight size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+              </div>
+           </div>
+
            <div className="bg-primary/[0.02] rounded-3xl border border-primary/10 p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
               <h3 className="text-sm font-bold text-neutral-800 tracking-tight mb-2 flex items-center gap-2">
@@ -489,15 +527,13 @@ export function DashboardTab() {
                  </div>
                  <div className="flex-1 flex items-center justify-between p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
                      <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Grading Speed</span>
-                    <span className="text-[10px] font-bold text-primary uppercase px-2.5 py-1 bg-primary/5 rounded-md">Good</span>
+                    <span className="text-[10px] font-bold text-primary uppercase px-1.5 py-1 bg-primary/5 rounded-md">Good</span>
                  </div>
               </div>
            </div>
         </div>
 
-        {/* Sidebar: Recent Activity & Alerts */}
         <div className="space-y-8">
-           {/* Quick Navigation Panel */}
            <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col">
               <div className="px-6 py-5 border-b border-neutral-50 bg-neutral-50/20">
                  <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Shortcuts</h2>
@@ -532,7 +568,7 @@ export function DashboardTab() {
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                  {filteredRecentActivity.length === 0 ? (
-                    <div className="py-2.50 text-center opacity-30">
+                    <div className="py-2.5 text-center opacity-30">
                        <Activity size={32} className="mx-auto mb-2" />
                         <p className="text-[10px] font-bold">No updates yet...</p>
                     </div>

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
 } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, supabaseAdmin } from "../lib/supabaseClient";
 import { authApi } from "../api";
 import { sendCodeEmail, sendSignupCodeEmail } from "../services/emailService";
 
@@ -47,6 +47,7 @@ export function useAuthModal(onClose: () => void) {
   const [signupVerificationCode, setSignupVerificationCode] = useState("");
   const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
   const [isResendingSignupCode, setIsResendingSignupCode] = useState(false);
+  const [pendingSignupUserId, setPendingSignupUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (view !== "signup") {
@@ -190,7 +191,7 @@ export function useAuthModal(onClose: () => void) {
   const generateSignupCode = (): string =>
     Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Handle signup: generate code → store in Supabase → send via EmailJS → show "Account Created"
+  // Handle signup: generate code â†’ store in Supabase â†’ send via EmailJS â†’ show "Account Created"
   const handleSignUp = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -221,24 +222,21 @@ export function useAuthModal(onClose: () => void) {
     const normalizedEmail = signupEmail.trim().toLowerCase();
 
     try {
-      // 1. Direct Database Checks (Fast fail)
+      // 1. Check if email is already in use (fast fail)
       const checkResult = await authApi.checkEmail(normalizedEmail);
-
       if (checkResult.exists) {
         setSignupError(checkResult.message || "Email already registered.");
         setIsSigningUp(false);
         return;
       }
 
-      // 2. ULTIMATE CHECK: Try to sign up via Supabase Auth immediately
+      // 2. Create the unconfirmed auth user.
+      // We deliberately do NOT confirm it here â€” confirmation happens after OTP verify.
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: signupPassword,
         options: {
-          data: {
-            display_name: normalizedEmail.split("@")[0],
-            role: "teacher",
-          },
+          data: { display_name: normalizedEmail.split("@")[0], role: "teacher" },
         },
       });
 
@@ -251,37 +249,32 @@ export function useAuthModal(onClose: () => void) {
         throw signUpError;
       }
 
-      // If identities is empty, it also means it's already registered in some cases
       if (signUpData.user?.identities?.length === 0) {
         setSignupError("Email already registered.");
         setIsSigningUp(false);
         return;
       }
 
+      // Save the auth user ID so handleVerifySignupCode can confirm it
+      if (signUpData.user?.id) {
+        setPendingSignupUserId(signUpData.user.id);
+      }
+
+      // 3. Store OTP and send verification email
       const code = generateSignupCode();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
       const { error: insertError } = await supabase
         .from("signup_verification_codes")
-        .insert({
-          email: normalizedEmail,
-          code,
-          expires_at: expiresAt,
-        });
+        .insert({ email: normalizedEmail, code, expires_at: expiresAt });
 
       if (insertError) throw insertError;
 
-      // console.log("Sending verification email...");
-      await sendSignupCodeEmail({
-        toEmail: signupEmail.trim(),
-        code,
-      });
+      await sendSignupCodeEmail({ toEmail: signupEmail.trim(), code });
 
-      // console.log("Signup initialization successful. Moving to confirmation step.");
       setSignupStep("accountCreated");
       startResendTimer();
     } catch (err: unknown) {
-      // console.error("Signup error:", err);
       const message = err instanceof Error ? err.message : String(err);
       setSignupError(message || "Registration failed. Please try again.");
     } finally {
@@ -323,13 +316,13 @@ export function useAuthModal(onClose: () => void) {
     }
 
     setIsVerifyingSignup(true);
+    const normalizedEmail = signupEmail.trim().toLowerCase();
+
     try {
+      // Step 1: Verify OTP
       const { data: isValid, error: rpcError } = await supabase.rpc(
         "verify_signup_code",
-        {
-          p_email: signupEmail.trim(),
-          p_code: signupVerificationCode,
-        },
+        { p_email: normalizedEmail, p_code: signupVerificationCode },
       );
 
       if (rpcError) throw rpcError;
@@ -338,59 +331,50 @@ export function useAuthModal(onClose: () => void) {
         return;
       }
 
-      // Step 2 no longer needs to call supabase.auth.signUp because we did it in Step 1
-      // We just need to check if we have a session or if we need to log in
+      // Step 2: Get the session from signUp() in handleSignUp.
+      // Confirm email must be OFF in Supabase Auth settings for this to work.
       const { data: { session } } = await supabase.auth.getSession();
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Upsert the user into the users table with role='teacher'
-      if (user) {
-        const { error: upsertError } = await supabase.from("users").upsert(
-          {
-            auth_user_id: user.id,
-            email: signupEmail.trim().toLowerCase(),
-            role: "teacher",
-            first_name: signupEmail.trim().split("@")[0],
-            is_active: true,
-          },
-          { onConflict: "auth_user_id" }
-        );
-
-        if (upsertError) {
-          console.error("Failed to create user record in public.users:", upsertError);
-          setSignupError("Account verified but failed to set up profile. Please contact support.");
-          setIsVerifyingSignup(false);
-          return;
-        }
-      }
-
-      if (session && user) {
-        login(session.access_token, {
-          id: user.id,
-          auth_id: user.id,
-          email: user.email ?? "",
-          username: user.email ?? "",
-          first_name: user.email?.split("@")[0] || "Teacher",
-          last_name: "",
-          role: "teacher",
-          is_active: true,
-          email_verified: true,
-        });
-        
-        // Use window.location.href for a hard redirect as a last resort if navigate fails
-        setTimeout(() => {
-          navigate("/Teacher/Dashboard");
-          onClose();
-        }, 100);
-      } else {
-        setSignupSuccess(
-          "Verification successful! Please log in with your email and password.",
-        );
+      if (!session || !user) {
+        setSignupSuccess("Email verified! Please log in with your password.");
         setView("login");
         setLoginEmail(signupEmail.trim());
+        return;
       }
+
+      // Step 3: Explicitly upsert teacher record into public.users BEFORE login().
+      // The handle_new_user trigger may not reliably create this record,
+      // so we do it explicitly to ensure checkAuth() finds it immediately.
+      const { error: upsertError } = await supabase.from("users").upsert(
+        {
+          auth_user_id: user.id,
+          email: normalizedEmail,
+          role: "teacher",
+          first_name: normalizedEmail.split("@")[0],
+          is_active: true,
+        },
+        { onConflict: "auth_user_id" }
+      );
+
+      if (upsertError) {
+        console.error("[Signup] Failed to upsert public.users:", upsertError);
+        // Non-fatal — proceed anyway, user can still log in
+      }
+
+      // Step 4: Set user in context and navigate
+      login(session.access_token, {
+        id: user.id, auth_id: user.id,
+        email: normalizedEmail, username: normalizedEmail,
+        first_name: normalizedEmail.split("@")[0], last_name: "",
+        role: "teacher", is_active: true, email_verified: true,
+      });
+
+      setTimeout(() => { navigate("/Teacher/Dashboard"); onClose(); }, 100);
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      console.error("[Signup] Error:", message);
       setSignupError(message || "Verification failed. Please try again.");
     } finally {
       setIsVerifyingSignup(false);

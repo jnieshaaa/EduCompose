@@ -3051,7 +3051,13 @@ export const fetchDuplicateEssays = async (
               name: string;
               abbr: string | null;
             };
-          };
+          } | Array<{
+            programs_lookup?: {
+              id: string;
+              name: string;
+              abbr: string | null;
+            };
+          }>;
         };
       };
 
@@ -3077,7 +3083,10 @@ export const fetchDuplicateEssays = async (
 
         const student = essay.students;
         const block = essay.blocks;
-        const program = block?.teacher_program_loads?.programs_lookup;
+        const tpl = Array.isArray(block?.teacher_program_loads)
+          ? block.teacher_program_loads[0]
+          : block?.teacher_program_loads;
+        const program = tpl?.programs_lookup;
 
         if (!student || !block || !program) {
           continue;
@@ -3144,7 +3153,13 @@ export const fetchDuplicateEssays = async (
               name: string;
               abbr: string | null;
             };
-          };
+          } | Array<{
+            programs_lookup?: {
+              id: string;
+              name: string;
+              abbr: string | null;
+            };
+          }>;
         };
       };
 
@@ -3163,10 +3178,12 @@ export const fetchDuplicateEssays = async (
         continue;
       }
 
-      // Type guard to ensure essayData is not null
       const student = essayData.students;
       const block = essayData.blocks;
-      const program = block?.teacher_program_loads?.programs_lookup;
+      const tpl = Array.isArray(block?.teacher_program_loads)
+        ? block.teacher_program_loads[0]
+        : block?.teacher_program_loads;
+      const program = tpl?.programs_lookup;
 
       if (!student || !block || !program) {
         continue;
