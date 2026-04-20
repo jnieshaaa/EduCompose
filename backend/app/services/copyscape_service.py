@@ -309,13 +309,23 @@ class CopyscapeService:
                             words_elem = item.find("words")
                             percent_elem = item.find("percent")
                             
+                            minwords = int(minwords_elem.text) if minwords_elem is not None and minwords_elem.text else 0
+                            maxwords = int(maxwords_elem.text) if maxwords_elem is not None and maxwords_elem.text else 0
+                            words_matched = int(words_elem.text) if words_elem is not None and words_elem.text else minwords
+                            percent = float(percent_elem.text) if percent_elem is not None and percent_elem.text else 0.0
+                            
+                            if percent == 0.0 and words_matched > 0:
+                                total_words = len(text.split())
+                                if total_words > 0:
+                                    percent = round(min((words_matched / total_words) * 100, 100.0), 1)
+
                             result_data = {
                                 "url": url_elem.text if url_elem is not None and url_elem.text else "",
                                 "title": title_elem.text if title_elem is not None and title_elem.text else "",
-                                "minwords": int(minwords_elem.text) if minwords_elem is not None and minwords_elem.text else 0,
-                                "maxwords": int(maxwords_elem.text) if maxwords_elem is not None and maxwords_elem.text else 0,
-                                "words": int(words_elem.text) if words_elem is not None and words_elem.text else 0,
-                                "percent": float(percent_elem.text) if percent_elem is not None and percent_elem.text else 0.0,
+                                "minwords": minwords,
+                                "maxwords": maxwords,
+                                "words": words_matched,
+                                "percent": percent,
                             }
                             results.append(result_data)
                         except (ValueError, AttributeError) as e:
@@ -324,7 +334,7 @@ class CopyscapeService:
                 
                 # Calculate overall plagiarism score
                 max_percent = max([r["percent"] for r in results], default=0.0) if results else 0.0
-                is_plagiarized = max_percent > 0.0
+                is_plagiarized = result_count > 0 or max_percent > 0.0
                 
                 return {
                     "is_plagiarized": is_plagiarized,

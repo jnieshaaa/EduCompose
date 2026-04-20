@@ -1509,12 +1509,12 @@ const AnalysisResults: React.FC = () => {
                                 className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 hover:bg-neutral-100 transition-colors"
                               >
                                 <div className="flex items-start justify-between">
-                                  <div className="flex-1">
+                                  <div className="flex-1 min-w-0">
                                     <div className="flex items-center space-x-2 mb-2">
                                       <span className="text-sm font-semibold text-red-600">
                                         {match.percent.toFixed(1)}% match
                                       </span>
-                                      {match.words && (
+                                      {(match.words ?? 0) > 0 && (
                                         <span className="text-xs text-neutral-500">
                                           ({match.words} words)
                                         </span>
@@ -1529,10 +1529,10 @@ const AnalysisResults: React.FC = () => {
                                       href={match.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-sm text-primary hover:text-primary-600 flex items-center space-x-1 group"
+                                      className="text-sm text-primary hover:text-primary-600 flex items-start space-x-1 group"
                                     >
-                                      <span className="truncate max-w-md">{match.url}</span>
-                                      <ExternalLink className="w-3 h-3 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                                      <span className="break-all leading-snug">{match.url}</span>
+                                      <ExternalLink className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform mt-0.5" />
                                     </a>
                                   </div>
                                 </div>
