@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, ArrowRight, CheckCircle, Send } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
@@ -618,13 +618,13 @@ export function SubmitEssayTab() {
                             Great work! Our AI has checked your essay for grammar, flow, and strong ideas.
                          </p>
 
-                         <button 
+                         {/* <button 
                           onClick={() => navigate('/Student/Feedback')}
                           className="px-10 py-4 bg-neutral-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-neutral-900/20 group"
                          >
                             See AI Tips
                             <ArrowRight size={14} className="inline-block ml-2 group-hover:translate-x-1 transition-transform" />
-                         </button>
+                         </button> */}
                       </motion.div>
                     )}
 

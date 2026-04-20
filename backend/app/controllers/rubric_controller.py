@@ -83,33 +83,33 @@ async def generate_rubrics(
 
     llm_response = None
     
-    # Try Gemini
+    # Try Gemini models sequentially
     if os.getenv("GEMINI_API_KEY"):
-        try:
-            from google import genai
-            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        from google import genai
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+        # Priority list of models to try
+        target_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+        env_model = os.getenv("GEMINI_MODEL_NAME")
+        if env_model and env_model not in target_models:
+            target_models.insert(0, env_model)
             
-            # Use model from env or try standard ones
-            model_name = os.getenv("GEMINI_MODEL_NAME")
-            if not model_name:
-                for m in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
-                    try:
-                        client.models.get(model=m)
-                        model_name = m
-                        break
-                    except:
-                        continue
-            
-            if model_name:
+        for model_name in target_models:
+            try:
+                logger.info(f"Attempting rubric generation with model: {model_name}")
                 response = client.models.generate_content(
                     model=model_name,
                     contents=prompt,
                     config={"temperature": 0.7}
                 )
-                llm_response = response.text
-                logger.info(f"Rubric generation success using Gemini ({model_name})")
-        except Exception as e:
-            logger.error(f"Gemini rubric generation failed: {e}")
+                if response and response.text:
+                    llm_response = response.text
+                    logger.info(f"Rubric generation success using Gemini ({model_name})")
+                    break # Exit loop on success
+            except Exception as e:
+                logger.warning(f"Gemini model {model_name} failed: {e}")
+                # Continue to next model in loop
+                continue
 
     # Fallback to OpenAI if Gemini failed and OpenAI is available
     if not llm_response and os.getenv("OPENAI_API_KEY"):

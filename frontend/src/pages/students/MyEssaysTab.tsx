@@ -10,7 +10,7 @@ import {
   Clock, 
   Zap, 
   Filter,
-  ArrowRight,
+  // ArrowRight,
   Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +56,7 @@ export function MyEssaysTab() {
 
         const { data, error } = await supabase
           .from('essays')
-          .select('id, title, submitted_at, status, overall_score, essay_activities(id, title)')
+          .select('id, title, file_path, content, submitted_at, status, overall_score, essay_activities(id, title)')
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: false });
 
@@ -73,6 +73,8 @@ export function MyEssaysTab() {
           hasTeacherFeedback: e.status === 'reviewed',
           activityId: (e.essay_activities as any)?.id,
           studentCode: student.student_code,
+          filePath: e.file_path,
+          content: e.content,
         }));
         setEssaysData(formattedData);
       } catch (error) {
@@ -142,13 +144,13 @@ export function MyEssaysTab() {
         <p className="text-sm font-medium text-neutral-400 max-w-sm mb-10 leading-relaxed">
           You haven't sent any essays yet. Send your first assignment to get AI tips and improve your writing!
         </p>
-        <button 
+        {/* <button 
           onClick={() => navigate('/Student/Submit')}
           className="group flex items-center gap-3 bg-neutral-900 text-white px-8 py-3.5 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-primary/10"
         >
           Send My First Work
           <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-        </button>
+        </button> */}
       </div>
     );
   }
@@ -274,7 +276,44 @@ export function MyEssaysTab() {
                             <Eye size={14} className="mr-2 text-primary" />
                             See Score
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700">
+                          <DropdownMenuItem 
+                            className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700"
+                            onClick={async () => {
+                              try {
+                                if (essay.filePath) {
+                                  // Download from storage
+                                  const { data, error } = await supabase.storage
+                                    .from('essays')
+                                    .download(essay.filePath);
+                                  
+                                  if (error) throw error;
+                                  
+                                  const url = window.URL.createObjectURL(data);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', essay.filename || 'essay-file');
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                } else if (essay.content) {
+                                  // Download content as text file
+                                  const blob = new Blob([essay.content], { type: 'text/plain' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', `${essay.title || 'essay'}.txt`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                } else {
+                                  alert("No file or content available for this essay.");
+                                }
+                              } catch (err) {
+                                console.error("Download failed:", err);
+                                alert("Failed to download file.");
+                              }
+                            }}
+                          >
                             <Download size={14} className="mr-2 text-neutral-400" />
                             Get File
                           </DropdownMenuItem>
