@@ -240,32 +240,35 @@ export function EssayTextDisplay({
   return (
     <div className="flex flex-col relative z-20">
       {/* Header - Institutional Transcript Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
+      <div className="mb-6 space-y-4">
+        {/* Row 1: Title and Anomalies Badge */}
+        <div className="flex items-center justify-between">
           <h1 className="text-xl font-black text-neutral-900 tracking-tight uppercase tracking-widest text-[10px] flex items-center gap-2">
              <div className="w-1 h-5 bg-primary" />
              Evaluation <span className="text-primary/50">Manuscript</span>
           </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Legend - Premium glass pills */}
-          <div className="hidden lg:flex items-center gap-2 p-1 bg-white/40 border border-white/60 rounded-2xl shadow-sm backdrop-blur-md">
-            {[
-              { type: "grammar", label: "Grammar", color: "bg-error-default", border: "border-error-200" },
-              { type: "spelling", label: "Spelling", color: "bg-warning-default", border: "border-warning-200" },
-              { type: "punctuation", label: "Punc.", color: "bg-info-default", border: "border-info-200" },
-            ].map((item) => (
-              <div key={item.type} className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-xl shadow-sm border border-neutral-100">
-                <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{item.label}</span>
-              </div>
-            ))}
-          </div>
+          
           {textSegments.errors.length > 0 && (
             <Badge variant="error" size="sm" className="rounded-xl px-3 py-1 font-bold text-[9px] uppercase tracking-widest bg-error-50/50">
               {textSegments.errors.length} Anomalies found
             </Badge>
           )}
+        </div>
+
+        {/* Row 2: Legend Indicators - Now always visible and in its own row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { type: "grammar", label: "Grammar", color: "bg-error-default" },
+            { type: "spelling", label: "Spelling", color: "bg-warning-default" },
+            { type: "punctuation", label: "Punc.", color: "bg-info-default" },
+            { type: "capitalization", label: "Capitalization", color: "bg-primary" },
+            { type: "word_choice", label: "Diction", color: "bg-purple-500" },
+          ].map((item) => (
+            <div key={item.type} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/60 border border-neutral-100 rounded-xl shadow-sm backdrop-blur-sm">
+              <div className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
+              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest leading-none">{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 

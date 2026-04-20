@@ -2412,6 +2412,8 @@ export const fetchEssayAnalysis = async (
   analysis: Omit<import("../types/Essay").AnalysisResponse, "essay_id">;
   text: string;
   title: string;
+  plagiarismResults?: import("../api").PlagiarismCheckResponse | null;
+  aiDetectionResults?: import("../api").AIDetectionResponse | null;
 } | null> => {
   try {
     const studentDbId = await resolveStudentIdForEssayFilter(studentId);
@@ -2518,18 +2520,19 @@ export const fetchEssayAnalysis = async (
         knowledge_graph: analysisData.knowledge_graph_score || 0,
         overall: analysisData.overall_score || 0,
       },
-      // detailed_analysis contains ALL interactive data:
-      // - grammar.errors[] with offset, errorLength, context, message, suggestion
-      // - readability with flesch_reading_ease, flesch_kincaid_grade, issues[]
-      // - argumentation with claims, evidence, warrants, rebuttals, graph
-      // - knowledge_graph with concepts, relationships, graph_structure
-      // - coherence with topic_sentences, transitional_elements, coherence_issues
       detailed_analysis: analysisData.detailed_analysis || {},
       recommendations: analysisData.recommendations || [],
       diagnostic_summary: analysisData.diagnostic_summary || undefined,
       word_count: analysisData.word_count || undefined,
       generated_at: analysisData.generated_at || new Date().toISOString(),
     };
+
+    const plagiarismResults = analysisData.plagiarism_results || null;
+    const aiDetectionResults = analysisData.ai_detection_results || null;
+
+    if (aiDetectionResults && !aiDetectionResults.is_ai_generated && aiDetectionResults.is_ai !== undefined) {
+      aiDetectionResults.is_ai_generated = !!aiDetectionResults.is_ai;
+    }
 
     // Add rubric_scores if present (for TextAnalysisResponse compatibility)
     if (analysisData.rubric_scores) {
@@ -2553,10 +2556,10 @@ export const fetchEssayAnalysis = async (
 
     return {
       analysis: analysis,
-      // original_text is CRITICAL - needed for displaying essay with grammar error highlights
-      // The offset/errorLength in grammar.errors reference positions in this text
       text: analysisData.original_text || "",
       title: essayData.title || "Essay Analysis",
+      plagiarismResults,
+      aiDetectionResults,
     };
   } catch (err) {
     console.error("Error fetching essay analysis:", err);

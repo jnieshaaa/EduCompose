@@ -415,20 +415,34 @@ const AnalysisResults: React.FC = () => {
           try {
             const { fetchEssayAnalysis } = await import('../services/activityService');
             const analysisData = await fetchEssayAnalysis(refStudentId, refActivityId);
-            if (analysisData) {
-              const stableAnalysis = JSON.parse(JSON.stringify(analysisData.analysis));
-              const stableText = analysisData.text || '';
-              const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
+              if (analysisData) {
+                console.log("[AnalysisResults] Fetched analysis data from ref token:", {
+                  hasAnalysis: !!analysisData.analysis,
+                  hasPlagiarism: !!analysisData.plagiarismResults,
+                  hasAIDetection: !!analysisData.aiDetectionResults
+                });
+                
+                const stableAnalysis = JSON.parse(JSON.stringify(analysisData.analysis));
+                const stableText = analysisData.text || '';
+                const newAnalysisKey = `${stableText.substring(0, 50)}-${Date.now()}`;
 
-              stableAnalysisRef.current = stableAnalysis;
-              stableTextRef.current = stableText;
+                stableAnalysisRef.current = stableAnalysis;
+                stableTextRef.current = stableText;
 
-              setAnalysis(stableAnalysis);
-              setOriginalText(stableText);
-              setAnalysisKey(newAnalysisKey);
-            } else {
-              setError('Analysis results not found. The essay may not have been graded yet.');
-            }
+                setAnalysis(stableAnalysis);
+                setOriginalText(stableText);
+                setAnalysisKey(newAnalysisKey);
+                
+                if (analysisData.plagiarismResults) {
+                  setPlagiarismResult(analysisData.plagiarismResults);
+                }
+                
+                if (analysisData.aiDetectionResults) {
+                  setAiDetectionResult(analysisData.aiDetectionResults);
+                }
+              } else {
+                setError('Analysis results not found. The essay may not have been graded yet.');
+              }
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis results';
             setError(errorMessage);
@@ -607,6 +621,8 @@ const AnalysisResults: React.FC = () => {
 
     const loadSavedAIDetection = async () => {
       try {
+        console.log("[AnalysisResults] Attempting to load saved AI detection results...", { essayId, studentId, activityId });
+        
         if (aiDetectionStorageKey) {
           const cached = localStorage.getItem(aiDetectionStorageKey);
           if (cached) {
@@ -614,6 +630,11 @@ const AnalysisResults: React.FC = () => {
               result?: AIDetectionResponse;
             };
             if (parsed?.result) {
+              console.log("[AnalysisResults] Found AI detection results in localStorage");
+              // Normalize legacy is_ai field
+              if (!parsed.result.is_ai_generated && (parsed.result as any).is_ai !== undefined) {
+                parsed.result.is_ai_generated = !!(parsed.result as any).is_ai;
+              }
               setAiDetectionResult(parsed.result);
               return;
             }
@@ -629,6 +650,12 @@ const AnalysisResults: React.FC = () => {
         }
 
         if (savedResult) {
+          console.log("[AnalysisResults] Found AI detection results in Database");
+          // Normalize legacy is_ai field
+          if (!savedResult.is_ai_generated && (savedResult as any).is_ai !== undefined) {
+            savedResult.is_ai_generated = !!(savedResult as any).is_ai;
+          }
+          
           setAiDetectionResult(savedResult);
           if (aiDetectionStorageKey) {
             localStorage.setItem(
@@ -636,9 +663,11 @@ const AnalysisResults: React.FC = () => {
               JSON.stringify({ result: savedResult, timestamp: Date.now() }),
             );
           }
+        } else {
+          console.log("[AnalysisResults] No saved AI detection results found in Database or localStorage.");
         }
-      } catch {
-        // console.warn('Error loading saved AI detection result:');
+      } catch (err) {
+        console.warn('Error loading saved AI detection result:', err);
       }
     };
 
@@ -1565,21 +1594,21 @@ const AnalysisResults: React.FC = () => {
                     {aiDetectionResult && !isCheckingAIDetection && (
                       <div className="space-y-4 mt-4">
                         <div className={`p-4 rounded-lg border-2 ${
-                          aiDetectionResult.is_ai_generated
+                          (aiDetectionResult.is_ai_generated || (aiDetectionResult as any).is_ai)
                             ? 'bg-amber-50 border-amber-200'
                             : 'bg-green-50 border-green-200'
                         }`}>
                           <div className="flex items-center space-x-3">
-                            {aiDetectionResult.is_ai_generated ? (
+                            {(aiDetectionResult.is_ai_generated || (aiDetectionResult as any).is_ai) ? (
                               <AlertTriangle className="w-6 h-6 text-amber-600" />
                             ) : (
                               <CheckCircle2 className="w-6 h-6 text-green-600" />
                             )}
                             <div>
                               <h3 className={`font-bold text-lg ${
-                                aiDetectionResult.is_ai_generated ? 'text-amber-900' : 'text-green-900'
+                                (aiDetectionResult.is_ai_generated || (aiDetectionResult as any).is_ai) ? 'text-amber-900' : 'text-green-900'
                               }`}>
-                                {aiDetectionResult.is_ai_generated ? 'Potential AI-Generated Content' : 'Likely Human-Written'}
+                                {(aiDetectionResult.is_ai_generated || (aiDetectionResult as any).is_ai) ? 'Potential AI-Generated Content' : 'Likely Human-Written'}
                               </h3>
                               <p className={`text-sm ${
                                 aiDetectionResult.is_ai_generated ? 'text-amber-700' : 'text-green-700'

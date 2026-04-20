@@ -50,14 +50,8 @@ interface AnalysisData {
     knowledge_graph?: any;
     coherence?: any;
   };
-  plagiarism?: {
-    is_plagiarized: boolean;
-    percentage: number;
-  };
-  ai_detection?: {
-    is_ai_generated: boolean;
-    score: number;
-  };
+  plagiarism?: import("../../api").PlagiarismCheckResponse | null;
+  ai_detection?: import("../../api").AIDetectionResponse | null;
   original_text?: string;
   recommendations?: any[];
   diagnostic_summary?: any;
@@ -134,7 +128,9 @@ export function EssayResultTranscript() {
             detailed_analysis: analysisData.detailed_analysis || baseData?.detailed_analysis || {},
             recommendations: analysisData.recommendations || baseData?.recommendations || [],
             diagnostic_summary: analysisData.diagnostic_summary || baseData?.diagnostic_summary || {},
-            original_text: fallbackText
+            original_text: fallbackText,
+            plagiarism: analysisData.plagiarism_results,
+            ai_detection: analysisData.ai_detection_results
           });
         } else {
           const fallbackPayload = essayData?.analysis_payload as any || {};
@@ -353,8 +349,16 @@ export function EssayResultTranscript() {
         <div className="pt-12 border-t border-neutral-100">
             <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8">Academic Integrity & Protocols</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <IntegrityCard label="AI Detection Score" value={analysis?.ai_detection?.score || 0} isFlagged={analysis?.ai_detection?.is_ai_generated} />
-                 <IntegrityCard label="Plagiarism Index" value={analysis?.plagiarism?.percentage || 0} isFlagged={analysis?.plagiarism?.is_plagiarized} />
+                 <IntegrityCard 
+                   label="AI Detection Score" 
+                   value={analysis?.ai_detection?.ai_score || 0} 
+                   isFlagged={analysis?.ai_detection?.is_ai_generated || (analysis?.ai_detection as any)?.is_ai} 
+                 />
+                 <IntegrityCard 
+                   label="Plagiarism Index" 
+                   value={analysis?.plagiarism?.plagiarism_percentage || 0} 
+                   isFlagged={analysis?.plagiarism?.is_plagiarized} 
+                 />
                  <IntegrityCard label="Class Similarity" value={duplicates.length > 0 ? 100 : 0} isFlagged={duplicates.length > 0} desc={duplicates.length > 0 ? `Matches with ${duplicates.length} records` : "No identical submissions found."} />
             </div>
         </div>
