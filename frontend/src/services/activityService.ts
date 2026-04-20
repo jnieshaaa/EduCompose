@@ -2922,10 +2922,7 @@ export const fetchDuplicateEssays = async (
       return [];
     }
 
-    // console.log("[fetchDuplicateEssays] Starting check for activity:", activityDbId);
-
     // 1. Find the course and all related activities
-    // Tracing: Activity -> Block -> Program Load -> Course Load -> Course
     const { data: activityData, error: activityError } = await supabase
       .from("essay_activities")
       .select(`
@@ -2942,8 +2939,7 @@ export const fetchDuplicateEssays = async (
 
     let activityIds: string[] = [activityDbId];
     
-    // 1b. If we have block_id(s) but no activities by course_id yet, resolve them manually
-    // to find related activities for Cross-Class detection
+    // 1b. Resolve related activities manually via course relationships
     if (activityData?.block_id) {
        try {
          const bid = Array.isArray(activityData.block_id) ? activityData.block_id[0] : activityData.block_id;
@@ -2962,7 +2958,6 @@ export const fetchDuplicateEssays = async (
            
            const courseId = (blockCourseData?.teacher_program_loads as any)?.teacher_course_loads?.course_id;
            if (courseId) {
-             // Find all activities for the same course
               const { data: relatedActivities } = await supabase
                 .from("essay_activities")
                 .select("id")
@@ -2978,7 +2973,7 @@ export const fetchDuplicateEssays = async (
        }
     }
     
-    // Try to find related activities via course_id column (if it exists)
+    // Also try directly via course_id column
     const courseIdFromCol = activityData?.course_id;
     if (courseIdFromCol) {
       const { data: relatedByCol } = await supabase
@@ -2991,183 +2986,77 @@ export const fetchDuplicateEssays = async (
       }
     }
 
-
-
-    // console.log(`[fetchDuplicateEssays] Searching duplicates across ${activityIds.length} activity IDs:`, activityIds);
-
-    // 2. Fetch analysis results for all targeted activities
-    // Simplified join syntax to avoid "foreign key not found" errors
-    const { data: analysisResults, error } = await supabase
+    // 2. Fetch analysis results for all targeted activities (Simple pass)
+    const { data: results, error } = await supabase
       .from("essay_analysis_results")
-      .select(`
-        essay_id,
-        student_id,
-        original_text,
-        essays!essay_id(
-          id,
-          title,
-          submitted_at,
-          block_id,
-          students!student_id(
-            id,
-            first_name,
-            middle_name,
-            last_name
-          ),
-          blocks!block_id(
-            id,
-            name,
-            year,
-            teacher_program_loads!program_load_id(
-              programs_lookup!program_id(
-                id,
-                name,
-                abbr
-              )
-            )
-          )
-        )
-      `)
+      .select("essay_id, student_id, original_text, generated_at")
       .in("activity_id", activityIds);
 
     if (error) {
       console.error("[fetchDuplicateEssays] Error fetching analysis results:", error);
     }
 
-    if (!analysisResults || analysisResults.length === 0) {
-      // 3. Fallback: fetch from essays table if analysis_results don't exist yet
-      const { data: essaysData, error: essaysError } = await supabase
+    let analysisResults = results || [];
+
+    // Fallback: fetch from essays table if no analysis results yet
+    if (analysisResults.length === 0) {
+      const { data: fallbackEssays, error: essaysError } = await supabase
         .from("essays")
-        .select(`
-          id,
-          title,
-          submitted_at,
-          content,
-          block_id,
-          students!student_id(
-            id,
-            first_name,
-            middle_name,
-            last_name
-          ),
-          blocks!block_id(
-            id,
-            name,
-            year,
-            teacher_program_loads!program_load_id(
-              programs_lookup!program_id(
-                id,
-                name,
-                abbr
-              )
-            )
-          )
-        `)
+        .select("id, student_id, content, title, submitted_at, block_id")
         .in("activity_id", activityIds);
 
       if (essaysError) {
         console.error("[fetchDuplicateEssays] Fallback query error:", essaysError);
       }
 
-      if (!essaysData || essaysData.length === 0) {
+      if (!fallbackEssays || fallbackEssays.length === 0) {
         return [];
       }
-
-      // console.log(`[fetchDuplicateEssays] Found ${essaysData.length} essays (fallback). Attempting to use content field...`);
-
-      // Try to use essays.content if available
-      type EssayWithNested = {
-        id: string;
-        title: string;
-        submitted_at: string;
-        content?: string | null;
-        block_id?: string | null;
-        students?: {
-          id: string;
-          first_name: string;
-          middle_name: string | null;
-          last_name: string;
-        };
-        blocks?: {
-          id: string;
-          name: string;
-          year?: number | null;
-          teacher_program_loads?: {
-            programs_lookup?: {
-              id: string;
-              name: string;
-              abbr: string | null;
-            };
-          } | Array<{
-            programs_lookup?: {
-              id: string;
-              name: string;
-              abbr: string | null;
-            };
-          }>;
-        };
-      };
-
-      const essaysWithContent = (
-        essaysData as unknown as EssayWithNested[]
-      ).filter((e) => e.content && e.content.trim().length >= 50);
-
-      if (essaysWithContent.length < 2) {
-        console.log(
-          `[fetchDuplicateEssays] Not enough essays with content for comparison (need at least 2, found ${essaysWithContent.length})`,
-        );
-        return [];
-      }
-
-      // Process essays with content field
-      const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
-
-      for (const essay of essaysWithContent) {
-        const essayText = essay.content;
-        if (!essayText || essayText.trim().length < 50) {
-          continue;
-        }
-
-        const student = essay.students;
-        const block = essay.blocks;
-        const tpl = Array.isArray(block?.teacher_program_loads)
-          ? block.teacher_program_loads[0]
-          : block?.teacher_program_loads;
-        const program = tpl?.programs_lookup;
-
-        if (!student || !block || !program) {
-          continue;
-        }
-
-        const essayInfo = {
-          essayId: essay.id,
-          studentId: student.id,
-          studentName: buildFullNameFromObject(student, "Unknown"),
-          programName: program.abbr || program.name || "Unknown",
-          sectionName: block.year
-            ? `${block.year}${block.name}`
-            : block.name || "Unknown",
-          title: essay.title || "Untitled",
-          submittedAt: essay.submitted_at || new Date().toISOString(),
-        };
-
-        const contentHash = generateContentHash(essayText);
-        if (!contentGroups.has(contentHash)) {
-          contentGroups.set(contentHash, []);
-        }
-        contentGroups.get(contentHash)!.push(essayInfo);
-      }
-
-      // Continue with similarity matching
-      return processSimilarityGroups(
-        contentGroups,
-        essaysWithContent.map((e) => ({
-          id: e.id,
-          content: e.content || null,
-        })),
-        "content",
-      );
+      
+      analysisResults = fallbackEssays.map(e => ({
+        essay_id: e.id,
+        student_id: e.student_id,
+        original_text: (e as any).content || "",
+        _fallback_essay: e
+      })) as any;
     }
+
+    // 3. Fetch missing metadata (Metadata pass)
+    const essayIds = analysisResults.map(r => r.essay_id);
+    const { data: metadata, error: metaError } = await supabase
+      .from("essays")
+      .select(`
+        id,
+        title,
+        submitted_at,
+        block_id,
+        students!student_id(
+          id,
+          first_name,
+          middle_name,
+          last_name
+        ),
+        blocks!block_id(
+          id,
+          name,
+          year,
+          teacher_program_loads!program_load_id(
+            programs_lookup!program_id(
+              id,
+              name,
+              abbr
+            )
+          )
+        )
+      `)
+      .in("id", essayIds);
+
+    if (metaError) {
+       console.error("[fetchDuplicateEssays] Error fetching metadata:", metaError);
+    }
+
+    const metaMap = new Map();
+    metadata?.forEach(m => metaMap.set(String(m.id), m));
 
     // Group essays by content hash
     const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
@@ -3175,58 +3064,14 @@ export const fetchDuplicateEssays = async (
     for (const result of analysisResults) {
       const originalText = result.original_text;
       if (!originalText || originalText.trim().length < 50) {
-        continue; // Skip essays without text or too short
-      }
-
-      // Supabase returns nested data - handle the structure
-      type EssayDataStructure = {
-        id: number;
-        title: string;
-        submitted_at: string;
-        block_id?: string | null;
-        students?: {
-          id: number;
-          first_name: string;
-          middle_name: string | null;
-          last_name: string;
-        };
-        blocks?: {
-          id: string;
-          name: string;
-          year?: number | null;
-          teacher_program_loads?: {
-            programs_lookup?: {
-              id: string;
-              name: string;
-              abbr: string | null;
-            };
-          } | Array<{
-            programs_lookup?: {
-              id: string;
-              name: string;
-              abbr: string | null;
-            };
-          }>;
-        };
-      };
-
-      // Handle different possible structures from Supabase
-      // Supabase returns nested data as an object (not array) when using !inner
-      const essaysData = result.essays as unknown;
-      let essayData: EssayDataStructure | null = null;
-
-      if (Array.isArray(essaysData)) {
-        essayData = essaysData[0] as unknown as EssayDataStructure;
-      } else {
-        essayData = essaysData as unknown as EssayDataStructure;
-      }
-
-      if (!essayData) {
         continue;
       }
 
-      const student = essayData.students;
-      const block = essayData.blocks;
+      const meta = metaMap.get(String(result.essay_id)) || (result as any)._fallback_essay;
+      if (!meta) continue;
+
+      const student = meta.students;
+      const block = meta.blocks;
       const tpl = Array.isArray(block?.teacher_program_loads)
         ? block.teacher_program_loads[0]
         : block?.teacher_program_loads;
@@ -3237,39 +3082,35 @@ export const fetchDuplicateEssays = async (
       }
 
       const essayInfo = {
-        essayId: String(essayData.id),
+        essayId: String(meta.id),
         studentId: String(student.id),
         studentName: buildFullNameFromObject(student, "Unknown"),
         programName: program.abbr || program.name || "Unknown",
         sectionName: block.year
           ? `${block.year}${block.name}`
           : block.name || "Unknown",
-        title: essayData.title || "Untitled",
-        submittedAt: essayData.submitted_at || new Date().toISOString(),
+        title: meta.title || "Untitled",
+        submittedAt: meta.submitted_at || new Date().toISOString(),
       };
 
       const contentHash = generateContentHash(originalText);
-
       if (!contentGroups.has(contentHash)) {
         contentGroups.set(contentHash, []);
       }
       contentGroups.get(contentHash)!.push(essayInfo);
     }
 
-    // Use the helper function to process similarity groups
-    const duplicateGroups = processSimilarityGroups(
+    // Continue with similarity matching using the simple results list
+    return processSimilarityGroups(
       contentGroups,
       analysisResults.map((r) => ({
-        essay_id: r.essay_id,
-        original_text: r.original_text,
-        essays: r.essays,
+        id: String(r.essay_id),
+        content: r.original_text || null,
       })),
       "original_text",
     );
-
-    return duplicateGroups;
   } catch (err) {
-    console.error("Error fetching duplicate essays:", err);
+    console.error("Error in fetchDuplicateEssays:", err);
     return [];
   }
 };
