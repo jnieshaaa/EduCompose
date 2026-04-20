@@ -11,8 +11,16 @@ import type {
 import { supabase, supabaseAdmin } from "./lib/supabaseClient";
 
 // Get API base URL from environment variable, fallback to localhost for development
-const API_BASE_URL =
+let API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+// Force HTTPS for railway domains to prevent Mixed Content errors in production
+if (API_BASE_URL.includes("railway.app") && API_BASE_URL.startsWith("http://")) {
+  API_BASE_URL = API_BASE_URL.replace("http://", "https://");
+}
+
+// Remove trailing slash globally to prevent double slashes in paths
+API_BASE_URL = API_BASE_URL.replace(/\/$/, "");
 
 class ApiError extends Error {
   status: number;
@@ -691,7 +699,7 @@ export const analysisApi = {
       | "comprehensive" = "comprehensive",
     rubricId?: string,
   ): Promise<TextAnalysisResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/analyze-text/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -730,11 +738,9 @@ export const ocrApi = {
     formData.append("file", file);
 
     const token = localStorage.getItem("auth_token");
-    // Fix: Javascript doesn't have rstrip. Using replace for trailing slash removal.
-    const baseUrl = API_BASE_URL.replace(/\/$/, "");
     
     // Add trailing slash to the endpoint to avoid redirects which can cause CORS issues
-    const response = await fetch(`${baseUrl}/ocr/extract-text/`, {
+    const response = await fetch(`${API_BASE_URL}/ocr/extract-text/`, {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -781,7 +787,7 @@ export interface PlagiarismCheckResponse {
 
 export const plagiarismApi = {
   checkPlagiarism: async (text: string): Promise<PlagiarismCheckResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/check-plagiarism`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-plagiarism/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -814,7 +820,7 @@ export interface AIDetectionResponse {
 
 export const aiDetectionApi = {
   checkAIDetection: async (text: string): Promise<AIDetectionResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/check-ai-detection`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-ai-detection/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
