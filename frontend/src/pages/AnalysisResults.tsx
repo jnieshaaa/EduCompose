@@ -635,6 +635,9 @@ const AnalysisResults: React.FC = () => {
               if (!parsed.result.is_ai_generated && (parsed.result as any).is_ai !== undefined) {
                 parsed.result.is_ai_generated = !!(parsed.result as any).is_ai;
               }
+              if (parsed.result.ai_score === undefined && (parsed.result as any).score !== undefined) {
+                parsed.result.ai_score = (parsed.result as any).score;
+              }
               setAiDetectionResult(parsed.result);
               return;
             }
@@ -651,9 +654,12 @@ const AnalysisResults: React.FC = () => {
 
         if (savedResult) {
           console.log("[AnalysisResults] Found AI detection results in Database");
-          // Normalize legacy is_ai field
+          // Normalize legacy fields
           if (!savedResult.is_ai_generated && (savedResult as any).is_ai !== undefined) {
             savedResult.is_ai_generated = !!(savedResult as any).is_ai;
+          }
+          if (savedResult.ai_score === undefined && (savedResult as any).score !== undefined) {
+            savedResult.ai_score = (savedResult as any).score;
           }
           
           setAiDetectionResult(savedResult);
@@ -1622,7 +1628,7 @@ const AnalysisResults: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-neutral-50 rounded-lg p-4">
                             <div className="text-2xl font-bold text-neutral-900">
-                              {Number(aiDetectionResult.ai_score || 0).toFixed(1)}%
+                              {Number(aiDetectionResult.ai_score ?? (aiDetectionResult as any).score ?? 0).toFixed(1)}%
                             </div>
                             <div className="text-xs text-neutral-600 mt-1">AI Score</div>
                           </div>

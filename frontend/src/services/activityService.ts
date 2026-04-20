@@ -2554,12 +2554,23 @@ export const fetchEssayAnalysis = async (
       }
     }
 
+    // Normalize legacy AI fields
+    const normalizedAIDetection = aiDetectionResults ? { ...aiDetectionResults } : null;
+    if (normalizedAIDetection) {
+      if (normalizedAIDetection.is_ai_generated === undefined && (normalizedAIDetection as any).is_ai !== undefined) {
+        normalizedAIDetection.is_ai_generated = !!(normalizedAIDetection as any).is_ai;
+      }
+      if (normalizedAIDetection.ai_score === undefined && (normalizedAIDetection as any).score !== undefined) {
+        normalizedAIDetection.ai_score = (normalizedAIDetection as any).score;
+      }
+    }
+
     return {
       analysis: analysis,
       text: analysisData.original_text || "",
       title: essayData.title || "Essay Analysis",
       plagiarismResults,
-      aiDetectionResults,
+      aiDetectionResults: normalizedAIDetection,
     };
   } catch (err) {
     console.error("Error fetching essay analysis:", err);
@@ -2920,17 +2931,7 @@ export const fetchDuplicateEssays = async (
       .select(`
         id,
         course_id,
-        block_id,
-        blocks(
-          id,
-          teacher_program_loads(
-            id,
-            teacher_course_loads(
-              id,
-              course_id
-            )
-          )
-        )
+        block_id
       `)
       .eq("id", activityDbId)
       .maybeSingle();
@@ -2940,6 +2941,42 @@ export const fetchDuplicateEssays = async (
     }
 
     let activityIds: string[] = [activityDbId];
+    
+    // 1b. If we have block_id(s) but no activities by course_id yet, resolve them manually
+    // to find related activities for Cross-Class detection
+    if (activityData?.block_id) {
+       try {
+         const bid = Array.isArray(activityData.block_id) ? activityData.block_id[0] : activityData.block_id;
+         if (bid) {
+           const { data: blockCourseData } = await supabase
+            .from("blocks")
+            .select(`
+              teacher_program_loads!program_load_id(
+                teacher_course_loads!course_load_id(
+                  course_id
+                )
+              )
+            `)
+            .eq("id", bid)
+            .maybeSingle();
+           
+           const courseId = (blockCourseData?.teacher_program_loads as any)?.teacher_course_loads?.course_id;
+           if (courseId) {
+             // Find all activities for the same course
+              const { data: relatedActivities } = await supabase
+                .from("essay_activities")
+                .select("id")
+                .overlaps("course_id", [courseId]);
+              
+              if (relatedActivities && relatedActivities.length > 0) {
+                activityIds = [...new Set([...activityIds, ...relatedActivities.map(a => a.id)])];
+              }
+           }
+         }
+       } catch (e) {
+         console.warn("[fetchDuplicateEssays] Manual course resolution failed:", e);
+       }
+    }
     
     // Try to find related activities via course_id column (if it exists)
     const courseIdFromCol = activityData?.course_id;
@@ -2954,26 +2991,7 @@ export const fetchDuplicateEssays = async (
       }
     }
 
-    // Try to find related activities via the blocks/course relationship
-    // This is more robust as it doesn't rely on the newer course_id array column
-    try {
-      const blocksData = activityData?.blocks as any;
-      const courseId = blocksData?.teacher_program_loads?.teacher_course_loads?.course_id;
-      
-      if (courseId) {
-        // Find all activities linked to blocks belonging to the same course
-        const { data: relatedByCourse } = await supabase
-          .from("essay_activities")
-          .select("id")
-          .filter("blocks.teacher_program_loads.teacher_course_loads.course_id", "eq", courseId);
-          
-        if (relatedByCourse && relatedByCourse.length > 0) {
-           activityIds = [...new Set([...activityIds, ...relatedByCourse.map(a => a.id)])];
-        }
-      }
-    } catch (e) {
-      // Ignored - fallback to current activity only if join fails
-    }
+
 
     // console.log(`[fetchDuplicateEssays] Searching duplicates across ${activityIds.length} activity IDs:`, activityIds);
 
@@ -2985,23 +3003,23 @@ export const fetchDuplicateEssays = async (
         essay_id,
         student_id,
         original_text,
-        essays(
+        essays!essay_id(
           id,
           title,
           submitted_at,
           block_id,
-          students(
+          students!student_id(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks(
+          blocks!block_id(
             id,
             name,
             year,
-            teacher_program_loads(
-              programs_lookup(
+            teacher_program_loads!program_load_id(
+              programs_lookup!program_id(
                 id,
                 name,
                 abbr
@@ -3026,18 +3044,18 @@ export const fetchDuplicateEssays = async (
           submitted_at,
           content,
           block_id,
-          students(
+          students!student_id(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks(
+          blocks!block_id(
             id,
             name,
             year,
-            teacher_program_loads(
-              programs_lookup(
+            teacher_program_loads!program_load_id(
+              programs_lookup!program_id(
                 id,
                 name,
                 abbr
