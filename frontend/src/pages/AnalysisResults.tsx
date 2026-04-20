@@ -1638,7 +1638,7 @@ const AnalysisResults: React.FC = () => {
                       <div className="space-y-4">
                         <div className="p-4 bg-warning-default/5 border border-warning-default/20 rounded-lg">
                           <p className="text-sm text-warning-default-dark font-medium">
-                            Warning: {duplicateGroups.length} duplicate group{duplicateGroups.length !== 1 ? 's' : ''} found in this activity.
+                            Warning: {duplicateGroups.length} duplicate group{duplicateGroups.length !== 1 ? 's' : ''} found in this course (including other programs).
                           </p>
                         </div>
                         
@@ -1673,7 +1673,7 @@ const AnalysisResults: React.FC = () => {
                     ) : (
                       <div className="text-center py-8 bg-neutral-50 rounded-lg border border-dashed border-neutral-200">
                         <CheckCircle2 className="w-8 h-8 text-success-default mx-auto mb-2 opacity-50" />
-                        <p className="text-sm text-neutral-500">No cross-class duplicate essays detected.</p>
+                        <p className="text-sm text-neutral-500">No cross-course duplicate essays detected.</p>
                       </div>
                     )}
                   </div>

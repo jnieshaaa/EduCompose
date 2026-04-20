@@ -248,39 +248,27 @@ class TransformerClaimClassifier:
                 })
         return results
 
-    def classify_sentences(self, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Synchronous wrapper for classification"""
+    async def classify_sentences(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Asynchronous classification"""
         if not self._initialized:
             return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
 
         if self.use_remote:
-            import asyncio
             try:
-                # Use a loop if we are already in one, or run a new one
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        # This is tricky in a sync wrapper, but for small batches it's usually via a controller
-                        # In FastAPI, we are usually in an async context anyway if called from router
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        return loop.run_until_complete(self._classify_remote(sentences))
-                    return loop.run_until_complete(self._classify_remote(sentences))
-                except RuntimeError:
-                    return asyncio.run(self._classify_remote(sentences))
+                return await self._classify_remote(sentences)
             except Exception as e:
                 logger.error(f"Remote classification failed: {e}")
                 return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
         else:
             return self._classify_local(sentences)
 
-    def classify_text(self, text: str) -> Dict[str, Any]:
+    async def classify_text(self, text: str) -> Dict[str, Any]:
         """Split text and classify components"""
         import re
         sentences = re.split(r'(?<=[.!?])\s+', text)
         sentences = [s.strip() for s in sentences if len(s.strip()) > 5]
         
-        classifications = self.classify_sentences(sentences)
+        classifications = await self.classify_sentences(sentences)
         
         counts = {}
         for c in classifications:

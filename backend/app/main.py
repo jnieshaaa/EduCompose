@@ -131,8 +131,12 @@ async def startup_event():
         from .services.model_warmup import warmup_all_models
         
         def run_warmup():
+            import asyncio
             try:
-                warmup_all_models()
+                # Use a specific event loop for this background thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(warmup_all_models())
             except Exception as e:
                 print(f"Background warmup error: {e}")
                 
@@ -175,7 +179,7 @@ async def warmup_endpoint():
             "warmed": True
         }
     
-    result = warmup_all_models()
+    result = await warmup_all_models()
     return {
         "status": "warmed",
         "message": "Models warmed up successfully",

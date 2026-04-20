@@ -286,15 +286,32 @@ export function MyEssaysTab() {
                                     .from('essays')
                                     .download(essay.filePath);
                                   
-                                  if (error) throw error;
+                                  if (error) {
+                                    if (error.message.includes("Object not found")) {
+                                      alert("The file could not be found in storage. It may have been removed.");
+                                    } else if (error.message.includes("download is not allowed")) {
+                                      alert("Access denied. Please check if the storage bucket permissions are set correctly.");
+                                    } else {
+                                      throw error;
+                                    }
+                                    return;
+                                  }
                                   
                                   const url = window.URL.createObjectURL(data);
                                   const link = document.createElement('a');
                                   link.href = url;
-                                  link.setAttribute('download', essay.filename || 'essay-file');
+                                  
+                                  // Clean filename - use filename if provided, else derive from path
+                                  let finalFilename = essay.filename || 'essay-file';
+                                  if (finalFilename === 'No name' && essay.filePath) {
+                                    finalFilename = essay.filePath.split('/').pop() || 'essay-file';
+                                  }
+                                  
+                                  link.setAttribute('download', finalFilename);
                                   document.body.appendChild(link);
                                   link.click();
                                   link.remove();
+                                  window.URL.revokeObjectURL(url);
                                 } else if (essay.content) {
                                   // Download content as text file
                                   const blob = new Blob([essay.content], { type: 'text/plain' });
@@ -305,12 +322,13 @@ export function MyEssaysTab() {
                                   document.body.appendChild(link);
                                   link.click();
                                   link.remove();
+                                  window.URL.revokeObjectURL(url);
                                 } else {
                                   alert("No file or content available for this essay.");
                                 }
-                              } catch (err) {
+                              } catch (err: any) {
                                 console.error("Download failed:", err);
-                                alert("Failed to download file.");
+                                alert(`Download failed: ${err.message || "Unknown error"}`);
                               }
                             }}
                           >

@@ -13,7 +13,7 @@ _warmup_complete = False
 _warmup_start_time = None
 _warmup_duration = None
 
-def warmup_all_models() -> Dict[str, Any]:
+async def warmup_all_models() -> Dict[str, Any]:
     """
     Preload all NLP models to avoid cold start delays.
     This should be called on server startup.
@@ -89,7 +89,7 @@ def warmup_all_models() -> Dict[str, Any]:
                not essay_analysis_service.argument_miner._ensure_transformer_classifier_loaded() or \
                not essay_analysis_service.argument_miner.transformer_classifier.use_remote:
                 
-                _ = essay_analysis_service.argument_miner.analyze(dummy_text[:200])
+                _ = await essay_analysis_service.argument_miner.analyze(dummy_text[:200])
                 if essay_analysis_service.argument_miner._transformer_available:
                     warmup_results["argument_miner"] = True
                 logger.info("      ArgumentMiner ready")

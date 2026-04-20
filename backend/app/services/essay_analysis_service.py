@@ -147,7 +147,7 @@ class EssayAnalysisService:
         
         if analysis_type in ["argument", "comprehensive"]:
             start = time.time()
-            argument_analysis = self.argument_miner.analyze(content)
+            argument_analysis = await self.argument_miner.analyze(content)
             timing_info["argument"] = round(time.time() - start, 2)
         
         if analysis_type == "comprehensive":

@@ -137,7 +137,7 @@ class ArgumentMiner:
         
         return self.transformer_classifier if self.transformer_classifier is not False else None
     
-    def analyze(self, text: str) -> Dict[str, Any]:
+    async def analyze(self, text: str) -> Dict[str, Any]:
         """
         Comprehensive argument analysis using Toulmin's model
         
@@ -179,12 +179,12 @@ class ArgumentMiner:
         results["thesis_statement"] = thesis
         
         # Extract claims
-        claims = self._extract_claims(text, sentences)
+        claims = await self._extract_claims(text, sentences)
         results["claims"] = claims
         results["claim_score"] = self._calculate_claim_score(claims, thesis)
         
         # Extract evidence/grounds
-        grounds = self._extract_grounds(text, sentences)
+        grounds = await self._extract_grounds(text, sentences)
         results["grounds"] = grounds
         results["evidence_score"] = self._calculate_evidence_score(grounds, claims)
         
@@ -194,7 +194,7 @@ class ArgumentMiner:
         results["warrant_score"] = self._calculate_warrant_score(warrants, claims)
         
         # Extract rebuttals
-        rebuttals = self._extract_rebuttals(text, sentences)
+        rebuttals = await self._extract_rebuttals(text, sentences)
         results["rebuttals"] = rebuttals
         results["rebuttal_score"] = self._calculate_rebuttal_score(rebuttals)
         
@@ -304,7 +304,7 @@ class ArgumentMiner:
         
         return None
     
-    def _extract_claims(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+    async def _extract_claims(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
         """Extract claim statements using a hybrid of transformer classifier and pattern matching"""
         claims = []
         found_indices = set()
@@ -313,7 +313,7 @@ class ArgumentMiner:
         transformer_classifier = self._ensure_transformer_classifier_loaded()
         if transformer_classifier:
             try:
-                classifications = transformer_classifier.classify_sentences(sentences)
+                classifications = await transformer_classifier.classify_sentences(sentences)
                 for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
                     component = classification.get("component", "unknown")
                     confidence = classification.get("confidence", 0.0)
@@ -351,7 +351,7 @@ class ArgumentMiner:
                     
         return claims
     
-    def _extract_grounds(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+    async def _extract_grounds(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
         """Extract evidence/ground statements using pattern matching or transformer classifier"""
         grounds = []
         
@@ -359,7 +359,7 @@ class ArgumentMiner:
         transformer_classifier = self._ensure_transformer_classifier_loaded()
         if transformer_classifier:
             try:
-                classifications = transformer_classifier.classify_sentences(sentences)
+                classifications = await transformer_classifier.classify_sentences(sentences)
                 
                 # Extract sentences classified as evidence
                 for i, (sentence, classification) in enumerate(zip(sentences, classifications)):
@@ -474,7 +474,7 @@ class ArgumentMiner:
         
         return warrants
     
-    def _extract_rebuttals(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+    async def _extract_rebuttals(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
         """Extract rebuttal/counterargument statements using pattern matching or transformer classifier"""
         rebuttals = []
         
@@ -482,7 +482,7 @@ class ArgumentMiner:
         transformer_classifier = self._ensure_transformer_classifier_loaded()
         if transformer_classifier:
             try:
-                classifications = transformer_classifier.classify_sentences(sentences)
+                classifications = await transformer_classifier.classify_sentences(sentences)
                 
                 # Extract sentences classified as counterclaims
                 for i, (sentence, classification) in enumerate(zip(sentences, classifications)):

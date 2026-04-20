@@ -2921,6 +2921,34 @@ export const fetchDuplicateEssays = async (
       return [];
     }
 
+    // 1. First, find the course(s) this activity belongs to
+    const { data: currentActivity, error: activityError } = await supabase
+      .from("essay_activities")
+      .select("id, course_id")
+      .eq("id", activityDbId)
+      .maybeSingle();
+
+    if (activityError) {
+      console.error("[fetchDuplicateEssays] Error fetching activity course info:", activityError);
+    }
+
+    const courseIds = currentActivity?.course_id;
+    let activityIds = [activityDbId];
+
+    if (Array.isArray(courseIds) && courseIds.length > 0) {
+      // Find all activities sharing ANY of these course_ids
+      const { data: relatedActivities } = await supabase
+        .from("essay_activities")
+        .select("id")
+        .overlaps("course_id", courseIds);
+      
+      if (relatedActivities && relatedActivities.length > 0) {
+        activityIds = relatedActivities.map(a => a.id);
+      }
+    }
+
+    console.log(`[fetchDuplicateEssays] Searching for duplicates across ${activityIds.length} related activities for course(s): ${courseIds || 'none'}`);
+
     const { data: analysisResults, error } = await supabase
       .from("essay_analysis_results")
       .select(
@@ -2954,7 +2982,7 @@ export const fetchDuplicateEssays = async (
         )
       `,
       )
-      .eq("activity_id", activityDbId);
+      .in("activity_id", activityIds);
 
     if (error) {
       console.error(
@@ -2997,7 +3025,7 @@ export const fetchDuplicateEssays = async (
           )
         `,
         )
-        .eq("activity_id", activityDbId);
+        .in("activity_id", activityIds);
 
       if (essaysError) {
         console.error(
