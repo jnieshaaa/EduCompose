@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import AlertModal, { type AlertType } from "../components/ui/AlertModal";
-import { useNotification } from "../context/NotificationContext";
+import { useNotification } from "../contexts/NotificationContext";
 
 interface AlertOptions {
   type?: AlertType;

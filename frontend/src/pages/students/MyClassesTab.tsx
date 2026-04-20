@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Users, Calendar, GraduationCap, Loader2, ArrowRight } from 'lucide-react';
-import { useNotification } from '../../context/NotificationContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildSecureUrl } from '../../utils/secureUrl';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2, School as SchoolIcon, Layers, X, Hash, GraduationCap, Building2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import type { School, Department, Program } from "../../types/academic";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../components/ui/Button";
 

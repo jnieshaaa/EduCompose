@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { fetchAcademicSettings, updateAcademicSettings } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 

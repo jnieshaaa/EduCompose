@@ -15,7 +15,7 @@ import { supabase } from "../../lib/supabaseClient";
 import type { EssayActivity, CourseSection } from "../../types/activityTypes";
 import { getCoursesLabel, getBlocksLabel } from "../../utils/activityUtils";
 import { fetchCourseSectionCounts } from "../../services/activityService";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 
 interface CourseSectionsViewProps {
   activity: EssayActivity;

@@ -13,7 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import Button from "../../components/ui/Button";
 import EnrollTeacherModal from "../../components/admin/EnrollTeacherModal";
 import EditTeacherModal from "../../components/admin/EditTeacherModal";

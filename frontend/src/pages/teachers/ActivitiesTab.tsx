@@ -8,7 +8,7 @@ import { EditActivityModal } from "../../components/activities/EditActivityModal
 import { useActivities } from "../../hooks/useActivities";
 import type { NewActivityForm } from "../../types/activityTypes";
 import { readSecureParams } from "../../utils/secureUrl";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 
 export function ActivitiesTab() {
   const [searchParams] = useSearchParams();

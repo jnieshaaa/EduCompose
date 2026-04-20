@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../../components/ui/Button";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import type { CriteriaRow } from "../../types/rubricTypes";
 import { logActivity } from "../../utils/logger";
 import { motion } from "framer-motion";

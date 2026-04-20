@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { User, Lock, Eye, EyeOff, Mail, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { supabase } from "../../lib/supabaseClient";
 import { sendSignupCodeEmail } from "../../services/emailService";
 

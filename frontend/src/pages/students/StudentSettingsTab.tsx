@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw } from 'lucide-react';
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
 
 export function StudentSettingsTab() {

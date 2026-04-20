@@ -15,7 +15,7 @@ import {
   UserCircle,
   RefreshCw
 } from "lucide-react";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { adminApi } from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 import CreateUserModal from "../../components/admin/CreateUserModal";

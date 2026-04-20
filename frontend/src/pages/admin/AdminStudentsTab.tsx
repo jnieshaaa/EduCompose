@@ -31,7 +31,7 @@ import { sendStudentWelcomeEmail } from "../../services/emailService";
 import { authApi } from "../../api";
 import AlertModal from "../../components/ui/AlertModal";
 import { AdminPendingStudentsTab } from "./AdminPendingStudentsTab";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../components/ui/Button";
 
@@ -312,7 +312,7 @@ export const AdminStudentsTab: React.FC = () => {
       );
 
       if (rpcError) throw new Error(rpcError.message);
-      if (!ok) throw new Error("Synchronization failure: Auth identity not found.");
+      if (!ok) throw new Error("This student doesn't have a login account yet. Please click 'Provision Account' first.");
 
       await sendStudentWelcomeEmail({
         to_name: `${student.first_name} ${student.last_name}`.trim(),
@@ -1138,23 +1138,22 @@ export const AdminStudentsTab: React.FC = () => {
 
                   <div className="py-1 border-t border-neutral-50">
                     <p className="px-5 py-2 text-[8px] font-bold text-neutral-300 uppercase tracking-[0.2em]">Account Management</p>
-                    {s.auth_user_id ? (
-                      <button
-                        onClick={() => { handleResendPassword(s); setOpenDropdown(null); }}
-                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
-                      >
-                        <Mail size={14} />
-                        Resend Email
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => { handleProvisionAuthAccount(s); setOpenDropdown(null); }}
-                        className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
-                      >
-                        <Zap size={14} />
-                        Create Account
-                      </button>
-                    )}
+                    <button
+                      onClick={() => { handleResendPassword(s); setOpenDropdown(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                    >
+                      <Mail size={14} />
+                      Resend Email
+                    </button>
+                    
+                    <button
+                      onClick={() => { handleProvisionAuthAccount(s); setOpenDropdown(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-amber-600 uppercase tracking-widest hover:bg-amber-50 transition-colors"
+                    >
+                      <Zap size={14} />
+                      {s.auth_user_id ? "Repair / Provision" : "Provision Account"}
+                    </button>
+
                     <button
                       onClick={() => { handleToggleActive(s); setOpenDropdown(null); }}
                       className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"

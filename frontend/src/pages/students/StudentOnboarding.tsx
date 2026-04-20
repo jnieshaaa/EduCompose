@@ -23,7 +23,7 @@ import {
   UserCircle,
   LogOut
 } from "lucide-react";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 
 interface StudentData {
   id: number;
@@ -269,9 +269,9 @@ const StudentOnboarding: React.FC = () => {
           <div className="w-24 h-24 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-red-500/10">
             <Lock size={48} />
           </div>
-          <h2 className="text-3xl font-black text-neutral-900 mb-4 tracking-tighter">Account Locked</h2>
+          <h2 className="text-3xl font-medium text-neutral-900 mb-4 tracking-tighter">Account Locked</h2>
           <p className="text-neutral-500 mb-10 leading-relaxed font-medium">
-            Your account is currently <span className="font-bold text-red-500 uppercase tracking-widest">{studentData.enrollment_status}</span>. 
+            Your account is currently <span className="font-medium text-red-500 uppercase tracking-widest">{studentData.enrollment_status}</span>. 
             Please talk to your school admin if you need help.
           </p>
           <button 
@@ -279,7 +279,7 @@ const StudentOnboarding: React.FC = () => {
               await supabase.auth.signOut();
               window.location.href = "/";
             }}
-            className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/20 active:scale-95"
+            className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-medium hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/20 active:scale-95"
           >
             Go Back
           </button>
@@ -311,7 +311,7 @@ const StudentOnboarding: React.FC = () => {
               <div className="p-2 bg-white rounded-xl shadow-lg">
                 <Sparkles className="w-6 h-6 text-primary" />
               </div>
-              <span className="text-xl font-black tracking-tighter text-white uppercase italic">EduCompose<span className="text-white/50 not-italic">.online</span></span>
+              <span className="text-xl font-medium tracking-tighter text-white uppercase italic">EduCompose<span className="text-white/50 not-italic">.online</span></span>
             </div>
 
             <div className="relative z-10">
@@ -327,9 +327,9 @@ const StudentOnboarding: React.FC = () => {
                   <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-xl">
                       <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Student Welcome</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white">Student Welcome</span>
                     </div>
-                    <h1 className="text-4xl font-black leading-[1.1] text-white tracking-tighter">
+                    <h1 className="text-4xl font-medium leading-[1.1] text-white tracking-tighter">
                       {stepsContent[currentStep - 1].title}
                     </h1>
                     <p className="text-base text-white/70 font-medium leading-relaxed max-w-md">
@@ -349,7 +349,7 @@ const StudentOnboarding: React.FC = () => {
                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                           <CheckCircle2 className="w-5 h-5 text-white" />
                         </div>
-                        <span className="font-bold text-white/90 text-sm tracking-wide">{feature}</span>
+                        <span className="font-medium text-white/90 text-sm tracking-wide">{feature}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -358,7 +358,7 @@ const StudentOnboarding: React.FC = () => {
             </div>
 
             <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 mt-6">
-               <div className="flex items-center gap-3 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+               <div className="flex items-center gap-3 text-white/40 text-[10px] font-medium uppercase tracking-widest">
                   <div className="flex -space-x-2">
                      {[1, 2, 3, 4].map(i => <div key={i} className={`w-6 h-6 rounded-full border-2 border-primary bg-neutral-200`} />)}
                   </div>
@@ -381,14 +381,14 @@ const StudentOnboarding: React.FC = () => {
                 {[1, 2, 3, 4].map((step) => (
                   <div key={step} className="flex items-center gap-3 group">
                     <div className={`
-                      w-9 h-9 rounded-2xl flex items-center justify-center font-black text-[10px] transition-all duration-500 border-2
+                      w-9 h-9 rounded-2xl flex items-center justify-center font-medium text-[10px] transition-all duration-500 border-2
                       ${currentStep === step ? "bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-110" : 
                         currentStep > step ? "bg-secondary border-secondary text-white" : "bg-white border-neutral-100 text-neutral-300"}
                     `}>
                       {currentStep > step ? <CheckCircle2 className="w-5 h-5" /> : `0${step}`}
                     </div>
                     <div className="flex flex-col">
-                      <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
+                      <span className={`text-[9px] font-medium uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
                         {step === 1 ? "Welcome" : step === 2 ? "Your Info" : step === 3 ? "Course" : "Security"}
                       </span>
                       <div className={`h-[2px] w-full mt-1.5 transition-all duration-500 ${currentStep >= step ? "bg-primary" : "bg-neutral-100"}`} />
@@ -423,8 +423,8 @@ const StudentOnboarding: React.FC = () => {
                       className="space-y-8"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 1</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Let's Get<br/>Started.</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Step 1</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-[1.1]">Let's Get<br/>Started.</h2>
                         <p className="text-neutral-500 font-medium leading-relaxed">EduCompose uses AI to help you write better. We'll show you what to fix so you can get higher scores.</p>
                       </div>
 
@@ -434,7 +434,7 @@ const StudentOnboarding: React.FC = () => {
                             <FileText size={24} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-neutral-900 text-base">Write Better</h4>
+                            <h4 className="font-medium text-neutral-900 text-base">Write Better</h4>
                             <p className="text-sm text-neutral-500 font-medium mt-1">Send us your essays and we'll give you tips right away.</p>
                           </div>
                         </div>
@@ -443,7 +443,7 @@ const StudentOnboarding: React.FC = () => {
                             <GraduationCap size={24} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-neutral-900 text-base">See Your Score</h4>
+                            <h4 className="font-medium text-neutral-900 text-base">See Your Score</h4>
                             <p className="text-sm text-neutral-500 font-medium mt-1">Watch how your scores get better with every essay you write.</p>
                           </div>
                         </div>
@@ -460,39 +460,39 @@ const StudentOnboarding: React.FC = () => {
                       className="space-y-8"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 2</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Info.</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Step 2</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Info.</h2>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
-                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-medium text-neutral-900 italic">
                              {studentData?.first_name || "---"}
                            </div>
                          </div>
                          <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
-                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-medium text-neutral-900 italic">
                              {studentData?.middle_name || "---"}
                            </div>
                          </div>
                          <div className="sm:col-span-2 space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
-                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic">
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-medium text-neutral-900 italic">
                              {studentData?.last_name || "---"}
                            </div>
                          </div>
                          <div className="sm:col-span-2 space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">School Email</label>
-                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-bold text-neutral-900 italic flex items-center gap-3">
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School Email</label>
+                           <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-medium text-neutral-900 italic flex items-center gap-3">
                              <Mail size={16} className="text-neutral-300" />
                              {studentData?.email || "No email assigned"}
                            </div>
                          </div>
                          <div className="sm:col-span-2 space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Student ID Number</label>
-                           <div className="px-5 py-4 bg-primary/[0.03] rounded-2xl border border-primary/10 text-base font-black text-primary flex items-center gap-3">
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Student ID Number</label>
+                           <div className="px-5 py-4 bg-primary/[0.03] rounded-2xl border border-primary/10 text-base font-medium text-primary flex items-center gap-3">
                              <UserCircle size={18} />
                              {studentData?.student_code || "---"}
                            </div>
@@ -510,8 +510,8 @@ const StudentOnboarding: React.FC = () => {
                       className="space-y-8"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 3</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Course.</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Step 3</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-[1.1]">Check Your<br/>Course.</h2>
                       </div>
 
                       <div className="bg-neutral-50 p-10 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-8 relative overflow-hidden group">
@@ -522,11 +522,11 @@ const StudentOnboarding: React.FC = () => {
                             <GraduationCap className="text-primary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Course</p>
-                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none">
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">My Course</p>
+                            <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none">
                               {studentData?.programs_lookup?.name || "Program Name"}
                             </p>
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase mt-1">{studentData?.programs_lookup?.abbr || "---"}</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase mt-1">{studentData?.programs_lookup?.abbr || "---"}</p>
                           </div>
                         </div>
 
@@ -535,8 +535,8 @@ const StudentOnboarding: React.FC = () => {
                             <Building2 className="text-secondary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Department</p>
-                            <p className="text-lg font-black text-neutral-900 tracking-tight leading-none">
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">My Department</p>
+                            <p className="text-lg font-medium text-neutral-900 tracking-tight leading-none">
                               {studentData?.programs_lookup?.departments?.name || "Department Name"}
                             </p>
                           </div>
@@ -547,8 +547,8 @@ const StudentOnboarding: React.FC = () => {
                             <Users className="text-accent w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">My Group</p>
-                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none">
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">My Group</p>
+                            <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none">
                               {studentData?.year && studentData?.block_name ? `Year ${studentData.year} - Group ${studentData.block_name}` : "No Section Yet"}
                             </p>
                           </div>
@@ -566,14 +566,14 @@ const StudentOnboarding: React.FC = () => {
                       className="space-y-8"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Step 4</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-[1.1]">Keep Your<br/>Account Safe.</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Step 4</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-[1.1]">Keep Your<br/>Account Safe.</h2>
                         <p className="text-neutral-500 font-medium leading-relaxed">Please change your password so that only you can open your account.</p>
                       </div>
 
                       <div className="p-8 bg-neutral-50 rounded-[2.5rem] border border-neutral-100 space-y-6">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">New Password</label>
+                          <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">New Password</label>
                           <div className="relative group/pass">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/pass:text-primary transition-colors" />
                             <input
@@ -583,7 +583,7 @@ const StudentOnboarding: React.FC = () => {
                               onFocus={() => setIsPasswordFocused(true)}
                               onBlur={() => setIsPasswordFocused(false)}
                               placeholder="Type New Password"
-                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
                             />
                             <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-neutral-600">
                               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -597,7 +597,7 @@ const StudentOnboarding: React.FC = () => {
                                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                   className="absolute left-0 right-0 top-full mt-4 p-5 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-[60]"
                                 >
-                                  <h5 className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-4">Password Rules</h5>
+                                  <h5 className="text-[9px] font-medium text-neutral-400 uppercase tracking-[0.2em] mb-4">Password Rules</h5>
                                   <div className="grid grid-cols-1 gap-3">
                                     {[
                                       { label: "8+ Letters", met: hasMinLength },
@@ -608,7 +608,7 @@ const StudentOnboarding: React.FC = () => {
                                         <div className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${req.met ? "bg-success-default text-white" : "bg-neutral-50 text-neutral-200"}`}>
                                            <CheckCircle2 size={12} />
                                         </div>
-                                        <span className={`text-[10px] font-black uppercase tracking-wider ${req.met ? "text-neutral-900" : "text-neutral-300"}`}>{req.label}</span>
+                                        <span className={`text-[10px] font-medium uppercase tracking-wider ${req.met ? "text-neutral-900" : "text-neutral-300"}`}>{req.label}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -619,7 +619,7 @@ const StudentOnboarding: React.FC = () => {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Type it Again</label>
+                          <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Type it Again</label>
                           <div className="relative group/verify">
                             <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/verify:text-primary transition-colors" />
                             <input
@@ -627,13 +627,13 @@ const StudentOnboarding: React.FC = () => {
                               value={confirmPassword}
                               onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
                               placeholder="Re-type Password"
-                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+                              className="w-full h-12 pl-11 pr-12 bg-white border border-neutral-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
                             />
                           </div>
                         </div>
 
                         {passwordError && (
-                          <div className="p-3.5 bg-red-50 text-red-500 rounded-xl border border-red-100 flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-widest italic animate-shake">
+                          <div className="p-3.5 bg-red-50 text-red-500 rounded-xl border border-red-100 flex items-center gap-2.5 text-[10px] font-medium uppercase tracking-widest italic animate-shake">
                             <AlertCircle size={14} /> {passwordError}
                           </div>
                         )}
@@ -654,14 +654,14 @@ const StudentOnboarding: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center group-hover:bg-neutral-100 transition-colors">
                   <ChevronLeft className="w-5 h-5 text-neutral-500" />
                 </div>
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-2">Back</span>
+                <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] ml-2">Back</span>
               </button>
 
               <button
                 onClick={currentStep === 4 ? handleComplete : handleNext}
                 disabled={isLoading}
                 className={`
-                  flex items-center gap-4 pl-12 pr-6 py-4 rounded-3xl font-black tracking-[0.15em] uppercase text-xs transition-all duration-500 relative overflow-hidden group active:scale-95 shadow-2xl shadow-primary/20
+                  flex items-center gap-4 pl-12 pr-6 py-4 rounded-3xl font-medium tracking-[0.15em] uppercase text-xs transition-all duration-500 relative overflow-hidden group active:scale-95 shadow-2xl shadow-primary/20
                   ${currentStep === 4 ? "bg-success-default" : "bg-primary"} text-white
                 `}
               >
@@ -677,7 +677,7 @@ const StudentOnboarding: React.FC = () => {
       </AnimatePresence>
 
       <footer className="fixed bottom-0 left-0 w-full lg:w-[45%] p-8 pointer-events-none hidden lg:block">
-         <div className="flex justify-between items-center text-white/20 text-[9px] font-black uppercase tracking-[0.3em]">
+         <div className="flex justify-between items-center text-white/20 text-[9px] font-medium uppercase tracking-[0.3em]">
             <span>EduCompose AI v2.4</span>
             <span>&copy; 2026</span>
          </div>
@@ -699,13 +699,13 @@ const StudentOnboarding: React.FC = () => {
               <div className="w-20 h-20 bg-success-default/10 text-success-default rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-success-default/5">
                 <Lock size={32} />
               </div>
-              <h3 className="text-2xl font-black text-neutral-900 mb-4 tracking-tighter">Security Tip</h3>
+              <h3 className="text-2xl font-medium text-neutral-900 mb-4 tracking-tighter">Security Tip</h3>
               <p className="text-neutral-500 mb-10 leading-relaxed font-medium">
                 Please create a password that only you know to keep your account safe.
               </p>
               <button
                 onClick={() => setShowSecurityModal(false)}
-                className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-bold hover:bg-neutral-800 transition-all shadow-xl active:scale-95"
+                className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-medium hover:bg-neutral-800 transition-all shadow-xl active:scale-95"
               >
                 Got it!
               </button>

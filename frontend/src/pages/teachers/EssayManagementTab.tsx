@@ -29,7 +29,7 @@ import Modal from "../../components/ui/Modal";
 import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
 
 // Types

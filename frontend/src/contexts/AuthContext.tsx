@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { ReactNode } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
-import { useNotification } from "../context/NotificationContext";
+import { useNotification } from "../contexts/NotificationContext";
 
 interface User {
   auth_id: string;

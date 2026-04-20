@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
 import { getErrorMessage } from '../../utils/errorUtils';
-import { useNotification } from '../../context/NotificationContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Types

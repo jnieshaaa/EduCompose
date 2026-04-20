@@ -17,7 +17,7 @@ import {
   BarChart3
 } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { fetchAllTeacherLoads, fetchAcademicSettings, deleteTeacherCourseLoad } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 import { motion, AnimatePresence } from "framer-motion";

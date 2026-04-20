@@ -9,7 +9,7 @@ import {
   Search, Eye, MessageSquare, Download, MoreVertical, Filter, 
   Upload, FileText, X, ClipboardList, Loader2, Info, Brain
 } from 'lucide-react';
-import { useGrading } from '../../context/GradingContext';
+import { useGrading } from '../../contexts/GradingContext';
 import {
   Table,
   TableBody,

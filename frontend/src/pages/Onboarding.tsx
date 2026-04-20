@@ -224,7 +224,7 @@ const TeacherOnboarding: React.FC = () => {
               <div className="p-2 bg-white rounded-xl shadow-lg">
                 <Sparkles className="w-6 h-6 text-primary" />
               </div>
-              <span className="text-xl font-black tracking-tighter text-white uppercase italic">EduCompose<span className="text-white/50 not-italic">.online</span></span>
+              <span className="text-xl font-medium tracking-tighter text-white uppercase italic">EduCompose<span className="text-white/50 not-italic">.online</span></span>
             </div>
 
             <div className="relative z-10">
@@ -240,9 +240,9 @@ const TeacherOnboarding: React.FC = () => {
                   <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-xl">
                       <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Instructional Evolution</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white">Instructional Evolution</span>
                     </div>
-                    <h1 className="text-4xl font-black leading-[1.1] text-white tracking-tighter">
+                    <h1 className="text-4xl font-medium leading-[1.1] text-white tracking-tighter">
                       {stepsContent[currentStep - 1].title}
                     </h1>
                     <p className="text-base text-white/70 font-medium leading-relaxed max-w-md">
@@ -262,7 +262,7 @@ const TeacherOnboarding: React.FC = () => {
                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                           <CheckCircle2 className="w-5 h-5 text-white" />
                         </div>
-                        <span className="font-bold text-white/90 text-sm tracking-wide">{feature}</span>
+                        <span className="font-medium text-white/90 text-sm tracking-wide">{feature}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -271,7 +271,7 @@ const TeacherOnboarding: React.FC = () => {
             </div>
 
             <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 mt-6">
-               <div className="flex items-center gap-3 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+               <div className="flex items-center gap-3 text-white/40 text-[10px] font-medium uppercase tracking-widest">
                   <div className="flex -space-x-2">
                      {[1, 2, 3, 4].map(i => <div key={i} className={`w-6 h-6 rounded-full border-2 border-primary bg-neutral-200`} />)}
                   </div>
@@ -291,10 +291,10 @@ const TeacherOnboarding: React.FC = () => {
             <div className="lg:hidden p-6 flex justify-between items-center bg-primary text-white">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                <span className="font-black tracking-tighter uppercase">EduCompose</span>
+                <span className="font-medium tracking-tighter uppercase">EduCompose</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black uppercase tracking-widest">Step {currentStep} of 3</span>
+                <span className="text-[10px] font-medium uppercase tracking-widest">Step {currentStep} of 3</span>
                 <button onClick={async () => { await logout(); navigate("/"); }} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
                   <LogOut size={16} />
                 </button>
@@ -308,14 +308,14 @@ const TeacherOnboarding: React.FC = () => {
                 {[1, 2, 3].map((step) => (
                   <div key={step} className="flex items-center gap-3 group">
                     <div className={`
-                      w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs transition-all duration-500 border-2
+                      w-10 h-10 rounded-2xl flex items-center justify-center font-medium text-xs transition-all duration-500 border-2
                       ${currentStep === step ? "bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-110" : 
                         currentStep > step ? "bg-secondary border-secondary text-white" : "bg-white border-neutral-100 text-neutral-300"}
                     `}>
                       {currentStep > step ? <CheckCircle2 className="w-5 h-5" /> : `0${step}`}
                     </div>
                     <div className="flex flex-col">
-                      <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
+                      <span className={`text-[10px] font-medium uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
                         {step === 1 ? "Organization" : step === 2 ? "Identity" : "Deployment"}
                       </span>
                       <div className={`h-[2px] w-full mt-1.5 transition-all duration-500 ${currentStep >= step ? "bg-primary" : "bg-neutral-100"}`} />
@@ -332,7 +332,7 @@ const TeacherOnboarding: React.FC = () => {
                   className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-all group flex items-center gap-2"
                   title="Logout"
                 >
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
+                  <span className="text-[10px] font-medium uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Logout</span>
                   <LogOut size={18} />
                 </button>
               </div>
@@ -351,19 +351,19 @@ const TeacherOnboarding: React.FC = () => {
                       className="space-y-6"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Institutional Node</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-tight">Where is your<br/>Academic Hub?</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Institutional Node</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Where is your<br/>Academic Hub?</h2>
                       </div>
 
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Preferred Title</label>
+                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Preferred Title</label>
                             <div className="relative group">
                               <select
                                 value={data.title}
                                 onChange={(e) => setData({ ...data, title: e.target.value })}
-                                className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-bold text-sm outline-none shadow-sm"
+                                className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-medium text-sm outline-none shadow-sm"
                               >
                                 <option value="">Select Prefix</option>
                                 {titleOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -372,26 +372,26 @@ const TeacherOnboarding: React.FC = () => {
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Professional Alias</label>
+                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Professional Alias</label>
                             <input
                               type="text"
                               value={data.nickname}
                               placeholder="e.g. Doc Smith"
                               onChange={(e) => setData({ ...data, nickname: e.target.value })}
-                              className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                              className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-3 pt-2">
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Host Institution</label>
+                             <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Host Institution</label>
                              <div className="relative group">
                                 <School className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-300 group-focus-within:text-primary transition-colors" />
                                 <select
                                   value={data.school}
                                   onChange={(e) => setData({ ...data, school: e.target.value, department: "" })}
-                                  className="w-full pl-12 pr-10 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-bold text-sm outline-none shadow-sm"
+                                  className="w-full pl-12 pr-10 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-medium text-sm outline-none shadow-sm"
                                 >
                                   <option value="">Locate your School</option>
                                   {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -406,13 +406,13 @@ const TeacherOnboarding: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-2"
                               >
-                                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Academic Department</label>
+                                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Academic Department</label>
                                 <div className="relative group">
                                   <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 group-focus-within:text-primary transition-colors" />
                                   <select
                                     value={data.department}
                                     onChange={(e) => setData({ ...data, department: e.target.value })}
-                                    className="w-full pl-12 pr-10 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-bold text-sm outline-none shadow-sm"
+                                    className="w-full pl-12 pr-10 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all appearance-none cursor-pointer font-medium text-sm outline-none shadow-sm"
                                   >
                                     <option value="">Select Department</option>
                                     {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -435,60 +435,60 @@ const TeacherOnboarding: React.FC = () => {
                       className="space-y-6"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Profile Identity</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-tight">How shall we<br/>Recognize you?</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Profile Identity</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">How shall we<br/>Recognize you?</h2>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Given Name</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Given Name</label>
                            <input
                              type="text"
                              value={data.firstName}
                              placeholder="First Name"
                              onChange={(e) => setData({ ...data, firstName: e.target.value })}
-                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                            <input
                              type="text"
                              value={data.middleName}
                              placeholder="Middle Name"
                              onChange={(e) => setData({ ...data, middleName: e.target.value })}
-                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Family Name</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Family Name</label>
                            <input
                              type="text"
                              value={data.lastName}
                              placeholder="Last Name"
                              onChange={(e) => setData({ ...data, lastName: e.target.value })}
-                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                            <input
                              type="text"
                              value={data.suffix}
                              placeholder="e.g. Jr., Sr., II"
                              onChange={(e) => setData({ ...data, suffix: e.target.value })}
-                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                             className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                            />
                         </div>
                         <div className="sm:col-span-2 space-y-2">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Communication Endpoint</label>
+                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Communication Endpoint</label>
                             <div className="relative group">
                               <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 group-focus-within:text-primary transition-colors" />
                               <input
                                 type="email"
                                 value={data.email}
                                 onChange={(e) => setData({ ...data, email: e.target.value })}
-                                className="w-full pl-12 pr-5 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm outline-none placeholder:text-neutral-300 shadow-sm"
+                                className="w-full pl-12 pr-5 py-3 bg-white border border-neutral-300 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-medium text-sm outline-none placeholder:text-neutral-300 shadow-sm"
                                 placeholder="your@email.com"
                               />
                             </div>
@@ -506,8 +506,8 @@ const TeacherOnboarding: React.FC = () => {
                       className="space-y-6"
                     >
                       <div className="space-y-3 text-center sm:text-left">
-                        <label className="text-[11px] font-black text-primary uppercase tracking-[0.3em]">Operational Readiness</label>
-                        <h2 className="text-4xl font-black text-neutral-900 tracking-tighter leading-tight">Ready for<br/>Deployment?</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Operational Readiness</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Ready for<br/>Deployment?</h2>
                       </div>
 
                       <div className="bg-neutral-50/50 p-10 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-8 relative overflow-hidden group">
@@ -518,8 +518,8 @@ const TeacherOnboarding: React.FC = () => {
                             <User className="text-primary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Authorised User</p>
-                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none">
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Authorised User</p>
+                            <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none">
                               {data.title && `${data.title} `}{data.nickname}
                             </p>
                           </div>
@@ -530,15 +530,15 @@ const TeacherOnboarding: React.FC = () => {
                             <School className="text-secondary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Operational Post</p>
-                            <p className="text-xl font-black text-neutral-900 tracking-tight leading-none truncate max-w-[240px]">
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Operational Post</p>
+                            <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none truncate max-w-[240px]">
                               {schools.find((s) => s.id === data.school)?.name || "Academic Entity"}
                             </p>
                           </div>
                         </div>
 
                         <div className="p-6 bg-white rounded-2xl border border-dashed border-neutral-200 text-center italic relative">
-                          <p className="text-xs font-bold text-neutral-400 leading-relaxed uppercase tracking-wider">
+                          <p className="text-xs font-medium text-neutral-400 leading-relaxed uppercase tracking-wider">
                             "Initializing high-fidelity academic orchestration protocols."
                           </p>
                         </div>
@@ -559,14 +559,14 @@ const TeacherOnboarding: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center group-hover:bg-neutral-100 transition-colors">
                   <ChevronLeft className="w-5 h-5 text-neutral-500" />
                 </div>
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-2">Previous</span>
+                <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] ml-2">Previous</span>
               </button>
 
               <button
                 onClick={currentStep === 3 ? handleComplete : handleNext}
                 disabled={isLoading || (currentStep === 1 && (!data.title || !data.nickname || !data.school || !data.department))}
                 className={`
-                  flex items-center gap-4 pl-12 pr-6 py-4 rounded-3xl font-black tracking-[0.15em] uppercase text-xs transition-all duration-500 relative overflow-hidden group active:scale-95 shadow-2xl shadow-primary/20
+                  flex items-center gap-4 pl-12 pr-6 py-4 rounded-3xl font-medium tracking-[0.15em] uppercase text-xs transition-all duration-500 relative overflow-hidden group active:scale-95 shadow-2xl shadow-primary/20
                   ${currentStep === 3 ? "bg-primary-500" : "bg-primary"} text-white
                 `}
               >
@@ -582,7 +582,7 @@ const TeacherOnboarding: React.FC = () => {
       </AnimatePresence>
 
       <footer className="fixed bottom-0 left-0 w-full lg:w-[45%] p-8 pointer-events-none hidden lg:block">
-         <div className="flex justify-between items-center text-white/20 text-[9px] font-black uppercase tracking-[0.3em]">
+         <div className="flex justify-between items-center text-white/20 text-[9px] font-medium uppercase tracking-[0.3em]">
             <span>EduCompose AI v2.4</span>
             <span>&copy; 2025 Institutional Registry</span>
          </div>

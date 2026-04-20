@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "./dialog";
 import Button from "./Button";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 import { BatchUploadController } from "../../services/BatchUploadController";
 import type { UploadResult } from "../../services/BatchUploadController";

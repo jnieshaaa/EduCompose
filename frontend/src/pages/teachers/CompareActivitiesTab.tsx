@@ -31,7 +31,7 @@ import {
 } from "../../services/activityService";
 import type { EssayActivity } from "../../types/activityTypes";
 import { ViewEssayModal } from "../../components/activities/ViewEssayModal";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 
 type ComparisonResult = {
   insights: string;

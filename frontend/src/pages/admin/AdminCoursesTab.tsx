@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, Edit2, Search, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, BookOpen, School as SchoolIcon, Hash, Type, Calculator, UserCircle } from "lucide-react";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { supabase } from "../../lib/supabaseClient";
 import type { School, Course } from "../../types/academic";
 import Button from "../../components/ui/Button";

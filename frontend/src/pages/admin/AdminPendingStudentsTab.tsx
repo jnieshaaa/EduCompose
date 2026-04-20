@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../../components/ui/Button";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { authApi } from "../../api";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
 import { motion } from "framer-motion";

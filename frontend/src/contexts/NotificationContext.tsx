@@ -52,7 +52,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         </button>
       </div>
     ), {
-      duration: 4000,
+      duration: 10000,
       position: 'top-right',
     });
   }, []);

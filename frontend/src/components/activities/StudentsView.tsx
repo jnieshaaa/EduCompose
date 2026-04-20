@@ -38,7 +38,7 @@ import {
   allowResubmission,
 } from "../../services/activityService";
 import { buildSecureUrl } from "../../utils/secureUrl";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface StudentsViewProps {

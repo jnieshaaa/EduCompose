@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import type { PlatformRubric } from "../../types/rubricTypes";
-import { useNotification } from "../../context/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 
 const typeBadgeStyles: Record<string, string> = {
   Basic: "bg-emerald-50 text-emerald-600 border-emerald-200",

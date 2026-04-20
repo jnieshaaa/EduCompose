@@ -114,9 +114,7 @@ export class UnifiedStudentUploadService {
           continue;
         }
 
-        // C. Check if teacher_program_load exists
-        // STRICT MODE: We don't auto-create program loads during student upload
-        // Teachers should explicitly assign programs to their subjects first
+        // C. Check if teacher_program_load exists (AUTO-CREATE if missing)
         let { data: progLoad } = await supabase
           .from("teacher_program_loads")
           .select("id")
@@ -125,9 +123,24 @@ export class UnifiedStudentUploadService {
           .maybeSingle();
 
         if (!progLoad) {
-          errors.push(`Row ${totalRows + 2}: Program "${progAbbr}" is not assigned to this subject. Please assign the program to your subject first before uploading students.`);
-          continue;
+           // Auto-associate the program to this subject load
+           const { data: newProgLoad, error: plError } = await supabase
+             .from("teacher_program_loads")
+             .insert({
+                course_load_id: loadData.id,
+                program_id: prog.id
+             })
+             .select()
+             .single();
+           
+           if (plError || !newProgLoad) {
+             errors.push(`Failed to auto-assign program "${progAbbr}" to subject: ${plError?.message || "Unknown error"}`);
+             continue;
+           }
+           progLoad = newProgLoad;
         }
+
+        if (!progLoad) continue;
 
         // D. Resolve or Create Block
         let { data: block, error: bError } = await supabase
