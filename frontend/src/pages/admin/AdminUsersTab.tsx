@@ -55,8 +55,8 @@ export function AdminUsersTab() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<{id: string, email: string} | null>(null);
 
-  // Super Admin Check (ID 69)
-  const isSuperAdmin = currentUser?.id?.toString() === "69";
+  // Super Admin Check (ID 1)
+  const isSuperAdmin = currentUser?.id?.toString() === "1";
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
