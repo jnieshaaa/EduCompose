@@ -186,7 +186,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
       s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
 
     if (title && nickname) {
-      return `${capitalize(title)}. ${capitalize(nickname)}`;
+      return `${capitalize(title)} ${capitalize(nickname)}`;
     }
     if (nickname) {
       return capitalize(nickname);
