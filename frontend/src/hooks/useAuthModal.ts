@@ -1,9 +1,9 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useAuth,
 } from "../contexts/AuthContext";
-import { supabase, supabaseAdmin } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 import { authApi } from "../api";
 import { sendCodeEmail, sendSignupCodeEmail } from "../services/emailService";
 
@@ -47,7 +47,7 @@ export function useAuthModal(onClose: () => void) {
   const [signupVerificationCode, setSignupVerificationCode] = useState("");
   const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
   const [isResendingSignupCode, setIsResendingSignupCode] = useState(false);
-  const [pendingSignupUserId, setPendingSignupUserId] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (view !== "signup") {
@@ -253,11 +253,6 @@ export function useAuthModal(onClose: () => void) {
         setSignupError("Email already registered.");
         setIsSigningUp(false);
         return;
-      }
-
-      // Save the auth user ID so handleVerifySignupCode can confirm it
-      if (signUpData.user?.id) {
-        setPendingSignupUserId(signUpData.user.id);
       }
 
       // 3. Store OTP and send verification email
