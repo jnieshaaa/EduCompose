@@ -158,7 +158,9 @@ const AppContent: React.FC = () => {
         <Route
           path="/Student/Onboarding"
           element={
+            <ProtectedRoute requiredRole="student">
               <StudentOnboarding />
+            </ProtectedRoute>
           }
         />
         <Route

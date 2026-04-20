@@ -21,8 +21,9 @@ interface StudentLoginLookup {
 }
 
 const Login: React.FC = () => {
-  // View states for swapping Login <-> Verification
-  const [view, setView] = useState<"login" | "verification">("login");
+  // View states for swapping Login <-> Verification <-> Forgot Password
+  const [view, setView] = useState<"login" | "verification" | "forgot-password">("login");
+  const [forgotEmail, setForgotEmail] = useState("");
   const [pendingStudent, setPendingStudent] = useState<StudentLoginLookup | null>(null);
   const [pendingPassword, setPendingPassword] = useState("");
 
@@ -32,6 +33,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showNotification } = useNotification();
@@ -53,35 +55,30 @@ const Login: React.FC = () => {
   }, []);
 
 
-  const handleForgotPassword = async () => {
-    const normalizedStudentCode = studentCode.trim();
-    if (!normalizedStudentCode) {
-      setError("Enter your student code first so we can send a reset link.");
+  const handleForgotPasswordClick = () => {
+    setError("");
+    setSuccessMessage("");
+    // Pre-fill email if student code was entered and found
+    if (studentCode.trim()) {
+       setView("forgot-password");
+    } else {
+       setView("forgot-password");
+    }
+  };
+
+  const handleSendResetEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailToReset = forgotEmail.trim();
+    if (!emailToReset) {
+      setError("Please enter your email address.");
       return;
     }
 
     setIsLoading(true);
     setError("");
     try {
-      const { data: studentIdentity, error: lookupError } = await supabase
-        .rpc("get_student_login_email", {
-          p_student_code: normalizedStudentCode,
-        })
-        .maybeSingle<StudentLoginLookup>();
-
-      if (lookupError) {
-        throw lookupError;
-      }
-
-      if (!studentIdentity?.email) {
-        setError(
-          "Student code not found or no email is assigned to this student.",
-        );
-        return;
-      }
-
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        studentIdentity.email,
+        emailToReset,
         {
           redirectTo: `${window.location.origin}/`,
         },
@@ -91,10 +88,13 @@ const Login: React.FC = () => {
         throw resetError;
       }
 
-      setError("Password reset link sent. Please check your email.");
+      showNotification('success', "Password reset link sent! Please check your email.");
+      setSuccessMessage("Password reset link sent! Please check your email.");
+      setError("");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message || "Failed to send reset link.");
+      setSuccessMessage("");
     } finally {
       setIsLoading(false);
     }
@@ -292,6 +292,26 @@ const Login: React.FC = () => {
         return;
       }
 
+      // Check if there's already an auth account for this email in public.users
+      // but not yet linked in public.students
+      let effectiveAuthId = studentIdentity.auth_user_id;
+      if (!effectiveAuthId) {
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("auth_user_id")
+          .eq("email", studentIdentity.email.trim().toLowerCase())
+          .maybeSingle();
+        
+        if (existingUser?.auth_user_id) {
+          effectiveAuthId = existingUser.auth_user_id;
+          // Silently link them now to avoid future loops
+          await supabase.rpc("link_student_auth", {
+            p_student_id: studentIdentity.student_id,
+            p_auth_user_id: effectiveAuthId
+          });
+        }
+      }
+
       if (!studentIdentity.is_active) {
         setError(
           "Your student account is inactive. Please contact your teacher.",
@@ -299,8 +319,8 @@ const Login: React.FC = () => {
         return;
       }
 
-      // STATE 1: Not Verified Yet (No auth_user_id) -> Show View
-      if (!studentIdentity.auth_user_id) {
+      // STATE 1: Not Verified Yet (No effectiveAuthId) -> Show View
+      if (!effectiveAuthId) {
         setPendingStudent(studentIdentity);
         setPendingPassword(password.trim());
         setError("");
@@ -308,7 +328,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      // STATE 2: Verified, but Not Onboarded (auth_user_id exists, onboarding_completed is false)
+      // STATE 2: Verified, but Not Onboarded (effectiveAuthId exists, onboarding_completed is false)
       if (!studentIdentity.onboarding_completed) {
         // Authenticate first, then go to Onboarding
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -324,7 +344,7 @@ const Login: React.FC = () => {
         if (data.session && data.user) {
           login(data.session.access_token, {
             id: studentIdentity.student_id,
-            auth_id: data.user.id,
+            auth_id: effectiveAuthId,
             email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
             username: studentIdentity.student_code,
             first_name: studentIdentity.first_name,
@@ -374,7 +394,7 @@ const Login: React.FC = () => {
 
         login(data.session.access_token, {
           id: studentIdentity.student_id,
-          auth_id: data.user.id,
+          auth_id: effectiveAuthId,
           email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
           username: studentIdentity.student_code,
           first_name: studentIdentity.first_name,
@@ -415,6 +435,16 @@ const Login: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMessage && !error && (
+          <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{successMessage}</span>
           </div>
         )}
 
@@ -495,7 +525,7 @@ const Login: React.FC = () => {
           </label>
           <button
             type="button"
-            onClick={handleForgotPassword}
+            onClick={handleForgotPasswordClick}
             className="font-bold text-primary hover:text-primary-600 transition-colors"
           >
             Forgot password?
@@ -628,6 +658,92 @@ const Login: React.FC = () => {
     </div>
   );
 
+  const renderForgotPasswordForm = () => (
+    <div className="animate-fade-in text-left">
+      <button 
+        onClick={() => {
+           setView("login");
+           setError("");
+           setSuccessMessage("");
+        }}
+        className="flex items-center text-xs text-neutral-500 hover:text-neutral-900 font-bold tracking-wide uppercase group mb-6 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+        Back to Login
+      </button>
+
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Reset Password</h2>
+        <p className="text-neutral-600 text-sm">
+          Enter your registered email address and we'll send you a link to reset your password.
+        </p>
+      </div>
+
+      <form onSubmit={handleSendResetEmail} className="space-y-6">
+        {/* Messages */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+        {successMessage && (
+          <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs flex items-start gap-2 shadow-sm animate-fade-in">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <label htmlFor="forgotEmail" className="block text-sm font-medium text-neutral-600">
+            Email Address
+          </label>
+          <div className="relative group">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors w-4 h-4" />
+            <input
+              id="forgotEmail"
+              type="email"
+              required
+              value={forgotEmail}
+              onChange={(e) => {
+                setForgotEmail(e.target.value);
+                setError("");
+              }}
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg bg-white text-neutral-900 placeholder:text-neutral-400 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+              placeholder="name@example.com"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-primary hover:bg-primary-600 disabled:opacity-50 text-white font-bold py-2.5 text-sm rounded-lg shadow-lg transition-all active:translate-y-[0px] hover:-translate-y-[1px] flex items-center justify-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Sending...</span>
+            </>
+          ) : "Send Reset Link"}
+        </button>
+      </form>
+    </div>
+  );
+
+  const getActiveView = () => {
+    switch (view) {
+      case "verification": return renderVerificationForm();
+      case "forgot-password": return renderForgotPasswordForm();
+      case "login":
+      default: return renderLoginForm();
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col lg:flex-row bg-gradient-to-tr from-primary via-primary-400 to-primary overflow-hidden">
       {/* subtle overlay */}
@@ -710,7 +826,7 @@ const Login: React.FC = () => {
           </div>
 
           <div className="rounded-2xl shadow-2xl bg-white p-8 md:p-10 border border-white/20 min-h-[460px] flex flex-col overflow-hidden relative">
-            {view === "login" ? renderLoginForm() : renderVerificationForm()}
+            {getActiveView()}
             
             {view === "login" && (
               <div className="mt-auto pt-6 border-t border-neutral-100 text-center relative z-20">

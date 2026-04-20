@@ -16,6 +16,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useNotification } from "../../context/NotificationContext";
 import Button from "../../components/ui/Button";
 import EnrollTeacherModal from "../../components/admin/EnrollTeacherModal";
+import EditTeacherModal from "../../components/admin/EditTeacherModal";
 
 interface TeacherRecord {
   id: string;
@@ -25,6 +26,11 @@ interface TeacherRecord {
   middle_name?: string;
   last_name: string;
   suffix?: string;
+  title?: string;
+  nickname?: string;
+  school_id?: string;
+  department_id?: string;
+  role: string;
   code?: string;
   birthday?: string;
   is_active: boolean;
@@ -37,6 +43,7 @@ export const AdminTeachersTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<TeacherRecord | null>(null);
   const { showNotification } = useNotification();
 
   const loadTeachers = useCallback(async () => {
@@ -44,7 +51,7 @@ export const AdminTeachersTab: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("users")
-        .select("*")
+        .select("id, auth_user_id, email, first_name, middle_name, last_name, suffix, title, nickname, school_id, department_id, role, code, birthday, is_active, onboarding_completed, created_at")
         .eq("role", "teacher")
         .order("last_name", { ascending: true });
 
@@ -208,7 +215,7 @@ export const AdminTeachersTab: React.FC = () => {
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          onClick={() => {}}
+                          onClick={() => setEditingTeacher(teacher)}
                           className="p-2 h-9 w-9 flex items-center justify-center bg-white border border-neutral-100 text-neutral-400 hover:text-secondary hover:border-secondary/20 hover:shadow-lg hover:shadow-secondary/5 rounded-lg transition-all"
                           title="Edit Faculty"
                         >
@@ -253,9 +260,21 @@ export const AdminTeachersTab: React.FC = () => {
         onClose={() => setShowEnrollModal(false)}
         onSuccess={() => {
           showNotification('success', "Faculty member enrolled successfully.");
-          loadTeachers();
+          setTimeout(loadTeachers, 500);
         }}
       />
+
+      {editingTeacher && (
+        <EditTeacherModal 
+          teacher={editingTeacher}
+          isOpen={!!editingTeacher}
+          onClose={() => setEditingTeacher(null)}
+          onSuccess={() => {
+            loadTeachers();
+            showNotification('success', "Teacher profile synchronized.");
+          }}
+        />
+      )}
     </div>
   );
 };

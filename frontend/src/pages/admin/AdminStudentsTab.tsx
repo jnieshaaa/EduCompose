@@ -47,6 +47,7 @@ interface Student {
   year: number;
   block_name: string;
   program_id: string;
+  birthday?: string;
   is_active: boolean;
   enrollment_status: "active" | "dropped" | "graduated";
   programs_lookup?: {
@@ -344,7 +345,7 @@ export const AdminStudentsTab: React.FC = () => {
     try {
       setLoading(true);
       setConfirmingAction(null);
-      const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const tempPassword = student.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
 
       const provisionResult = await authApi.provisionStudentAccount({
         email: student.email,
@@ -470,7 +471,7 @@ export const AdminStudentsTab: React.FC = () => {
 
     for (const student of needProvision) {
       try {
-        const tempPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+        const tempPassword = student.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
         const normalizedEmail = student.email.trim().toLowerCase();
 
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -813,17 +814,17 @@ export const AdminStudentsTab: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="sticky top-6 z-[60] p-6 bg-primary rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6"
+                  className="sticky top-6 z-[60] py-4 px-7 bg-primary/95 backdrop-blur-xl rounded-[2rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col md:flex-row items-center justify-between gap-6"
                 >
                   <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-white/10 rounded-2xl flex flex-col items-center justify-center border border-white/5 shadow-2xl">
-                      <span className="text-xl font-bold text-white leading-none">{selectedIds.size}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-tighter text-white/40 mt-1">Units</span>
+                    <div className="w-12 h-12 bg-white/10 rounded-xl flex flex-col items-center justify-center border border-white/10">
+                      <span className="text-lg font-bold text-white leading-none">{selectedIds.size}</span>
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-white/50 mt-0.5">Units</span>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-white tracking-tight uppercase">Bulk Actions Panel</p>
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={10} className="text-primary" /> Active Student Operations
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-white tracking-widest uppercase">Bulk Operations</p>
+                      <p className="text-[10px] font-medium text-white/60 tracking-wide">
+                        Managing {selectedIds.size} selected student records
                       </p>
                     </div>
                   </div>
@@ -849,19 +850,19 @@ export const AdminStudentsTab: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Button 
                           onClick={handleBulkProvision}
-                          className="rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:scale-[1.03] transition-all"
+                          className="rounded-xl bg-white text-primary text-[10px] font-bold uppercase tracking-widest px-6 h-10 hover:bg-neutral-100 shadow-lg shadow-black/10 transition-all"
                         >
                           Provision Access
                         </Button>
                         <Button 
                           onClick={handleBulkResendWelcome}
-                          className="rounded-xl bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-white/20 transition-all border border-white/5"
+                          className="rounded-xl bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-white/30 transition-all border border-white/20"
                         >
                           Dispatch Credentials
                         </Button>
                         <Button 
                           onClick={handleBulkDelete}
-                          className="rounded-xl bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-red-500/20 transition-all border border-red-500/20"
+                          className="rounded-xl bg-red-500/20 text-red-100 text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-red-500/40 transition-all border border-red-500/30"
                         >
                           Bulk Delete
                         </Button>

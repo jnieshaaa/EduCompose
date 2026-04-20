@@ -123,10 +123,10 @@ export const authApi = {
         return { success: false, message: "User not found." };
       }
 
-      // Use supabaseAdmin to update password
-      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
-        userData.auth_user_id,
-        { password: newPassword.trim() }
+      // Use RPC instead of direct admin client to avoid 403 browser locks
+      const { error: resetError } = await supabase.rpc(
+        "admin_reset_student_password",
+        { p_email: email.trim().toLowerCase(), p_new_password: newPassword.trim() }
       );
 
       if (resetError) throw resetError;
@@ -294,23 +294,26 @@ export const authApi = {
     code?: string;
     birthday?: string;
     password?: string;
-  }) => {
+  }): Promise<{ success: boolean; auth_id: string; role: string; temp_password: string; email: string }> => {
     try {
-      const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const tempPassword = payload.password || payload.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
+      // Use the ultra-safe v6 RPC with all fields
       const { data: authId, error: provisionError } = await supabase.rpc(
-        "create_auth_account_v1",
+        "create_new_portal_user_v6",
         {
           p_email: normalizedEmail,
           p_password: tempPassword,
-          p_meta: {
-            first_name: payload.first_name, 
-            last_name: payload.last_name, 
-            role: payload.role, 
-            middle_name: payload.middle_name || null,
-            suffix: payload.suffix || null
-          }
+          p_first_name: payload.first_name,
+          p_last_name: payload.last_name,
+          p_role: payload.role,
+          p_middle_name: payload.middle_name || null,
+          p_suffix: payload.suffix || null,
+          p_code: payload.code || null,
+          p_birthday: payload.birthday || null,
+          p_school_id: (payload as any).school_id || null,
+          p_department_id: (payload as any).department_id || null
         }
       );
 
@@ -318,41 +321,15 @@ export const authApi = {
         throw new Error(`Provisioning Error: ${provisionError.message}`);
       }
 
-      // Step 2: Direct update to public.users for extra metadata
-      // The trigger handle_new_user will have created the record already
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({
-          code: payload.code || null,
-          birthday: payload.birthday || null,
-          suffix: payload.suffix || null,
-          middle_name: payload.middle_name || null
-        })
-        .eq("auth_user_id", authId);
-
-      if (updateError) {
-        console.warn("Metadata update error (retrying...):", updateError.message);
-        // Sometimes the trigger is a few milliseconds behind, let's wait and retry once
-        await new Promise(resolve => setTimeout(resolve, 800));
-        await supabase
-          .from("users")
-          .update({
-            code: payload.code || null,
-            birthday: payload.birthday || null,
-            suffix: payload.suffix || null,
-            middle_name: payload.middle_name || null
-          })
-          .eq("auth_user_id", authId);
-      }
-
       return {
         success: true,
         auth_id: authId as string,
+        role: payload.role,
         temp_password: tempPassword,
         email: normalizedEmail
       };
     } catch (err: any) {
-      console.error("Supabase provisioning v2 error:", err);
+      console.error("Supabase provisioning error:", err);
       throw err;
     }
   },
@@ -909,19 +886,42 @@ export const adminApi = {
       first_name?: string;
       middle_name?: string;
       last_name?: string;
+      suffix?: string;
       title?: string;
       nickname?: string;
       role?: string;
       is_active?: boolean;
+      school_id?: string;
+      department_id?: string;
     },
   ) => {
-    const { error } = await supabase
+    // 1. Update the metadata/profile in "users" table first
+    const { error: dbError } = await supabase
       .from("users")
       .update(data)
       .eq("id", userId);
 
-    if (error) {
-      throw new Error(error.message);
+    if (dbError) throw new Error(dbError.message);
+
+    // 2. If email is provided, update it in auth.users too
+    if (data.email) {
+      // Get the auth_user_id first
+      const { data: user, error: fetchError } = await supabase
+        .from("users")
+        .select("auth_user_id")
+        .eq("id", userId)
+        .single();
+
+      if (fetchError || !user?.auth_user_id) {
+        console.warn("User record found but auth_user_id missing. Skipping auth email update.");
+      } else {
+        // Use RPC instead of direct admin API to avoid browser 403 locks
+        const { error: authError } = await supabase.rpc('admin_sync_user_email', {
+          p_auth_id: user.auth_user_id,
+          p_new_email: data.email
+        });
+        if (authError) throw new Error(`Auth sync failed via RPC: ${authError.message}`);
+      }
     }
 
     return { message: "User updated successfully", user: data };
@@ -931,7 +931,7 @@ export const adminApi = {
     // First get the auth_user_id
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("auth_user_id")
+      .select("auth_user_id, email")
       .eq("id", userId)
       .single();
 
@@ -953,7 +953,7 @@ export const adminApi = {
     // First get the auth_user_id
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("auth_user_id")
+      .select("auth_user_id, email")
       .eq("id", userId)
       .single();
 
@@ -961,10 +961,10 @@ export const adminApi = {
       throw new Error("User not found");
     }
 
-    // Update password using admin client
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(
-      user.auth_user_id,
-      { password: newPassword },
+    // Update password using RPC
+    const { error } = await supabase.rpc(
+      "admin_reset_student_password",
+      { p_email: user.email, p_new_password: newPassword }
     );
 
     if (error) {

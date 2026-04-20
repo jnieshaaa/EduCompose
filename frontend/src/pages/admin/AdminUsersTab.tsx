@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useNotification } from "../../context/NotificationContext";
 import { adminApi } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 import CreateUserModal from "../../components/admin/CreateUserModal";
 import EditUserModal from "../../components/admin/EditUserModal";
 import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
@@ -49,9 +50,13 @@ export function AdminUsersTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter] = useState<string>("admin"); // Forced to admin
   const { showNotification } = useNotification();
+  const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<{id: string, email: string} | null>(null);
+
+  // Super Admin Check (ID 69)
+  const isSuperAdmin = currentUser?.id?.toString() === "69";
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -231,13 +236,15 @@ export function AdminUsersTab() {
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Administrators</h1>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage system governance and access</p>
         </div>
-        <Button
-          onClick={() => setShowCreateUserModal(true)}
-          className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
-        >
-          <UserPlus size={16} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Add Admin</span>
-        </Button>
+        {isSuperAdmin && (
+          <Button
+            onClick={() => setShowCreateUserModal(true)}
+            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
+          >
+            <UserPlus size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Add Admin</span>
+          </Button>
+        )}
       </div>
 
       {/* Modern Filter Hub */}
@@ -425,9 +432,13 @@ export function AdminUsersTab() {
                      <p className="text-[9px] font-bold text-neutral-400 lowercase">{user.email}</p>
                   </div>
                   {[
-                    { icon: Edit2, label: "Edit User", onClick: () => setEditingUser(user) },
+                    // Only show Edit and Deactivate for Super Admin (ID 69) or if user is editing themselves? 
+                    // Per request: only ID 69 has special access.
+                    ...(isSuperAdmin ? [
+                      { icon: Edit2, label: "Edit User", onClick: () => setEditingUser(user) },
+                      { icon: Activity, label: user.is_active ? 'Deactivate' : 'Activate', onClick: () => handleToggleActive(user) }
+                    ] : []),
                     { icon: Key, label: "Reset Password", onClick: () => setResettingPasswordUser(user) },
-                    { icon: Activity, label: user.is_active ? 'Deactivate' : 'Activate', onClick: () => handleToggleActive(user) },
                     { icon: Search, label: "Activity Logs", onClick: () => {
                         setSelectedUserForLogs(user);
                         searchParams.set("logs", user.id);
@@ -443,15 +454,18 @@ export function AdminUsersTab() {
                       {action.label}
                     </button>
                   ))}
-                  <div className="mt-2 pt-2 border-t border-neutral-50">
-                    <button
-                      onClick={() => { handleDeleteUser(user.id, user.email); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-4 px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
-                    >
-                      <Trash2 size={14} />
-                      Delete User
-                    </button>
-                  </div>
+                  
+                  {isSuperAdmin && (
+                    <div className="mt-2 pt-2 border-t border-neutral-50">
+                      <button
+                        onClick={() => { handleDeleteUser(user.id, user.email); setOpenDropdown(null); }}
+                        className="w-full flex items-center gap-4 px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
+                      >
+                        <Trash2 size={14} />
+                        Delete User
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -463,7 +477,11 @@ export function AdminUsersTab() {
       <CreateUserModal
         isOpen={showCreateUserModal}
         restrictedRole="admin"
-        onClose={() => { setShowCreateUserModal(false); loadUsers(); }}
+        onClose={() => setShowCreateUserModal(false)}
+        onSuccess={() => {
+          // Delayed reload to ensure trigger completes
+          setTimeout(loadUsers, 500);
+        }}
       />
 
       {editingUser && (

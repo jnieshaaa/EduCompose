@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, UserPlus, Mail, Hash, Calendar, BookOpen } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { authApi } from "../../api";
+import { sendStudentWelcomeEmail } from "../../services/emailService";
 import Button from "../ui/Button";
 
 interface Program {
@@ -115,7 +116,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
       // For this implementation, we proceed with direct table operations as requested
       // and let the backend/auth logic handle the sync.
       
-      const { error: insertError } = await supabase
+      const { data: studentData, error: insertError } = await supabase
         .from("students")
         .insert({
           student_code: formData.student_code.trim(),
@@ -130,14 +131,16 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
           birthday: formData.birthday || null,
           enrollment_status: "active",
           is_active: true
-        });
+        })
+        .select("id")
+        .single();
 
       if (insertError) throw insertError;
       
       // 4. Provision Auth account if birthday is present
       if (formData.birthday) {
         try {
-           await authApi.provisionUserV2({
+           const provisionResult = await authApi.provisionUserV2({
              email: normalizedEmail,
              role: "student",
              first_name: formData.first_name.trim(),
@@ -147,8 +150,28 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
              code: formData.student_code.trim(),
              birthday: formData.birthday || undefined,
            });
+
+           if (provisionResult.success) {
+             // 5. Link the student record to the auth account
+             try {
+               await supabase.rpc("link_student_auth", {
+                 p_student_id: studentData.id,
+                 p_auth_user_id: provisionResult.auth_id,
+               });
+             } catch (linkErr) {
+               console.error("Linking failed but account provisioned:", linkErr);
+             }
+
+             // Send welcome email with the credentials
+             await sendStudentWelcomeEmail({
+               to_name: `${formData.first_name.trim()} ${formData.last_name.trim()}`,
+               to_email: normalizedEmail,
+               student_code: formData.student_code.trim(),
+               temp_password: provisionResult.temp_password,
+             });
+           }
         } catch (authErr) {
-           console.error("Auth provisioning failed, but student record created:", authErr);
+           console.error("Auth provisioning or email failed, but student record created:", authErr);
         }
       }
 

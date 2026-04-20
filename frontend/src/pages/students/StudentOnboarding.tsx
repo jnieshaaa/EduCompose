@@ -398,7 +398,10 @@ const StudentOnboarding: React.FC = () => {
               </div>
               <div className="flex-1 flex justify-end">
                 <button 
-                  onClick={() => logout()}
+                  onClick={async () => {
+                    await logout();
+                    navigate("/");
+                  }}
                   className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-all group flex items-center gap-2"
                   title="Logout"
                 >

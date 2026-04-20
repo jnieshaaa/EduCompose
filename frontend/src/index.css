@@ -30,8 +30,10 @@
   }
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 

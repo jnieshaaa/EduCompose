@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, UserPlus, Mail, Hash, Calendar, BookOpen, Briefcase } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { authApi } from "../../api";
+import { sendUserWelcomeEmail } from "../../services/emailService";
 import Button from "../ui/Button";
 
 interface Program {
@@ -105,8 +106,18 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
         birthday: formData.birthday || undefined,
       });
 
-      if (!provisionResult.success) {
-          throw new Error("Failed to provision teacher account.");
+      if (provisionResult.success) {
+        // Send welcome email
+        try {
+          await sendUserWelcomeEmail({
+            to_name: `${formData.first_name.trim()} ${formData.last_name.trim()}`,
+            to_email: normalizedEmail,
+            role: "teacher",
+            temp_password: provisionResult.temp_password || formData.birthday.replace(/-/g, ""), // Birthday is fallback
+          });
+        } catch (emailErr) {
+          console.error("Failed to send welcome email:", emailErr);
+        }
       }
 
       // 3. Optional: Assign to department/program if needed

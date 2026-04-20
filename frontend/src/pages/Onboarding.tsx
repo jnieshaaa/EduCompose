@@ -295,7 +295,7 @@ const TeacherOnboarding: React.FC = () => {
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-[10px] font-black uppercase tracking-widest">Step {currentStep} of 3</span>
-                <button onClick={() => logout()} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
+                <button onClick={async () => { await logout(); navigate("/"); }} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
                   <LogOut size={16} />
                 </button>
               </div>
@@ -325,7 +325,10 @@ const TeacherOnboarding: React.FC = () => {
               </div>
               <div className="flex-1 flex justify-end">
                 <button 
-                  onClick={() => logout()}
+                  onClick={async () => {
+                    await logout();
+                    navigate("/");
+                  }}
                   className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-all group flex items-center gap-2"
                   title="Logout"
                 >
