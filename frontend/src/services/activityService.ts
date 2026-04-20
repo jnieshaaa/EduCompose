@@ -2901,7 +2901,7 @@ const processSimilarityGroups = (
   return duplicateGroups;
 };
 
-// Detect duplicate essays across different programs for an activity
+// // Detect duplicate essays across different programs for an activity
 export const fetchDuplicateEssays = async (
   activityId: string,
 ): Promise<DuplicateEssayGroup[]> => {
@@ -2911,58 +2911,97 @@ export const fetchDuplicateEssays = async (
       return [];
     }
 
-    // 1. First, find the course(s) this activity belongs to
-    const { data: currentActivity, error: activityError } = await supabase
+    // console.log("[fetchDuplicateEssays] Starting check for activity:", activityDbId);
+
+    // 1. Find the course and all related activities
+    // Tracing: Activity -> Block -> Program Load -> Course Load -> Course
+    const { data: activityData, error: activityError } = await supabase
       .from("essay_activities")
-      .select("id, course_id")
+      .select(`
+        id,
+        course_id,
+        block_id,
+        blocks(
+          id,
+          teacher_program_loads(
+            id,
+            teacher_course_loads(
+              id,
+              course_id
+            )
+          )
+        )
+      `)
       .eq("id", activityDbId)
       .maybeSingle();
 
     if (activityError) {
-      console.error("[fetchDuplicateEssays] Error fetching activity course info:", activityError);
+      console.error("[fetchDuplicateEssays] Error fetching activity data:", activityError);
     }
 
-    const courseIds = currentActivity?.course_id;
-    let activityIds = [activityDbId];
-
-    if (Array.isArray(courseIds) && courseIds.length > 0) {
-      // Find all activities sharing ANY of these course_ids
-      const { data: relatedActivities } = await supabase
+    let activityIds: string[] = [activityDbId];
+    
+    // Try to find related activities via course_id column (if it exists)
+    const courseIdFromCol = activityData?.course_id;
+    if (courseIdFromCol) {
+      const { data: relatedByCol } = await supabase
         .from("essay_activities")
         .select("id")
-        .overlaps("course_id", courseIds);
+        .overlaps("course_id", Array.isArray(courseIdFromCol) ? courseIdFromCol : [courseIdFromCol]);
       
-      if (relatedActivities && relatedActivities.length > 0) {
-        activityIds = relatedActivities.map(a => a.id);
+      if (relatedByCol && relatedByCol.length > 0) {
+        activityIds = [...new Set([...activityIds, ...relatedByCol.map(a => a.id)])];
       }
     }
 
-    // console.log(`[fetchDuplicateEssays] Searching for duplicates across ${activityIds.length} related activities for course(s): ${courseIds || 'none'}`);
+    // Try to find related activities via the blocks/course relationship
+    // This is more robust as it doesn't rely on the newer course_id array column
+    try {
+      const blocksData = activityData?.blocks as any;
+      const courseId = blocksData?.teacher_program_loads?.teacher_course_loads?.course_id;
+      
+      if (courseId) {
+        // Find all activities linked to blocks belonging to the same course
+        const { data: relatedByCourse } = await supabase
+          .from("essay_activities")
+          .select("id")
+          .filter("blocks.teacher_program_loads.teacher_course_loads.course_id", "eq", courseId);
+          
+        if (relatedByCourse && relatedByCourse.length > 0) {
+           activityIds = [...new Set([...activityIds, ...relatedByCourse.map(a => a.id)])];
+        }
+      }
+    } catch (e) {
+      // Ignored - fallback to current activity only if join fails
+    }
 
+    // console.log(`[fetchDuplicateEssays] Searching duplicates across ${activityIds.length} activity IDs:`, activityIds);
+
+    // 2. Fetch analysis results for all targeted activities
+    // Simplified join syntax to avoid "foreign key not found" errors
     const { data: analysisResults, error } = await supabase
       .from("essay_analysis_results")
-      .select(
-        `
+      .select(`
         essay_id,
         student_id,
         original_text,
-        essays!essays_id_fkey(
+        essays(
           id,
           title,
           submitted_at,
           block_id,
-          students!essays_student_id_fkey(
+          students(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks!essays_block_id_fkey(
+          blocks(
             id,
             name,
             year,
-            teacher_program_loads!fk_block_program_load!inner(
-              programs_lookup!inner(
+            teacher_program_loads(
+              programs_lookup(
                 id,
                 name,
                 abbr
@@ -2970,60 +3009,49 @@ export const fetchDuplicateEssays = async (
             )
           )
         )
-      `,
-      )
+      `)
       .in("activity_id", activityIds);
 
     if (error) {
-      console.error(
-        "[fetchDuplicateEssays] Error fetching analysis results:",
-        error,
-      );
+      console.error("[fetchDuplicateEssays] Error fetching analysis results:", error);
     }
 
     if (!analysisResults || analysisResults.length === 0) {
-      // console.log(`[fetchDuplicateEssays] No analysis results found. Trying fallback to essays table...`);
-      // Try fallback: fetch from essays table if essay_analysis_results doesn't exist
+      // 3. Fallback: fetch from essays table if analysis_results don't exist yet
       const { data: essaysData, error: essaysError } = await supabase
         .from("essays")
-        .select(
-          `
+        .select(`
           id,
           title,
           submitted_at,
           content,
           block_id,
-          students!essays_student_id_fkey(
+          students(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks!essays_block_id_fkey(
+          blocks(
             id,
             name,
             year,
-            teacher_program_loads!fk_block_program_load!inner(
-              programs_lookup!inner(
+            teacher_program_loads(
+              programs_lookup(
                 id,
                 name,
                 abbr
               )
             )
           )
-        `,
-        )
+        `)
         .in("activity_id", activityIds);
 
       if (essaysError) {
-        console.error(
-          "[fetchDuplicateEssays] Error fetching essays:",
-          essaysError,
-        );
+        console.error("[fetchDuplicateEssays] Fallback query error:", essaysError);
       }
 
       if (!essaysData || essaysData.length === 0) {
-        // console.log(`[fetchDuplicateEssays] No essays found for activity ${activityDbId}`);
         return [];
       }
 
