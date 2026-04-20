@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw, Lock, Eye, EyeOff } from 'lucide-react';
+import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw} from 'lucide-react';
 import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
 import { ChangePassword } from "../../components/settings/ChangePassword";
