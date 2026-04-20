@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { X, UserPlus, Loader2, Mail, Hash, User, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, UserPlus, Loader2, Mail, Hash, User, Calendar, Users } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
 import { useStudents } from "../../hooks/useStudents";
 import Button from "../../components/ui/Button";
 
@@ -32,6 +33,100 @@ export function AddStudentDialog({
     year: 1,
     block_name: "",
   });
+
+  const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
+  const [existingStudents, setExistingStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [isLoadingExisting, setIsLoadingExisting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && blockId) {
+      const fetchExisting = async () => {
+        setIsLoadingExisting(true);
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData?.user) return;
+          
+          // Fetch block info first to filter students
+          const { data: bData } = await supabase
+            .from("blocks")
+            .select(`
+              name,
+              year,
+              teacher_program_loads!fk_block_program_load (
+                program_id
+              )
+            `)
+            .eq("id", blockId)
+            .single();
+            
+          if (!bData) return;
+
+          const blockName = bData.name;
+          const year = bData.year;
+          const programId = (bData.teacher_program_loads as any)?.program_id;
+
+          let query = supabase
+            .from("students")
+            .select("id, first_name, last_name, student_code")
+            .eq("teacher_id", userData.user.id)
+            .eq("is_active", true);
+
+          if (blockName) query = query.eq("block_name", blockName);
+          if (year) query = query.eq("year", year);
+          if (programId) query = query.eq("program_id", programId);
+
+          const { data: matchedStudents } = await query;
+
+          if (!matchedStudents) return;
+
+          const { data: inBlock } = await supabase
+            .from("block_students")
+            .select("student_id")
+            .eq("block_id", blockId);
+
+          const inBlockIds = new Set((inBlock || []).map(b => b.student_id));
+          const available = matchedStudents.filter(s => !inBlockIds.has(s.id));
+          
+          setExistingStudents(available);
+        } catch (err) {
+          console.error("Failed to load existing students", err);
+        } finally {
+          setIsLoadingExisting(false);
+        }
+      };
+      fetchExisting();
+    }
+  }, [isOpen, blockId]);
+
+  const handleAddExisting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudentId) {
+      setError("Please select a student to add.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const { error: insertErr } = await supabase
+        .from("block_students")
+        .insert({
+          block_id: blockId,
+          student_id: selectedStudentId
+        });
+        
+      if (insertErr) throw insertErr;
+      
+      if (onSuccess) onSuccess();
+      onClose();
+      setSelectedStudentId("");
+    } catch (err: any) {
+      setError(err.message || "Failed to add existing student.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +188,87 @@ export function AddStudentDialog({
           </button>
         </div>
 
+        {blockId && (
+          <div className="flex border-b border-neutral-100">
+            <button
+              onClick={() => { setActiveTab("existing"); setError(null); }}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === "existing" ? "text-primary border-b-2 border-primary" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50/50"
+              }`}
+            >
+              Add Existing
+            </button>
+            <button
+              onClick={() => { setActiveTab("new"); setError(null); }}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === "new" ? "text-primary border-b-2 border-primary" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50/50"
+              }`}
+            >
+              Create New
+            </button>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 relative">
-          {/* Error Overlay (Centered within form) */}
-          {error && (
+        {blockId && activeTab === "existing" ? (
+          <form onSubmit={handleAddExisting} className="p-6 space-y-4 relative">
+             {error && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 animate-in fade-in duration-300">
+                <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-6 text-center space-y-4 max-w-[280px] scale-in-center">
+                  <div className="mx-auto w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500">
+                    <X size={24} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-neutral-900">Add Failed</h3>
+                    <p className="text-xs text-neutral-500 mt-2 leading-relaxed">
+                      {error}
+                    </p>
+                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={() => setError(null)} 
+                    className="w-full bg-primary text-white hover:bg-primary-600 shadow-md h-10 text-xs"
+                  >
+                    Go Back & Fix
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Select Student</label>
+              <div className="relative group">
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-primary transition-colors" size={16} />
+                <select
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all appearance-none"
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  disabled={isLoadingExisting || existingStudents.length === 0}
+                >
+                  <option value="" disabled>
+                    {isLoadingExisting ? "Loading..." : existingStudents.length === 0 ? "No available students to add." : "-- Select a student --"}
+                  </option>
+                  {existingStudents.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.student_code} - {s.last_name}, {s.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" onClick={onClose} variant="ghost">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting || existingStudents.length === 0} className="bg-primary text-white px-8">
+                {isSubmitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Add to Class
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4 relative">
+            {/* Error Overlay (Centered within form) */}
+            {error && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 animate-in fade-in duration-300">
               <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-6 text-center space-y-4 max-w-[280px] scale-in-center">
                 <div className="mx-auto w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500">
@@ -258,6 +430,7 @@ export function AddStudentDialog({
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

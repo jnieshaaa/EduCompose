@@ -416,17 +416,29 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
   };
 
   const handleDeleteStudent = async (studentId: string) => {
-    showWarning("Are you sure you want to remove this student?", {
+    showWarning(
+      blockId 
+      ? "Are you sure you want to remove this student from this class? You can add them back later." 
+      : "Are you sure you want to permanently delete this student?", {
       onConfirm: async () => {
         try {
-          const { error } = await supabase
-            .from("students")
-            .delete()
-            .eq("id", studentId);
+          if (blockId) {
+            const { error } = await supabase
+              .from("block_students")
+              .delete()
+              .eq("student_id", studentId)
+              .eq("block_id", blockId);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from("students")
+              .delete()
+              .eq("id", studentId);
+            if (error) throw error;
+          }
           
-          if (error) throw error;
           setStudents(prev => prev.filter(s => s.id !== studentId));
-          showSuccess("Student removed.");
+          showSuccess(blockId ? "Student removed from class." : "Student permanently deleted.");
         } catch (err) {
           showError("Failed to remove student.");
         }

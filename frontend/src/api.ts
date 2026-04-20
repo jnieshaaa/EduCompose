@@ -699,7 +699,7 @@ export const analysisApi = {
       | "comprehensive" = "comprehensive",
     rubricId?: string,
   ): Promise<TextAnalysisResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/analyze-text/`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/analyze-text`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -787,7 +787,7 @@ export interface PlagiarismCheckResponse {
 
 export const plagiarismApi = {
   checkPlagiarism: async (text: string): Promise<PlagiarismCheckResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/check-plagiarism/`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-plagiarism`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -820,7 +820,7 @@ export interface AIDetectionResponse {
 
 export const aiDetectionApi = {
   checkAIDetection: async (text: string): Promise<AIDetectionResponse> => {
-    const response = await fetch(`${API_BASE_URL}/analysis/check-ai-detection/`, {
+    const response = await fetch(`${API_BASE_URL}/analysis/check-ai-detection`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
