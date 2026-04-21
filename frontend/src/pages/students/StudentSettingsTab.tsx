@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Label } from '../../components/ui/label';
-import { Switch } from '../../components/ui/switch';
-import { Download, Loader2, Check, User, Bell, Settings as SettingsIcon, ShieldCheck, RotateCcw} from 'lucide-react';
+// import { Switch } from '../../components/ui/switch';
+import { Loader2, Check, User, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
 import { ChangePassword } from "../../components/settings/ChangePassword";
@@ -26,14 +26,8 @@ export function StudentSettingsTab() {
     notifyRevision: true,
     notifyDeadline: true,
     notifyEmail: false,
-    autoAiEval: true,
-    allowResubmit: true,
     saveDrafts: true,
-    defaultFormat: "PDF",
-    showScores: true,
-    detailedFeedback: true,
-    dashboardView: "Overview",
-    dataSharing: true
+    dashboardView: "Overview"
   });
 
   useEffect(() => {
@@ -73,9 +67,9 @@ export function StudentSettingsTab() {
     loadData();
   }, []);
 
-  const handlePreferenceChange = (key: string, value: any) => {
-    setPreferences(prev => ({ ...prev, [key]: value }));
-  };
+  // const handlePreferenceChange = (key: string, value: any) => {
+  //   setPreferences(prev => ({ ...prev, [key]: value }));
+  // };
 
   const sanitizeName = (value: string) => {
     let clean = value.replace(/[^A-Za-z]/g, "");
@@ -153,14 +147,8 @@ export function StudentSettingsTab() {
       notifyRevision: true,
       notifyDeadline: true,
       notifyEmail: false,
-      autoAiEval: true,
-      allowResubmit: true,
       saveDrafts: true,
-      defaultFormat: "PDF",
-      showScores: true,
-      detailedFeedback: true,
-      dashboardView: "Overview",
-      dataSharing: true
+      dashboardView: "Overview"
     };
     setPreferences(defaults);
     showNotification('info', "Settings started over.");
@@ -186,11 +174,8 @@ export function StudentSettingsTab() {
         </p>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Column: Personal Info */}
-        <div className="lg:col-span-2 space-y-8">
+      {/* Main Content */}
+      <div className="max-w-3xl mx-auto w-full space-y-8">
           
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
@@ -286,7 +271,7 @@ export function StudentSettingsTab() {
           </motion.div>
 
           {/* Preferences Form */}
-          <motion.div 
+          {/* <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -323,7 +308,7 @@ export function StudentSettingsTab() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
@@ -336,93 +321,6 @@ export function StudentSettingsTab() {
             </div>
           </motion.div>
 
-        </div>
-
-        {/* Right Column: Mini Settings */}
-        <div className="space-y-8">
-          
-          {/* Submission settings */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-            className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/20 shadow-xl shadow-primary/5 relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-[60px] translate-x-12 -translate-y-12" />
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center gap-3">
-                 <SettingsIcon size={18} className="text-primary" />
-                 <h2 className="text-lg font-bold tracking-tight text-neutral-900">Writing Tips</h2>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 pr-3">
-                    <Label className="text-xs font-bold text-neutral-800">Automatic AI Check</Label>
-                    <p className="text-[10px] text-neutral-400 mt-1">Check my essay right away</p>
-                  </div>
-                  <Switch 
-                    checked={preferences.autoAiEval} 
-                    onCheckedChange={(val) => handlePreferenceChange('autoAiEval', val)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 pr-3">
-                    <Label className="text-xs font-bold text-neutral-800">Allow Resending</Label>
-                    <p className="text-[10px] text-neutral-400 mt-1">Let me fix essays easily</p>
-                  </div>
-                  <Switch 
-                    checked={preferences.allowResubmit} 
-                    onCheckedChange={(val) => handlePreferenceChange('allowResubmit', val)}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <Label className="text-[9px] font-black text-primary/40 uppercase tracking-widest">Preferred File</Label>
-                  <select 
-                    value={preferences.defaultFormat}
-                    onChange={(e) => handlePreferenceChange('defaultFormat', e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-primary/20 rounded-2xl text-xs font-bold text-neutral-600 outline-none focus:border-primary transition-all appearance-none"
-                  >
-                    <option value="PDF">PDF Document</option>
-                    <option value="DOCX">Microsoft Word</option>
-                    <option value="TXT">Plain Text</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Privacy settings */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white p-8 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-900/5 space-y-6"
-          >
-             <div className="flex items-center gap-3">
-                 <ShieldCheck size={18} className="text-emerald-500" />
-                 <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Privacy</h2>
-              </div>
-              
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex-1 pr-3">
-                  <Label className="text-xs font-bold text-neutral-800 leading-tight">Let teacher see my scores</Label>
-                </div>
-                <Switch 
-                  checked={preferences.dataSharing} 
-                  onCheckedChange={(val) => handlePreferenceChange('dataSharing', val)}
-                />
-              </div>
-
-              <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-neutral-50 text-neutral-400 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-100 hover:text-neutral-600 transition-all">
-                <Download size={14} />
-                Download My Info
-              </button>
-          </motion.div>
-
-        </div>
       </div>
 
       {/* Action Footer */}
