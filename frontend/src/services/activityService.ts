@@ -2254,7 +2254,6 @@ export const gradeEssay = async (
         essay_id: essayData.id,
         student_id: studentDbId,
         activity_id: activityDbId,
-        user_id: teacherId,
         analysis_type: analysisResult.analysis_type || "comprehensive",
         word_count: analysisResult.word_count || null,
         generated_at: analysisResult.generated_at || new Date().toISOString(),

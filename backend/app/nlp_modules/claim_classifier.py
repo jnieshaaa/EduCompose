@@ -177,68 +177,81 @@ class TransformerClaimClassifier:
                     raise model_err
             
             data = json.loads(response.text)
+            results = []
+            for item in data:
+                results.append({
+                    "component": str(item.get('label', 'unknown')).lower(),
+                    "confidence": float(item.get('score', 0.0))
+                })
             return results
         except Exception as e:
-            if "429" in str(e) or "404" in str(e):
-                logger.warning(f"Gemini fallback unavailable ({e}). Using heuristics.")
-            else:
-                logger.error(f"Gemini classification fallback failed: {e}")
+            logger.warning(f"Classification fallback triggered ({e}). Using local heuristics.")
             return self._heuristic_classify(sentences)
 
     def _heuristic_classify(self, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Last resort: use keywords to detect claims and evidence"""
+        """Last resort: use broad keywords to detect claims and evidence"""
         results = []
+        # Significantly expanded keywords
         claim_indicators = [
             "argue", "claim", "must", "should", "Therefore", "Hence", "believe", "point is",
-            "conclude", "opinion", "In my view", "necessary", "ought to"
+            "conclude", "opinion", "view", "necessary", "ought to", "thesis", "position",
+            "in conclusion", "clearly", "obviously", "essential", "important", "main idea",
+            "suggest", "propose", "think", "appears that", "shows that"
         ]
         evidence_indicators = [
             "study", "research", "According to", "data", "found", "statistics", "report", "example",
-            "fact", "shows", "demonstrates", "proof", "source"
+            "fact", "shows", "demonstrates", "proof", "source", "instance", "illustrates",
+            "specifically", "for one", "evidence", "data", "results", "analysis", "case"
         ]
         premise_indicators = [
-            "because", "since", "given that", "as shown by", "follows from"
+            "because", "since", "given that", "as shown by", "follows from", "reason",
+            "due to", "owing to", "account of", "considering", "if"
         ]
         
         for s in sentences:
             s_lower = s.lower()
-            if any(ind.lower() in s_lower for ind in claim_indicators):
-                results.append({"component": "claim", "confidence": 0.8})
-            elif any(ind.lower() in s_lower for ind in evidence_indicators):
-                results.append({"component": "evidence", "confidence": 0.8})
-            elif any(ind.lower() in s_lower for ind in premise_indicators):
-                results.append({"component": "premise", "confidence": 0.7})
+            # Check for indicators with word boundaries to avoid partial matches
+            has_claim = any(ind.lower() in s_lower for ind in claim_indicators)
+            has_evidence = any(ind.lower() in s_lower for ind in evidence_indicators)
+            has_premise = any(ind.lower() in s_lower for ind in premise_indicators)
+
+            if has_claim:
+                results.append({"component": "claim", "confidence": 0.85})
+            elif has_evidence:
+                results.append({"component": "evidence", "confidence": 0.85})
+            elif has_premise:
+                results.append({"component": "premise", "confidence": 0.80})
+            elif len(s.split()) > 15:
+                # Long sentences are often background or warrants
+                results.append({"component": "background", "confidence": 0.5})
             else:
-                results.append({"component": "background", "confidence": 0.2})
+                results.append({"component": "unknown", "confidence": 0.1})
         return results
 
     async def _classify_remote(self, sentences: List[str]) -> List[Dict[str, Any]]:
-        """Call Hugging Face Inference API for classification with LLM fallback"""
+        """Call Hugging Face Inference API for classification with robust fallback"""
         if not self.hf_token:
-            # Try LLM directly if no token
-            return await self._classify_llm(sentences)
+            return self._heuristic_classify(sentences)
 
         url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
         headers = {
             "Authorization": f"Bearer {self.hf_token}",
             "Content-Type": "application/json",
-            "x-use-cache": "false" # Force fresh analysis
+            "x-use-cache": "false"
         }
         
         results = []
-        # Process in small batches for API stability
         batch_size = 5
         for i in range(0, len(sentences), batch_size):
             batch = sentences[i:i + batch_size]
             payload = {"inputs": batch, "options": {"wait_for_model": True}}
             
             try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
+                async with httpx.AsyncClient(timeout=15.0) as client:
                     response = await client.post(url, json=payload, headers=headers)
                 
                 if response.status_code == 200:
                     data = response.json()
-                    # HF API returns list of lists of dicts (for multi-sentence) or list of dicts
                     for item in data:
                         if isinstance(item, list) and len(item) > 0:
                             best = max(item, key=lambda x: x.get('score', 0))
@@ -253,16 +266,13 @@ class TransformerClaimClassifier:
                             })
                         else:
                             results.append({"component": "unknown", "confidence": 0.0})
-                elif response.status_code == 404:
-                    logger.warning(f"HF API 404 for {self.hf_repo}. Falling back to LLM.")
-                    llm_results = await self._classify_llm(batch)
-                    results.extend(llm_results)
                 else:
-                    logger.error(f"HF API Error {response.status_code} for URL {url}: {response.text[:200]}")
-                    for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
+                    # On any non-200 status, trigger heuristic fallback immediately
+                    logger.warning(f"HF API returned {response.status_code}. Using heuristics.")
+                    results.extend(self._heuristic_classify(batch))
             except Exception as e:
-                logger.error(f"HF API request failed: {e}")
-                for _ in batch: results.append({"component": "unknown", "confidence": 0.0})
+                logger.error(f"HF API request failed: {e}. Falling back to heuristics.")
+                results.extend(self._heuristic_classify(batch))
                 
         return results
 
