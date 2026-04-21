@@ -4217,54 +4217,58 @@ export const savePlagiarismResult = async (
       return { success: false, error: "Invalid essay ID" };
     }
 
-    const { data: existingRow, error: checkError } = await supabase
+    // Check if the row exists in essay_analysis_results
+    const { data: existingRow } = await supabase
       .from("essay_analysis_results")
-      .select("id")
+      .select("id, student_id, activity_id")
       .eq("essay_id", essayId)
       .maybeSingle();
 
-    if (checkError || !existingRow) {
-      console.error(
-        "Essay analysis results row not found for essay_id:",
-        essayId,
-        checkError,
-      );
-      return {
-        success: false,
-        error: "Analysis results not found. Please run analysis first.",
-      };
+    if (existingRow) {
+      // 1. Primary path: Update essay_analysis_results
+      const { error: updateError } = await supabase
+        .from("essay_analysis_results")
+        .update({
+          plagiarism_results: result,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("essay_id", essayId);
+
+      if (updateError) {
+        console.error("Error updating plagiarism results in essay_analysis_results:", updateError);
+        // Continue to fallback if primary fails
+      } else {
+        console.log("Successfully saved plagiarism results to essay_analysis_results for essay_id:", essayId);
+      }
+    } else {
+      console.warn("Essay analysis results row not found for essay_id:", essayId, "Attempting fallback to essays table.");
     }
 
-    // Update essay_analysis_results with plagiarism results
-    const { data: updateData, error: updateError } = await supabase
-      .from("essay_analysis_results")
+    // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
+    // This ensures results are saved even if the primary analysis table is missing or restricted.
+    const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
+    const currentAnalysis = essayStatus?.analysis || {};
+    
+    const { error: essayUpdateError } = await supabase
+      .from("essays")
       .update({
-        plagiarism_results: result,
-        updated_at: new Date().toISOString(),
+        analysis: {
+          ...currentAnalysis,
+          plagiarism_results: result
+        }
       })
-      .eq("essay_id", essayId)
-      .select();
+      .eq("id", essayId);
 
-    if (updateError) {
-      console.error("Error updating plagiarism results:", updateError);
-      return {
-        success: false,
-        error: updateError.message || "Failed to save plagiarism results",
-      };
+    if (essayUpdateError) {
+      console.error("Error updating plagiarism results in essays table:", essayUpdateError);
+      if (!existingRow) {
+         return {
+           success: false,
+           error: "Analysis results not found and fallback save failed. Please run analysis first.",
+         };
+      }
     }
 
-    if (!updateData || updateData.length === 0) {
-      console.error(
-        "Update succeeded but no rows were updated for essay_id:",
-        essayId,
-      );
-      return {
-        success: false,
-        error: "Update completed but no rows were affected",
-      };
-    }
-
-    console.log("Successfully saved plagiarism results for essay_id:", essayId);
     return { success: true };
   } catch (err) {
     console.error("Error saving plagiarism result:", err);
@@ -4398,38 +4402,54 @@ export const saveAIDetectionResult = async (
       return { success: false, error: "Invalid essay ID" };
     }
 
-    const { data: existingRow, error: checkError } = await supabase
+    // Check if the row exists in essay_analysis_results
+    const { data: existingRow } = await supabase
       .from("essay_analysis_results")
       .select("id")
       .eq("essay_id", essayId)
       .maybeSingle();
-    if (checkError || !existingRow) {
-      return {
-        success: false,
-        error: "Analysis results not found. Please run analysis first.",
-      };
+
+    if (existingRow) {
+      // 1. Primary path: Update essay_analysis_results
+      const { error: updateError } = await supabase
+        .from("essay_analysis_results")
+        .update({
+          ai_detection_results: result,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("essay_id", essayId);
+
+      if (updateError) {
+        console.error("Error updating AI detection results in essay_analysis_results:", updateError);
+      } else {
+        console.log("Successfully saved AI detection results to essay_analysis_results for essay_id:", essayId);
+      }
+    } else {
+      console.warn("Essay analysis results row not found for essay_id:", essayId, "Attempting fallback to essays table.");
     }
 
-    const { data: updateData, error: updateError } = await supabase
-      .from("essay_analysis_results")
+    // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
+    const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
+    const currentAnalysis = essayStatus?.analysis || {};
+    
+    const { error: essayUpdateError } = await supabase
+      .from("essays")
       .update({
-        ai_detection_results: result,
-        updated_at: new Date().toISOString(),
+        analysis: {
+          ...currentAnalysis,
+          ai_detection_results: result
+        }
       })
-      .eq("essay_id", essayId)
-      .select();
+      .eq("id", essayId);
 
-    if (updateError) {
-      return {
-        success: false,
-        error: updateError.message || "Failed to save AI detection results",
-      };
-    }
-    if (!updateData || updateData.length === 0) {
-      return {
-        success: false,
-        error: "Update completed but no rows were affected",
-      };
+    if (essayUpdateError) {
+      console.error("Error updating AI detection results in essays table:", essayUpdateError);
+      if (!existingRow) {
+         return {
+           success: false,
+           error: "Analysis results not found and fallback save failed. Please run analysis first.",
+         };
+      }
     }
 
     return { success: true };

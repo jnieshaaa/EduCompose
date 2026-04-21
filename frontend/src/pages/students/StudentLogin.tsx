@@ -385,15 +385,22 @@ const Login: React.FC = () => {
       });
 
       if (error) {
-        const normalizedMessage = error.message.toLowerCase();
         if (
           normalizedMessage.includes("invalid login credentials") ||
           normalizedMessage.includes("email not confirmed") ||
-          normalizedMessage.includes("invalid email or password")
+          normalizedMessage.includes("invalid email or password") ||
+          normalizedMessage.includes("bad request")
         ) {
-          setError("Invalid student code or password.");
+          setError("Invalid student code or password. Please double-check your credentials.");
           return;
         }
+        
+        // Handle specialized 400 errors from Supabase
+        if (error.status === 400) {
+          setError("Login failed (Bad Request). This often happens if the account is in a transition state. Try refreshing the page.");
+          return;
+        }
+
         throw error;
       }
       if (data.session && data.user) {
