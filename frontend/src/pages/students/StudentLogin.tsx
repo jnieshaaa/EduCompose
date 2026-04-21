@@ -385,6 +385,7 @@ const Login: React.FC = () => {
       });
 
       if (error) {
+        const normalizedMessage = error.message.toLowerCase();
         if (
           normalizedMessage.includes("invalid login credentials") ||
           normalizedMessage.includes("email not confirmed") ||
