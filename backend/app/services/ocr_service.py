@@ -158,6 +158,41 @@ class OCRService:
                 logger.warning("HF OCR candidate failed: %s", e)
         return None
 
+    def _try_gemini_ocr(self, image: Image.Image) -> Optional[str]:
+        """Fallback to Gemini Multimodal for text extraction when HF/EasyOCR fail."""
+        try:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                return None
+            
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            
+            # Convert PIL to bytes for Gemini
+            buf = BytesIO()
+            image.save(buf, format="JPEG")
+            img_bytes = buf.getvalue()
+
+            prompt = (
+                "Extract all text from this image exactly as it appears. "
+                "Keep the original formatting including paragraphs. "
+                "Return ONLY the extracted text."
+            )
+            
+            # Using the same high-quota model
+            model_id = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+            
+            response = client.models.generate_content(
+                model=model_id,
+                contents=[prompt, {"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}}]
+            )
+            
+            if response and response.text:
+                return response.text.strip()
+        except Exception as e:
+            logger.error(f"Gemini OCR fallback failed: {e}")
+        return None
+
     def _correct_orientation(self, image: Image.Image) -> Image.Image:
         """Correct image orientation based on EXIF metadata"""
         try:
@@ -476,18 +511,55 @@ class OCRService:
                         page_confidence = 0.0
                         detection_count = 0
                         for bound in bounds:
-                            if len(bound) >= 3:
-                                text = bound[1]
-                                confidence = bound[2] if len(bound) > 2 else 0.0
-                                page_text.append(text)
-                                page_confidence += confidence
-                                detection_count += 1
-                        page_text_combined = '\n'.join(page_text)
-                        logger.info(f"Page {page_num}: EasyOCR ({detection_count} regions)")
-                    else:
-                        logger.warning(
-                            f"Page {page_num}: no HF OCR text and EasyOCR disabled or unavailable"
-                        )
+                                min_size=0,
+                                slope_ths=0.2,
+                                ycenter_ths=0.7,
+                                height_ths=0.6,
+                                width_ths=0.8,
+                                decoder='beamsearch',
+                                beamWidth=10,
+                                paragraph=True,
+                                text_threshold=0.5,
+                                low_text=0.3
+                            )
+                            if len(bounds) == 0:
+                                logger.warning(
+                                    f"No text with standard params on page {page_num}, trying lenient..."
+                                )
+                                bounds = self.reader.readtext(
+                                    np.array(preprocessed_image),
+                                    paragraph=True,
+                                    text_threshold=0.3,
+                                    low_text=0.2,
+                                    width_ths=0.5,
+                                    height_ths=0.5
+                                )
+                            if len(bounds) == 0:
+                                logger.warning(
+                                    f"No text with preprocessing on page {page_num}, trying original image..."
+                                )
+                                bounds = self.reader.readtext(
+                                    np.array(image),
+                                    paragraph=True,
+                                    text_threshold=0.3,
+                                    low_text=0.2
+                                )
+                            page_text = []
+                            page_confidence = 0.0
+                            detection_count = 0
+                            for bound in bounds:
+                                if len(bound) >= 3:
+                                    text = bound[1]
+                                    confidence = bound[2] if len(bound) > 2 else 0.0
+                                    page_text.append(text)
+                                    page_confidence += confidence
+                                    detection_count += 1
+                            page_text_combined = '\n'.join(page_text)
+                            logger.info(f"Page {page_num}: EasyOCR ({detection_count} regions)")
+                        else:
+                            logger.warning(
+                                f"Page {page_num}: No remote OCR (HF/Gemini) worked and EasyOCR is disabled/dead."
+                            )
 
                     all_text.append(page_text_combined)
                     if detection_count > 0:
