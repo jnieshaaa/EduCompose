@@ -53,13 +53,7 @@ export class UnifiedStudentUploadService {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Authentication required");
 
-      const { data: teacherUser } = await supabase
-        .from("users")
-        .select("auth_user_id")
-        .eq("auth_user_id", authUser.id)
-        .single();
-      
-      const teacherUserId = teacherUser?.auth_user_id || authUser.id;
+      const teacherId = authUser.id;
 
       // 2. Process each file configuration
       for (const config of configs) {
@@ -103,7 +97,7 @@ export class UnifiedStudentUploadService {
         const { data: loadData } = await supabase
           .from("teacher_course_loads")
           .select("id")
-          .eq("teacher_id", teacherUserId)
+          .eq("teacher_id", teacherId)
           .eq("course_id", _targetCourseId) // Using the targetCourseId here
           .eq("academic_year", context.ay)
           .eq("term", context.term)
@@ -162,7 +156,7 @@ export class UnifiedStudentUploadService {
                program_load_id: progLoad.id, 
                name: blockName, 
                year: year, 
-               teacher_id: teacherUserId 
+               teacher_id: teacherId 
             })
             .select()
             .single();
@@ -236,7 +230,7 @@ export class UnifiedStudentUploadService {
             const { error: insertError } = await supabase
               .from("pending_student_registrations")
               .insert({
-                teacher_id: teacherUserId,
+                teacher_id: teacherId,
                 course_id: _targetCourseId,
                 program_id: prog.id,
                 student_code: studentCode,

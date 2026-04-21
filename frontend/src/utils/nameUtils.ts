@@ -59,7 +59,7 @@ export function getInitials(fullName: string | null | undefined): string {
 
   const nameParts = fullName.trim().split(/\s+/);
   const initials = nameParts
-    .map((part) => part.charAt(0).toUpperCase())
+    .map((part) => (part?.charAt(0) || "").toUpperCase())
     .join("");
 
   return initials || "U";

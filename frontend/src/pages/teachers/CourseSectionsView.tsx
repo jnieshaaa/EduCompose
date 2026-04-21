@@ -89,14 +89,6 @@ export function CourseSectionsView({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: dbUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_user_id", userData.user.id)
-        .single();
-
-      if (!dbUser) return;
-
       const { data: loadData } = await supabase
         .from("teacher_course_loads")
         .select("id")
@@ -261,9 +253,6 @@ export function CourseSectionsView({
     if (selectedProgramIds.length === 0) return;
     setIsCreating(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
-
       let courseLoadId: string;
       const { data: existingLoad } = await supabase
         .from("teacher_course_loads")
@@ -327,8 +316,8 @@ export function CourseSectionsView({
     if (!selectedProgramLoad || !newBlock.name) return;
     setIsCreating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) throw new Error("Not authenticated");
 
       const { data: block, error } = await supabase
         .from("blocks")
@@ -336,7 +325,7 @@ export function CourseSectionsView({
           program_load_id: selectedProgramLoad.id,
           year: newBlock.year,
           name: newBlock.name.toUpperCase(),
-          teacher_id: user.id
+          teacher_id: authData.user.id
         })
         .select()
         .single();

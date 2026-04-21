@@ -78,28 +78,9 @@ export const fetchTeacherUUID = async (): Promise<string | null> => {
   }
 };
 
-// Load user ID (bigint) from Supabase users table (legacy compatibility)
-export const fetchTeacherId = async (): Promise<number | null> => {
-  try {
-    const uuid = await fetchTeacherUUID();
-    if (!uuid) return null;
-
-    const { data: userData, error: userTableError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_user_id", uuid)
-      .maybeSingle();
-
-    if (userTableError || !userData) {
-      console.error("Error getting user from users table:", userTableError);
-      return null;
-    }
-
-    return userData.id;
-  } catch (err) {
-    console.error("Unexpected error fetching user ID:", err);
-    return null;
-  }
+// Load user ID (UUID) from Supabase auth (standardized)
+export const fetchTeacherId = async (): Promise<string | null> => {
+  return await fetchTeacherUUID();
 };
 
 // Load rubrics for a teacher
@@ -116,7 +97,7 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
       .select(
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
-      .eq("teacher_id", teacherId) // Use numeric teacher_id
+      .eq("teacher_id", teacherId) // Use UUID
       .order("created_at", { ascending: false });
 
 

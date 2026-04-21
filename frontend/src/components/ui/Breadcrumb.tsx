@@ -400,7 +400,7 @@ const Breadcrumb: React.FC = () => {
             rubrics: "Rubrics",
           };
           items.push({
-            label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
+            label: labels[view] || (view ? view.charAt(0).toUpperCase() + view.slice(1) : ""),
             path: `${pathname}?view=${view}`,
           });
         }
@@ -415,7 +415,7 @@ const Breadcrumb: React.FC = () => {
             courses: "Global Course Registry",
           };
           items.push({
-            label: labels[view] || view.charAt(0).toUpperCase() + view.slice(1),
+            label: labels[view] || (view ? view.charAt(0).toUpperCase() + view.slice(1) : ""),
             path: `${pathname}?view=${view}`,
           });
         }

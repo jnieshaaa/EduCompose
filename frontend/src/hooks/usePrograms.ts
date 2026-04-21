@@ -11,7 +11,7 @@ import { useAlert } from "./useAlert";
 import type { UploadResult } from "../services/BatchUploadController";
 
 // Helper to get user ID from authenticated user
-const getTeacherId = async (): Promise<number | null> => {
+const getTeacherId = async (): Promise<string | null> => {
   try {
     const {
       data: { user },
@@ -21,19 +21,7 @@ const getTeacherId = async (): Promise<number | null> => {
       console.error("Error getting authenticated user:", userError);
       return null;
     }
-
-    const { data: userData, error: userTableError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (userTableError || !userData) {
-      console.error("Error getting user record:", userTableError);
-      return null;
-    }
-
-    return userData.id;
+    return user.id;
   } catch (err) {
     console.error("Unexpected error fetching user ID:", err);
     return null;

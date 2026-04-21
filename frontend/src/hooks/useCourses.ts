@@ -17,6 +17,7 @@ const getTeacherInfo = async () => {
     const { data: userData, error: userTableError } = await supabase
       .from("users")
       .select(`
+        id,
         auth_user_id, 
         school_id, 
         department_id,
@@ -103,7 +104,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
           academic_year,
           term,
           courses (
-            id, school_id, course_code, course_title, units, department_id, program_id, user_id,
+            id, school_id, course_code, course_title, units, department_id, program_id, teacher_id,
             departments(name, code),
             programs_lookup(name, abbr)
           )
@@ -215,7 +216,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .insert({
           ...courseData,
           school_id: teacherInfo.school_id,
-          user_id: teacherInfo.auth_user_id,
+          teacher_id: teacherInfo.auth_user_id,
           department_id: teacherInfo.department_id,
           department: courseData.department || null,
         })
