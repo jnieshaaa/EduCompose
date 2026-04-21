@@ -243,13 +243,13 @@ export function EssayTextDisplay({
       <div className="mb-6 space-y-4">
         {/* Row 1: Title and Anomalies Badge */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-black text-neutral-900 tracking-tight uppercase tracking-widest text-[10px] flex items-center gap-2">
-             <div className="w-1 h-5 bg-primary" />
+          <h1 className="text-sm font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
+             <div className="w-1 h-4 bg-primary" />
              Evaluation <span className="text-primary/50">Manuscript</span>
           </h1>
           
           {textSegments.errors.length > 0 && (
-            <Badge variant="error" size="sm" className="rounded-xl px-3 py-1 font-bold text-[9px] uppercase tracking-widest bg-error-50/50">
+            <Badge variant="error" size="sm" className="rounded-lg px-2 py-0.5 font-black text-[8px] uppercase tracking-widest">
               {textSegments.errors.length} Anomalies found
             </Badge>
           )}
