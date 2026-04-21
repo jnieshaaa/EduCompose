@@ -124,11 +124,14 @@ class GrammarAnalyzer:
                 if not model_name:
                     continue
                 try:
-                    # Verify model existence/accessibility
-                    # With newer SDK, try just the string first
-                    client.models.get(model=model_name)
-                    self.gemini_model = model_name
-                    logger.info(f"Gemini client initialized with model: {model_name}")
+                    # Sanitize model name - remove 'models/' prefix if present
+                    current_model = model_name
+                    if current_model and current_model.startswith("models/"):
+                        current_model = current_model.replace("models/", "", 1)
+                        
+                    client.models.get(model=current_model)
+                    self.gemini_model = current_model
+                    logger.info(f"Gemini client initialized with model: {current_model}")
                     break
                 except Exception as model_error:
                     last_error = model_error

@@ -144,9 +144,10 @@ class TransformerClaimClassifier:
             from google import genai
             client = genai.Client(api_key=gemini_key)
             
-            # The new google-genai SDK uses model names without 'models/' prefix 
-            # and may require 'gemini-1.5-flash-latest' for some accounts
+            # Sanitize model name - the new google-genai SDK expects names without the 'models/' prefix
             model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+            if model_name.startswith("models/"):
+                model_name = model_name.replace("models/", "", 1)
             
             prompt = f"""Classify each of the following sentences into one of these argument components:
             claim, premise, evidence, counterclaim, background.
@@ -177,23 +178,28 @@ class TransformerClaimClassifier:
                     raise model_err
             
             data = json.loads(response.text)
-            results = []
-            for item in data:
-                results.append({
-                    "component": str(item.get('label', 'unknown')).lower(),
-                    "confidence": float(item.get('score', 0.0))
-                })
             return results
         except Exception as e:
-            logger.error(f"Gemini classification fallback failed: {e}")
-            # Final local heuristic fallback instead of just 'unknown'
+            if "429" in str(e):
+                logger.warning("Gemini quota exceeded. Using heuristic fallback.")
+            else:
+                logger.error(f"Gemini classification fallback failed: {e}")
             return self._heuristic_classify(sentences)
 
     def _heuristic_classify(self, sentences: List[str]) -> List[Dict[str, Any]]:
         """Last resort: use keywords to detect claims and evidence"""
         results = []
-        claim_indicators = ["argue", "claim", "must", "should", "Therefore", "Hence", "believe", "point is"]
-        evidence_indicators = ["study", "research", "According to", "data", "found", "statistics", "report", "example"]
+        claim_indicators = [
+            "argue", "claim", "must", "should", "Therefore", "Hence", "believe", "point is",
+            "conclude", "opinion", "In my view", "necessary", "ought to"
+        ]
+        evidence_indicators = [
+            "study", "research", "According to", "data", "found", "statistics", "report", "example",
+            "fact", "shows", "demonstrates", "proof", "source"
+        ]
+        premise_indicators = [
+            "because", "since", "given that", "as shown by", "follows from"
+        ]
         
         for s in sentences:
             s_lower = s.lower()
@@ -201,6 +207,8 @@ class TransformerClaimClassifier:
                 results.append({"component": "claim", "confidence": 0.5})
             elif any(ind.lower() in s_lower for ind in evidence_indicators):
                 results.append({"component": "evidence", "confidence": 0.5})
+            elif any(ind.lower() in s_lower for ind in premise_indicators):
+                results.append({"component": "premise", "confidence": 0.4})
             else:
                 results.append({"component": "background", "confidence": 0.1})
         return results
@@ -214,7 +222,8 @@ class TransformerClaimClassifier:
         url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
         headers = {
             "Authorization": f"Bearer {self.hf_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-use-cache": "false" # Force fresh analysis
         }
         
         results = []
