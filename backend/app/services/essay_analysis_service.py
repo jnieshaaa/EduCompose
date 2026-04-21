@@ -795,6 +795,26 @@ class EssayAnalysisService:
         
         return results
     
+    def _row_to_rubric_dict(self, row) -> Dict[str, Any]:
+        """Helper to convert database row to rubric dictionary"""
+        rubric_data = {
+            "id": str(row[0]),
+            "name": row[1],
+            "description": row[2],
+            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
+            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
+            "grading_intensity": row[5]
+        }
+        
+        # Ensure criteria is a list
+        if isinstance(rubric_data["criteria"], dict):
+            if "criteria" in rubric_data["criteria"]:
+                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
+            else:
+                rubric_data["criteria"] = [rubric_data["criteria"]]
+        
+        return rubric_data
+
     async def _fetch_rubric(self, rubric_id: str) -> Optional[Dict[str, Any]]:
         """
         Fetch rubric from database by ID
@@ -831,15 +851,13 @@ class EssayAnalysisService:
                         # If not found by UUID, try mapping legacy integer to UUID format
                         if raw_id.isdigit():
                             deterministic_uuid = f"{int(raw_id):032x}"
-                            # Insert dashes if needed, but Postgres cast handles hex
-                            # lpad(to_hex(id), 32, '0')::uuid
                             result = connection.execute(
                                 text("""
                                     SELECT id, name, description, criteria, programs, grading_intensity
                                     FROM rubrics
                                     WHERE id::text = :rubric_id AND teacher_id IS NULL
                                 """),
-                                {"rubric_id": f"{int(raw_id):032x}"}
+                                {"rubric_id": deterministic_uuid}
                             )
                             row = result.fetchone()
                             if row:
@@ -849,7 +867,6 @@ class EssayAnalysisService:
                     logger.info(f"Database connection issue, checking hardcoded fallback: {e}")
                 
                 # Try fallback to hardcoded platform rubrics if DB fails or row not found
-                # For hardcoded fallback, we still use numeric mapping
                 try:
                     numeric_id = int(raw_id)
                     hardcoded_rubric = get_platform_rubric_by_id(numeric_id)
@@ -877,30 +894,6 @@ class EssayAnalysisService:
                     else:
                         logger.warning(f"Rubric {rubric_id} not found in database")
                         return None
-                    
-        except Exception as e:
-            logger.error(f"Error fetching rubric {rubric_id}: {e}")
-            return None
-
-    def _row_to_rubric_dict(self, row) -> Dict[str, Any]:
-        """Helper to convert database row to rubric dictionary"""
-        rubric_data = {
-            "id": str(row[0]),
-            "name": row[1],
-            "description": row[2],
-            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
-            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
-            "grading_intensity": row[5]
-        }
-        
-        # Ensure criteria is a list
-        if isinstance(rubric_data["criteria"], dict):
-            if "criteria" in rubric_data["criteria"]:
-                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
-            else:
-                rubric_data["criteria"] = [rubric_data["criteria"]]
-        
-        return rubric_data
                     
         except (OperationalError, DatabaseError) as e:
             # Database connection errors - try hardcoded fallback for platform rubrics
@@ -932,14 +925,14 @@ class EssayAnalysisService:
                 except Exception as fallback_error:
                     logger.debug(f"Hardcoded fallback failed for rubric {rubric_id_int}: {fallback_error}")
             
-            # Log the error (either non-platform rubric or hardcoded fallback failed)
+            # Log the error
             if "could not translate host name" in error_msg.lower() or "connection" in error_msg.lower():
                 logger.warning(f"Database connection error while fetching rubric {rubric_id}: {error_msg}. Proceeding without rubric scoring.")
             else:
                 logger.warning(f"Database error fetching rubric {rubric_id}: {error_msg}. Proceeding without rubric scoring.")
             return None
         except Exception as e:
-            # Other unexpected errors - log as error
+            # Other unexpected errors
             logger.error(f"Unexpected error fetching rubric {rubric_id}: {e}")
             return None
 

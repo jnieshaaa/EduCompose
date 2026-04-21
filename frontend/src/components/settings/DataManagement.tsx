@@ -1,8 +1,7 @@
 // Data Management Section Component (View)
 
 import React from "react";
-import { Upload, FileText, Download } from "lucide-react";
-import Button from "../ui/Button";
+import { Upload, Download } from "lucide-react";
 
 interface DataManagementProps {
   id: string;
