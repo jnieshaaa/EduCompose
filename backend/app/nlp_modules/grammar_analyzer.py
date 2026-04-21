@@ -111,48 +111,31 @@ class GrammarAnalyzer:
             # Reorder fallback candidates for better availability
             model_candidates = [
                 os.getenv("GEMINI_MODEL_NAME"),
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash",
-                "gemini-2.0-flash"
+                'gemini-1.5-flash-latest',   # More stable slug
+                'gemini-1.5-flash',          # 1.5 flash has higher free-tier quota (1500/day) than 2.0 (20/day)
+                'gemini-2.0-flash',          # Fallback to 2.0 flash
+                'gemini-1.5-pro',            # Pro version
+                'gemini-pro-latest',         # Legacy latest
             ]
             
-            model_id = None
-            for candidate in model_candidates:
-                if not candidate: continue
+            self.gemini_model = None
+            last_error = None
+            for model_name in model_candidates:
+                if not model_name:
+                    continue
                 try:
-                    self.gemini_model = env_model_name
-                    logger.info(f"Gemini client initialized with model from env: {env_model_name}")
+                    # Verify model existence/accessibility
+                    client.models.get(model=model_name)
+                    self.gemini_model = model_name
+                    logger.info(f"Gemini client initialized with model: {model_name}")
+                    break
                 except Exception as model_error:
-                    logger.warning(f"Failed to find Gemini model '{env_model_name}' from env: {model_error}")
-                    logger.info("Falling back to default model list...")
-                    env_model_name = None  # Trigger fallback
+                    last_error = model_error
+                    logger.debug(f"Model {model_name} failed: {model_error}")
             
-            if not env_model_name:
-                # Try different model names in order of preference
-                model_names = [
-                    'gemini-1.5-flash-latest',   # More stable slug
-                    'gemini-1.5-flash',          # 1.5 flash has higher free-tier quota (1500/day) than 2.0 (20/day)
-                    'gemini-2.0-flash',          # Fallback to 2.0 flash
-                    'gemini-1.5-pro',            # Pro version
-                    'gemini-pro-latest',         # Legacy latest
-                ]
-                
-                self.gemini_model = None
-                last_error = None
-                for model_name in model_names:
-                    try:
-                        client.models.get(model=model_name)
-                        self.gemini_model = model_name
-                        logger.info(f"Gemini client initialized with model: {model_name}")
-                        break
-                    except Exception as model_error:
-                        last_error = model_error
-                        logger.debug(f"Model {model_name} failed: {model_error}")
-                        continue
-                
-                if not self.gemini_model:
-                    logger.warning(f"Failed to initialize any Gemini model. Last error: {last_error}")
-                    self.llm_client = None
+            if not self.gemini_model:
+                logger.warning(f"Failed to initialize any Gemini model. Last error: {last_error}")
+                self.llm_client = None
                 
         except ImportError:
             logger.debug("google-genai package not installed")
