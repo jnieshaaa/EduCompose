@@ -739,8 +739,8 @@ export const ocrApi = {
 
     const token = localStorage.getItem("auth_token");
     
-    // Add trailing slash to the endpoint to avoid redirects which can cause CORS issues
-    const response = await fetch(`${API_BASE_URL}/ocr/extract-text/`, {
+    // Removed trailing slash to match backend strict routing and prevent 307 redirects
+    const response = await fetch(`${API_BASE_URL}/ocr/extract-text`, {
       method: "POST",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
