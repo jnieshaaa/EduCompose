@@ -1732,36 +1732,29 @@ export const fetchEssayByStudentAndActivity = async (
       return null;
     }
 
-    // If the essay was submitted as text only, store it in `content` and show it.
-    if (!essayData.file_path) {
-      const content = essayData.content || "";
-      if (!content.trim()) return null;
-      return {
-        fileUrl: "",
-        title: essayData.title || "Essay Submission",
-        fileType: "text",
-        content,
-      };
+    // Treat it as a file upload if file_path is present, otherwise just text.
+    let fileUrl = "";
+    let fileType = "text";
+    
+    if (essayData.file_path) {
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from("essays")
+        .createSignedUrl(essayData.file_path, 3600);
+      
+      if (urlError) {
+        console.error("Error creating signed URL:", urlError);
+      } else if (urlData) {
+        fileUrl = urlData.signedUrl;
+        const ext = essayData.file_path.split(".").pop()?.toLowerCase();
+        fileType = (ext === "pdf") ? "pdf" : (["jpg", "jpeg", "png", "webp", "gif"].includes(ext || "")) ? "image" : "file";
+      }
     }
-
-    // Otherwise, treat it as a file upload and create a signed URL from Supabase Storage.
-    const { data: urlData, error: urlError } = await supabase.storage
-      .from("essays")
-      .createSignedUrl(essayData.file_path, 3600);
-
-    if (urlError || !urlData?.signedUrl) {
-      console.error("Error getting file URL:", urlError);
-      return null;
-    }
-
-    const fileExt = essayData.file_path.split(".").pop()?.toLowerCase() || "";
-    const isPdf = fileExt === "pdf";
-    const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(fileExt);
 
     return {
-      fileUrl: urlData.signedUrl,
+      fileUrl,
       title: essayData.title || "Essay Submission",
-      fileType: isPdf ? "pdf" : isImage ? "image" : "unknown",
+      fileType,
+      content: essayData.content || undefined,
     };
   } catch (err) {
     console.error("Unexpected error fetching essay:", err);

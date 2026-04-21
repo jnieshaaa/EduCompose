@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Eye,
   ExternalLink,
   BookOpen,
   Info,
@@ -21,6 +22,7 @@ import { motion } from 'framer-motion';
 import KnowledgeGraphLoader from '../components/ui/KnowledgeGraphLoader';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
+import { ViewEssayModal } from '../components/activities/ViewEssayModal';
 import { EssayTextDisplay, AnalysisMetrics, FeedbackPanel, RubricScores, getGrammarErrorSelectionKey, type HighlightError } from '../components/grading';
 import type { AnalysisResponse, TextAnalysisResponse, DiagnosticRecommendation } from '../types/Essay';
 import { analysisApi, plagiarismApi, aiDetectionApi, type PlagiarismCheckResponse, type PlagiarismMatch, type AIDetectionResponse } from '../api';
@@ -31,7 +33,6 @@ import { savePlagiarismResult, loadPlagiarismResult, saveAIDetectionResult, load
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { readSecureParams } from '../utils/secureUrl';
-import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'essay_analysis_results';
 const AI_DETECTION_STORAGE_KEY_PREFIX = 'essay_ai_detection_result';
@@ -278,6 +279,8 @@ const AnalysisResults: React.FC = () => {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>([]);
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
   const [filePath, setFilePath] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [studentName, setStudentName] = useState<string>('');
 
   // Stable references to prevent recalculation
   const stableAnalysisRef = useRef<StoredAnalysisResult | null>(null);
@@ -399,6 +402,8 @@ const AnalysisResults: React.FC = () => {
       if (state.text) setOriginalText(state.text);
       return;
     }
+
+    if (state?.studentName) setStudentName(state.studentName);
 
     // Check if we have a ref token in the URL (encoded studentId + activityId)
     const secureParams = readSecureParams(window.location.search);
@@ -1321,16 +1326,9 @@ const AnalysisResults: React.FC = () => {
               <Button
                 variant="outline"
                 className="rounded-xl py-3 px-6 font-bold text-[10px] uppercase tracking-widest border-neutral-200"
-                onClick={() => {
-                  const { data } = supabase.storage
-                    .from('essays')
-                    .getPublicUrl(filePath);
-                  if (data?.publicUrl) {
-                    window.open(data.publicUrl, '_blank');
-                  }
-                }}
+                onClick={() => setIsViewerOpen(true)}
               >
-                <ExternalLink className="w-4 h-4 mr-2" />
+                <Eye className="w-4 h-4 mr-2" />
                 View Original
               </Button>
             )}
@@ -1752,6 +1750,16 @@ const AnalysisResults: React.FC = () => {
           rubric={previewRubric}
           isOpen={showRubricPreview}
           onClose={() => setShowRubricPreview(false)}
+        />
+      )}
+      {/* Submission Viewer Modal */}
+      {studentId && activityId && (
+        <ViewEssayModal
+          isOpen={isViewerOpen}
+          onClose={() => setIsViewerOpen(false)}
+          studentId={studentId}
+          studentName={studentName || "Student"}
+          activityId={activityId}
         />
       )}
     </div>
