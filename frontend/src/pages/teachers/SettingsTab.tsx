@@ -70,9 +70,7 @@ export function SettingsTab() {
         }
 
         if (teacherIdResult.data) {
-          const teacherRubrics = await fetchTeacherRubrics(
-            teacherIdResult.data.id
-          );
+          const teacherRubrics = await fetchTeacherRubrics();
           setRubrics(
             teacherRubrics.map((r) => ({
               id: r.id,
