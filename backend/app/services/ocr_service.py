@@ -468,82 +468,32 @@ class OCRService:
                         page_text_combined = cloud_text
                         detection_count = 1
                         page_confidence = 0.85
-                        logger.info(
-                            f"Page {page_num}: {cloud_src.upper()} OCR ({len(cloud_text)} chars)"
-                        )
-                    elif self._wants_local_easyocr() and self._ensure_reader():
-                        bounds = self.reader.readtext(
-                            np.array(preprocessed_image),
-                            min_size=0,
-                            slope_ths=0.2,
-                            ycenter_ths=0.7,
-                            height_ths=0.6,
-                            width_ths=0.8,
-                            decoder='beamsearch',
-                            beamWidth=10,
-                            paragraph=True,
-                            text_threshold=0.5,
-                            low_text=0.3
-                        )
-                        if len(bounds) == 0:
-                            logger.warning(
-                                f"No text with standard params on page {page_num}, trying lenient..."
-                            )
+                        logger.info(f"Page {page_num}: {cloud_src.upper()} OCR ({len(cloud_text)} chars)")
+                    else:
+                        # FALLBACK 1: Try Gemini Vision if HF fails
+                        logger.warning(f"HF OCR failed for Page {page_num}, trying Gemini Vision...")
+                        gemini_text = self._try_gemini_ocr(image)
+                        
+                        if gemini_text:
+                            page_text_combined = gemini_text
+                            detection_count = 1
+                            page_confidence = 0.95
+                            logger.info(f"Page {page_num}: GEMINI OCR success ({len(gemini_text)} chars)")
+                        elif self._wants_local_easyocr() and self._ensure_reader():
+                            # FALLBACK 2: Try Local EasyOCR if enabled
                             bounds = self.reader.readtext(
-                                np.array(preprocessed_image),
-                                paragraph=True,
-                                text_threshold=0.3,
-                                low_text=0.2,
-                                width_ths=0.5,
-                                height_ths=0.5
-                            )
-                        if len(bounds) == 0:
-                            logger.warning(
-                                f"No text with preprocessing on page {page_num}, trying original image..."
-                            )
-                            bounds = self.reader.readtext(
-                                np.array(image),
-                                paragraph=True,
-                                text_threshold=0.3,
-                                low_text=0.2
-                            )
-                        page_text = []
-                        page_confidence = 0.0
-                        detection_count = 0
-                        for bound in bounds:
+                                np.array(pre_rgb),
                                 min_size=0,
-                                slope_ths=0.2,
-                                ycenter_ths=0.7,
-                                height_ths=0.6,
-                                width_ths=0.8,
-                                decoder='beamsearch',
-                                beamWidth=10,
                                 paragraph=True,
-                                text_threshold=0.5,
-                                low_text=0.3
+                                text_threshold=0.5
                             )
-                            if len(bounds) == 0:
-                                logger.warning(
-                                    f"No text with standard params on page {page_num}, trying lenient..."
-                                )
-                                bounds = self.reader.readtext(
-                                    np.array(preprocessed_image),
-                                    paragraph=True,
-                                    text_threshold=0.3,
-                                    low_text=0.2,
-                                    width_ths=0.5,
-                                    height_ths=0.5
-                                )
-                            if len(bounds) == 0:
-                                logger.warning(
-                                    f"No text with preprocessing on page {page_num}, trying original image..."
-                                )
+                            if not bounds:
                                 bounds = self.reader.readtext(
                                     np.array(image),
                                     paragraph=True,
-                                    text_threshold=0.3,
-                                    low_text=0.2
+                                    text_threshold=0.3
                                 )
+                            
                             page_text = []
                             page_confidence = 0.0
                             detection_count = 0
@@ -557,9 +507,9 @@ class OCRService:
                             page_text_combined = '\n'.join(page_text)
                             logger.info(f"Page {page_num}: EasyOCR ({detection_count} regions)")
                         else:
-                            logger.warning(
-                                f"Page {page_num}: No remote OCR (HF/Gemini) worked and EasyOCR is disabled/dead."
-                            )
+                            page_text_combined = ""
+                            detection_count = 0
+                            logger.warning(f"Page {page_num}: All OCR methods failed (HF, Gemini, EasyOCR).")
 
                     all_text.append(page_text_combined)
                     if detection_count > 0:
@@ -570,10 +520,9 @@ class OCRService:
                     logger.error(f"Error processing page {page_num}: {e}")
                     all_text.append("")
 
+                # Cleanup
                 del image
-                del preprocessed_image
-                if 'bounds' in locals():
-                    del bounds
+                del pre_rgb
                 gc.collect()
             
             # Combine all pages
