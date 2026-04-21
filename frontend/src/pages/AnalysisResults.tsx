@@ -31,6 +31,7 @@ import { savePlagiarismResult, loadPlagiarismResult, saveAIDetectionResult, load
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
 import { readSecureParams } from '../utils/secureUrl';
+import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'essay_analysis_results';
 const AI_DETECTION_STORAGE_KEY_PREFIX = 'essay_ai_detection_result';
@@ -276,6 +277,7 @@ const AnalysisResults: React.FC = () => {
   const [essayId, setEssayId] = useState<string | number | null>(null);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>([]);
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
+  const [filePath, setFilePath] = useState<string | null>(null);
 
   // Stable references to prevent recalculation
   const stableAnalysisRef = useRef<StoredAnalysisResult | null>(null);
@@ -440,6 +442,10 @@ const AnalysisResults: React.FC = () => {
                 if (analysisData.aiDetectionResults) {
                   setAiDetectionResult(analysisData.aiDetectionResults);
                 }
+
+                if (analysisData.filePath) {
+                  setFilePath(analysisData.filePath);
+                }
               } else {
                 setError('Analysis results not found. The essay may not have been graded yet.');
               }
@@ -514,6 +520,9 @@ const AnalysisResults: React.FC = () => {
             setAnalysis(stableAnalysis);
             setOriginalText(stableText);
             setAnalysisKey(newAnalysisKey);
+            if (analysisData.filePath) {
+              setFilePath(analysisData.filePath);
+            }
           } else {
             setError("Analysis results not found. The essay may not have been graded yet.");
           }
@@ -1307,14 +1316,33 @@ const AnalysisResults: React.FC = () => {
               </div>
             </div>
           </div>
-          <Button
-            variant="primary"
-            onClick={handleExportPDF}
-            className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-3 px-6 font-bold text-[10px] uppercase tracking-widest"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+          <div className="flex items-center space-x-3">
+            {filePath && (
+              <Button
+                variant="outline"
+                className="rounded-xl py-3 px-6 font-bold text-[10px] uppercase tracking-widest border-neutral-200"
+                onClick={() => {
+                  const { data } = supabase.storage
+                    .from('essays')
+                    .getPublicUrl(filePath);
+                  if (data?.publicUrl) {
+                    window.open(data.publicUrl, '_blank');
+                  }
+                }}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View Original
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleExportPDF}
+              className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-3 px-6 font-bold text-[10px] uppercase tracking-widest"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Report
+            </Button>
+          </div>
         </div>
       </header>
 

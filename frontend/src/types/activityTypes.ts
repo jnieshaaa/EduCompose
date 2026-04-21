@@ -43,6 +43,7 @@ export type Student = {
   score?: number;
   wordCount?: number;
   gradingError?: string;
+  filePath?: string;
 };
 
 export type NewActivityForm = {

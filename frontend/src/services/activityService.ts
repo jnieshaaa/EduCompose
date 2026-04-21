@@ -1204,6 +1204,7 @@ export const fetchStudentsByCourseAndSection = async (
     score?: number;
     wordCount?: number;
     gradingError?: string;
+    filePath?: string;
   }[]
 > => {
   try {
@@ -1262,6 +1263,7 @@ export const fetchStudentsByCourseAndSection = async (
         coherence?: number;
         readability?: number;
         argumentative?: number;
+        filePath?: string;
       }
     >();
 
@@ -1272,7 +1274,7 @@ export const fetchStudentsByCourseAndSection = async (
         const { data: essaysData, error: essaysError } = await supabase
           .from("essays")
           .select(
-            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error",
+            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error, file_path",
           )
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
@@ -1299,6 +1301,7 @@ export const fetchStudentsByCourseAndSection = async (
                 : undefined,
               wordCount: essay.word_count || undefined,
               gradingError: essay.grading_error || undefined,
+              filePath: essay.file_path || undefined,
             });
           });
         }
@@ -1323,6 +1326,7 @@ export const fetchStudentsByCourseAndSection = async (
         score: submission?.score,
         wordCount: submission?.wordCount,
         gradingError: submission?.gradingError,
+        filePath: submission?.filePath,
       };
     });
 
@@ -2414,6 +2418,7 @@ export const fetchEssayAnalysis = async (
   title: string;
   plagiarismResults?: import("../api").PlagiarismCheckResponse | null;
   aiDetectionResults?: import("../api").AIDetectionResponse | null;
+  filePath?: string | null;
 } | null> => {
   try {
     const studentDbId = await resolveStudentIdForEssayFilter(studentId);
@@ -2424,7 +2429,7 @@ export const fetchEssayAnalysis = async (
 
     const { data: essayData, error: essayError } = await supabase
       .from("essays")
-      .select("id, title")
+      .select("id, title, file_path")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
       .maybeSingle();
@@ -2497,6 +2502,7 @@ export const fetchEssayAnalysis = async (
         analysis: fallbackEssay.analysis_payload,
         text: text,
         title: fallbackEssay.title || "Essay Analysis",
+        filePath: fallbackEssay.file_path,
       };
     }
 
@@ -2571,6 +2577,7 @@ export const fetchEssayAnalysis = async (
       title: essayData.title || "Essay Analysis",
       plagiarismResults,
       aiDetectionResults: normalizedAIDetection,
+      filePath: essayData.file_path,
     };
   } catch (err) {
     console.error("Error fetching essay analysis:", err);

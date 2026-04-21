@@ -37,6 +37,7 @@ import {
   fetchEssayAnalysis,
   allowResubmission,
 } from "../../services/activityService";
+import { supabase } from "../../lib/supabaseClient";
 import { buildSecureUrl } from "../../utils/secureUrl";
 import { useNotification } from "../../contexts/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -431,9 +432,28 @@ export function StudentsView({
                                   }
                                 }}
                                 disabled={student.status !== "submitted"}
+                                title="View extracted text"
                               >
-                                <FileText size={13} className="mr-2" /> View Essay
+                                <Eye size={13} className="mr-2" /> View Essay
                               </DropdownMenuItem>
+
+                              {student.filePath && (
+                                <DropdownMenuItem
+                                  className="text-xs font-medium cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const { data } = supabase.storage
+                                      .from('essays')
+                                      .getPublicUrl(student.filePath!);
+                                    if (data?.publicUrl) {
+                                      window.open(data.publicUrl, '_blank');
+                                    }
+                                  }}
+                                  title="Open original uploaded file"
+                                >
+                                  <FileText size={13} className="mr-2" /> View Original File
+                                </DropdownMenuItem>
+                              )}
 
                               <DropdownMenuItem
                                  className="text-xs font-medium text-error-default cursor-pointer"
