@@ -72,7 +72,7 @@ class TransformerClaimClassifier:
              os.getenv("HUGGINGFACE_API_TOKEN") or "")
             .strip()
         )
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "sentence-transformers/all-MiniLM-L6-v2").strip()
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "nt-prgrmr/my_finetuned_distilbert").strip()
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
