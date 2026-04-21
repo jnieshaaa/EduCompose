@@ -144,10 +144,9 @@ class TransformerClaimClassifier:
             from google import genai
             client = genai.Client(api_key=gemini_key)
             
-            # Sanitize model name - the new google-genai SDK expects names without the 'models/' prefix
-            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
-            if model_name.startswith("models/"):
-                model_name = model_name.replace("models/", "", 1)
+            # Sanitize model name - remove 'models/' prefix if present
+            raw_model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+            model_name = raw_model_name.replace("models/", "") if raw_model_name else "gemini-1.5-flash"
             
             prompt = f"""Classify each of the following sentences into one of these argument components:
             claim, premise, evidence, counterclaim, background.
@@ -180,8 +179,8 @@ class TransformerClaimClassifier:
             data = json.loads(response.text)
             return results
         except Exception as e:
-            if "429" in str(e):
-                logger.warning("Gemini quota exceeded. Using heuristic fallback.")
+            if "429" in str(e) or "404" in str(e):
+                logger.warning(f"Gemini fallback unavailable ({e}). Using heuristics.")
             else:
                 logger.error(f"Gemini classification fallback failed: {e}")
             return self._heuristic_classify(sentences)
@@ -204,13 +203,13 @@ class TransformerClaimClassifier:
         for s in sentences:
             s_lower = s.lower()
             if any(ind.lower() in s_lower for ind in claim_indicators):
-                results.append({"component": "claim", "confidence": 0.5})
+                results.append({"component": "claim", "confidence": 0.8})
             elif any(ind.lower() in s_lower for ind in evidence_indicators):
-                results.append({"component": "evidence", "confidence": 0.5})
+                results.append({"component": "evidence", "confidence": 0.8})
             elif any(ind.lower() in s_lower for ind in premise_indicators):
-                results.append({"component": "premise", "confidence": 0.4})
+                results.append({"component": "premise", "confidence": 0.7})
             else:
-                results.append({"component": "background", "confidence": 0.1})
+                results.append({"component": "background", "confidence": 0.2})
         return results
 
     async def _classify_remote(self, sentences: List[str]) -> List[Dict[str, Any]]:

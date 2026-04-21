@@ -125,9 +125,9 @@ class GrammarAnalyzer:
                     continue
                 try:
                     # Sanitize model name - remove 'models/' prefix if present
-                    current_model = model_name
-                    if current_model and current_model.startswith("models/"):
-                        current_model = current_model.replace("models/", "", 1)
+                    current_model = model_name.replace("models/", "") if model_name else None
+                    if not current_model:
+                        continue
                         
                     client.models.get(model=current_model)
                     self.gemini_model = current_model
