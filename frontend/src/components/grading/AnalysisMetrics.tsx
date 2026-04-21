@@ -94,12 +94,12 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
       {/* Overall Score Card - Executive HUD style */}
       <Card variant="glass" className="bg-gradient-to-br from-primary-50/40 to-white/40 border-primary-100/30 overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-200/20 blur-[60px] rounded-full -mr-16 -mt-16" />
-        <div className="relative z-10 text-center py-4">
-          <p className="text-[10px] font-bold text-primary/70 uppercase tracking-[0.2em] mb-3">Academic Proficiency Index</p>
-          <div className="text-6xl font-bold text-neutral-900 tracking-tighter mb-4 leading-none">
-            {Math.round(scores.overall)}<span className="text-xl text-primary/50 ml-1">%</span>
+        <div className="relative z-10 text-center py-3 md:py-4">
+          <p className="text-[9px] md:text-[10px] font-bold text-primary/70 uppercase tracking-[0.2em] mb-2 md:mb-3">Academic Proficiency Index</p>
+          <div className="text-4xl md:text-6xl font-bold text-neutral-900 tracking-tighter mb-3 md:mb-4 leading-none">
+            {Math.round(scores.overall)}<span className="text-lg md:text-xl text-primary/50 ml-1">%</span>
           </div>
-          <ProgressBar value={scores.overall} color={getScoreColor(scores.overall)} size="sm" className="h-1.5 rounded-full" />
+          <ProgressBar value={scores.overall} color={getScoreColor(scores.overall)} size="sm" className="h-1 md:h-1.5 rounded-full" />
         </div>
       </Card>
 
@@ -115,9 +115,9 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
           ].map(({ key, label, icon: Icon, color }) => {
             const score = scores[key as keyof typeof scores] || 0;
             return (
-              <div key={key} className="flex items-center gap-3 p-3 bg-white/40 border border-white/60 rounded-2xl shadow-sm hover:bg-white/60 transition-colors group">
-                <div className={`p-2 rounded-xl bg-white shadow-sm transition-transform duration-300 group-hover:scale-110`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
+              <div key={key} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-white/40 border border-white/60 rounded-2xl shadow-sm hover:bg-white/60 transition-colors group">
+                <div className={`p-1.5 md:p-2 rounded-xl bg-white shadow-sm transition-transform duration-300 group-hover:scale-110`}>
+                  <Icon className={`w-3.5 h-3.5 md:w-4 h-4 ${color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] font-bold text-neutral-400 uppercase leading-none mb-1">{label}</p>
@@ -132,16 +132,16 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
       {/* Argument Structure - Toumils Model */}
       {analysis.detailed_analysis?.argumentation && (
         <Card variant="glass" className={prominentGraph ? 'border-primary-200/40 shadow-xl p-0 overflow-hidden' : 'p-0 overflow-hidden'}>
-          <div className="p-6 pb-0 flex items-center justify-between mb-6">
-            <h4 className={`font-bold text-neutral-900 tracking-tight ${prominentGraph ? 'text-2xl' : 'text-sm uppercase tracking-widest'}`}>
+          <div className="p-4 md:p-6 pb-0 flex items-center justify-between mb-4 md:mb-6">
+            <h4 className={`font-bold text-neutral-900 tracking-tight ${prominentGraph ? 'text-lg md:text-2xl' : 'text-[10px] uppercase tracking-widest'}`}>
               <>Argument <span className="text-primary">Structure</span></>
             </h4>
             <div className="flex items-center gap-2">
-               <Badge variant="outline" size="sm" className="rounded-lg px-3 py-1 font-bold text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Toulmin's Protocol</Badge>
+               <Badge variant="outline" size="sm" className="rounded-lg px-2 md:px-3 py-1 font-bold text-[8px] md:text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Toulmin</Badge>
             </div>
           </div>
           
-          <div className="px-6 grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="px-4 md:px-6 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-6">
             {[
               { label: 'Claims', val: analysis.detailed_analysis.argumentation.argument_structure.total_claims, bg: 'bg-primary-50/50', txt: 'text-primary' },
               { label: 'Evidence', val: analysis.detailed_analysis.argumentation.argument_structure.total_grounds, bg: 'bg-success-50/50', txt: 'text-success-default' },
@@ -149,9 +149,9 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
               { label: 'Rebuttals', val: analysis.detailed_analysis.argumentation.argument_structure.total_rebuttals, bg: 'bg-error-50/50', txt: 'text-error-default' },
               { label: 'Qualifiers', val: analysis.detailed_analysis.argumentation.argument_structure.total_qualifiers || 0, bg: 'bg-purple-50/50', txt: 'text-purple-600' },
             ].map((stat) => (
-              <div key={stat.label} className={`text-center p-3 ${stat.bg} border border-white backdrop-blur-sm rounded-2xl shadow-sm`}>
-                <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tight mb-1">{stat.label}</p>
-                <p className={`font-bold tracking-tighter ${stat.txt} ${prominentGraph ? 'text-2xl' : 'text-lg'}`}>
+              <div key={stat.label} className={`text-center p-2 md:p-3 ${stat.bg} border border-white backdrop-blur-sm rounded-2xl shadow-sm`}>
+                <p className="text-[7px] md:text-[8px] font-bold text-neutral-400 uppercase tracking-tight mb-1">{stat.label}</p>
+                <p className={`font-bold tracking-tighter ${stat.txt} ${prominentGraph ? 'text-lg md:text-2xl' : 'text-base md:text-lg'}`}>
                   {stat.val}
                 </p>
               </div>

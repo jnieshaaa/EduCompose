@@ -1300,13 +1300,13 @@ const AnalysisResults: React.FC = () => {
   };
 
   return (
-    <div className="relative h-screen flex flex-col bg-neutral-50/50 overflow-hidden font-sans">
+    <div className="relative min-h-screen md:h-screen flex flex-col bg-neutral-50/50 overflow-hidden font-sans">
       {/* Premium visual background flourishes */}
       <div className="absolute top-[-5%] right-[-10%] w-[45%] h-[45%] bg-primary-200/20 blur-[130px] rounded-full pointer-events-none z-0" />
       <div className="absolute bottom-[10%] left-[-10%] w-[35%] h-[35%] bg-success-200/10 blur-[110px] rounded-full pointer-events-none z-0" />
 
       {/* Header - Fixed height with glassmorphism */}
-      <header className="relative z-20 flex-shrink-0 bg-white/70 backdrop-blur-xl border-b border-white/40 px-8 py-4 shadow-sm">
+      <header className="relative z-20 flex-shrink-0 bg-white/70 backdrop-blur-xl border-b border-white/40 px-4 md:px-8 py-3 md:py-4 shadow-sm">
         <div className="max-w-[1920px] mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <button
@@ -1316,12 +1316,12 @@ const AnalysisResults: React.FC = () => {
               <div className="p-2 rounded-xl group-hover:bg-primary-50 transition-colors">
                 <ArrowLeft className="w-5 h-5" />
               </div>
-              <span className="font-bold text-xs uppercase tracking-widest px-2">Back</span>
+              <span className="hidden sm:inline font-bold text-xs uppercase tracking-widest px-2">Back</span>
             </button>
             <div className="h-8 w-px bg-neutral-200/60" />
             <div>
               <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-bold text-neutral-900 tracking-tight leading-none">
+                <h1 className="text-lg md:text-2xl font-bold text-neutral-900 tracking-tight leading-none">
                   {isPreviewMode ? <>Analysis <span className="text-primary">Preview</span></> : <>Analysis <span className="text-primary">Report</span></>}
                 </h1>
                 {rubricData?.rubric_name && (
@@ -1345,50 +1345,46 @@ const AnalysisResults: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 md:space-x-3">
             {rubricData?.rubric_id && (
               <Button
                 variant="outline"
-                className="rounded-xl py-3 px-6 font-bold text-[10px] uppercase tracking-widest border-primary-200 text-primary hover:bg-primary-50"
+                className="rounded-xl py-2 md:py-3 px-3 md:px-6 font-bold text-[10px] uppercase tracking-widest border-primary-200 text-primary hover:bg-primary-50"
                 onClick={handlePreviewRubric}
+                title="View Rubric"
               >
-                <ClipboardList className="w-4 h-4 mr-2" />
-                View Rubric
+                <ClipboardList className="w-4 h-4 md:mr-2" />
+                <span className="hidden lg:inline">View Rubric</span>
               </Button>
             )}
             {filePath && (
               <Button
                 variant="outline"
-                className="rounded-xl py-3 px-6 font-bold text-[10px] uppercase tracking-widest border-neutral-200"
+                className="rounded-xl py-2 md:py-3 px-3 md:px-6 font-bold text-[10px] uppercase tracking-widest border-neutral-200"
                 onClick={() => setIsViewerOpen(true)}
+                title="View Original"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                View Original
+                <Eye className="w-4 h-4 md:mr-2" />
+                <span className="hidden lg:inline">View Original</span>
               </Button>
             )}
             <Button
               variant="primary"
               onClick={handleExportPDF}
-              className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-3 px-6 font-bold text-[10px] uppercase tracking-widest"
+              className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-2 md:py-3 px-4 md:px-6 font-bold text-[10px] uppercase tracking-widest"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
+              <Download className="w-4 h-4 md:mr-2" />
+              <span className="hidden sm:inline">Export Report</span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main 50/50 Split-Screen Layout */}
-      <div className="flex-1 overflow-hidden">
-        <div 
-          className="h-full"
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr',
-          }}
-        >
+      {/* Main Split-Screen Layout - Responsive grid */}
+      <div className="flex-1 overflow-x-hidden overflow-y-auto md:overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 h-full">
           {/* Left Panel - Essay Text */}
-          <div className="relative h-full flex flex-col border-r border-neutral-200 bg-white overflow-hidden">
+          <div className="relative h-[60vh] md:h-full flex flex-col border-b md:border-b-0 md:border-r border-neutral-200 bg-white overflow-hidden">
             {/* Scrollable Essay Content */}
             <div className="flex-1 overflow-y-auto">
               <div className="p-6">
@@ -1404,10 +1400,10 @@ const AnalysisResults: React.FC = () => {
           </div>
 
           {/* Right Panel - Analysis Tabs */}
-          <div className="h-full flex flex-col bg-white/30 backdrop-blur-md overflow-hidden relative z-10">
-            {/* Tabs Header */}
-            <div className="flex-shrink-0 bg-white/80 border-b border-neutral-200">
-              <div className="flex px-4">
+          <div className="h-[70vh] md:h-full flex flex-col bg-white/30 backdrop-blur-md overflow-hidden relative z-10">
+            {/* Tabs Header - Scrollable on mobile */}
+            <div className="flex-shrink-0 bg-white/80 border-b border-neutral-200 overflow-x-auto no-scrollbar">
+              <div className="flex px-4 min-w-[500px] md:min-w-0">
                 {[
                   { id: 'insights', label: 'Analysis Insights', icon: TrendingUp },
                   { id: 'feedback', label: 'Diagnostic Feedback', icon: Lightbulb },
@@ -1420,13 +1416,13 @@ const AnalysisResults: React.FC = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as 'insights' | 'feedback' | 'rubric' | 'plagiarism')}
-                      className={`relative flex-1 flex flex-col items-center justify-center py-5 transition-all duration-300 group ${
+                      className={`relative flex-1 flex flex-col items-center justify-center py-3 md:py-5 transition-all duration-300 group ${
                         isActive ? 'text-primary' : 'text-neutral-400 hover:text-neutral-700'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                         <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                         <span className={`text-[10px] font-bold uppercase tracking-widest transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{tab.label}</span>
+                         <Icon className={`w-3.5 h-3.5 md:w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                         <span className={`text-[8px] md:text-[10px] font-bold uppercase tracking-widest transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{tab.label}</span>
                       </div>
                       {isActive && (
                         <motion.div
@@ -1442,7 +1438,7 @@ const AnalysisResults: React.FC = () => {
             </div>
 
             {/* Tab Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
               {activeTab === 'insights' && (
                 <AnalysisMetrics 
                   analysis={analysis} 

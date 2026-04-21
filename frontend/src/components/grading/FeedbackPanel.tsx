@@ -50,7 +50,7 @@ export function FeedbackPanel({ recommendations }: FeedbackPanelProps) {
         <div className="p-4 bg-success-50/50 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
           <Award className="w-10 h-10 text-success-default" />
         </div>
-        <p className="text-2xl font-black text-neutral-900 tracking-tight mb-2">Excellent Technical Merit</p>
+        <p className="text-xl md:text-2xl font-black text-neutral-900 tracking-tight mb-2">Excellent Technical Merit</p>
         <p className="text-sm font-medium text-neutral-500 max-w-xs mx-auto">
           No structural anomalies detected. The manuscript demonstrates high-tier academic proficiency.
         </p>
@@ -106,8 +106,8 @@ export function FeedbackPanel({ recommendations }: FeedbackPanelProps) {
                 variant="glass"
                 className={`relative border border-white/60 shadow-sm overflow-hidden border-l-4 ${priorityColor} ${bgColor}`}
               >
-                <div className="flex items-start gap-4">
-                  <div className={`p-2 bg-white rounded-xl shadow-sm ${iconColor} mt-1`}>
+                <div className="flex items-start gap-3 md:gap-4">
+                  <div className={`p-1.5 md:p-2 bg-white rounded-xl shadow-sm ${iconColor} mt-1`}>
                     {getPriorityIcon(recommendation.priority)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -122,7 +122,7 @@ export function FeedbackPanel({ recommendations }: FeedbackPanelProps) {
                       <span className="text-neutral-300">|</span>
                       <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{recommendation.dimension}</span>
                     </div>
-                    <p className="text-lg font-black text-neutral-900 tracking-tight mb-2 leading-snug">{recommendation.message}</p>
+                    <p className="text-base md:text-lg font-black text-neutral-900 tracking-tight mb-2 leading-snug">{recommendation.message}</p>
                     {recommendation.suggestion && (
                       <p className="text-xs font-medium text-neutral-500 mb-4 leading-relaxed">{recommendation.suggestion}</p>
                     )}
@@ -135,8 +135,8 @@ export function FeedbackPanel({ recommendations }: FeedbackPanelProps) {
                         </div>
                         <ul className="space-y-2">
                           {recommendation.action_items.slice(0, 3).map((item, itemIdx) => (
-                            <li key={itemIdx} className="flex items-start gap-3 text-xs bg-white/30 p-2 rounded-xl border border-white/40 group hover:bg-white/60 transition-colors">
-                              <div className="p-1 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors mt-0.5">
+                            <li key={itemIdx} className="flex items-start gap-2 md:gap-3 text-xs bg-white/30 p-2 rounded-xl border border-white/40 group hover:bg-white/60 transition-colors">
+                              <div className="p-0.5 md:p-1 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors mt-0.5">
                                 <ArrowRight className="w-2.5 h-2.5 text-primary" />
                               </div>
                               <span className="font-medium text-neutral-600 leading-normal">{item}</span>

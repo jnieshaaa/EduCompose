@@ -1,9 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
+import type { HTMLMotionProps } from "framer-motion";
 
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
+interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?:
     | "primary"
     | "secondary"
@@ -12,14 +11,9 @@ interface ButtonProps {
     | "warning"
     | "error"
     | "ghost"
-    | "outline"; // FIX C: Added 'outline' variant
+    | "outline";
   size?: "sm" | "md" | "lg";
-  disabled?: boolean;
   loading?: boolean;
-  className?: string;
-  type?: "button" | "submit" | "reset";
-  /** Associates a submit button with a form by id (button outside the form element). */
-  form?: string;
   asChild?: boolean;
 }
 
