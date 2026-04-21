@@ -253,6 +253,9 @@ export function CourseSectionsView({
     if (selectedProgramIds.length === 0) return;
     setIsCreating(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) throw new Error("Not authenticated");
+
       let courseLoadId: string;
       const { data: existingLoad } = await supabase
         .from("teacher_course_loads")
