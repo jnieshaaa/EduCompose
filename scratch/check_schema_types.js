@@ -1,43 +1,38 @@
-
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config({ path: '../frontend/.env.local' });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkSchema() {
-  console.log("Checking database schema for ID types...");
-  
-  // We'll use a hacky way to check types by querying information_schema if possible,
-  // or just querying one row and checking the value format.
-  
-  const tables = ['essays', 'essay_activities', 'essay_analysis_results', 'students'];
-  
-  for (const table of tables) {
-    try {
-      const { data, error } = await supabase.from(table).select('*').limit(1);
-      if (error) {
-        console.error(`Error querying table ${table}:`, error.message);
-        continue;
-      }
-      
-      console.log(`\n--- Table: ${table} ---`);
-      if (data && data.length > 0) {
-        Object.keys(data[0]).forEach(key => {
-          const val = data[0][key];
-          if (key.includes('id')) {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(val));
-            console.log(`${key}: ${val} (Type: ${typeof val}, Is UUID: ${isUuid})`);
-          }
-        });
-      } else {
-        console.log("No data found in table to check types.");
-      }
-    } catch (err) {
-      console.error(`Unexpected error for ${table}:`, err);
-    }
+async function checkTypes() {
+  // Query information_schema
+  const { data, error } = await supabase.rpc('check_column_types', { table_name: 'essay_analysis_results' });
+
+  if (error) {
+    // If RPC doesn't exist, try a direct query to information_schema via a trick or just guess
+    console.error('Error checking types:', error);
+    
+    // Fallback: try to insert a uuid and see what happens, or just look at the error hints
+  } else {
+    console.log('Column types:', data);
   }
 }
 
-checkSchema();
+// Since I can't easily add RPCs, I'll use a standard query that might work if permissions allow
+async function checkViaSelect() {
+    const { data, error } = await supabase
+        .from('essay_analysis_results')
+        .select('*')
+        .limit(1);
+    
+    if (data && data.length > 0) {
+        console.log('Sample Data Key Types:');
+        for (const [key, value] of Object.entries(data[0])) {
+            console.log(`${key}: ${typeof value} (Value: ${value})`);
+        }
+    }
+}
+
+checkViaSelect();

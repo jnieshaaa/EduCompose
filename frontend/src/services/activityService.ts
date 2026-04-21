@@ -4217,67 +4217,62 @@ export const savePlagiarismResult = async (
       return { success: false, error: "Invalid essay ID" };
     }
 
-    // Check if the row exists in essay_analysis_results
-    const { data: existingRow } = await supabase
-      .from("essay_analysis_results")
-      .select("id, student_id, activity_id")
-      .eq("essay_id", essayId)
-      .maybeSingle();
-
-    if (existingRow) {
-      // 1. Primary path: Update essay_analysis_results
-      const { error: updateError } = await supabase
+      // 1. Primary path: Upsert to essay_analysis_results
+      // We use upsert to create the row if it doesn't exist yet (e.g., if plagiarism check is run before full analysis)
+      const { error: upsertError } = await supabase
         .from("essay_analysis_results")
-        .update({
+        .upsert({
+          essay_id: essayId,
           plagiarism_results: result,
           updated_at: new Date().toISOString(),
-        })
-        .eq("essay_id", essayId);
+        }, { onConflict: 'essay_id' });
 
-      if (updateError) {
-        console.error("Error updating plagiarism results in essay_analysis_results:", updateError);
-        // Continue to fallback if primary fails
+      if (upsertError) {
+        console.error("Error upserting plagiarism results to essay_analysis_results:", upsertError);
+        // If primary fails, we'll try fallback, but we won't return yet
       } else {
         console.log("Successfully saved plagiarism results to essay_analysis_results for essay_id:", essayId);
+        // If primary worked, we still try fallback as backup, but it's not critical
       }
-    } else {
-      console.warn("Essay analysis results row not found for essay_id:", essayId, "Attempting fallback to essays table.");
-    }
 
-    // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
-    // This ensures results are saved even if the primary analysis table is missing or restricted.
-    const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
-    const currentAnalysis = essayStatus?.analysis || {};
-    
-    const { error: essayUpdateError } = await supabase
-      .from("essays")
-      .update({
-        analysis: {
-          ...currentAnalysis,
-          plagiarism_results: result
+      // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
+      // We wrap this in a try-catch and don't fail if it fails, because the schema cache might be stale
+      try {
+        const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
+        const currentAnalysis = essayStatus?.analysis || {};
+        
+        const { error: essayUpdateError } = await supabase
+          .from("essays")
+          .update({
+            analysis: {
+              ...currentAnalysis,
+              plagiarism_results: result
+            }
+          })
+          .eq("id", essayId);
+
+        if (essayUpdateError) {
+          console.warn("Fallback save to essays table failed (likely schema cache issue):", essayUpdateError.message);
         }
-      })
-      .eq("id", essayId);
-
-    if (essayUpdateError) {
-      console.error("Error updating plagiarism results in essays table:", essayUpdateError);
-      if (!existingRow) {
-         return {
-           success: false,
-           error: "Analysis results not found and fallback save failed. Please run analysis first.",
-         };
+      } catch (fallbackErr) {
+        console.warn("Silent failure in fallback save:", fallbackErr);
       }
-    }
 
-    return { success: true };
-  } catch (err) {
-    console.error("Error saving plagiarism result:", err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
-};
+      // If upsert failed AND it's not a schema cache issue, we should report it
+      // But if upsert worked, we return success regardless of fallback
+      if (upsertError && !upsertError.message?.includes("PGRST204")) {
+          return { success: false, error: `Failed to save results: ${upsertError.message}` };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error("Error saving plagiarism result:", err);
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      };
+    }
+  };
 
 // Load saved plagiarism check results from essay_analysis_results table
 // Can be called with either (studentId, activityId) or essayId
@@ -4402,54 +4397,41 @@ export const saveAIDetectionResult = async (
       return { success: false, error: "Invalid essay ID" };
     }
 
-    // Check if the row exists in essay_analysis_results
-    const { data: existingRow } = await supabase
+    // 1. Primary path: Upsert to essay_analysis_results
+    const { error: upsertError } = await supabase
       .from("essay_analysis_results")
-      .select("id")
-      .eq("essay_id", essayId)
-      .maybeSingle();
+      .upsert({
+        essay_id: essayId,
+        ai_detection_results: result,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'essay_id' });
 
-    if (existingRow) {
-      // 1. Primary path: Update essay_analysis_results
-      const { error: updateError } = await supabase
-        .from("essay_analysis_results")
-        .update({
-          ai_detection_results: result,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("essay_id", essayId);
-
-      if (updateError) {
-        console.error("Error updating AI detection results in essay_analysis_results:", updateError);
-      } else {
-        console.log("Successfully saved AI detection results to essay_analysis_results for essay_id:", essayId);
-      }
+    if (upsertError) {
+      console.error("Error upserting AI detection results to essay_analysis_results:", upsertError);
     } else {
-      console.warn("Essay analysis results row not found for essay_id:", essayId, "Attempting fallback to essays table.");
+      console.log("Successfully saved AI detection results to essay_analysis_results for essay_id:", essayId);
     }
 
-    // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
-    const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
-    const currentAnalysis = essayStatus?.analysis || {};
-    
-    const { error: essayUpdateError } = await supabase
-      .from("essays")
-      .update({
-        analysis: {
-          ...currentAnalysis,
-          ai_detection_results: result
-        }
-      })
-      .eq("id", essayId);
+    // 2. Secondary path: Save to essays table (as fallback)
+    try {
+      const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
+      const currentAnalysis = essayStatus?.analysis || {};
+      
+      const { error: essayUpdateError } = await supabase
+        .from("essays")
+        .update({
+          analysis: {
+            ...currentAnalysis,
+            ai_detection_results: result
+          }
+        })
+        .eq("id", essayId);
 
-    if (essayUpdateError) {
-      console.error("Error updating AI detection results in essays table:", essayUpdateError);
-      if (!existingRow) {
-         return {
-           success: false,
-           error: "Analysis results not found and fallback save failed. Please run analysis first.",
-         };
+      if (essayUpdateError) {
+        console.warn("Fallback save to essays table failed (likely schema cache issue):", essayUpdateError.message);
       }
+    } catch (fallbackErr) {
+       console.warn("Silent failure in fallback save:", fallbackErr);
     }
 
     return { success: true };

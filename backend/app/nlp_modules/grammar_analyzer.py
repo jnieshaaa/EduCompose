@@ -125,12 +125,14 @@ class GrammarAnalyzer:
                     continue
                 try:
                     # Verify model existence/accessibility
+                    # With newer SDK, try just the string first
                     client.models.get(model=model_name)
                     self.gemini_model = model_name
                     logger.info(f"Gemini client initialized with model: {model_name}")
                     break
                 except Exception as model_error:
                     last_error = model_error
+                    # If it's a 404, we'll try the next candidate
                     logger.debug(f"Model {model_name} failed: {model_error}")
             
             if not self.gemini_model:

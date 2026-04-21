@@ -75,7 +75,7 @@ export const markNotificationAsRead = async (
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
-      .eq("id", parseInt(notificationId, 10))
+      .eq("id", notificationId)
       .eq("user_id", teacherId);
 
     if (error) {

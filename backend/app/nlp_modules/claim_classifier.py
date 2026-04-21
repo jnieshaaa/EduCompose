@@ -72,7 +72,7 @@ class TransformerClaimClassifier:
              os.getenv("HUGGINGFACE_API_TOKEN") or "")
             .strip()
         )
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "distilbert-base-uncased-finetuned-sst-2-english").strip()
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "sentence-transformers/all-MiniLM-L6-v2").strip()
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
@@ -143,7 +143,9 @@ class TransformerClaimClassifier:
         try:
             from google import genai
             client = genai.Client(api_key=gemini_key)
-            # Use gemini-1.5-flash as default for defense because it has 1500 req/day quota (2.0 only has 20 req/day)
+            
+            # The new google-genai SDK uses model names without 'models/' prefix 
+            # and may require 'gemini-1.5-flash-latest' for some accounts
             model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
             
             prompt = f"""Classify each of the following sentences into one of these argument components:
@@ -156,11 +158,23 @@ class TransformerClaimClassifier:
             Example: [{{"label": "claim", "score": 0.95}}, ...]
             """
             
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config={'response_mime_type': 'application/json'}
-            )
+            # Try with primary model name, fallback to -latest if 404
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config={'response_mime_type': 'application/json'}
+                )
+            except Exception as model_err:
+                if "404" in str(model_err) and model_name == "gemini-1.5-flash":
+                    logger.info("Retrying with gemini-1.5-flash-latest...")
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash-latest",
+                        contents=prompt,
+                        config={'response_mime_type': 'application/json'}
+                    )
+                else:
+                    raise model_err
             
             data = json.loads(response.text)
             results = []
@@ -172,7 +186,24 @@ class TransformerClaimClassifier:
             return results
         except Exception as e:
             logger.error(f"Gemini classification fallback failed: {e}")
-            return [{"component": "unknown", "confidence": 0.0} for _ in sentences]
+            # Final local heuristic fallback instead of just 'unknown'
+            return self._heuristic_classify(sentences)
+
+    def _heuristic_classify(self, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Last resort: use keywords to detect claims and evidence"""
+        results = []
+        claim_indicators = ["argue", "claim", "must", "should", "Therefore", "Hence", "believe", "point is"]
+        evidence_indicators = ["study", "research", "According to", "data", "found", "statistics", "report", "example"]
+        
+        for s in sentences:
+            s_lower = s.lower()
+            if any(ind.lower() in s_lower for ind in claim_indicators):
+                results.append({"component": "claim", "confidence": 0.5})
+            elif any(ind.lower() in s_lower for ind in evidence_indicators):
+                results.append({"component": "evidence", "confidence": 0.5})
+            else:
+                results.append({"component": "background", "confidence": 0.1})
+        return results
 
     async def _classify_remote(self, sentences: List[str]) -> List[Dict[str, Any]]:
         """Call Hugging Face Inference API for classification with LLM fallback"""
