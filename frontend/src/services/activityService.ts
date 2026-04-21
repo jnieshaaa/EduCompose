@@ -345,7 +345,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
     // Fetch all rubrics and filter in JavaScript to avoid 406 error
     const { data: allRubrics, error: fetchError } = await supabase
       .from("rubrics")
-      .select("id, name, user_id");
+      .select("id, name, teacher_id");
 
     if (fetchError) {
       console.error("Error fetching existing rubrics:", fetchError);
@@ -355,7 +355,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 
     const existingNames = new Set(
       (allRubrics || [])
-        .filter((r) => r.user_id === null)
+        .filter((r) => r.teacher_id === null)
         .map((r) => r.name.toLowerCase()),
     );
 
@@ -375,7 +375,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
             criteria: template.criteria,
             programs: [], // Platform rubrics don't have specific programs
             grading_intensity: template.type || "Basic",
-            user_id: null, // Platform rubric
+            teacher_id: null, // Platform rubric
           })
           .select("id")
           .single();
@@ -1105,19 +1105,19 @@ export const fetchRubrics = async (): Promise<{
     // Fetch platform rubrics from database
     const { data: allRubricsData, error: allRubricsError } = await supabase
       .from("rubrics")
-      .select("id, name, description, grading_intensity, user_id")
+      .select("id, name, description, grading_intensity, teacher_id")
       .order("name", { ascending: true });
 
-    // Filter platform rubrics (user_id is null) in JavaScript
+    // Filter platform rubrics (teacher_id is null) in JavaScript
     const platformData =
-      allRubricsData?.filter((r) => r.user_id === null) || [];
+      allRubricsData?.filter((r) => r.teacher_id === null) || [];
     const platformError = allRubricsError;
 
     // Fetch teacher rubrics from database
     const { data: teacherData, error: teacherError } = await supabase
       .from("rubrics")
       .select("id, name, description, grading_intensity")
-      .eq("user_id", teacherId)
+      .eq("teacher_id", teacherId)
       .order("name", { ascending: true });
 
     if (platformError) {
@@ -1137,11 +1137,11 @@ export const fetchRubrics = async (): Promise<{
       // Fetch again after initialization
       const { data: refreshedAllRubrics } = await supabase
         .from("rubrics")
-        .select("id, name, description, grading_intensity, user_id")
+        .select("id, name, description, grading_intensity, teacher_id")
         .order("name", { ascending: true });
 
       const refreshedPlatform = (refreshedAllRubrics || []).filter(
-        (r) => r.user_id === null,
+        (r) => r.teacher_id === null,
       );
 
       if (refreshedPlatform.length > 0) {

@@ -32,7 +32,7 @@ const fetchPlatformRubrics = async (): Promise<
     const { data: platformData, error } = await supabase
       .from("rubrics")
       .select("id, name")
-      .is("created_by", null)
+      .is("teacher_id", null)
       .order("name", { ascending: true });
 
     if (!error && platformData && platformData.length > 0) {
