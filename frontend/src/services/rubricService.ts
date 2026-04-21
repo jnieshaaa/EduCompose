@@ -103,19 +103,20 @@ export const fetchTeacherId = async (): Promise<number | null> => {
 };
 
 // Load rubrics for a teacher
-export const fetchTeacherRubrics = async (
-  teacherUUID: string
-): Promise<(RubricTemplate & {
+export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
   programsList?: string[];
   fullData?: Record<string, unknown>;
 })[]> => {
   try {
+    const teacherId = await fetchTeacherId();
+    if (!teacherId) return [];
+
     const { data: rubricsData, error: rubricsError } = await supabase
       .from("rubrics")
       .select(
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
-      .eq("teacher_id", teacherUUID) // Use teacher_id (UUID)
+      .eq("teacher_id", teacherId) // Use numeric teacher_id
       .order("created_at", { ascending: false });
 
 
@@ -222,16 +223,18 @@ export const saveRubric = async (
     gradingIntensity: string;
     programs: string[];
     criteria: CriteriaRow[];
-  },
-  teacherUUID: string
+  }
 ) => {
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
+
+  const teacherId = await fetchTeacherId();
+  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
 
   // Check if a rubric with the same name already exists for this teacher
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherUUID)
+    .eq("teacher_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -256,7 +259,7 @@ export const saveRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: teacherUUID,
+      teacher_id: teacherId, // Use numeric teacher_id
     })
     .select()
     .maybeSingle();
@@ -276,16 +279,18 @@ export const saveTemplateRubric = async (
     description: string;
     criteria: CriteriaRow[];
     type: string;
-  },
-  teacherUUID: string
+  }
 ) => {
   const rubricName = rubric.name?.trim() || "Untitled Rubric";
+
+  const teacherId = await fetchTeacherId();
+  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
 
   // Check if a rubric with the same name already exists for this teacher
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherUUID)
+    .eq("teacher_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -310,7 +315,7 @@ export const saveTemplateRubric = async (
       criteria: rubric.criteria,
       programs: [], // Template rubrics don't have specific programs
       grading_intensity: rubric.type, // Use type as intensity
-      teacher_id: teacherUUID,
+      teacher_id: teacherId, // Use numeric teacher_id
     })
     .select()
     .maybeSingle();
@@ -325,7 +330,14 @@ export const saveTemplateRubric = async (
 
 // Delete rubric from Supabase
 export const deleteRubric = async (rubricId: string | number): Promise<void> => {
-  const { error } = await supabase.from("rubrics").delete().eq("id", rubricId);
+  const teacherId = await fetchTeacherId();
+  if (!teacherId) return;
+
+  const { error } = await supabase
+    .from("rubrics")
+    .delete()
+    .eq("id", rubricId)
+    .eq("teacher_id", teacherId); // Use numeric teacher_id
 
   if (error) {
     console.error("Error deleting rubric:", error);
@@ -341,16 +353,18 @@ export const updateRubric = async (
     gradingIntensity: string;
     programs: string[];
     criteria: CriteriaRow[];
-  },
-  teacherUUID: string
+  }
 ) => {
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
+
+  const teacherId = await fetchTeacherId();
+  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
 
   // Check if another rubric with the same name already exists for this teacher (excluding current rubric)
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherUUID)
+    .eq("teacher_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -378,10 +392,10 @@ export const updateRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: teacherUUID,
+      teacher_id: teacherId,
     })
     .eq("id", rubricId)
-    .eq("teacher_id", teacherUUID) // Ensure only the owner can update
+    .eq("teacher_id", teacherId) // Ensure only the owner can update
     .select()
     .maybeSingle();
 

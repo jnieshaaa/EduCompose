@@ -1280,7 +1280,18 @@ const AnalysisResults: React.FC = () => {
       const { fetchRubricById } = await import('../services/rubricService');
       const dbRubric = await fetchRubricById(rubricData.rubric_id);
       if (dbRubric && dbRubric.fullData) {
-        setPreviewRubric(dbRubric.fullData as any);
+        const full = dbRubric.fullData as any;
+        // Map to PlatformRubric format to satisfy the state type
+        const mappedRubric: PlatformRubric = {
+          id: full.id,
+          name: full.name,
+          description: full.description || "",
+          type: (full.type as any) || "Basic",
+          criteria: full.criteria || [],
+          programs: Array.isArray(full.programs) ? full.programs.length : 0,
+          lastUpdated: dbRubric.lastUsed || new Date().toISOString()
+        };
+        setPreviewRubric(mappedRubric);
         setShowRubricPreview(true);
       }
     } catch (err) {

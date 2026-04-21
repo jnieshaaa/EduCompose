@@ -73,7 +73,7 @@ export function RubricsTab() {
         const id = await fetchTeacherUUID();
         if (id) {
           setTeacherId(id);
-          const rubrics = await fetchTeacherRubrics(id);
+          const rubrics = await fetchTeacherRubrics();
           setSavedRubrics(rubrics);
         }
       } catch (err) {
@@ -191,7 +191,7 @@ export function RubricsTab() {
       let data;
       if (editingRubricId) {
         // Update existing rubric
-        data = await updateRubric(editingRubricId, rubricFormData, teacherId);
+        data = await updateRubric(editingRubricId, rubricFormData);
 
         // Extract programs from dedicated column
         const programs = (data.programs as string[]) || [];
@@ -216,7 +216,7 @@ export function RubricsTab() {
         showSuccess("Rubric updated successfully!");
       } else {
         // Create new rubric
-        data = await saveRubric(rubricFormData, teacherId);
+        data = await saveRubric(rubricFormData);
 
         // Extract programs from dedicated column
         const programs = (data.programs as string[]) || [];
@@ -289,7 +289,7 @@ export function RubricsTab() {
     }
 
     try {
-      const data = await saveTemplateRubric(rubric, teacherId);
+      const data = await saveTemplateRubric(rubric);
 
       // Map to RubricTemplate format and add to local state
       const newRubric: RubricTemplate & { programsList?: string[] } = {

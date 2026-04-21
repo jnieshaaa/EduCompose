@@ -468,9 +468,10 @@ export const createActivity = async (
   activity: NewActivityForm,
 ): Promise<EssayActivity[]> => {
   try {
-    const teacherId = await fetchTeacherUUID();
-    if (!teacherId) {
-      throw new Error("Teacher UUID not available");
+    const teacherUUID = await fetchTeacherUUID();
+    const teacherId = await fetchTeacherId(); // Get numeric ID for bigint columns
+    if (!teacherUUID || !teacherId) {
+      throw new Error("Teacher identification not available");
     }
 
     // For now, store first selected course/section or null if empty (meaning "all")
@@ -480,7 +481,7 @@ export const createActivity = async (
 
     if (activity.suggestedRubric) {
       // 1. Save the AI suggested rubric first
-      // We don't need teacherNumericId anymore since we use teacherId (UUID)
+      // We use the numeric teacherId for the bigint column
       const { data: newRubric, error: rubricError } = await supabase
         .from("rubrics")
         .insert({
@@ -488,7 +489,7 @@ export const createActivity = async (
           description: activity.suggestedRubric.description,
           criteria: activity.suggestedRubric.criteria,
           grading_intensity: activity.suggestedRubric.grading_intensity,
-          teacher_id: teacherId, // Correctly use UUID
+          teacher_id: teacherId, // Use numeric ID (bigint)
         })
         .select("id")
         .single();
