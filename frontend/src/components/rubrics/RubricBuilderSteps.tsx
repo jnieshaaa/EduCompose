@@ -223,11 +223,11 @@ export function RubricCriteriaEditor({
     onFormChange({ criteria: [...criteriaList, newCriteria] });
   };
 
-  const handleDeleteCriteria = (criteriaId: number) => {
+  const handleDeleteCriteria = (criteriaId: string | number) => {
     onFormChange({ criteria: criteriaList.filter((c) => c.id !== criteriaId) });
   };
 
-  const handleCriteriaTitleChange = (criteriaId: number, newTitle: string) => {
+  const handleCriteriaTitleChange = (criteriaId: string | number, newTitle: string) => {
     onFormChange({
       criteria: criteriaList.map((c) =>
         c.id === criteriaId ? { ...c, title: newTitle } : c,
@@ -236,7 +236,7 @@ export function RubricCriteriaEditor({
   };
 
   // --- Score Level Handlers ---
-  const handleAddScoreLevel = (criteriaId: number) => {
+  const handleAddScoreLevel = (criteriaId: string | number) => {
     onFormChange({
       criteria: criteriaList.map((criteria) => {
         if (criteria.id === criteriaId) {
@@ -257,7 +257,7 @@ export function RubricCriteriaEditor({
     });
   };
 
-  const handleDeleteScoreLevel = (criteriaId: number, scoreId: number) => {
+  const handleDeleteScoreLevel = (criteriaId: string | number, scoreId: string | number) => {
     onFormChange({
       criteria: criteriaList.map((criteria) => {
         if (criteria.id === criteriaId) {
@@ -272,8 +272,8 @@ export function RubricCriteriaEditor({
   };
 
   const handleScoreChange = (
-    criteriaId: number,
-    scoreId: number,
+    criteriaId: string | number,
+    scoreId: string | number,
     field: keyof ScoreLevel,
     value: string | number,
   ) => {

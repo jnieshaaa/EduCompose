@@ -46,7 +46,7 @@ export function SettingsTab() {
   const [settings, setSettings] = useState<TeacherSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [rubrics, setRubrics] = useState<{ id: number; name: string }[]>([]);
+  const [rubrics, setRubrics] = useState<{ id: string | number; name: string }[]>([]);
 
   // Load settings and rubrics on mount
   useEffect(() => {
