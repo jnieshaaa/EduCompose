@@ -1,7 +1,7 @@
 // src/constants/rubrics.ts
 
 export interface Criterion {
-  id: number;
+  id: string | number;
   name: string;
   weight: number;
   range: string;
@@ -10,7 +10,7 @@ export interface Criterion {
 }
 
 export interface RubricTemplate {
-  id: number;
+  id: string | number;
   name: string;
   criteria: number;
   programs: number;

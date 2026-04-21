@@ -20,15 +20,15 @@ interface RubricPreviewModalProps {
   rubric:
     | PlatformRubric
     | {
-        id: number;
+        id: string | number;
         name: string;
         description: string;
         type: string;
         criteria: Array<{
-          id: number;
+          id: string | number;
           title: string;
           scores: Array<{
-            id: number;
+            id: string | number;
             title: string;
             points: number;
             description: string;

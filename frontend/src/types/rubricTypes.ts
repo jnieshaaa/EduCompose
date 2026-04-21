@@ -3,7 +3,7 @@
 export type RubricView = "list" | "options";
 
 export interface SupabaseRubricRow {
-  id: number;
+  id: string;
   name: string;
   description?: string | null;
   criteria: unknown; // JSONB column, can be array or object

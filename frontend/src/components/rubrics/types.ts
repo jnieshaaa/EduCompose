@@ -1,14 +1,14 @@
 // Shared types for the Rubric Builder
 
 export interface ScoreLevel {
-  id: number;
+  id: string | number;
   title: string;
   points: number;
   description: string;
 }
 
 export interface CriteriaRow {
-  id: number;
+  id: string | number;
   title: string;
   scores: ScoreLevel[];
 }
@@ -22,7 +22,7 @@ export interface RubricFormData {
 
 // Full rubric data structure for platform rubrics
 export interface PlatformRubric {
-  id: number;
+  id: string | number;
   name: string;
   description: string;
   type: 'Basic' | 'Professional' | 'Advanced' | 'Technical';

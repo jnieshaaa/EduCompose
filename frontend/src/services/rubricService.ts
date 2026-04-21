@@ -161,7 +161,7 @@ export const fetchTeacherRubrics = async (
   }
 };
 
-// Save platform rubric (admin only - created_by is null)
+// Save platform rubric (admin only - teacher_id is null)
 export const savePlatformRubric = async (
   rubricFormData: {
     name: string;
@@ -177,7 +177,7 @@ export const savePlatformRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .is("user_id", null) // Platform rubrics
+    .is("teacher_id", null) // Platform rubrics
     .ilike("name", rubricName);
 
   if (checkError) {
@@ -201,7 +201,7 @@ export const savePlatformRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      user_id: null, // Platform rubric
+      teacher_id: null, // Platform rubric
     })
     .select()
     .maybeSingle();
@@ -223,7 +223,7 @@ export const saveRubric = async (
     programs: string[];
     criteria: CriteriaRow[];
   },
-  teacherId: number
+  teacherUUID: string
 ) => {
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
 
@@ -231,7 +231,7 @@ export const saveRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("user_id", teacherId)
+    .eq("teacher_id", teacherUUID)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -256,7 +256,7 @@ export const saveRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      user_id: teacherId,
+      teacher_id: teacherUUID,
     })
     .select()
     .maybeSingle();
@@ -277,7 +277,7 @@ export const saveTemplateRubric = async (
     criteria: CriteriaRow[];
     type: string;
   },
-  teacherId: number
+  teacherUUID: string
 ) => {
   const rubricName = rubric.name?.trim() || "Untitled Rubric";
 
@@ -285,7 +285,7 @@ export const saveTemplateRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("user_id", teacherId)
+    .eq("teacher_id", teacherUUID)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -310,7 +310,7 @@ export const saveTemplateRubric = async (
       criteria: rubric.criteria,
       programs: [], // Template rubrics don't have specific programs
       grading_intensity: rubric.type, // Use type as intensity
-      user_id: teacherId,
+      teacher_id: teacherUUID,
     })
     .select()
     .maybeSingle();
@@ -324,7 +324,7 @@ export const saveTemplateRubric = async (
 };
 
 // Delete rubric from Supabase
-export const deleteRubric = async (rubricId: number): Promise<void> => {
+export const deleteRubric = async (rubricId: string | number): Promise<void> => {
   const { error } = await supabase.from("rubrics").delete().eq("id", rubricId);
 
   if (error) {
@@ -335,14 +335,14 @@ export const deleteRubric = async (rubricId: number): Promise<void> => {
 
 // Update rubric in Supabase
 export const updateRubric = async (
-  rubricId: number,
+  rubricId: string,
   rubricFormData: {
     name: string;
     gradingIntensity: string;
     programs: string[];
     criteria: CriteriaRow[];
   },
-  teacherId: number
+  teacherUUID: string
 ) => {
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
 
@@ -350,7 +350,7 @@ export const updateRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("user_id", teacherId)
+    .eq("teacher_id", teacherUUID)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -378,9 +378,10 @@ export const updateRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
+      teacher_id: teacherUUID,
     })
     .eq("id", rubricId)
-    .eq("user_id", teacherId) // Ensure only the owner can update
+    .eq("teacher_id", teacherUUID) // Ensure only the owner can update
     .select()
     .maybeSingle();
 

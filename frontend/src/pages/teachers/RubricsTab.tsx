@@ -22,7 +22,7 @@ import {
   initialCriteria,
 } from "../../components/rubrics/types";
 import {
-  fetchTeacherId,
+  fetchTeacherUUID,
   fetchTeacherRubrics,
   saveRubric,
   saveTemplateRubric,
@@ -50,13 +50,13 @@ export function RubricsTab() {
     })[]
   >([]);
   const [isLoadingRubrics, setIsLoadingRubrics] = useState(true);
-  const [teacherId, setTeacherId] = useState<number | null>(null);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
 
   // Form state for the rubric builder
   const [rubricFormData, setRubricFormData] = useState<RubricFormData>(
     defaultRubricFormData
   );
-  const [editingRubricId, setEditingRubricId] = useState<number | null>(null);
+  const [editingRubricId, setEditingRubricId] = useState<string | null>(null);
 
   // Preview modal state
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -70,7 +70,7 @@ export function RubricsTab() {
     const loadData = async () => {
       setIsLoadingRubrics(true);
       try {
-        const id = await fetchTeacherId();
+        const id = await fetchTeacherUUID();
         if (id) {
           setTeacherId(id);
           const rubrics = await fetchTeacherRubrics(id);
@@ -111,7 +111,7 @@ export function RubricsTab() {
   };
 
   // Edit rubric handler
-  const handleEditRubric = async (rubricId: number) => {
+  const handleEditRubric = async (rubricId: string | number) => {
     try {
       const rubric = await fetchRubricById(rubricId);
       if (!rubric || !rubric.fullData) {
@@ -134,7 +134,7 @@ export function RubricsTab() {
         criteria: fullData.criteria || [],
       });
 
-      setEditingRubricId(rubricId);
+      setEditingRubricId(String(rubricId));
       setCurrentView("options");
       setSelectedMode("scratch");
       setActiveTab("my");
@@ -145,7 +145,7 @@ export function RubricsTab() {
   };
 
   // Delete rubric handler
-  const handleDeleteRubric = async (rubricId: number) => {
+  const handleDeleteRubric = async (rubricId: string | number) => {
     if (
       !window.confirm(
         "Are you sure you want to delete this rubric? This action cannot be undone."
