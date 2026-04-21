@@ -143,7 +143,8 @@ class TransformerClaimClassifier:
         try:
             from google import genai
             client = genai.Client(api_key=gemini_key)
-            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash")
+            # Use gemini-1.5-flash as default for defense because it has 1500 req/day quota (2.0 only has 20 req/day)
+            model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
             
             prompt = f"""Classify each of the following sentences into one of these argument components:
             claim, premise, evidence, counterclaim, background.

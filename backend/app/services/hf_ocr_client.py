@@ -92,13 +92,23 @@ def _parse_inference_response(payload: Any) -> Optional[str]:
 def ocr_pil_image(image: Image.Image, timeout: float = 120.0) -> Optional[str]:
     """
     Send a PIL image to HF Inference API; return recognized text or None.
+    Includes a fallback logic to ensure successful extraction for defense.
     """
     token = get_hf_token()
     if not token:
+        logger.warning("HF OCR: No API token found in environment.")
         return None
 
-    model = _default_model()
-    url = f"{INFERENCE_BASE}/{model}"
+    # Primary model (user defined or stable default)
+    primary_model = _default_model()
+    # Secondary model as reliable fallback
+    fallback_model = "microsoft/trocr-base-handwritten" if primary_model != "microsoft/trocr-base-handwritten" else "facebook/nougat-small"
+    
+    models_to_try = [primary_model]
+    if primary_model != fallback_model:
+        models_to_try.append(fallback_model)
+
+    img = None
     try:
         img = _resize_if_needed(image)
         data = _pil_to_jpeg_bytes(img)
@@ -107,42 +117,47 @@ def ocr_pil_image(image: Image.Image, timeout: float = 120.0) -> Optional[str]:
         return None
 
     headers = {"Authorization": f"Bearer {token}"}
-    last_error = None
-    for attempt in range(2):
-        try:
-            with httpx.Client(timeout=timeout) as client:
-                r = client.post(url, content=data, headers=headers)
-            if r.status_code == 503:
-                wait = 12 + attempt * 8
-                logger.warning(
-                    "HF OCR model cold-start (503), retrying in %ss (attempt %s/2)",
-                    wait,
-                    attempt + 1,
-                )
-                time.sleep(wait)
-                continue
-            if r.status_code != 200:
-                last_error = f"HTTP {r.status_code}: {r.text[:400]}"
-                logger.error("HF OCR request failed: %s", last_error)
-                return None
+    
+    for model in models_to_try:
+        url = f"{INFERENCE_BASE}/{model}"
+        logger.info("HF OCR: Attempting extraction with model: %s", model)
+        
+        for attempt in range(2):
             try:
-                payload = r.json()
-            except Exception as je:
-                logger.error("HF OCR invalid JSON: %s", je)
-                return None
-            text = _parse_inference_response(payload)
-            if text:
-                return text
-            logger.warning("HF OCR empty result payload: %s", str(payload)[:300])
-            return None
-        except httpx.TimeoutException as e:
-            last_error = str(e)
-            logger.warning("HF OCR timeout (attempt %s): %s", attempt + 1, e)
-            time.sleep(5)
-        except Exception as e:
-            logger.error("HF OCR request error: %s", e)
-            return None
+                with httpx.Client(timeout=timeout) as client:
+                    r = client.post(url, content=data, headers=headers)
+                
+                if r.status_code == 503:
+                    wait = 15 + attempt * 10
+                    logger.warning("HF OCR model %s cold-start, retrying in %ss...", model, wait)
+                    time.sleep(wait)
+                    continue
+                    
+                if r.status_code == 404:
+                    logger.warning("HF OCR model %s not available (404). Trying next model...", model)
+                    break # Break inner loop, try next model in models_to_try
+                
+                if r.status_code != 200:
+                    logger.error("HF OCR request failed for %s (HTTP %s): %s", model, r.status_code, r.text[:200])
+                    break # Try next model
+                
+                try:
+                    payload = r.json()
+                except Exception as je:
+                    logger.error("HF OCR invalid JSON from %s: %s", model, je)
+                    break
 
-    if last_error:
-        logger.error("HF OCR gave up: %s", last_error)
+                text = _parse_inference_response(payload)
+                if text and len(text.strip()) > 5:
+                    logger.info("HF OCR success with model %s (%d chars)", model, len(text))
+                    return text
+                
+                logger.warning("HF OCR empty result from %s, trying next model/attempt...", model)
+            except httpx.TimeoutException:
+                logger.warning("HF OCR timeout with model %s (attempt %s/2)", model, attempt + 1)
+                time.sleep(5)
+            except Exception as e:
+                logger.error("HF OCR request error for %s: %s", model, e)
+                break
+                
     return None

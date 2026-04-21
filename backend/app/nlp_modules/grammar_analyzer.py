@@ -124,8 +124,8 @@ class GrammarAnalyzer:
             if not env_model_name:
                 # Try different model names in order of preference
                 model_names = [
-                    'gemini-2.0-flash',          # Latest 2.0 flash
-                    'gemini-1.5-flash',          # Stable 1.5 flash
+                    'gemini-1.5-flash',          # 1.5 flash has higher free-tier quota (1500/day) than 2.0 (20/day)
+                    'gemini-2.0-flash',          # Fallback to 2.0 flash
                     'gemini-1.5-pro',            # Pro version
                     'gemini-pro-latest',         # Legacy latest
                 ]
