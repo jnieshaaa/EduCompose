@@ -2837,6 +2837,7 @@ export interface DuplicateEssayGroup {
     sectionName: string;
     title: string;
     submittedAt: string;
+    activityId?: string; // Track which activity this submission belongs to
   }>;
 }
 
@@ -3077,7 +3078,8 @@ export const fetchDuplicateEssays = async (
       .select(`
         id,
         course_id,
-        block_id
+        block_id,
+        title
       `)
       .eq("id", activityDbId)
       .maybeSingle();
@@ -3109,10 +3111,11 @@ export const fetchDuplicateEssays = async (
            const courseId = (blockCourseData?.teacher_program_loads as any)?.teacher_course_loads?.course_id;
            console.log(`[fetchDuplicateEssays] Found course ID via blocks: ${courseId}`);
            if (courseId) {
-              const { data: relatedActivities } = await supabase
+               const { data: relatedActivities } = await supabase
                 .from("essay_activities")
                 .select("id")
-                .overlaps("course_id", [courseId]);
+                .overlaps("course_id", [courseId])
+                .eq("title", activityData.title); // Only match same-named assignments
               
               if (relatedActivities && relatedActivities.length > 0) {
                 activityIds = [...new Set([...activityIds, ...relatedActivities.map(a => a.id)])];
@@ -3130,7 +3133,8 @@ export const fetchDuplicateEssays = async (
       const { data: relatedByCol } = await supabase
         .from("essay_activities")
         .select("id")
-        .overlaps("course_id", Array.isArray(courseIdFromCol) ? courseIdFromCol : [courseIdFromCol]);
+        .overlaps("course_id", Array.isArray(courseIdFromCol) ? courseIdFromCol : [courseIdFromCol])
+        .eq("title", activityData.title); // Only match same-named assignments
       
       if (relatedByCol && relatedByCol.length > 0) {
         activityIds = [...new Set([...activityIds, ...relatedByCol.map(a => a.id)])];
@@ -3142,7 +3146,7 @@ export const fetchDuplicateEssays = async (
     // 2. Fetch analysis results for all targeted activities (Simple pass)
     const { data: results, error } = await supabase
       .from("essay_analysis_results")
-      .select("essay_id, student_id, original_text, generated_at")
+      .select("essay_id, student_id, original_text, generated_at, activity_id")
       .in("activity_id", activityIds);
 
     if (error) {
@@ -3156,7 +3160,7 @@ export const fetchDuplicateEssays = async (
     if (analysisResults.length === 0) {
       const { data: fallbackEssays, error: essaysError } = await supabase
         .from("essays")
-        .select("id, student_id, content, title, submitted_at, block_id")
+        .select("id, student_id, content, title, submitted_at, block_id, activity_id")
         .in("activity_id", activityIds);
 
       if (essaysError) {
@@ -3170,6 +3174,7 @@ export const fetchDuplicateEssays = async (
       analysisResults = fallbackEssays.map(e => ({
         essay_id: e.id,
         student_id: e.student_id,
+        activity_id: e.activity_id, // Keep track of activity ID
         original_text: (e as any).content || "",
         _fallback_essay: e
       })) as any;
@@ -3184,7 +3189,7 @@ export const fetchDuplicateEssays = async (
     // Fetch basic essay fields
     const { data: basicEssays, error: metaError } = await supabase
       .from("essays")
-      .select("id, title, submitted_at, block_id, student_id")
+      .select("id, title, submitted_at, block_id, student_id, activity_id")
       .in("id", essayIds);
 
     if (metaError) {
@@ -3313,6 +3318,7 @@ export const fetchDuplicateEssays = async (
         sectionName: resolvedSectionName,
         title: title,
         submittedAt: submittedAt,
+        activityId: String(meta?.activity_id || fallback?.activity_id || (result as any).activity_id),
       };
 
       const contentHash = generateContentHash(originalText);
@@ -3325,13 +3331,19 @@ export const fetchDuplicateEssays = async (
     console.log(`[fetchDuplicateEssays] Content groups built:`, contentGroups.size);
 
     // Continue with similarity matching using the simple results list
-    return processSimilarityGroups(
+    const finalGroups = processSimilarityGroups(
       contentGroups,
       analysisResults.map((r) => ({
         id: String(r.essay_id),
         content: r.original_text || null,
       })),
       "content",
+    );
+
+    // 4. Narrowing filter: Only return groups that have AT LEAST ONE essay matching the requested activityId.
+    // This removes groups that are entirely composed of submissions from "Other" activities in the same course.
+    return finalGroups.filter(group => 
+      group.essays.some(e => e.activityId === activityDbId)
     );
   } catch (err) {
     console.error("Error in fetchDuplicateEssays:", err);
