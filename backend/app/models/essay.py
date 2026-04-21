@@ -16,6 +16,7 @@ class Essay(Base):
     student_id = Column(String, ForeignKey("students.id"))  # uuid
     teacher_id = Column(String, ForeignKey("users.id"))
     class_id = Column(String, ForeignKey("classes.id"))
+    activity_id = Column(String, index=True) # UUID of the activity
     submitted_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="submitted")  # submitted, analyzed, reviewed
     

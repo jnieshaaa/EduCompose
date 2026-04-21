@@ -52,6 +52,7 @@ class AnalysisResponse(BaseModel):
     diagnostic_summary: Optional[Dict[str, Any]] = None
     word_count: Optional[int] = None
     generated_at: datetime
+    rubric_scores: Optional[Dict[str, Any]] = None
 
 class BatchAnalysisRequest(BaseModel):
     essay_ids: List[int]

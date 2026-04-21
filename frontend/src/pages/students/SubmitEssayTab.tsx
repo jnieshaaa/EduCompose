@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
@@ -22,6 +22,7 @@ interface ActivityDetails {
   teacherId: string;
   teacherUUID: string;
   minWordCount: number;
+  rubricId: string | null;
 }
 
 interface SidebarPost {
@@ -60,6 +61,9 @@ export function SubmitEssayTab() {
   const [isResubmitRequested, setIsResubmitRequested] = useState(false);
   const [requestingResubmission, setRequestingResubmission] = useState(false);
   const [essayScore, setEssayScore] = useState<number | null>(null);
+  const [showRubricPreview, setShowRubricPreview] = useState(false);
+  const [previewRubric, setPreviewRubric] = useState<any | null>(null);
+  const [loadingRubric, setLoadingRubric] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -128,9 +132,10 @@ export function SubmitEssayTab() {
           instructions: actRow.instructions || "No instructions provided.",
           courseId: actRow.course_id?.[0] || "",
           term: actRow.term || "N/A",
-          teacherId: actRow.teacher_id,
+          teacherId: actRow.teacher?.auth_user_id || "",
           teacherUUID: actRow.teacher?.auth_user_id || "",
-          minWordCount: actRow.min_word_count || 150
+          minWordCount: actRow.min_word_count || 150,
+          rubricId: actRow.rubric_id || null
         });
 
         const { data: essayData } = await supabase
@@ -206,6 +211,48 @@ export function SubmitEssayTab() {
 
     loadContent();
   }, [user?.auth_id, activityIdParam]);
+
+  const handlePreviewRubric = async () => {
+    if (!activity?.rubricId) return;
+
+    setLoadingRubric(true);
+    try {
+      const { platformRubrics } = await import('../../data/rubricData');
+      
+      // 1. Try platform rubrics first
+      let numericId: number | null = null;
+      let isPlatformFormat = false;
+
+      if (activity.rubricId.startsWith('platform-')) {
+        isPlatformFormat = true;
+        const numId = parseInt(activity.rubricId.replace('platform-', ''));
+        if (!isNaN(numId)) numericId = numId;
+      } else if (!isNaN(parseInt(activity.rubricId))) {
+        numericId = parseInt(activity.rubricId);
+      }
+
+      if (numericId !== null && (isPlatformFormat || numericId <= 10)) {
+        const rubric = platformRubrics.find((r) => r.id === numericId);
+        if (rubric) {
+          setPreviewRubric(rubric);
+          setShowRubricPreview(true);
+          return;
+        }
+      }
+
+      // 2. Try DB
+      const { fetchRubricById } = await import('../../services/rubricService');
+      const dbRubric = await fetchRubricById(activity.rubricId);
+      if (dbRubric && dbRubric.fullData) {
+        setPreviewRubric(dbRubric.fullData);
+        setShowRubricPreview(true);
+      }
+    } catch (err) {
+      console.error("Failed to load rubric for preview:", err);
+    } finally {
+      setLoadingRubric(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -466,6 +513,19 @@ export function SubmitEssayTab() {
                         {isSubmitted ? 'Sent' : 'Waiting for file'}
                       </span>
                    </div>
+                   {activity.rubricId && (
+                     <div className="space-y-1 pt-2 sm:pt-0">
+                       <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">Grading Rules</p>
+                       <button
+                         onClick={handlePreviewRubric}
+                         disabled={loadingRubric}
+                         className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 transition-all text-xs font-bold"
+                       >
+                         {loadingRubric ? <Loader2 size={12} className="animate-spin" /> : <ClipboardList size={14} />}
+                         View Rubric
+                       </button>
+                     </div>
+                   )}
                 </div>
               </motion.div>
             ) : (
@@ -617,14 +677,6 @@ export function SubmitEssayTab() {
                          <p className="text-sm font-medium text-neutral-500 max-w-sm mx-auto leading-relaxed mb-8">
                             Great work! Our AI has checked your essay for grammar, flow, and strong ideas.
                          </p>
-
-                         {/* <button 
-                          onClick={() => navigate('/Student/Feedback')}
-                          className="px-10 py-4 bg-neutral-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-neutral-900/20 group"
-                         >
-                            See AI Tips
-                            <ArrowRight size={14} className="inline-block ml-2 group-hover:translate-x-1 transition-transform" />
-                         </button> */}
                       </motion.div>
                     )}
 
@@ -715,6 +767,39 @@ export function SubmitEssayTab() {
         </div>
 
       </div>
+
+      {/* Rubric Preview */}
+      {showRubricPreview && previewRubric && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl relative">
+              <div className="p-8 border-b border-neutral-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                <div>
+                  <h3 className="text-2xl font-bold text-neutral-900">{previewRubric.name}</h3>
+                  <p className="text-sm text-neutral-500">{previewRubric.description}</p>
+                </div>
+                <button 
+                  onClick={() => setShowRubricPreview(false)}
+                  className="p-3 hover:bg-neutral-100 rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto max-h-[calc(90vh-100px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {previewRubric.criteria?.map((item: any, idx: number) => (
+                    <div key={idx} className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-neutral-900">{item.name}</h4>
+                        <span className="text-[10px] font-bold text-primary uppercase bg-white px-2 py-1 rounded-lg border border-primary/10">{item.scoreRange || '0-100'}</span>
+                      </div>
+                      <p className="text-xs text-neutral-500 leading-relaxed">{item.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 }

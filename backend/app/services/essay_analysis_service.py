@@ -96,7 +96,34 @@ class EssayAnalysisService:
             Dictionary containing scores, detailed analysis, and recommendations
         """
         content = essay.content
-        return await self._perform_analysis(content, analysis_type)
+        analysis_result = await self._perform_analysis(content, analysis_type)
+
+        # Apply rubric scoring if activity has a rubric
+        rubric_id = None
+        if hasattr(essay, 'activity_id') and essay.activity_id:
+            try:
+                # Fetch rubric_id from activity
+                with engine.connect() as connection:
+                    result = connection.execute(
+                        text("SELECT rubric_id FROM essay_activities WHERE id = :activity_id"),
+                        {"activity_id": essay.activity_id}
+                    )
+                    row = result.fetchone()
+                    if row:
+                        rubric_id = row[0]
+            except Exception as e:
+                logger.warning(f"Failed to fetch rubric_id for activity {essay.activity_id}: {e}")
+
+        if rubric_id:
+            rubric_data = await self._fetch_rubric(str(rubric_id))
+            if rubric_data:
+                rubric_scores = rubric_scoring_service.score_with_rubric(
+                    rubric_data,
+                    analysis_result
+                )
+                analysis_result["rubric_scores"] = rubric_scores
+
+        return analysis_result
     
     async def _perform_analysis(self, content: str, analysis_type: str = "comprehensive") -> Dict[str, Any]:
         """
@@ -843,21 +870,15 @@ class EssayAnalysisService:
                 return None
             else:
                 # Regular database rubrics - could be platform (created_by IS NULL) or teacher-created
-                try:
-                    rubric_id_int = int(rubric_id)
-                except ValueError:
-                    logger.warning(f"Invalid rubric ID format: {rubric_id}")
-                    return None
-                
                 # Query database for rubric (check both platform and teacher-created)
                 with engine.connect() as connection:
                     result = connection.execute(
                         text("""
                             SELECT id, name, description, criteria, programs, grading_intensity
                             FROM rubrics
-                            WHERE id = :rubric_id
+                            WHERE id::text = :rubric_id
                         """),
-                        {"rubric_id": rubric_id_int}
+                        {"rubric_id": str(rubric_id)}
                     )
                     row = result.fetchone()
                     

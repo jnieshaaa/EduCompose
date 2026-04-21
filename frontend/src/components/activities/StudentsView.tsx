@@ -78,6 +78,7 @@ export function StudentsView({
   const [isAllowingResubmission, setIsAllowingResubmission] = useState<
     string | null
   >(null);
+  const [isViewingResult, setIsViewingResult] = useState<string | null>(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { showNotification } = useNotification();
@@ -363,18 +364,27 @@ export function StudentsView({
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 if (isGraded) {
-                                  const analysisData = await fetchEssayAnalysis(student.id, activity.id);
-                                  if (analysisData) {
-                                    navigate(buildSecureUrl('/Teacher/AnalysisResults', {
-                                      s: student.id,
-                                      a: activity.id,
-                                      activityId: activity.id,
-                                      activityTitle: activity.title,
-                                      programSection: courseSection,
-                                      programName: courseName,
-                                      studentName: student.name,
-                                      studentId: student.id,
-                                    }), { state: { ...analysisData, studentId: student.id, studentName: student.name, activityId: activity.id } });
+                                  setIsViewingResult(student.id);
+                                  try {
+                                    const analysisData = await fetchEssayAnalysis(student.id, activity.id);
+                                    if (analysisData) {
+                                      navigate(buildSecureUrl('/Teacher/AnalysisResults', {
+                                        s: student.id,
+                                        a: activity.id,
+                                        activityId: activity.id,
+                                        activityTitle: activity.title,
+                                        programSection: courseSection,
+                                        programName: courseName,
+                                        studentName: student.name,
+                                        studentId: student.id,
+                                      }), { state: { ...analysisData, studentId: student.id, studentName: student.name, activityId: activity.id } });
+                                    } else {
+                                      showNotification('error', "Evaluation data not found. Try grading again.");
+                                    }
+                                  } catch (err) {
+                                    showNotification('error', "Could not load results. System may be busy.");
+                                  } finally {
+                                    setIsViewingResult(null);
                                   }
                                 } else {
                                   setGradingStudents((prev) => new Map(prev).set(student.id, { progress: 0, step: "Starting..." }));
@@ -397,8 +407,12 @@ export function StudentsView({
                               }`}
                               title={isGraded ? "View Evaluation" : "Grade Now"}
                             >
-                              {isGraded ? <Eye size={12} /> : <Edit size={12} />}
-                              {isGraded ? "View" : "Grade"}
+                               {isViewingResult === student.id ? (
+                                 <Loader2 size={12} className="animate-spin" />
+                               ) : (
+                                 isGraded ? <Eye size={12} /> : <Edit size={12} />
+                               )}
+                               {isViewingResult === student.id ? "Loading..." : (isGraded ? "View" : "Grade")}
                             </button>
                           )}
                           

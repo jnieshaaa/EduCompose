@@ -489,7 +489,7 @@ export const createActivity = async (
             description: activity.suggestedRubric.description,
             criteria: activity.suggestedRubric.criteria,
             grading_intensity: activity.suggestedRubric.grading_intensity,
-            user_id: teacherNumericId,
+            teacher_id: teacherId, // Correctly use UUID
           })
           .select("id")
           .single();
@@ -2454,49 +2454,184 @@ export const fetchEssayAnalysis = async (
     }
 
     if (analysisError || !analysisData) {
-      // Fallback: try to get from essays.analysis_payload (for backwards compatibility)
+      // Fallback: try to get from essays table directly (both analysis_payload and individual columns)
       const { data: fallbackEssay, error: fallbackError } = await supabase
         .from("essays")
-        .select("id, title, file_path, analysis_payload")
+        .select(`
+          id, title, file_path, content,
+          analysis_payload,
+          overall_score, grammar_score, readability_score, coherence_score, argument_strength_score,
+          grammar_errors, style_issues, argument_analysis,
+          word_count, status
+        `)
         .eq("id", essayData.id)
         .maybeSingle();
 
-      if (fallbackError || !fallbackEssay || !fallbackEssay.analysis_payload) {
+      if (fallbackError || !fallbackEssay) {
         return null;
       }
 
-      // Get text from file if available
-      let text = "";
-      if (fallbackEssay.file_path) {
-        try {
-          const { data: urlData } = await supabase.storage
-            .from("essays")
-            .createSignedUrl(fallbackEssay.file_path, 3600);
+      // If we have a complete payload, use it
+      if (fallbackEssay.analysis_payload) {
+        let text = fallbackEssay.content || "";
+        if (!text && fallbackEssay.file_path) {
+          try {
+            const { data: urlData } = await supabase.storage
+              .from("essays")
+              .createSignedUrl(fallbackEssay.file_path, 3600);
 
-          if (urlData?.signedUrl) {
-            const response = await fetch(urlData.signedUrl);
-            if (response.ok) {
-              const blob = await response.blob();
-              const file = new File(
-                [blob],
-                fallbackEssay.file_path.split("/").pop() || "essay.pdf",
-              );
-              const { ocrApi } = await import("../api");
-              const ocrResult = await ocrApi.extractTextFromFile(file);
-              text = ocrResult.text;
+            if (urlData?.signedUrl) {
+              const response = await fetch(urlData.signedUrl);
+              if (response.ok) {
+                const blob = await response.blob();
+                const file = new File(
+                  [blob],
+                  fallbackEssay.file_path.split("/").pop() || "essay.pdf",
+                );
+                const { ocrApi } = await import("../api");
+                const ocrResult = await ocrApi.extractTextFromFile(file);
+                text = ocrResult.text;
+              }
             }
+          } catch (err) {
+            console.error("Error extracting text for display:", err);
           }
-        } catch (err) {
-          console.error("Error extracting text for display:", err);
         }
+        return {
+          analysis: fallbackEssay.analysis_payload,
+          text: text,
+          title: fallbackEssay.title || "Essay Analysis",
+          filePath: fallbackEssay.file_path,
+        };
       }
 
-      return {
-        analysis: fallbackEssay.analysis_payload,
-        text: text,
-        title: fallbackEssay.title || "Essay Analysis",
-        filePath: fallbackEssay.file_path,
-      };
+      // If no payload, but we have individual columns, reconstruct it
+      if (fallbackEssay.overall_score !== null) {
+        return {
+          analysis: {
+            analysis_type: "reconstructed",
+            scores: {
+              grammar: fallbackEssay.grammar_score || 0,
+              readability: fallbackEssay.readability_score || 0,
+              coherence: fallbackEssay.coherence_score || 0,
+              argument_strength: fallbackEssay.argument_strength_score || 0,
+              knowledge_graph: 0,
+              overall: fallbackEssay.overall_score || 0,
+            },
+            detailed_analysis: {
+              grammar: {
+                score: fallbackEssay.grammar_score || 0,
+                errors: fallbackEssay.grammar_errors || [],
+                error_count: (fallbackEssay.grammar_errors || []).length,
+                syntax_patterns: {
+                  sentence_types: {
+                    simple: 0,
+                    compound: 0,
+                    complex: 0,
+                    compound_complex: 0,
+                  },
+                  dependency_tags: {},
+                  pos_tags: {},
+                  complexity_score: 0,
+                  avg_dependency_depth: 0,
+                },
+              },
+              readability: {
+                score: fallbackEssay.readability_score || 0,
+                flesch_reading_ease: 0,
+                flesch_kincaid_grade: 0,
+                smog_index: 0,
+                coleman_liau_index: 0,
+                lexical_diversity: 0,
+                issues: fallbackEssay.style_issues || [],
+              },
+              coherence: {
+                score: fallbackEssay.coherence_score || 0,
+                entity_grid_score: 0,
+                semantic_similarity_score: 0,
+                transition_score: 0,
+                paragraph_unity: 0,
+                topic_sentences: [],
+                transitional_elements: [],
+                coherence_issues: [],
+                structure_analysis: {
+                  has_introduction: false,
+                  has_body: false,
+                  has_conclusion: false,
+                  paragraph_count: 0,
+                  sentence_count: 0,
+                  structure_quality: "unknown",
+                },
+              },
+              argumentation: {
+                score: fallbackEssay.argument_strength_score || 0,
+                claim_score: 0,
+                evidence_score: 0,
+                warrant_score: 0,
+                rebuttal_score: 0,
+                claims: [],
+                grounds: [],
+                warrants: [],
+                rebuttals: [],
+                argument_structure: {
+                  total_claims: 0,
+                  total_grounds: 0,
+                  total_warrants: 0,
+                  total_rebuttals: 0,
+                  grounds_per_claim: 0,
+                  has_thesis: false,
+                  has_evidence: false,
+                  has_reasoning: false,
+                  has_counterarguments: false,
+                },
+                toulmin_analysis: {
+                  has_claim: false,
+                  has_ground: false,
+                  has_warrant: false,
+                  has_rebuttal: false,
+                  completeness_score: 0,
+                },
+                argument_issues: [],
+              },
+              knowledge_graph: {
+                score: 0,
+                concepts: [],
+                relationships: [],
+                graph_structure: {
+                  nodes: 0,
+                  edges: 0,
+                  density: 0,
+                  clusters: 0,
+                  avg_clustering: 0,
+                  is_connected: false,
+                },
+                concept_coverage: {
+                  coverage_score: 0,
+                  concept_distribution: {},
+                },
+                conceptual_gaps: [],
+                connectivity_score: 0,
+                depth_score: 0,
+              },
+            },
+            recommendations: [],
+            diagnostic_summary: {
+              overall_score: fallbackEssay.overall_score || 0,
+              strengths: [],
+              weaknesses: [],
+              critical_issues: [],
+              dimension_scores: {},
+            },
+            word_count: fallbackEssay.word_count || 0,
+            generated_at: new Date().toISOString(),
+          },
+          text: fallbackEssay.content || "",
+          title: fallbackEssay.title || "Essay Analysis",
+          filePath: fallbackEssay.file_path,
+        };
+      }
+
+      return null;
     }
 
     // Reconstruct the analysis response from the database record

@@ -104,7 +104,7 @@ export const fetchTeacherId = async (): Promise<number | null> => {
 
 // Load rubrics for a teacher
 export const fetchTeacherRubrics = async (
-  teacherId: number
+  teacherUUID: string
 ): Promise<(RubricTemplate & {
   programsList?: string[];
   fullData?: Record<string, unknown>;
@@ -115,7 +115,7 @@ export const fetchTeacherRubrics = async (
       .select(
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
-      .eq("user_id", teacherId)
+      .eq("teacher_id", teacherUUID) // Use teacher_id (UUID)
       .order("created_at", { ascending: false });
 
 
@@ -394,7 +394,7 @@ export const updateRubric = async (
 
 // Fetch a single rubric by ID
 export const fetchRubricById = async (
-  rubricId: number
+  rubricId: string | number
 ): Promise<(RubricTemplate & { programsList?: string[]; fullData?: Record<string, unknown> }) | null> => {
   try {
     const { data: rubricData, error: rubricError } = await supabase

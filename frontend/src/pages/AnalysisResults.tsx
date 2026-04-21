@@ -1247,31 +1247,44 @@ const AnalysisResults: React.FC = () => {
     : undefined;
 
   // Find the rubric for preview
-  const handlePreviewRubric = () => {
+  const handlePreviewRubric = async () => {
     if (!rubricData?.rubric_id) return;
 
-    // Try to find in platform rubrics
-    // rubric_id might be a number or string like "platform-1"
-    let rubricId: number | null = null;
+    // 1. Try to find in platform rubrics first
+    let numericId: number | null = null;
+    let isPlatformFormat = false;
+
     if (typeof rubricData.rubric_id === 'number') {
-      rubricId = rubricData.rubric_id;
+      numericId = rubricData.rubric_id;
     } else if (typeof rubricData.rubric_id === 'string') {
-      // Handle "platform-1" format
       if (rubricData.rubric_id.startsWith('platform-')) {
+        isPlatformFormat = true;
         const numId = parseInt(rubricData.rubric_id.replace('platform-', ''));
-        if (!isNaN(numId)) rubricId = numId;
-      } else {
-        const numId = parseInt(rubricData.rubric_id);
-        if (!isNaN(numId)) rubricId = numId;
+        if (!isNaN(numId)) numericId = numId;
+      } else if (!isNaN(parseInt(rubricData.rubric_id))) {
+        numericId = parseInt(rubricData.rubric_id);
       }
     }
 
-    if (rubricId !== null) {
-      const rubric = platformRubrics.find((r) => r.id === rubricId);
+    if (numericId !== null && (isPlatformFormat || numericId <= 10)) {
+      const rubric = platformRubrics.find((r) => r.id === numericId);
       if (rubric) {
         setPreviewRubric(rubric);
         setShowRubricPreview(true);
+        return;
       }
+    }
+
+    // 2. If not platform or not found, try fetching from Database (for AI/Custom rubrics)
+    try {
+      const { fetchRubricById } = await import('../services/rubricService');
+      const dbRubric = await fetchRubricById(rubricData.rubric_id);
+      if (dbRubric && dbRubric.fullData) {
+        setPreviewRubric(dbRubric.fullData as any);
+        setShowRubricPreview(true);
+      }
+    } catch (err) {
+      console.error("Failed to fetch custom rubric:", err);
     }
   };
 
@@ -1322,6 +1335,16 @@ const AnalysisResults: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            {rubricData?.rubric_id && (
+              <Button
+                variant="outline"
+                className="rounded-xl py-3 px-6 font-bold text-[10px] uppercase tracking-widest border-primary-200 text-primary hover:bg-primary-50"
+                onClick={handlePreviewRubric}
+              >
+                <ClipboardList className="w-4 h-4 mr-2" />
+                View Rubric
+              </Button>
+            )}
             {filePath && (
               <Button
                 variant="outline"
