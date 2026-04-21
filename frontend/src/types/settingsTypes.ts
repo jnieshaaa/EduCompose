@@ -31,7 +31,7 @@ export interface ThresholdSettings {
 }
 
 export interface RubricDefaults {
-  defaultRubricId?: number | null;
+  defaultRubricId?: string | number | null;
   autoApplyToNewPrograms: boolean;
 }
 

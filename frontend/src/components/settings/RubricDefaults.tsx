@@ -12,7 +12,7 @@ interface RubricDefaultsProps {
   defaults: RubricDefaults;
   isLoading: boolean;
   isSaving: boolean;
-  rubrics: { id: number; name: string }[];
+  rubrics: { id: string | number; name: string }[];
   onDefaultsChange: (defaults: Partial<RubricDefaults>) => void;
   onSaveDefaults: () => void;
 }
@@ -43,12 +43,12 @@ export const RubricDefaultsComponent: React.FC<RubricDefaultsProps> = ({
               id="default-rubric"
               className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all disabled:opacity-50 font-medium"
               value={defaults.defaultRubricId || ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                const val = e.target.value;
                 onDefaultsChange({
-                  defaultRubricId:
-                    e.target.value === "" ? null : parseInt(e.target.value),
-                })
-              }
+                  defaultRubricId: val === "" ? null : (isNaN(Number(val)) ? val : Number(val)),
+                });
+              }}
               disabled={isSaving}
             >
               <option value="">None</option>

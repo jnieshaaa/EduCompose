@@ -424,11 +424,11 @@ const ensurePlatformRubricExists = async (
     // Fetch all rubrics with this name and filter in JavaScript
     const { data: rubricsWithName } = await supabase
       .from("rubrics")
-      .select("id, user_id")
+      .select("id, teacher_id")
       .eq("name", template.name);
 
-    // Find the one that's a platform rubric (user_id is null)
-    const existing = rubricsWithName?.find((r) => r.user_id === null);
+    // Find the one that's a platform rubric (teacher_id is null)
+    const existing = rubricsWithName?.find((r) => r.teacher_id === null);
 
     if (existing) {
       return existing.id;
@@ -443,7 +443,7 @@ const ensurePlatformRubricExists = async (
         criteria: template.criteria,
         programs: [], // Platform rubrics don't have specific programs
         grading_intensity: template.type || "Basic",
-        user_id: null, // Platform rubric
+        teacher_id: null, // Platform rubric
       })
       .select("id")
       .single();
@@ -476,41 +476,41 @@ export const createActivity = async (
     // For now, store first selected course/section or null if empty (meaning "all")
 
     // Handle rubric ID - ensure platform rubrics exist in database
-    let rubricId: number | null = null;
+    let rubricId: string | null = null;
 
     if (activity.suggestedRubric) {
       // 1. Save the AI suggested rubric first
-      const teacherNumericId = await fetchTeacherId();
-      if (teacherNumericId) {
-        const { data: newRubric, error: rubricError } = await supabase
-          .from("rubrics")
-          .insert({
-            name: activity.suggestedRubric.name,
-            description: activity.suggestedRubric.description,
-            criteria: activity.suggestedRubric.criteria,
-            grading_intensity: activity.suggestedRubric.grading_intensity,
-            teacher_id: teacherId, // Correctly use UUID
-          })
-          .select("id")
-          .single();
-        
-        if (rubricError) {
-          console.error("Error saving suggested rubric:", rubricError);
-        } else if (newRubric) {
-          rubricId = newRubric.id;
-        }
+      // We don't need teacherNumericId anymore since we use teacherId (UUID)
+      const { data: newRubric, error: rubricError } = await supabase
+        .from("rubrics")
+        .insert({
+          name: activity.suggestedRubric.name,
+          description: activity.suggestedRubric.description,
+          criteria: activity.suggestedRubric.criteria,
+          grading_intensity: activity.suggestedRubric.grading_intensity,
+          teacher_id: teacherId, // Correctly use UUID
+        })
+        .select("id")
+        .single();
+      
+      if (rubricError) {
+        console.error("Error saving suggested rubric:", rubricError);
+      } else if (newRubric) {
+        rubricId = newRubric.id; // This is a UUID string
       }
     } else if (activity.rubricId) {
       if (activity.rubricId.startsWith("platform-")) {
         // Template rubric - ensure it exists in database, then use its ID
+        // Note: ensurePlatformRubricExists should probably return string if it creates a UUID row
         const numericId = activity.rubricId.replace("platform-", "");
         const templateId = parseInt(numericId, 10);
         if (!isNaN(templateId)) {
-          rubricId = await ensurePlatformRubricExists(templateId);
+          const resultId = await ensurePlatformRubricExists(templateId);
+          rubricId = resultId ? String(resultId) : null;
         }
       } else {
-        // Platform rubric from database - use ID directly
-        rubricId = parseInt(activity.rubricId, 10) || null;
+        // Platform rubric from database - use ID directly (could be UUID string or number)
+        rubricId = activity.rubricId || null;
       }
     }
 

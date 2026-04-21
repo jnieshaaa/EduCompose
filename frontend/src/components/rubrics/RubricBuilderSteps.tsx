@@ -208,7 +208,7 @@ export function RubricCriteriaEditor({
   const handleAddCriteria = () => {
     const newId =
       criteriaList.length > 0
-        ? Math.max(...criteriaList.map((c) => c.id)) + 1
+        ? Math.max(...criteriaList.filter(c => typeof c.id === 'number').map((c) => c.id as number), 0) + 1
         : 1;
     const newCriteria: CriteriaRow = {
       id: newId,
@@ -242,7 +242,7 @@ export function RubricCriteriaEditor({
         if (criteria.id === criteriaId) {
           const newScoreId =
             criteria.scores.length > 0
-              ? Math.max(...criteria.scores.map((s) => s.id)) + 1
+              ? Math.max(...criteria.scores.filter(s => typeof s.id === 'number').map((s) => s.id as number), 0) + 1
               : 1;
           const newScore: ScoreLevel = {
             id: newScoreId,
