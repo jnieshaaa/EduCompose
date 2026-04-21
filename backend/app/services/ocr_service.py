@@ -179,8 +179,26 @@ class OCRService:
                 "Return ONLY the extracted text."
             )
             
-            # Using the same high-quota model
-            model_id = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+            # Reorder fallback candidates for better availability
+            model_candidates = [
+                os.getenv("GEMINI_MODEL_NAME"),
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-flash",
+                "gemini-2.0-flash"
+            ]
+            
+            model_id = None
+            for candidate in model_candidates:
+                if not candidate: continue
+                try:
+                    client.models.get(model=candidate)
+                    model_id = candidate
+                    break
+                except:
+                    continue
+            
+            if not model_id:
+                model_id = "gemini-1.5-flash" # Absolute fallback
             
             response = client.models.generate_content(
                 model=model_id,

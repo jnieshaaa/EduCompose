@@ -3,9 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   User,
-  Settings,
-  AlertTriangle,
-  BookOpen,
   Upload,
   Loader2,
   RotateCcw,
@@ -15,24 +12,13 @@ import { useAlert } from "../../hooks/useAlert";
 import {
   fetchTeacherSettings,
   updateTeacherProfile,
-  updateAIAssessmentSettings,
-  updateThresholdSettings,
-  updateRubricDefaults,
   resetSettingsToDefaults,
 } from "../../services/settingsService";
 import type {
   TeacherSettings,
   TeacherProfile,
-  AIAssessmentSettings,
-  ThresholdSettings,
-  RubricDefaults,
 } from "../../types/settingsTypes";
-import { fetchTeacherRubrics } from "../../services/rubricService";
-import { supabase } from "../../lib/supabaseClient";
 import { ProfileInformation } from "../../components/settings/ProfileInformation";
-import { AIAssessmentSettingsComponent } from "../../components/settings/AIAssessmentSettings";
-import { ThresholdSettingsComponent } from "../../components/settings/ThresholdSettings";
-import { RubricDefaultsComponent } from "../../components/settings/RubricDefaults";
 import { DataManagement } from "../../components/settings/DataManagement";
 import { ChangePassword } from "../../components/settings/ChangePassword";
 
@@ -46,37 +32,16 @@ export function SettingsTab() {
   const [settings, setSettings] = useState<TeacherSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [rubrics, setRubrics] = useState<{ id: string | number; name: string }[]>([]);
 
   // Load settings and rubrics on mount
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [settingsData, teacherIdResult] = await Promise.all([
-          fetchTeacherSettings(),
-          supabase
-            .from("users")
-            .select("id")
-            .eq(
-              "auth_user_id",
-              (await supabase.auth.getUser()).data.user?.id || ""
-            )
-            .single(),
-        ]);
+        const settingsData = await fetchTeacherSettings();
 
         if (settingsData) {
           setSettings(settingsData);
-        }
-
-        if (teacherIdResult.data) {
-          const teacherRubrics = await fetchTeacherRubrics();
-          setRubrics(
-            teacherRubrics.map((r) => ({
-              id: r.id,
-              name: r.name,
-            }))
-          );
         }
       } catch {
         console.error("Error loading settings");
@@ -120,98 +85,7 @@ export function SettingsTab() {
     }
   }, [settings, showSuccess, showError]);
 
-  // AI Assessment handlers
-  const handleAISettingsChange = useCallback(
-    (aiSettings: Partial<AIAssessmentSettings>) => {
-      if (settings) {
-        setSettings({
-          ...settings,
-          aiAssessment: { ...settings.aiAssessment, ...aiSettings },
-        });
-      }
-    },
-    [settings]
-  );
 
-  const handleSaveAISettings = useCallback(async () => {
-    if (!settings) return;
-
-    setIsSaving(true);
-    try {
-      const result = await updateAIAssessmentSettings(settings.aiAssessment);
-      if (result.success) {
-        showSuccess("AI assessment settings saved successfully!");
-      } else {
-        showError(result.error || "Failed to save AI assessment settings");
-      }
-    } catch {
-      showError("An unexpected error occurred while saving settings");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [settings, showSuccess, showError]);
-
-  // Threshold handlers
-  const handleThresholdChange = useCallback(
-    (thresholds: Partial<ThresholdSettings>) => {
-      if (settings) {
-        setSettings({
-          ...settings,
-          thresholds: { ...settings.thresholds, ...thresholds },
-        });
-      }
-    },
-    [settings]
-  );
-
-  const handleSaveThresholds = useCallback(async () => {
-    if (!settings) return;
-
-    setIsSaving(true);
-    try {
-      const result = await updateThresholdSettings(settings.thresholds);
-      if (result.success) {
-        showSuccess("Threshold settings saved successfully!");
-      } else {
-        showError(result.error || "Failed to save threshold settings");
-      }
-    } catch {
-      showError("An unexpected error occurred while saving thresholds");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [settings, showSuccess, showError]);
-
-  // Rubric defaults handlers
-  const handleRubricDefaultsChange = useCallback(
-    (defaults: Partial<RubricDefaults>) => {
-      if (settings) {
-        setSettings({
-          ...settings,
-          rubricDefaults: { ...settings.rubricDefaults, ...defaults },
-        });
-      }
-    },
-    [settings]
-  );
-
-  const handleSaveRubricDefaults = useCallback(async () => {
-    if (!settings) return;
-
-    setIsSaving(true);
-    try {
-      const result = await updateRubricDefaults(settings.rubricDefaults);
-      if (result.success) {
-        showSuccess("Rubric defaults saved successfully!");
-      } else {
-        showError(result.error || "Failed to save rubric defaults");
-      }
-    } catch {
-      showError("An unexpected error occurred while saving rubric defaults");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [settings, showSuccess, showError]);
 
   // Reset to defaults
   const handleResetToDefaults = useCallback(async () => {
@@ -260,14 +134,7 @@ export function SettingsTab() {
         });
       }, observerOptions);
 
-      const sectionIds = [
-        "profile",
-        "security",
-        "ai-assessment",
-        "thresholds",
-        "rubric",
-        "data",
-      ];
+      const sectionIds = ["profile", "security", "data"];
       sectionIds.forEach((id) => {
         const element = document.getElementById(id);
         if (element) {
@@ -316,9 +183,6 @@ export function SettingsTab() {
   const settingsNavigation = [
     { id: "profile", name: "Profile", icon: User },
     { id: "security", name: "Security", icon: Lock },
-    { id: "ai-assessment", name: "AI Grading", icon: Settings },
-    { id: "thresholds", name: "Grading Targets", icon: AlertTriangle },
-    { id: "rubric", name: "Default Rubric", icon: BookOpen },
     { id: "data", name: "My Data", icon: Upload },
   ];
 
@@ -394,34 +258,6 @@ export function SettingsTab() {
             />
 
             <ChangePassword id="security" />
-
-            <AIAssessmentSettingsComponent
-              id="ai-assessment"
-              settings={settings.aiAssessment}
-              isLoading={isLoading}
-              isSaving={isSaving}
-              onSettingsChange={handleAISettingsChange}
-              onSaveSettings={handleSaveAISettings}
-            />
-
-            <ThresholdSettingsComponent
-              id="thresholds"
-              thresholds={settings.thresholds}
-              isLoading={isLoading}
-              isSaving={isSaving}
-              onThresholdChange={handleThresholdChange}
-              onSaveThresholds={handleSaveThresholds}
-            />
-
-            <RubricDefaultsComponent
-              id="rubric"
-              defaults={settings.rubricDefaults}
-              isLoading={isLoading}
-              isSaving={isSaving}
-              rubrics={rubrics}
-              onDefaultsChange={handleRubricDefaultsChange}
-              onSaveDefaults={handleSaveRubricDefaults}
-            />
 
             <DataManagement id="data" />
 

@@ -108,12 +108,18 @@ class GrammarAnalyzer:
             self.llm_client = client
             
             # Get model name from environment variable, or use fallback list
-            env_model_name = os.getenv("GEMINI_MODEL_NAME")
-            if env_model_name:
-                # Use the model name from environment variable
+            # Reorder fallback candidates for better availability
+            model_candidates = [
+                os.getenv("GEMINI_MODEL_NAME"),
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-flash",
+                "gemini-2.0-flash"
+            ]
+            
+            model_id = None
+            for candidate in model_candidates:
+                if not candidate: continue
                 try:
-                    # Test if model is reachable
-                    client.models.get(model=env_model_name)
                     self.gemini_model = env_model_name
                     logger.info(f"Gemini client initialized with model from env: {env_model_name}")
                 except Exception as model_error:
@@ -124,6 +130,7 @@ class GrammarAnalyzer:
             if not env_model_name:
                 # Try different model names in order of preference
                 model_names = [
+                    'gemini-1.5-flash-latest',   # More stable slug
                     'gemini-1.5-flash',          # 1.5 flash has higher free-tier quota (1500/day) than 2.0 (20/day)
                     'gemini-2.0-flash',          # Fallback to 2.0 flash
                     'gemini-1.5-pro',            # Pro version

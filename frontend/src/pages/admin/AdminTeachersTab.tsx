@@ -69,8 +69,8 @@ export const AdminTeachersTab: React.FC = () => {
   }, [loadTeachers]);
 
   const filteredTeachers = teachers.filter(t => 
-    `${t.first_name} ${t.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${t.first_name || ""} ${t.last_name || ""}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -170,7 +170,7 @@ export const AdminTeachersTab: React.FC = () => {
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center font-black text-xs text-secondary shadow-sm">
-                          {teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}
+                          {teacher.first_name?.[0]?.toUpperCase() || ""}{teacher.last_name?.[0]?.toUpperCase() || (teacher.first_name?.[0] ? "" : "?")}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900 leading-tight">

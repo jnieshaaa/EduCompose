@@ -712,18 +712,19 @@ export const updateActivity = async (
     // Get first selected program/section or null
 
     // Handle rubric ID - ensure platform rubrics exist in database
-    let rubricId: number | null = null;
+    let rubricId: string | null = null;
     if (activityData.rubricId) {
       if (activityData.rubricId.startsWith("platform-")) {
         // Template rubric - ensure it exists in database, then use its ID
         const numericId = activityData.rubricId.replace("platform-", "");
         const templateId = parseInt(numericId, 10);
         if (!isNaN(templateId)) {
-          rubricId = await ensurePlatformRubricExists(templateId);
+          const resultId = await ensurePlatformRubricExists(templateId);
+          rubricId = resultId ? String(resultId) : null;
         }
       } else {
-        // Platform rubric from database - use ID directly
-        rubricId = parseInt(activityData.rubricId, 10) || null;
+        // Platform rubric from database - use ID (UUID string) directly
+        rubricId = activityData.rubricId || null;
       }
     }
 
@@ -731,7 +732,7 @@ export const updateActivity = async (
       title: activityData.title,
       course_id: activityData.courseIds,
       block_id: activityData.sectionIds,
-      rubric_id: rubricId && !isNaN(rubricId) ? rubricId : null,
+      rubric_id: rubricId,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
       min_word_count: activityData.minWordCount || 150,
@@ -2169,7 +2170,7 @@ export const gradeEssay = async (
         const { data: verifyRubric } = await supabase
           .from("rubrics")
           .select("id, name, created_by")
-          .eq("id", parseInt(rubricId, 10))
+          .eq("id", rubricId)
           .single();
 
         if (verifyRubric) {
@@ -2679,12 +2680,19 @@ export const fetchEssayAnalysis = async (
       if (analysisData.activity_id) {
         const { data: activity } = await supabase
           .from("essay_activities")
-          .select("rubric_id")
+          .select("rubric_id, rubrics(id, name)")
           .eq("id", analysisData.activity_id)
           .single();
 
-        if (activity?.rubric_id) {
-          // Rubric found but no scores in analysis
+        if (activity?.rubrics) {
+          // Rubric found but no scores in analysis - provide basic rubric info
+          const rubricInfo = Array.isArray(activity.rubrics) ? activity.rubrics[0] : activity.rubrics;
+          (analysis as any).rubric_scores = {
+            rubric_id: rubricInfo.id,
+            rubric_name: rubricInfo.name,
+            rubric_applied: false, // Mark as not applied to show "Rubric Not Applied" with the name
+            criteria_scores: []
+          };
         }
       }
     }

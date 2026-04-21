@@ -12,6 +12,7 @@ interface RubricDetailsFormProps {
   onFormChange: (updates: Partial<RubricFormData>) => void;
   onContinue: () => void;
   onCancel: () => void;
+  hidePrograms?: boolean;
 }
 
 export function RubricDetailsForm({
@@ -19,6 +20,7 @@ export function RubricDetailsForm({
   onFormChange,
   onContinue,
   onCancel,
+  hidePrograms,
 }: RubricDetailsFormProps) {
   const gradingIntensities = [
     "Basic",
@@ -57,9 +59,9 @@ export function RubricDetailsForm({
     fetchPrograms();
   }, []);
 
-  // Validation: Continue button is disabled if name is empty or no programs selected
+  // Validation: Continue button is disabled if name is empty or no programs selected (unless hidden)
   const isFormValid =
-    formData.name.trim() !== "" && formData.programs.length > 0;
+    formData.name.trim() !== "" && (hidePrograms || formData.programs.length > 0);
 
   const toggleProgram = (programName: string) => {
     const currentPrograms = formData.programs;
@@ -125,45 +127,47 @@ export function RubricDetailsForm({
         </div>
 
         {/* Program Selection */}
-        <div>
-          <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
-            Programs <span className="text-tertiary">*</span>
-          </label>
-          <p className="text-xs text-neutral-400 mb-3 font-medium">
-            This rubric will be available for courses within the selected program(s)
-          </p>
-          {isLoadingPrograms ? (
-            <div className="flex items-center gap-2 py-3">
-              <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-              <span className="text-xs text-neutral-400">Loading programs…</span>
-            </div>
-          ) : programs.length === 0 ? (
-            <p className="text-xs text-neutral-400 py-3 italic">
-              No programs available. Please create a program first.
+        {!hidePrograms && (
+          <div>
+            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
+              Programs <span className="text-tertiary">*</span>
+            </label>
+            <p className="text-xs text-neutral-400 mb-3 font-medium">
+              This rubric will be available for courses within the selected program(s)
             </p>
-          ) : (
-            <div className="flex gap-1.5 flex-wrap">
-              {programs.map((program) => (
-                <button
-                  key={program.id}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    formData.programs.includes(program.name)
-                      ? "bg-primary text-white shadow-sm shadow-primary/20"
-                      : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
-                  }`}
-                  onClick={() => toggleProgram(program.name)}
-                >
-                  {program.name}
-                </button>
-              ))}
-            </div>
-          )}
-          {formData.programs.length > 0 && (
-            <p className="text-[11px] text-primary font-bold mt-2">
-              {formData.programs.length} selected: {formData.programs.join(", ")}
-            </p>
-          )}
-        </div>
+            {isLoadingPrograms ? (
+              <div className="flex items-center gap-2 py-3">
+                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                <span className="text-xs text-neutral-400">Loading programs…</span>
+              </div>
+            ) : programs.length === 0 ? (
+              <p className="text-xs text-neutral-400 py-3 italic">
+                No programs available. Please create a program first.
+              </p>
+            ) : (
+              <div className="flex gap-1.5 flex-wrap">
+                {programs.map((program) => (
+                  <button
+                    key={program.id}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      formData.programs.includes(program.name)
+                        ? "bg-primary text-white shadow-sm shadow-primary/20"
+                        : "bg-neutral-50 text-neutral-500 border border-neutral-200 hover:border-primary/20 hover:text-primary"
+                    }`}
+                    onClick={() => toggleProgram(program.name)}
+                  >
+                    {program.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {formData.programs.length > 0 && (
+              <p className="text-[11px] text-primary font-bold mt-2">
+                {formData.programs.length} selected: {formData.programs.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ─── Footer ─── */}
@@ -191,6 +195,7 @@ interface RubricCriteriaEditorProps {
   onFormChange: (updates: Partial<RubricFormData>) => void;
   onSave: () => void;
   onBack: () => void;
+  hidePrograms?: boolean;
 }
 
 export function RubricCriteriaEditor({
@@ -198,6 +203,7 @@ export function RubricCriteriaEditor({
   onFormChange,
   onSave,
   onBack,
+  hidePrograms,
 }: RubricCriteriaEditorProps) {
   const [activeSubTab, setActiveSubTab] = useState<"create" | "preview">(
     "create",
@@ -304,12 +310,16 @@ export function RubricCriteriaEditor({
           <span className="text-[11px] font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-md">
             {formData.gradingIntensity}
           </span>
-          <span className="text-neutral-200">|</span>
-          <span>
-            {formData.programs.length > 0
-              ? formData.programs.join(", ")
-              : "No programs"}
-          </span>
+          {!hidePrograms && (
+            <>
+              <span className="text-neutral-200">|</span>
+              <span>
+                {formData.programs.length > 0
+                  ? formData.programs.join(", ")
+                  : "No programs"}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Create / Preview Toggle */}

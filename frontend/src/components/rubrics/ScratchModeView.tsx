@@ -10,6 +10,7 @@ interface ScratchModeViewProps {
   onFormChange: (updates: Partial<RubricFormData>) => void;
   onSave: () => void;
   onCancel: () => void;
+  hidePrograms?: boolean;
 }
 
 export function ScratchModeView({
@@ -17,6 +18,7 @@ export function ScratchModeView({
   onFormChange,
   onSave,
   onCancel,
+  hidePrograms,
 }: ScratchModeViewProps) {
   const [step, setStep] = useState<"details" | "criteria">("details");
 
@@ -40,6 +42,7 @@ export function ScratchModeView({
           onFormChange={onFormChange}
           onContinue={handleContinue}
           onCancel={onCancel}
+          hidePrograms={hidePrograms}
         />
       ) : (
         <RubricCriteriaEditor
@@ -47,6 +50,7 @@ export function ScratchModeView({
           onFormChange={onFormChange}
           onSave={onSave}
           onBack={handleBack}
+          hidePrograms={hidePrograms}
         />
       )}
     </div>

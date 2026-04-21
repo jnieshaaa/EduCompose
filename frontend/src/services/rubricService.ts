@@ -97,7 +97,7 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
       .select(
         "id, name, description, criteria, programs, grading_intensity, created_at"
       )
-      .eq("teacher_id", teacherId) // Use UUID
+      .eq("teacher_id", teacherId)
       .order("created_at", { ascending: false });
 
 
@@ -209,7 +209,7 @@ export const saveRubric = async (
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
 
   const teacherId = await fetchTeacherId();
-  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
+  if (!teacherId) throw new Error("Could not resolve teacher UUID");
 
   // Check if a rubric with the same name already exists for this teacher
   const { data: existingRubrics, error: checkError } = await supabase
@@ -240,7 +240,7 @@ export const saveRubric = async (
       criteria: rubricFormData.criteria,
       programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: teacherId, // Use numeric teacher_id
+      teacher_id: teacherId,
     })
     .select()
     .maybeSingle();
@@ -265,7 +265,7 @@ export const saveTemplateRubric = async (
   const rubricName = rubric.name?.trim() || "Untitled Rubric";
 
   const teacherId = await fetchTeacherId();
-  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
+  if (!teacherId) throw new Error("Could not resolve teacher UUID");
 
   // Check if a rubric with the same name already exists for this teacher
   const { data: existingRubrics, error: checkError } = await supabase
@@ -296,7 +296,7 @@ export const saveTemplateRubric = async (
       criteria: rubric.criteria,
       programs: [], // Template rubrics don't have specific programs
       grading_intensity: rubric.type, // Use type as intensity
-      teacher_id: teacherId, // Use numeric teacher_id
+      teacher_id: teacherId,
     })
     .select()
     .maybeSingle();
@@ -318,7 +318,7 @@ export const deleteRubric = async (rubricId: string | number): Promise<void> => 
     .from("rubrics")
     .delete()
     .eq("id", rubricId)
-    .eq("teacher_id", teacherId); // Use numeric teacher_id
+    .eq("teacher_id", teacherId);
 
   if (error) {
     console.error("Error deleting rubric:", error);

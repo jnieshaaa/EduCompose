@@ -800,7 +800,7 @@ class EssayAnalysisService:
         Fetch rubric from database by ID
         
         Args:
-            rubric_id: Rubric ID (can be database ID or platform-{id} format)
+            rubric_id: Rubric ID (can be database UUID or platform-{id} format)
         
         Returns:
             Rubric data dictionary or None if not found
@@ -808,69 +808,59 @@ class EssayAnalysisService:
         try:
             # Handle platform rubrics (prefixed with "platform-")
             if rubric_id.startswith("platform-"):
-                # Extract numeric ID from platform-{id} format
-                numeric_id = rubric_id.replace("platform-", "")
-                try:
-                    rubric_id_int = int(numeric_id)
-                except ValueError:
-                    logger.warning(f"Invalid platform rubric ID format: {rubric_id}")
-                    return None
+                # Extract numeric ID if possible, or treat as UUID
+                raw_id = rubric_id.replace("platform-", "")
                 
                 # Try to fetch from database first
                 try:
                     with engine.connect() as connection:
+                        # Look for rubric with this ID where teacher_id is NULL (platform)
                         result = connection.execute(
                             text("""
                                 SELECT id, name, description, criteria, programs, grading_intensity
                                 FROM rubrics
-                                WHERE id = :rubric_id AND created_by IS NULL
+                                WHERE id::text = :rubric_id AND teacher_id IS NULL
                             """),
-                            {"rubric_id": rubric_id_int}
+                            {"rubric_id": raw_id}
                         )
                         row = result.fetchone()
                         
                         if row:
-                            # Convert row to dictionary
-                            rubric_data = {
-                                "id": row[0],
-                                "name": row[1],
-                                "description": row[2],
-                                "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
-                                "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
-                                "grading_intensity": row[5]
-                            }
-                            
-                            # Ensure criteria is a list
-                            if isinstance(rubric_data["criteria"], dict):
-                                # If criteria is wrapped in an object, extract it
-                                if "criteria" in rubric_data["criteria"]:
-                                    rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
-                                else:
-                                    # Convert dict to list if needed
-                                    rubric_data["criteria"] = [rubric_data["criteria"]]
-                            
-                            return rubric_data
-                except (OperationalError, DatabaseError):
-                    # Database connection failed - fallback to hardcoded platform rubrics
-                    logger.info(f"Database unavailable, using hardcoded platform rubric {rubric_id_int}")
-                    hardcoded_rubric = get_platform_rubric_by_id(rubric_id_int)
+                            return self._row_to_rubric_dict(row)
+                        
+                        # If not found by UUID, try mapping legacy integer to UUID format
+                        if raw_id.isdigit():
+                            deterministic_uuid = f"{int(raw_id):032x}"
+                            # Insert dashes if needed, but Postgres cast handles hex
+                            # lpad(to_hex(id), 32, '0')::uuid
+                            result = connection.execute(
+                                text("""
+                                    SELECT id, name, description, criteria, programs, grading_intensity
+                                    FROM rubrics
+                                    WHERE id::text = :rubric_id AND teacher_id IS NULL
+                                """),
+                                {"rubric_id": f"{int(raw_id):032x}"}
+                            )
+                            row = result.fetchone()
+                            if row:
+                                return self._row_to_rubric_dict(row)
+
+                except (OperationalError, DatabaseError) as e:
+                    logger.info(f"Database connection issue, checking hardcoded fallback: {e}")
+                
+                # Try fallback to hardcoded platform rubrics if DB fails or row not found
+                # For hardcoded fallback, we still use numeric mapping
+                try:
+                    numeric_id = int(raw_id)
+                    hardcoded_rubric = get_platform_rubric_by_id(numeric_id)
                     if hardcoded_rubric:
                         return hardcoded_rubric
-                    else:
-                        logger.warning(f"Platform rubric {rubric_id} (ID: {rubric_id_int}) not found in hardcoded data.")
-                        return None
+                except ValueError:
+                    pass
                 
-                # Database query succeeded but no row found
-                logger.warning(f"Platform rubric {rubric_id} (ID: {rubric_id_int}) not found in database. Platform rubrics should have created_by = NULL.")
-                # Try fallback to hardcoded data
-                hardcoded_rubric = get_platform_rubric_by_id(rubric_id_int)
-                if hardcoded_rubric:
-                    logger.info(f"Using hardcoded platform rubric {rubric_id_int} as fallback")
-                    return hardcoded_rubric
                 return None
             else:
-                # Regular database rubrics - could be platform (created_by IS NULL) or teacher-created
-                # Query database for rubric (check both platform and teacher-created)
+                # Regular database rubrics (UUID)
                 with engine.connect() as connection:
                     result = connection.execute(
                         text("""
@@ -883,29 +873,34 @@ class EssayAnalysisService:
                     row = result.fetchone()
                     
                     if row:
-                        # Convert row to dictionary
-                        rubric_data = {
-                            "id": row[0],
-                            "name": row[1],
-                            "description": row[2],
-                            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
-                            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
-                            "grading_intensity": row[5]
-                        }
-                        
-                        # Ensure criteria is a list
-                        if isinstance(rubric_data["criteria"], dict):
-                            # If criteria is wrapped in an object, extract it
-                            if "criteria" in rubric_data["criteria"]:
-                                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
-                            else:
-                                # Convert dict to list if needed
-                                rubric_data["criteria"] = [rubric_data["criteria"]]
-                        
-                        return rubric_data
+                        return self._row_to_rubric_dict(row)
                     else:
                         logger.warning(f"Rubric {rubric_id} not found in database")
                         return None
+                    
+        except Exception as e:
+            logger.error(f"Error fetching rubric {rubric_id}: {e}")
+            return None
+
+    def _row_to_rubric_dict(self, row) -> Dict[str, Any]:
+        """Helper to convert database row to rubric dictionary"""
+        rubric_data = {
+            "id": str(row[0]),
+            "name": row[1],
+            "description": row[2],
+            "criteria": row[3] if isinstance(row[3], (list, dict)) else json.loads(row[3]) if row[3] else [],
+            "programs": row[4] if isinstance(row[4], list) else json.loads(row[4]) if row[4] else [],
+            "grading_intensity": row[5]
+        }
+        
+        # Ensure criteria is a list
+        if isinstance(rubric_data["criteria"], dict):
+            if "criteria" in rubric_data["criteria"]:
+                rubric_data["criteria"] = rubric_data["criteria"]["criteria"]
+            else:
+                rubric_data["criteria"] = [rubric_data["criteria"]]
+        
+        return rubric_data
                     
         except (OperationalError, DatabaseError) as e:
             # Database connection errors - try hardcoded fallback for platform rubrics

@@ -8,21 +8,34 @@ import {
   ArrowRight,
   Lock,
   Globe,
-  Settings
+  Settings,
+  ArrowLeft
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../../components/ui/Button";
 import { useNotification } from "../../contexts/NotificationContext";
-import type { CriteriaRow } from "../../types/rubricTypes";
+import type { BuilderMode, RubricFormData, PlatformRubric } from "../../types/rubricTypes";
 import { logActivity } from "../../utils/logger";
 import { motion } from "framer-motion";
+import { RubricCreationOptionsView } from "../../components/rubrics/RubricCreationOptionsView";
+import { UploadModeView } from "../../components/rubrics/UploadModeView";
+import { TemplateModeView } from "../../components/rubrics/TemplateModeView";
+import { ScratchModeView } from "../../components/rubrics/ScratchModeView";
+import { RubricPreviewModal } from "../../components/rubrics/RubricPreviewModal";
+import { defaultRubricFormData, initialCriteria } from "../../components/rubrics/types";
 
 export function AdminRubricsTab() {
   const [platformRubrics, setPlatformRubrics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentView, setCurrentView] = useState<"list" | "options">("list");
+  const [selectedMode, setSelectedMode] = useState<BuilderMode>(null);
+  const [rubricFormData, setRubricFormData] = useState<RubricFormData>(defaultRubricFormData);
   const [searchTerm, setSearchTerm] = useState("");
   const { showNotification } = useNotification();
+
+  // Preview modal state
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedPreviewRubric, setSelectedPreviewRubric] = useState<PlatformRubric | null>(null);
 
   useEffect(() => {
     loadPlatformRubrics();
@@ -32,24 +45,24 @@ export function AdminRubricsTab() {
     try {
       setLoading(true);
       
-      // 1. Get all user IDs that have the 'admin' role
+      // 1. Get all auth IDs that have the 'admin' role
       const { data: admins } = await supabase
         .from("users")
-        .select("id")
+        .select("auth_user_id")
         .eq("role", "admin");
       
-      const adminIds = admins?.map(a => a.id).filter(Boolean) || [];
+      const adminIds = admins?.map(a => a.auth_user_id).filter(Boolean) || [];
 
       if (adminIds.length === 0) {
         setPlatformRubrics([]);
         return;
       }
 
-      // 2. Query rubrics that are STRICTLY created by any admin
+      // 2. Query rubrics that belong to any admin (using teacher_id as the standard UUID column)
       const { data, error } = await supabase
         .from("rubrics")
         .select("*")
-        .in("user_id", adminIds)
+        .in("teacher_id", adminIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -62,44 +75,34 @@ export function AdminRubricsTab() {
     }
   };
 
-  const handleCreatePlatformRubric = async (rubricData: {
-    name: string;
-    description: string;
-    criteria: CriteriaRow[];
-    gradingIntensity: string;
-    programs: string[];
-  }) => {
+  const handleCreatePlatformRubric = async (rubricData: RubricFormData) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("id, auth_user_id")
-        .eq("auth_user_id", user.id)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
 
       const { error } = await supabase
         .from("rubrics")
         .insert({
           name: rubricData.name,
-          description: rubricData.description,
           criteria: rubricData.criteria,
           programs: rubricData.programs,
           grading_intensity: rubricData.gradingIntensity,
-          user_id: profile.id, // Reference to users.id (bigint)
-        });
+          teacher_id: user.id, // Reference to auth.users.id (UUID)
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      await logActivity(profile.id, "create_rubric", `Created admin rubric: ${rubricData.name}`);
+      await logActivity(user.id, "create_rubric", `Created admin rubric: ${rubricData.name}`);
 
       showNotification('success', "Rubric created successfully.");
       await loadPlatformRubrics();
-      setShowCreateModal(false);
+      setCurrentView("list");
+      setSelectedMode(null);
+      setRubricFormData(defaultRubricFormData);
     } catch (err: any) {
+      console.error("Create rubric error:", err);
       showNotification('error', "Failed to create rubric.");
     }
   };
@@ -112,14 +115,6 @@ export function AdminRubricsTab() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("id, auth_user_id")
-        .eq("auth_user_id", user.id)
-        .single();
-
-      if (!profile) return;
 
       const { error } = await supabase
         .from("rubrics")
@@ -135,32 +130,137 @@ export function AdminRubricsTab() {
     }
   };
 
+  const handlePreviewRubric = (rubric: PlatformRubric) => {
+    setSelectedPreviewRubric(rubric);
+    setPreviewModalOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModalOpen(false);
+    setSelectedPreviewRubric(null);
+  };
+
+  const handleUseTemplate = (rubric: PlatformRubric) => {
+    setRubricFormData({
+      name: rubric.name,
+      gradingIntensity: rubric.type, // PlatformRubric uses 'type'
+      programs: [],
+      criteria: rubric.criteria
+    });
+    setSelectedMode("scratch");
+    handleClosePreview();
+  };
+
   const filteredRubrics = platformRubrics.filter(r => 
     r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     r.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleCreateClick = () => {
+    setCurrentView("options");
+    setSelectedMode(null);
+    setRubricFormData({
+      ...defaultRubricFormData,
+      criteria: [
+        ...initialCriteria.map((c) => ({
+          ...c,
+          scores: c.scores.map((s) => ({ ...s })),
+        })),
+      ],
+    });
+  };
+
+  const handleBackToList = () => {
+    setCurrentView("list");
+    setSelectedMode(null);
+  };
+
+  const handleModeSelection = (mode: BuilderMode) => {
+    setSelectedMode(mode);
+  };
+
+  const handleFormChange = (updates: Partial<RubricFormData>) => {
+    setRubricFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const handleCancelMode = () => {
+    setSelectedMode(null);
+  };
+
   return (
     <div className="space-y-10 pb-20">
       {/* Premium Integrated Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Platform Rubrics</h1>
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-            <Lock size={14} className="text-primary/50" />
-            Standard Grading Criteria
-          </p>
+        <div className="flex items-center gap-3">
+          {currentView === "options" && (
+            <button
+              onClick={handleBackToList}
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">
+              {currentView === "options" ? "Add Rubric" : "Platform Rubrics"}
+            </h1>
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+              <Lock size={14} className="text-primary/50" />
+              Standard Grading Criteria
+            </p>
+          </div>
         </div>
-        <Button
-          onClick={() => setShowCreateModal(true)}
+        
+        {currentView === "list" && (
+          <Button
+            onClick={handleCreateClick}
           className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all px-6 h-10 flex items-center gap-2 border-none group"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform" />
           <span className="text-[10px] font-bold uppercase tracking-widest">Create Rubric</span>
         </Button>
+        )}
       </div>
 
-      {/* Telemetry Filter */}
+      {currentView === "options" && (
+        <div className="space-y-0">
+          <RubricCreationOptionsView
+            selectedMode={selectedMode}
+            onModeSelect={handleModeSelection}
+          />
+
+          {selectedMode === "upload" && (
+            <UploadModeView
+              onCancel={handleCancelMode}
+              onImportSuccess={(rubricData) => {
+                setRubricFormData(rubricData);
+                setSelectedMode("scratch");
+              }}
+            />
+          )}
+
+          {selectedMode === "template" && (
+            <TemplateModeView
+              onCancel={handleCancelMode}
+              onPreviewRubric={handlePreviewRubric}
+            />
+          )}
+
+          {selectedMode === "scratch" && (
+            <ScratchModeView
+              formData={rubricFormData}
+              onFormChange={handleFormChange}
+              onSave={() => handleCreatePlatformRubric(rubricFormData)}
+              onCancel={handleCancelMode}
+              hidePrograms={true}
+            />
+          )}
+        </div>
+      )}
+
+      {currentView === "list" && (
+        <>
+          {/* Telemetry Filter */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm flex flex-col md:flex-row gap-6">
         <div className="flex-1 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={18} />
@@ -195,7 +295,7 @@ export function AdminRubricsTab() {
             You haven't created any global rubrics yet.
           </p>
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleCreateClick}
             className="mt-8 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-6 h-10"
           >
             Add New Rubric
@@ -244,148 +344,40 @@ export function AdminRubricsTab() {
                 </div>
 
                 <div className="pt-4 border-t border-neutral-50 flex items-center justify-between">
-                   <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_-1px_rgba(16,185,129,0.5)]" />
                       <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Platform Standard</span>
-                   </div>
-                   {rubric.grading_intensity && (
+                    </div>
+                    {(rubric.grading_intensity || (rubric as any).type) && (
                       <span className="text-[9px] font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-md uppercase tracking-tighter border border-primary/10">
-                         {rubric.grading_intensity} Depth
+                        {rubric.grading_intensity || (rubric as any).type} Depth
                       </span>
-                   )}
+                    )}
                 </div>
               </div>
               
-              <button className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white group-hover:border-primary/20">
-                 <span className="text-[10px] font-bold uppercase tracking-widest">View Rubric</span>
-                 <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-              </button>
+               <button className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white group-hover:border-primary/20">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">View Rubric</span>
+                  <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+               </button>
             </motion.div>
           ))}
         </div>
       )}
+    </>
+  )}
 
-      {showCreateModal && (
-        <PlatformRubricModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreatePlatformRubric}
-        />
-      )}
-    </div>
+    {/* Preview Modal for Platform Rubrics */}
+    {selectedPreviewRubric && (
+      <RubricPreviewModal
+        rubric={selectedPreviewRubric}
+        isOpen={previewModalOpen}
+        onClose={handleClosePreview}
+        onUseTemplate={handleUseTemplate}
+      />
+    )}
+  </div>
   );
 }
 
-function PlatformRubricModal({
-  isOpen,
-  onClose,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: {
-    name: string;
-    description: string;
-    criteria: CriteriaRow[];
-    gradingIntensity: string;
-    programs: string[];
-  }) => Promise<void>;
-}) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!name.trim()) {
-      setError("Please enter a name for the rubric.");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await onSubmit({
-        name: name.trim(),
-        description: description.trim(),
-        criteria: [],
-        gradingIntensity: "Basic",
-        programs: [],
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Protocol injection failure.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-6 bg-black/5 backdrop-blur-sm z-[100]"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl border border-neutral-100 p-10 overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-40 h-40 bg-primary/5 rounded-full blur-3xl opacity-50" />
-        
-        <div className="relative z-10 space-y-8">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">Add New Rubric</h2>
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest opacity-80">Set up a new grading rubric</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">
-                Rubric Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="E.g., Global Essay Assessment V1"
-                className="w-full h-12 px-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">
-                Description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What is this rubric used for?"
-                className="w-full h-32 px-5 py-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none resize-none"
-                rows={3}
-              />
-            </div>
-            {error && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold uppercase tracking-widest flex items-center gap-3">
-                <Trash2 size={12} />
-                {error}
-              </div>
-            )}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="ghost" onClick={onClose} className="rounded-xl h-12 text-[10px] font-bold uppercase tracking-widest px-6 hover:bg-neutral-50">
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" disabled={isLoading} className="rounded-xl h-12 text-[10px] font-bold uppercase tracking-widest px-8 shadow-xl shadow-primary/20">
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Rubric"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
