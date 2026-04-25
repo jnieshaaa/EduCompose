@@ -31,7 +31,7 @@ export interface ThresholdSettings {
 }
 
 export interface RubricDefaults {
-  defaultRubricId?: string | number | null;
+  defaultRubricId?: string | null;
   autoApplyToNewPrograms: boolean;
 }
 
@@ -66,8 +66,7 @@ export const DEFAULT_RUBRIC_DEFAULTS: RubricDefaults = {
 
 // Supabase row type for teachers table
 export interface SupabaseTeacherRow {
-  id: number;
-  auth_user_id: string;
+  id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;

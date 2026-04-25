@@ -29,7 +29,7 @@ const getTeacherId = async (): Promise<number | null> => {
     const { data: userData, error: userTableError } = await supabase
       .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
     if (userTableError || !userData) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, User, Mail, Hash, BookOpen, Layers, CheckCircle, AlertTriangle, GraduationCap } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../ui/Button";
@@ -97,14 +98,6 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
       const normalizedEmail = formData.email.trim().toLowerCase();
       const currentEmail = (student?.email || "").trim().toLowerCase();
-      const hasProvisionedAuthAccount = !!student?.auth_user_id;
-
-      if (hasProvisionedAuthAccount && normalizedEmail !== currentEmail) {
-        setFormError(
-          "Email cannot be changed here for provisioned student accounts. Please use account provisioning flow.",
-        );
-        return;
-      }
 
       if (normalizedEmail && normalizedEmail !== currentEmail) {
         const { data: existingUser, error: lookupError } = await supabase
@@ -127,10 +120,18 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
       }
 
       const { error } = await supabase
-        .from("students")
+        .from("users")
         .update({
-          ...formData,
+          student_code: formData.student_code.trim(),
+          first_name: formData.first_name.trim(),
+          middle_name: formData.middle_name.trim(),
+          last_name: formData.last_name.trim(),
           email: normalizedEmail,
+          program_id: formData.program_id,
+          year: formData.year,
+          block_name: formData.block_name,
+          is_active: formData.is_active,
+          enrollment_status: formData.enrollment_status
         })
         .eq("id", student.id);
 
@@ -146,11 +147,12 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-neutral-100"
       >
         <div className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
@@ -159,8 +161,8 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               <User size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Edit Student</h2>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update student information</p>
+              <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">Edit Student</h2>
+              <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update Student</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -174,7 +176,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               <motion.div 
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: 'auto' }} 
-                className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2"
+                className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-medium uppercase tracking-wider flex items-center gap-2"
               >
                 <AlertTriangle size={14} />
                 {formError}
@@ -184,7 +186,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Student ID</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Student ID*</label>
               <div className="relative group/id">
                 <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/id:text-primary transition-colors" size={14} />
                 <input
@@ -192,21 +194,21 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                   value={formData.student_code}
                   onChange={(e) => setFormData({ ...formData, student_code: e.target.value })}
                   placeholder="2024-0001"
-                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
               <div className="relative group/mail">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={14} />
                 <input
                   type="email"
                   required
                   value={formData.email}
-                  disabled={!!student?.auth_user_id}
+                  disabled={!!student?.id}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all disabled:opacity-50"
+                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
                 />
               </div>
             </div>
@@ -214,40 +216,40 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
               <input
                 required
                 value={formData.first_name}
                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
               <input
                 value={formData.middle_name}
                 onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
               <input
                 required
                 value={formData.last_name}
                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
           </div>
 
           <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program Concentration</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
               {isLoadingPrograms ? (
-                <div className="h-11 flex items-center gap-2 text-xs font-bold text-neutral-400 px-4">
+                <div className="h-11 flex items-center gap-2 text-xs font-medium text-neutral-400 px-4">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  CONSULTING REGISTRY...
+                  LOADING...
                 </div>
               ) : (
                 <div className="relative group/select">
@@ -255,7 +257,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                   <select
                     value={formData.program_id}
                     onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all appearance-none"
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none"
                     required
                   >
                     <option value="">Select Program</option>
@@ -271,13 +273,13 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Year Level*</label>
                 <div className="relative group/year">
                    <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/year:text-primary transition-colors shadow-none" size={14} />
                    <select
                     value={formData.year}
                     onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all appearance-none"
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none"
                   >
                     {[1, 2, 3, 4, 5].map((y) => (
                       <option key={y} value={y}>{y}{y === 1 ? "st" : y === 2 ? "nd" : y === 3 ? "rd" : "th"} Year</option>
@@ -286,19 +288,19 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Class</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Block</label>
                 <input
                   value={formData.block_name}
                   onChange={(e) => setFormData({ ...formData, block_name: e.target.value })}
                   placeholder="e.g. 3A"
-                  className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all"
+                  className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer"
                 />
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Student Status</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Status</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'active', label: 'Active', icon: CheckCircle, color: 'emerald' },
@@ -313,7 +315,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                     enrollment_status: s.id as any, 
                     is_active: s.id === 'active' 
                   })}
-                  className={`flex items-center justify-center gap-2 h-11 px-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
+                  className={`flex items-center justify-center gap-2 h-11 px-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border-2 transition-all ${
                     formData.enrollment_status === s.id
                       ? `bg-${s.color}-600 border-${s.color}-600 text-white shadow-lg shadow-${s.color}-200`
                       : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
@@ -332,7 +334,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             variant="outline" 
             onClick={onClose} 
             disabled={loading}
-            className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-bold uppercase tracking-widest"
+            className="flex-1 sm:flex-none border-neutral-200 text-neutral-500 h-10 rounded-xl text-[10px] font-medium uppercase tracking-widest"
           >
             Cancel
           </Button>
@@ -340,13 +342,14 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             type="submit"
             form="modify-registry-form"
             disabled={loading}
-            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px] text-[10px] font-bold uppercase tracking-widest"
+            className="flex-1 sm:flex-none bg-primary text-white shadow-lg shadow-primary/20 h-10 px-8 group rounded-xl text-[10px] font-medium uppercase tracking-widest"
           >
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

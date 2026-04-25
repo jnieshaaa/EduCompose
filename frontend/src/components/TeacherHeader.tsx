@@ -6,7 +6,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
@@ -36,7 +36,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [teacherProfile, setTeacherProfile] = useState<{
@@ -89,7 +88,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         const { data: dbUser } = await supabase
           .from("users")
           .select("title, nickname, email")
-          .eq("auth_user_id", authData.user.id)
+          .eq("id", authData.user.id)
           .maybeSingle();
 
         if (dbUser) {
@@ -122,24 +121,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     }
   };
 
-  const routeLabels: Record<string, string> = {
-    "/Teacher/Dashboard": "Dashboard",
-    "/Teacher/Programs": "Class Management",
-    "/Teacher/Sections": "Class Management",
-    "/Teacher/Students": "Class Management",
-    "/Teacher/Activities": "Activities",
-    "/Teacher/CompareActivities": "Duplicate Detection",
-    "/Teacher/Essays": "Essay Submissions",
-    "/Teacher/EssayManagement": "Essay Management",
-    "/Teacher/Rubrics": "Rubrics / Criteria",
-    "/Teacher/Metrics": "Metrics",
-    "/Teacher/Settings": "Settings",
-    "/Teacher/Notifications": "Notifications",
-    "/Teacher/AnalysisResults": "Analysis Results",
-    "/Teacher/Help": "Support Center",
-  };
-
-  const currentLabel = routeLabels[location.pathname] || "Dashboard";
 
   // Animate progress bar
   useEffect(() => {
@@ -210,8 +191,8 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
         >
           {isBurgerActive ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
-        <h1 className="text-base font-bold text-neutral-800 tracking-tight">
-          {currentLabel}
+        <h1 className="text-lg font-black text-primary tracking-tighter">
+          EduCompose
         </h1>
       </div>
 

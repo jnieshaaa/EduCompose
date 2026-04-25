@@ -43,9 +43,10 @@ export function ClassDetailTab() {
         setIsLoading(true);
 
         const { data: student } = await supabase
-          .from("students")
+          .from("users")
           .select("id")
-          .eq("auth_user_id", user.auth_id)
+          .eq("id", user.auth_id)
+          .eq("role", "student")
           .maybeSingle();
 
         if (!student) return;
@@ -131,9 +132,9 @@ export function ClassDetailTab() {
           .select("*")
           .order("created_at", { ascending: false });
 
-        const filterParts = [`course_id.cs.{${tcl.course_id}}`];
-        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.cs.{${currentBlockId}}`);
-        if (programId && programId !== "undefined") filterParts.push(`program_id.cs.{${programId}}`);
+        const filterParts = [`course_id.eq.${tcl.course_id}`];
+        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.eq.${currentBlockId}`);
+        if (programId && programId !== "undefined") filterParts.push(`program_id.eq.${programId}`);
 
         query = query.or(filterParts.join(','));
 

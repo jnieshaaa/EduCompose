@@ -7,7 +7,6 @@ import {
   BarChart3,
   Settings,
   GitCompare,
-  Archive,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -70,11 +69,6 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
         path: "/Teacher/Metrics",
       },
       {
-        icon: <Archive className="w-5 h-5" />,
-        label: "Archive",
-        path: "/Teacher/Archive",
-      },
-      {
         icon: <Settings className="w-5 h-5" />,
         label: "Settings",
         path: "/Teacher/Settings",
@@ -108,6 +102,12 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({
   const isItemActive = (path: string) => {
     const current = activePath.toLowerCase();
     const target = path.toLowerCase();
+    
+    // Highlight Settings if we are in Archive (since it's now a sub-section of Settings)
+    if (target === "/teacher/settings" && current === "/teacher/archive") {
+      return true;
+    }
+
     if (target === "/teacher/courses") {
       return courseManagementPaths.some(p => current.startsWith(p.toLowerCase()));
     }

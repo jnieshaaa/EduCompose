@@ -214,26 +214,26 @@ export function RubricCriteriaEditor({
   const handleAddCriteria = () => {
     const newId =
       criteriaList.length > 0
-        ? Math.max(...criteriaList.filter(c => typeof c.id === 'number').map((c) => c.id as number), 0) + 1
+        ? Math.max(...criteriaList.map((c) => parseInt(c.id) || 0), 0) + 1
         : 1;
     const newCriteria: CriteriaRow = {
-      id: newId,
+      id: String(newId),
       title: `Criteria ${newId}`,
       scores: [
-        { id: 1, title: "Excellent", points: 4, description: "" },
-        { id: 2, title: "Proficient", points: 3, description: "" },
-        { id: 3, title: "Developing", points: 2, description: "" },
-        { id: 4, title: "Beginning", points: 1, description: "" },
+        { id: '1', title: "Excellent", points: 4, description: "" },
+        { id: '2', title: "Proficient", points: 3, description: "" },
+        { id: '3', title: "Developing", points: 2, description: "" },
+        { id: '4', title: "Beginning", points: 1, description: "" },
       ],
     };
     onFormChange({ criteria: [...criteriaList, newCriteria] });
   };
 
-  const handleDeleteCriteria = (criteriaId: string | number) => {
+  const handleDeleteCriteria = (criteriaId: string) => {
     onFormChange({ criteria: criteriaList.filter((c) => c.id !== criteriaId) });
   };
 
-  const handleCriteriaTitleChange = (criteriaId: string | number, newTitle: string) => {
+  const handleCriteriaTitleChange = (criteriaId: string, newTitle: string) => {
     onFormChange({
       criteria: criteriaList.map((c) =>
         c.id === criteriaId ? { ...c, title: newTitle } : c,
@@ -242,16 +242,16 @@ export function RubricCriteriaEditor({
   };
 
   // --- Score Level Handlers ---
-  const handleAddScoreLevel = (criteriaId: string | number) => {
+  const handleAddScoreLevel = (criteriaId: string) => {
     onFormChange({
       criteria: criteriaList.map((criteria) => {
         if (criteria.id === criteriaId) {
           const newScoreId =
             criteria.scores.length > 0
-              ? Math.max(...criteria.scores.filter(s => typeof s.id === 'number').map((s) => s.id as number), 0) + 1
+              ? Math.max(...criteria.scores.map((s) => parseInt(s.id) || 0), 0) + 1
               : 1;
           const newScore: ScoreLevel = {
-            id: newScoreId,
+            id: String(newScoreId),
             title: "New Level",
             points: 0,
             description: "",
@@ -263,7 +263,7 @@ export function RubricCriteriaEditor({
     });
   };
 
-  const handleDeleteScoreLevel = (criteriaId: string | number, scoreId: string | number) => {
+  const handleDeleteScoreLevel = (criteriaId: string, scoreId: string) => {
     onFormChange({
       criteria: criteriaList.map((criteria) => {
         if (criteria.id === criteriaId) {
@@ -278,8 +278,8 @@ export function RubricCriteriaEditor({
   };
 
   const handleScoreChange = (
-    criteriaId: string | number,
-    scoreId: string | number,
+    criteriaId: string,
+    scoreId: string,
     field: keyof ScoreLevel,
     value: string | number,
   ) => {

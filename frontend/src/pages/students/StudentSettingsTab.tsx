@@ -38,12 +38,13 @@ export function StudentSettingsTab() {
         if (!authData?.user) return;
 
         const { data, error } = await supabase
-          .from("students")
+          .from("users")
           .select(`
             *,
-            programs_lookup (name, abbr)
+            programs_lookup!fk_user_program (name, abbr)
           `)
-          .eq("auth_user_id", authData.user.id)
+          .eq("id", authData.user.id)
+          .eq("role", "student")
           .single();
 
         if (error) throw error;
@@ -103,7 +104,7 @@ export function StudentSettingsTab() {
       localStorage.setItem(`student_prefs_${studentData.id}`, JSON.stringify(preferences));
       
       const { error } = await supabase
-        .from("students")
+        .from("users")
         .update({
           first_name: profile.firstName,
           last_name: profile.lastName,
@@ -122,15 +123,7 @@ export function StudentSettingsTab() {
         }
       });
 
-      // Also update public.users if exists
-      await supabase
-        .from("users")
-        .update({
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          nickname: profile.nickname
-        })
-        .eq("auth_user_id", studentData.auth_user_id);
+      // No need for separate users sync as we already updated users table
         
       showNotification('success', "All settings saved!");
     } catch (err) {

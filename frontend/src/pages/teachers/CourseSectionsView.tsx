@@ -190,8 +190,9 @@ export function CourseSectionsView({
 
         const results = await Promise.all(uniqueBlocks.map(async (b) => {
           const { count } = await supabase
-            .from("students")
+            .from("users")
             .select("*", { count: 'exact', head: true })
+            .eq("role", "student")
             .eq("program_id", selectedProgramLoad.program_id)
             .eq("year", b.year)
             .eq("block_name", b.name);
@@ -342,8 +343,9 @@ export function CourseSectionsView({
       let enrollmentCount = 0;
       if (block) {
         const { data: matchingStudents } = await supabase
-          .from("students")
+          .from("users")
           .select("id")
+          .eq("role", "student")
           .eq("program_id", selectedProgramLoad.program_id)
           .eq("year", newBlock.year)
           .eq("block_name", newBlock.name.toUpperCase());

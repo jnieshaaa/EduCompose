@@ -7,7 +7,7 @@ import { useNotification } from "../contexts/NotificationContext";
 
 interface User {
   auth_id: string;
-  id: string | number;
+  id: string;
   email: string;
   username: string;
   first_name: string;
@@ -18,6 +18,12 @@ interface User {
   onboarding_completed?: boolean;
   title?: string;
   nickname?: string;
+  student_code?: string;
+  program_id?: string;
+  year?: number;
+  block_name?: string;
+  school_id?: string;
+  department_id?: string;
 }
 
 interface AuthContextType {
@@ -27,6 +33,7 @@ interface AuthContextType {
   login: (token: string, userData?: User) => void;
   logout: (reason?: string) => void;
   checkAuth: () => Promise<void>;
+  isInitialCheckComplete: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,8 +51,16 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem("user");
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState(!localStorage.getItem("auth_token"));
+  const [isInitialCheckComplete, setIsInitialCheckComplete] = useState(false);
   const { showNotification } = useNotification();
 
   const isNetworkDisconnectError = (maybeMessage?: unknown) => {
@@ -67,39 +82,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return Promise.race([query, timeoutPromise]);
   };
 
-  const fetchUserFromTable = async (authUserId: string, roleHint?: string): Promise<{ user: User | null; error: any }> => {
+  const fetchUserFromTable = async (authUserId: string, _roleHint?: string): Promise<{ user: User | null; error: any }> => {
     try {
-      // 1. If we have a student hint, try students table first
-      if (roleHint === 'student') {
-        const studentResult: any = await safeDbQuery(
-          supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
-        );
-
-        if (studentResult.data) {
-          const data = studentResult.data;
-          return {
-            user: {
-              id: data.id.toString(),
-              auth_id: authUserId,
-              email: data.email ?? "",
-              username: data.email ?? "",
-              first_name: data.first_name || "",
-              last_name: data.last_name || "",
-              role: "student",
-              is_active: true,
-              email_verified: true,
-              onboarding_completed: data.onboarding_completed ?? false,
-            },
-            error: null
-          };
-        }
-        
-        if (studentResult.error?.isTimeout) return { user: null, error: studentResult.error };
-      }
-
-      // 2. Try fetching from users table (Teacher/Admin or default)
+      // Fetching from unified users table (Admin/Teacher/Student)
       const userResult: any = await safeDbQuery(
-        supabase.from("users").select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname").eq("auth_user_id", authUserId).maybeSingle()
+        supabase.from("users")
+          .select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname, student_code, program_id, year, block_name, school_id, department_id")
+          .eq("id", authUserId)
+          .maybeSingle()
       );
 
       if (userResult.error && userResult.error.message !== "DB_TIMEOUT") {
@@ -111,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return {
           user: {
             id: data.id.toString(),
-            auth_id: authUserId,
+            auth_id: authUserId, // In unified system, id === auth_id
             email: data.email ?? "",
             username: data.email ?? "",
             first_name: data.first_name || "",
@@ -122,39 +112,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             onboarding_completed: data.onboarding_completed ?? false,
             title: data.title,
             nickname: data.nickname,
+            student_code: data.student_code,
+            program_id: data.program_id,
+            year: data.year,
+            block_name: data.block_name,
+            school_id: data.school_id,
+            department_id: data.department_id,
           },
           error: null
         };
       }
 
       if (userResult.error?.isTimeout) return { user: null, error: userResult.error };
-
-      // 3. Fallback to students table if not tried yet
-      if (roleHint !== 'student') {
-        const studentResult: any = await safeDbQuery(
-          supabase.from("students").select("id, email, first_name, last_name, onboarding_completed").eq("auth_user_id", authUserId).maybeSingle()
-        );
-
-        if (studentResult.data) {
-          const data = studentResult.data;
-          return {
-            user: {
-              id: data.id.toString(),
-              auth_id: authUserId,
-              email: data.email ?? "",
-              username: data.email ?? "",
-              first_name: data.first_name || "",
-              last_name: data.last_name || "",
-              role: "student",
-              is_active: true,
-              email_verified: true,
-              onboarding_completed: data.onboarding_completed ?? false,
-            },
-            error: null
-          };
-        }
-        return { user: null, error: studentResult.error };
-      }
 
       return { user: null, error: null };
     } catch (e) { 
@@ -187,7 +156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [showNotification]);
 
   const checkAuth = useCallback(async () => {
-    setIsLoading(true);
+    // Only set loading to true if we don't have a user yet
+    if (!user) setIsLoading(true);
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -234,6 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("Auth check failed:", error);
     } finally {
       setIsLoading(false);
+      setIsInitialCheckComplete(true);
     }
   }, [logout, mapSupabaseUser]);
 
@@ -305,7 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, checkAuth, isInitialCheckComplete }}>
       {children}
     </AuthContext.Provider>
   );

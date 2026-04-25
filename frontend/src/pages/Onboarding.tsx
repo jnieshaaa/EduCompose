@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useLoader } from "../components/ui/LoaderContext";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -63,6 +64,22 @@ const TeacherOnboarding: React.FC = () => {
     email: user?.email || "",
   });
 
+  // Pre-populate data if user already has some info
+  useEffect(() => {
+    if (user) {
+      setData(prev => ({
+        ...prev,
+        title: user.title || prev.title,
+        nickname: user.nickname || prev.nickname,
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        email: user.email || prev.email,
+        school: (user as any).school_id || prev.school,
+        department: (user as any).department_id || prev.department,
+      }));
+    }
+  }, [user]);
+
   useEffect(() => {
     const fetchSchools = async () => {
       const { data: schoolsData, error } = await supabase
@@ -113,8 +130,11 @@ const TeacherOnboarding: React.FC = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  const { setLoading: setGlobalLoading } = useLoader();
+
   const handleComplete = async () => {
     setIsLoading(true);
+    setGlobalLoading(true);
     try {
       const {
         data: { user: authUser },
@@ -150,7 +170,7 @@ const TeacherOnboarding: React.FC = () => {
           email: data.email,
           onboarding_completed: true,
         })
-        .eq("auth_user_id", authUser.id)
+        .eq("id", authUser.id)
         .select()
         .single();
 
@@ -166,6 +186,7 @@ const TeacherOnboarding: React.FC = () => {
       console.error("Error completing onboarding:", error);
     } finally {
       setIsLoading(false);
+      setGlobalLoading(false);
     }
   };
 

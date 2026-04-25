@@ -43,9 +43,10 @@ export function ProgressTab() {
         if (!authUser?.user) return;
 
         const { data: student } = await supabase
-          .from('students')
+          .from('users')
           .select('id')
-          .eq('auth_user_id', authUser.user.id)
+          .eq('id', authUser.user.id)
+          .eq('role', 'student')
           .maybeSingle();
 
         if (!student) return;

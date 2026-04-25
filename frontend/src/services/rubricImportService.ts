@@ -87,7 +87,7 @@ export async function parseRubricJSON(file: File): Promise<ImportResult> {
         }
 
         parsedScores.push({
-          id: score.id || j + 1,
+          id: String(score.id || j + 1),
           title: score.title,
           points: score.points,
           description: score.description || "",
@@ -95,7 +95,7 @@ export async function parseRubricJSON(file: File): Promise<ImportResult> {
       }
 
       parsedCriteria.push({
-        id: criterion.id || i + 1,
+        id: String(criterion.id || i + 1),
         title: criterion.title,
         scores: parsedScores,
       });
@@ -299,7 +299,7 @@ export async function parseRubricExcel(file: File): Promise<ImportResult> {
 
         if (title && !isNaN(points)) {
           scores.push({
-            id: idx + 1,
+            id: String(idx + 1),
             title,
             points: points || scoreColumns.length - idx,
             description: description || "",
@@ -309,7 +309,7 @@ export async function parseRubricExcel(file: File): Promise<ImportResult> {
 
       if (scores.length > 0) {
         parsedCriteria.push({
-          id: parsedCriteria.length + 1,
+          id: String(parsedCriteria.length + 1),
           title: criterionTitle,
           scores,
         });
@@ -465,30 +465,30 @@ export function downloadRubricTemplate() {
     programs: ["Computer Science", "Engineering"],
     criteria: [
       {
-        id: 1,
+        id: '1',
         title: "Grammar & Mechanics",
         scores: [
           {
-            id: 1,
+            id: '1',
             title: "Excellent",
             points: 4,
             description:
               "Virtually no errors; demonstrates mastery of grammar and mechanics",
           },
           {
-            id: 2,
+            id: '2',
             title: "Proficient",
             points: 3,
             description: "Few minor errors; strong command of grammar",
           },
           {
-            id: 3,
+            id: '3',
             title: "Developing",
             points: 2,
             description: "Some errors that don't impede understanding",
           },
           {
-            id: 4,
+            id: '4',
             title: "Beginning",
             points: 1,
             description:
@@ -497,29 +497,29 @@ export function downloadRubricTemplate() {
         ],
       },
       {
-        id: 2,
+        id: '2',
         title: "Organization & Structure",
         scores: [
           {
-            id: 1,
+            id: '1',
             title: "Excellent",
             points: 4,
             description: "Clear, logical structure with smooth transitions",
           },
           {
-            id: 2,
+            id: '2',
             title: "Proficient",
             points: 3,
             description: "Generally organized with some minor flow issues",
           },
           {
-            id: 3,
+            id: '3',
             title: "Developing",
             points: 2,
             description: "Basic structure but lacks coherence",
           },
           {
-            id: 4,
+            id: '4',
             title: "Beginning",
             points: 1,
             description: "Disorganized and difficult to follow",

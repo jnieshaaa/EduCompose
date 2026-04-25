@@ -174,10 +174,10 @@ export function CreateActivityModal({
     setIsPreviewOpen(true);
   };
 
-  const handlePreviewExisting = async (id: string | number) => {
+  const handlePreviewExisting = async (id: string) => {
     setIsFetchingPreview(true);
     try {
-      const rubric = await fetchRubricById(Number(id));
+      const rubric = await fetchRubricById(id);
       if (rubric && rubric.fullData) {
         setPreviewRubric(rubric.fullData);
         setIsPreviewOpen(true);
@@ -332,8 +332,13 @@ export function CreateActivityModal({
                   <div 
                     key={idx}
                     onClick={() => {
-                      setSelectedSuggestionIndex(idx);
-                      setFormData(prev => ({ ...prev, rubricId: "ai-suggestion" }));
+                      if (selectedSuggestionIndex === idx) {
+                        setSelectedSuggestionIndex(null);
+                        setFormData(prev => ({ ...prev, rubricId: "" }));
+                      } else {
+                        setSelectedSuggestionIndex(idx);
+                        setFormData(prev => ({ ...prev, rubricId: "ai-suggestion" }));
+                      }
                     }}
                     className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${
                       selectedSuggestionIndex === idx 
@@ -383,7 +388,7 @@ export function CreateActivityModal({
                     <div 
                       key={rubric.id}
                       onClick={() => {
-                        setFormData((prev) => ({ ...prev, rubricId: rubric.id }));
+                        setFormData((prev) => ({ ...prev, rubricId: (prev.rubricId === rubric.id && selectedSuggestionIndex === null) ? "" : rubric.id }));
                         setSelectedSuggestionIndex(null);
                       }}
                       className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${
@@ -437,7 +442,7 @@ export function CreateActivityModal({
                     <div 
                       key={rubric.id}
                       onClick={() => {
-                        setFormData((prev) => ({ ...prev, rubricId: rubric.id }));
+                        setFormData((prev) => ({ ...prev, rubricId: (prev.rubricId === rubric.id && selectedSuggestionIndex === null) ? "" : rubric.id }));
                         setSelectedSuggestionIndex(null);
                       }}
                       className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer group/card ${

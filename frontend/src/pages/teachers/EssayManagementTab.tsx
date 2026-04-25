@@ -196,8 +196,8 @@ export function EssayManagementTab() {
 
   // 2. Fetch Students when program/block changes
   const fetchStudents = useCallback(async (targetProgramId: string, targetBlockId: string) => {
-    try {
-      let query = supabase.from('students').select('*').eq('teacher_id', user?.auth_id);
+      try {
+        let query = supabase.from('users').select('*').eq('teacher_id', user?.auth_id).eq('role', 'student');
       
       if (targetBlockId !== 'all') {
         const { data: enrollmentData } = await supabase
@@ -242,7 +242,7 @@ export function EssayManagementTab() {
         .from('essays')
         .select(`
           *,
-          student:students (
+          student:users!student_id (
             first_name,
             last_name,
             nickname
@@ -303,8 +303,8 @@ export function EssayManagementTab() {
         .insert({
           title: newActivity.title.trim(),
           teacher_id: user.auth_id,
-          program_id: newActivity.programId === 'all' ? null : [newActivity.programId],
-          block_id: newActivity.blockId === 'all' ? null : [newActivity.blockId],
+          program_id: newActivity.programId === 'all' ? [] : [newActivity.programId],
+          block_id: newActivity.blockId === 'all' ? null : newActivity.blockId,
           rubric_id: newActivity.rubricId || null,
           due_date: newActivity.dueDate || null,
           instructions: newActivity.description || null,

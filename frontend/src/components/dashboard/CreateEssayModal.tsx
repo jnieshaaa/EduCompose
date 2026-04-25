@@ -91,7 +91,7 @@ const CreateEssayModal: React.FC<CreateEssayModalProps> = ({
       const fallbackEssay: Essay = {
         id: String(Date.now()),
         student_id: parsedStudentId,
-        user_id: 1,
+        user_id: "1",
         class_id: parsedClassId,
         title: payload.title,
         content: payload.content,

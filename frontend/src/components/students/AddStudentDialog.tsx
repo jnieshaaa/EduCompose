@@ -67,8 +67,9 @@ export function AddStudentDialog({
           const programId = (bData.teacher_program_loads as any)?.program_id;
 
           let query = supabase
-            .from("students")
+            .from("users")
             .select("id, first_name, last_name, student_code")
+            .eq("role", "student")
             .eq("teacher_id", userData.user.id)
             .eq("is_active", true);
 

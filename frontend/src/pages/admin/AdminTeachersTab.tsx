@@ -20,7 +20,6 @@ import EditTeacherModal from "../../components/admin/EditTeacherModal";
 
 interface TeacherRecord {
   id: string;
-  auth_user_id: string;
   email: string;
   first_name: string;
   middle_name?: string;
@@ -51,8 +50,9 @@ export const AdminTeachersTab: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("users")
-        .select("id, auth_user_id, email, first_name, middle_name, last_name, suffix, title, nickname, school_id, department_id, role, code, birthday, is_active, onboarding_completed, created_at")
+        .select("id, email, first_name, middle_name, last_name, suffix, title, nickname, school_id, department_id, role, code, birthday, is_active, onboarding_completed, created_at")
         .eq("role", "teacher")
+        .eq("is_active", true)
         .order("last_name", { ascending: true });
 
       if (error) throw error;
@@ -74,12 +74,16 @@ export const AdminTeachersTab: React.FC = () => {
     t.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this teacher? This will NOT delete their auth account but will remove them from the list.")) return;
+  const handleArchive = async (id: string) => {
+    if (!window.confirm("Are you sure you want to archive this teacher? They will be moved to the archives and will no longer be able to log in.")) return;
     try {
-      const { error } = await supabase.from("users").delete().eq("id", id);
+      const { error } = await supabase
+        .from("users")
+        .update({ is_active: false, archived_at: new Date().toISOString() })
+        .eq("id", id);
+        
       if (error) throw error;
-      showNotification('success', "Teacher record removed.");
+      showNotification('success', "Teacher moved to archives.");
       loadTeachers();
     } catch (err: any) {
       showNotification('error', err.message);
@@ -90,7 +94,7 @@ export const AdminTeachersTab: React.FC = () => {
     <div className="space-y-8 pb-20 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Faculty Members</h1>
+          <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Faculty Members</h1>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage academic staff and educators</p>
         </div>
         <div className="flex gap-3">
@@ -100,14 +104,14 @@ export const AdminTeachersTab: React.FC = () => {
             className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Refresh</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">Refresh</span>
           </Button>
           <Button 
             onClick={() => setShowEnrollModal(true)}
             className="rounded-xl bg-secondary text-white shadow-lg shadow-secondary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
           >
             <UserPlus size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Enroll Faculty</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest">Enroll Faculty</span>
           </Button>
         </div>
       </div>
@@ -115,14 +119,14 @@ export const AdminTeachersTab: React.FC = () => {
       {/* Modern Filter Hub */}
       <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm flex flex-col md:flex-row gap-6">
         <div className="flex-1 space-y-2">
-          <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Faculty</label>
+          <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Search Faculty</label>
           <div className="relative group/search">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-secondary transition-colors" size={18} />
             <input
               placeholder="Search by name, email, or code..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-bold placeholder:text-neutral-300 focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary transition-all outline-none shadow-sm"
+              className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-medium placeholder:text-neutral-300 focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary transition-all outline-none shadow-sm"
             />
           </div>
         </div>
@@ -158,7 +162,7 @@ export const AdminTeachersTab: React.FC = () => {
                         <UserX className="text-neutral-300" size={32} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-neutral-500">No faculty members found</p>
+                        <p className="text-sm font-medium text-neutral-500">No faculty members found</p>
                         <p className="text-xs text-neutral-300 mt-1 uppercase tracking-widest">Enroll your first educator to get started</p>
                       </div>
                     </div>
@@ -173,7 +177,7 @@ export const AdminTeachersTab: React.FC = () => {
                           {teacher.first_name?.[0]?.toUpperCase() || ""}{teacher.last_name?.[0]?.toUpperCase() || (teacher.first_name?.[0] ? "" : "?")}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-neutral-900 leading-tight">
+                          <p className="text-sm font-medium text-neutral-900 leading-tight">
                             {teacher.first_name} {teacher.middle_name ? `${teacher.middle_name} ` : ""}{teacher.last_name} {teacher.suffix || ""}
                           </p>
                           <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-widest mt-1">Instructor</p>
@@ -189,7 +193,7 @@ export const AdminTeachersTab: React.FC = () => {
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2.5">
                         <Hash size={14} className="text-secondary" />
-                        <span className="text-xs font-bold text-neutral-900 tracking-wider">
+                        <span className="text-xs font-medium text-neutral-900 tracking-wider">
                           {teacher.code || "---"}
                         </span>
                       </div>
@@ -222,9 +226,9 @@ export const AdminTeachersTab: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                         <button 
-                          onClick={() => handleDelete(teacher.id)}
+                          onClick={() => handleArchive(teacher.id)}
                           className="p-2 h-9 w-9 flex items-center justify-center bg-white border border-neutral-100 text-neutral-400 hover:text-red-500 hover:border-red-100 hover:shadow-lg hover:shadow-red-500/5 rounded-lg transition-all"
-                          title="Delete Faculty"
+                          title="Archive Faculty"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -240,7 +244,7 @@ export const AdminTeachersTab: React.FC = () => {
         {/* Pagination placeholder */}
         {!loading && filteredTeachers.length > 0 && (
           <div className="px-8 py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-between">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
               Showing {filteredTeachers.length} educators
             </p>
             <div className="flex items-center gap-2">

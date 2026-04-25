@@ -2,7 +2,6 @@
 
 import { supabase } from "../lib/supabaseClient";
 import type {
-  SupabaseRubricRow,
   RubricTemplate,
   CriteriaRow,
 } from "../types/rubricTypes";
@@ -95,9 +94,9 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
     const { data: rubricsData, error: rubricsError } = await supabase
       .from("rubrics")
       .select(
-        "id, name, description, criteria, programs, grading_intensity, created_at"
+        "id, name, description, criteria, grading_intensity, created_at"
       )
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .order("created_at", { ascending: false });
 
 
@@ -107,31 +106,26 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
     }
 
     const mappedRubrics: (RubricTemplate & {
-      programsList?: string[];
       fullData?: Record<string, unknown>;
-    })[] = (rubricsData || []).map((r: SupabaseRubricRow) => {
+    })[] = (rubricsData || []).map((r: any) => {
       // Extract criteria from JSONB
       const criteriaObj: unknown = r.criteria;
       const criteriaData = extractCriteriaFromSupabase(criteriaObj) || [];
-
-      // Extract programs from dedicated column, fallback to criteria metadata for backward compatibility
-      const programs = extractProgramsFromSupabase(r.programs, criteriaObj);
 
       return {
         id: r.id,
         name: r.name,
         criteria: criteriaData.length,
-        programs: programs.length,
+        programs: 0, // programs column removed
         lastUsed: r.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
         level: "College",
-        programsList: programs,
         fullData: {
           id: r.id,
           name: r.name,
           description: r.description || "",
           criteria: criteriaData,
           type: r.grading_intensity || "Basic",
-          programs: programs,
+          programs: [],
         },
       };
     });
@@ -156,11 +150,15 @@ export const savePlatformRubric = async (
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
 
   // Check if a platform rubric with the same name already exists
-  const { data: existingRubrics, error: checkError } = await supabase
+  // A rubric is a platform rubric if user_id is null OR owner is an admin
+  const { data: allSameName, error: checkError } = await supabase
     .from("rubrics")
-    .select("id, name")
-    .is("teacher_id", null) // Platform rubrics
+    .select("id, name, user_id, owner:users!user_id(role)")
     .ilike("name", rubricName);
+
+  const existingRubrics = (allSameName || []).filter(
+    (r: any) => r.user_id === null || r.owner?.role === "admin"
+  );
 
   if (checkError) {
     console.error("Error checking for duplicate platform rubric:", checkError);
@@ -181,9 +179,8 @@ export const savePlatformRubric = async (
       name: rubricName,
       description: rubricFormData.description || `Grading intensity: ${rubricFormData.gradingIntensity}`,
       criteria: rubricFormData.criteria,
-      programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: null, // Platform rubric
+      user_id: null, // Platform rubric
     })
     .select()
     .maybeSingle();
@@ -215,7 +212,7 @@ export const saveRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -238,9 +235,8 @@ export const saveRubric = async (
       name: rubricName,
       description: `Grading intensity: ${rubricFormData.gradingIntensity}`,
       criteria: rubricFormData.criteria,
-      programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: teacherId,
+      user_id: teacherId,
     })
     .select()
     .maybeSingle();
@@ -271,7 +267,7 @@ export const saveTemplateRubric = async (
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -294,9 +290,8 @@ export const saveTemplateRubric = async (
       name: rubricName,
       description: rubric.description,
       criteria: rubric.criteria,
-      programs: [], // Template rubrics don't have specific programs
       grading_intensity: rubric.type, // Use type as intensity
-      teacher_id: teacherId,
+      user_id: teacherId,
     })
     .select()
     .maybeSingle();
@@ -310,7 +305,7 @@ export const saveTemplateRubric = async (
 };
 
 // Delete rubric from Supabase
-export const deleteRubric = async (rubricId: string | number): Promise<void> => {
+export const deleteRubric = async (rubricId: string): Promise<void> => {
   const teacherId = await fetchTeacherId();
   if (!teacherId) return;
 
@@ -318,7 +313,7 @@ export const deleteRubric = async (rubricId: string | number): Promise<void> => 
     .from("rubrics")
     .delete()
     .eq("id", rubricId)
-    .eq("teacher_id", teacherId);
+    .eq("user_id", teacherId);
 
   if (error) {
     console.error("Error deleting rubric:", error);
@@ -339,13 +334,13 @@ export const updateRubric = async (
   const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
 
   const teacherId = await fetchTeacherId();
-  if (!teacherId) throw new Error("Could not resolve numeric teacher ID");
+  if (!teacherId) throw new Error("Could not resolve teacher UUID");
 
   // Check if another rubric with the same name already exists for this teacher (excluding current rubric)
   const { data: existingRubrics, error: checkError } = await supabase
     .from("rubrics")
     .select("id, name")
-    .eq("teacher_id", teacherId)
+    .eq("user_id", teacherId)
     .ilike("name", rubricName); // Case-insensitive comparison
 
   if (checkError) {
@@ -371,12 +366,11 @@ export const updateRubric = async (
       name: rubricName,
       description: `Grading intensity: ${rubricFormData.gradingIntensity}`,
       criteria: rubricFormData.criteria,
-      programs: rubricFormData.programs,
       grading_intensity: rubricFormData.gradingIntensity,
-      teacher_id: teacherId,
+      user_id: teacherId,
     })
     .eq("id", rubricId)
-    .eq("teacher_id", teacherId) // Ensure only the owner can update
+    .eq("user_id", teacherId) // Ensure only the owner can update
     .select()
     .maybeSingle();
 
@@ -390,7 +384,7 @@ export const updateRubric = async (
 
 // Fetch a single rubric by ID
 export const fetchRubricById = async (
-  rubricId: string | number
+  rubricId: string
 ): Promise<(RubricTemplate & { programsList?: string[]; fullData?: Record<string, unknown> }) | null> => {
   try {
     const { data: rubricData, error: rubricError } = await supabase
@@ -406,26 +400,26 @@ export const fetchRubricById = async (
       return null;
     }
 
-    const r = rubricData as SupabaseRubricRow;
+    const r = rubricData as any;
     const criteriaObj: unknown = r.criteria;
     const criteriaData = extractCriteriaFromSupabase(criteriaObj) || [];
-    const programs = extractProgramsFromSupabase(r.programs, criteriaObj);
+    const programsList = extractProgramsFromSupabase(r.programs, criteriaObj) || [];
 
     return {
       id: r.id,
       name: r.name,
       criteria: criteriaData.length,
-      programs: programs.length,
+      programs: programsList.length,
       lastUsed: r.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
       level: "College",
-      programsList: programs,
+      programsList: programsList,
       fullData: {
         id: r.id,
         name: r.name,
         description: r.description || "",
         criteria: criteriaData,
         type: r.grading_intensity || "Basic",
-        programs: programs,
+        programs: programsList,
       },
     };
   } catch (err) {

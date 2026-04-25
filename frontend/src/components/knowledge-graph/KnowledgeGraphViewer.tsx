@@ -31,7 +31,7 @@ interface KnowledgeGraphData {
 }
 
 interface KnowledgeGraphViewerProps {
-  essayId: string | number;
+  essayId: string;
   graphData?: KnowledgeGraphData;
   onLoadGraph?: (data: KnowledgeGraphData) => void;
   height?: number;

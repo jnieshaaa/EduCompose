@@ -111,7 +111,7 @@ export function RubricsTab() {
   };
 
   // Edit rubric handler
-  const handleEditRubric = async (rubricId: string | number) => {
+  const handleEditRubric = async (rubricId: string) => {
     try {
       const rubric = await fetchRubricById(rubricId);
       if (!rubric || !rubric.fullData) {
@@ -145,7 +145,7 @@ export function RubricsTab() {
   };
 
   // Delete rubric handler
-  const handleDeleteRubric = async (rubricId: string | number) => {
+  const handleDeleteRubric = async (rubricId: string) => {
     if (
       !window.confirm(
         "Are you sure you want to delete this rubric? This action cannot be undone."

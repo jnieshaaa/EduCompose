@@ -92,10 +92,10 @@ export function AdminDashboardTab() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10 w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">System Online</span>
+            <span className="text-[10px] font-medium text-primary uppercase tracking-widest">System Online</span>
           </div>
-          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Admin Dashboard</h1>
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+          <h1 className="text-3xl font-medium text-neutral-900 tracking-tight">Admin Dashboard</h1>
+          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest flex items-center gap-2">
              Manage and monitor your system status
           </p>
         </div>
@@ -115,7 +115,7 @@ export function AdminDashboardTab() {
               <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
               <Terminal className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary w-8 h-8 opacity-20" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 animate-pulse">Loading system data...</p>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 animate-pulse">Loading system data...</p>
           </motion.div>
         ) : stats ? (
           <motion.div 
@@ -141,11 +141,11 @@ export function AdminDashboardTab() {
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3 ${card.bg} ${card.color}`}>
                         <card.icon size={26} />
                       </div>
-                      <span className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest">{card.trend}</span>
+                      <span className="text-[9px] font-medium text-neutral-300 uppercase tracking-widest">{card.trend}</span>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-1">{card.label}</p>
-                      <p className="text-4xl font-bold text-primary tracking-tighter">{stats ? card.value.toLocaleString() : "..."}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400 mb-1">{card.label}</p>
+                      <p className="text-4xl font-medium text-primary tracking-tighter">{stats ? card.value.toLocaleString() : "..."}</p>
                       <div className="h-1 w-full bg-neutral-50 rounded-full mt-4 overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }}
@@ -154,7 +154,7 @@ export function AdminDashboardTab() {
                           className={`h-full opacity-30 ${card.color.replace('text', 'bg')}`}
                         />
                       </div>
-                      <p className="text-[10px] font-bold text-neutral-400 mt-4 flex items-center gap-2">
+                      <p className="text-[10px] font-medium text-neutral-400 mt-4 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-neutral-200" />
                         {card.sub}
                       </p>
@@ -171,15 +171,15 @@ export function AdminDashboardTab() {
                   <div className="px-10 py-8 border-b border-neutral-50 bg-neutral-50/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Terminal size={18} className="text-primary" />
-                      <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Quick Actions</h2>
+                      <h2 className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">Quick Actions</h2>
                     </div>
-                    <span className="text-[9px] font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 tracking-widest uppercase">Ready to manage</span>
+                    <span className="text-[9px] font-medium text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 tracking-widest uppercase">Ready to manage</span>
                   </div>
                   <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                       { label: "Users", desc: "Manage students and teachers", icon: Users, link: "/Admin/Users", color: "text-primary", bg: "bg-primary/5" },
                       { label: "Rubrics", desc: "Standard grading criteria", icon: ClipboardCheck, link: "/Admin/Rubrics", color: "text-amber-500", bg: "bg-amber-50/50" },
-                      { label: "Archive", desc: "View past course records", icon: HistoryIcon, link: "/Admin/Archive", color: "text-emerald-500", bg: "bg-emerald-50/50" },
+                      { label: "Archive", desc: "View past course records", icon: HistoryIcon, link: "/Admin/Settings", color: "text-emerald-500", bg: "bg-emerald-50/50" },
                       { label: "Settings", desc: "System rules and setup", icon: Shield, link: "/Admin/Settings", color: "text-neutral-500", bg: "bg-neutral-50/50" },
                     ].map((action, i) => (
                       <button
@@ -191,8 +191,8 @@ export function AdminDashboardTab() {
                           <action.icon size={22} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-neutral-800 tracking-tight mb-0.5">{action.label}</p>
-                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{action.desc}</p>
+                          <p className="text-sm font-medium text-neutral-800 tracking-tight mb-0.5">{action.label}</p>
+                          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">{action.desc}</p>
                         </div>
                         <ArrowRight size={18} className="text-neutral-200 group-hover:translate-x-1 group-hover:text-primary transition-all opacity-0 group-hover:opacity-100" />
                       </button>
@@ -207,8 +207,8 @@ export function AdminDashboardTab() {
                   <div className="relative z-10 flex flex-col md:flex-row gap-16">
                      <div className="flex-1 space-y-8">
                         <div className="space-y-2">
-                          <h3 className="text-[11px] font-bold text-white uppercase tracking-widest opacity-40">User Distribution</h3>
-                          <p className="text-2xl font-bold text-white tracking-tight">Active Users</p>
+                          <h3 className="text-[11px] font-medium text-white uppercase tracking-widest opacity-40">User Distribution</h3>
+                          <p className="text-2xl font-medium text-white tracking-tight">Active Users</p>
                         </div>
                         <div className="space-y-6">
                           {[
@@ -217,7 +217,7 @@ export function AdminDashboardTab() {
                             { label: "Admins", value: stats.total_admins, total: stats.total_users, color: "bg-white/60" }
                           ].map((item, i) => (
                             <div key={i} className="space-y-3">
-                               <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                               <div className="flex justify-between text-[10px] font-medium uppercase tracking-widest">
                                   <span className="text-white/60">{item.label}</span>
                                   <span className="text-white">{item.value.toLocaleString()} <span className="text-white/20 mx-1">/</span> {item.total.toLocaleString()}</span>
                                </div>
@@ -238,8 +238,8 @@ export function AdminDashboardTab() {
 
                      <div className="space-y-8 md:w-64">
                         <div className="space-y-2">
-                          <h3 className="text-[11px] font-bold text-white uppercase tracking-widest opacity-40">Resources</h3>
-                          <p className="text-2xl font-bold text-white tracking-tight">Files & Data</p>
+                          <h3 className="text-[11px] font-medium text-white uppercase tracking-widest opacity-40">Resources</h3>
+                          <p className="text-2xl font-medium text-white tracking-tight">Files & Data</p>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
                            {[
@@ -259,8 +259,8 @@ export function AdminDashboardTab() {
                                    <node.icon size={18} />
                                 </div>
                                 <div className="flex flex-col">
-                                   <p className="text-xl font-bold text-white leading-none tracking-tight">{node.val.toLocaleString()}</p>
-                                   <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1.5">{node.label}</p>
+                                   <p className="text-xl font-medium text-white leading-none tracking-tight">{node.val.toLocaleString()}</p>
+                                   <p className="text-[9px] font-medium text-white/30 uppercase tracking-widest mt-1.5">{node.label}</p>
                                 </div>
                              </motion.div>
                            ))}
@@ -274,37 +274,37 @@ export function AdminDashboardTab() {
               <div className="space-y-8">
                  <div className="bg-primary/10 rounded-[2.5rem] border border-primary/20 p-8 relative overflow-hidden group shadow-xl shadow-primary/5">
                     <div className="absolute top-0 right-0 -mr-12 -mt-12 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
-                    <h3 className="text-sm font-bold text-neutral-900 tracking-tight mb-3 flex items-center gap-3">
+                    <h3 className="text-sm font-medium text-neutral-900 tracking-tight mb-3 flex items-center gap-3">
                        <Shield size={18} className="text-primary" />
                        System Status
                     </h3>
-                    <p className="text-xs font-bold text-neutral-500 leading-relaxed mb-8 uppercase tracking-wide opacity-80">
+                    <p className="text-xs font-medium text-neutral-500 leading-relaxed mb-8 uppercase tracking-wide opacity-80">
                        All systems are running smoothly. Database and AI engine are active.
                     </p>
                     <div className="space-y-3">
                        <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-xl shadow-primary/5 group-hover:scale-[1.02] transition-transform">
                           <div className="flex items-center gap-3">
                              <Database size={14} className="text-neutral-300" />
-                             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Database</span>
+                             <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-widest">Database</span>
                           </div>
-                          <span className="flex items-center gap-1.5 text-[9px] font-bold text-success-default uppercase px-3 py-1 bg-success-default/10 rounded-lg">
+                          <span className="flex items-center gap-1.5 text-[9px] font-medium text-success-default uppercase px-3 py-1 bg-success-default/10 rounded-lg">
                              <CheckCircle2 size={10} /> Active
                           </span>
                        </div>
                        <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-xl shadow-primary/5 group-hover:scale-[1.02] transition-transform">
                           <div className="flex items-center gap-3">
                              <Cpu size={14} className="text-neutral-300" />
-                             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">AI Engine</span>
+                             <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-widest">AI Engine</span>
                           </div>
-                          <span className="flex items-center gap-1.5 text-[9px] font-bold text-primary uppercase px-3 py-1 bg-primary/10 rounded-lg">
+                          <span className="flex items-center gap-1.5 text-[9px] font-medium text-primary uppercase px-3 py-1 bg-primary/10 rounded-lg">
                              <ShieldCheck size={10} /> Secure
                           </span>
                        </div>
                     </div>
                     <div className="mt-8 pt-8 border-t border-primary/10">
                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-primary/40 uppercase tracking-widest">Last Update</span>
-                          <span className="text-[10px] font-bold text-neutral-900">{new Date().toLocaleTimeString()}</span>
+                          <span className="text-[9px] font-medium text-primary/40 uppercase tracking-widest">Last Update</span>
+                          <span className="text-[10px] font-medium text-neutral-900">{new Date().toLocaleTimeString()}</span>
                        </div>
                     </div>
                  </div>
@@ -312,7 +312,7 @@ export function AdminDashboardTab() {
                  <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm p-8 space-y-6">
                     <div className="flex items-center gap-3">
                        <BarChart3 size={16} className="text-amber-500" />
-                       <h3 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Platform Data</h3>
+                       <h3 className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">Platform Data</h3>
                     </div>
                     <div className="space-y-6">
                        <div className="flex items-center gap-4 group/item">
@@ -320,10 +320,10 @@ export function AdminDashboardTab() {
                              <ClipboardCheck size={20} />
                           </div>
                           <div className="flex-1">
-                             <p className="text-sm font-bold text-neutral-800 tracking-tight">{stats.platform_rubrics} Global Rubrics</p>
+                             <p className="text-sm font-medium text-neutral-800 tracking-tight">{stats.platform_rubrics} Global Rubrics</p>
                              <div className="flex justify-between items-center mt-1">
-                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Platform Templates</p>
-                                <span className="text-[10px] font-bold text-amber-600">Global</span>
+                                <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest">Platform Templates</p>
+                                <span className="text-[10px] font-medium text-amber-600">Global</span>
                              </div>
                           </div>
                        </div>
@@ -332,16 +332,16 @@ export function AdminDashboardTab() {
                              <FileText size={20} />
                           </div>
                           <div className="flex-1">
-                             <p className="text-sm font-bold text-neutral-800 tracking-tight">{stats.total_essays.toLocaleString()} Submissions</p>
+                             <p className="text-sm font-medium text-neutral-800 tracking-tight">{stats.total_essays.toLocaleString()} Submissions</p>
                              <div className="flex justify-between items-center mt-1">
-                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Total essays submitted</p>
+                                <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest">Total essays submitted</p>
                                 <ChevronRight size={12} className="text-neutral-200" />
                              </div>
                           </div>
                        </div>
                     </div>
                     
-                    <button className="w-full py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-300 hover:text-primary transition-colors border-t border-neutral-50 mt-4 outline-none">
+                    <button className="w-full py-4 text-[10px] font-medium uppercase tracking-widest text-neutral-300 hover:text-primary transition-colors border-t border-neutral-50 mt-4 outline-none">
                        Full Report
                     </button>
                  </div>
@@ -351,8 +351,8 @@ export function AdminDashboardTab() {
         ) : (
           <div className="flex flex-col items-center justify-center py-40">
              <AlertCircle size={48} className="text-red-100 mb-4" />
-             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Could not load data</p>
-             <Button variant="outline" onClick={loadStats} className="mt-6 rounded-xl border-neutral-100 text-[10px] font-bold uppercase tracking-widest">Retry</Button>
+             <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Could not load data</p>
+             <Button variant="outline" onClick={loadStats} className="mt-6 rounded-xl border-neutral-100 text-[10px] font-medium uppercase tracking-widest">Retry</Button>
           </div>
         )}
       </AnimatePresence>
@@ -371,8 +371,8 @@ export function AdminDashboardTab() {
                <ShieldCheck size={20} />
              </div>
              <div>
-               <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-widest leading-none mb-1">System Controls</h3>
-               <p className="text-[10px] font-bold text-neutral-400">Manage user access and maintenance status</p>
+               <h3 className="text-sm font-medium text-neutral-900 uppercase tracking-widest leading-none mb-1">System Controls</h3>
+               <p className="text-[10px] font-medium text-neutral-400">Manage user access and maintenance status</p>
              </div>
           </div>
 
@@ -395,10 +395,10 @@ export function AdminDashboardTab() {
             />
             <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 flex flex-col justify-between overflow-hidden relative group">
               <div className="space-y-1 relative z-10">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Admin Access</p>
+                <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Admin Access</p>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-success-default" />
-                  <p className="text-xs font-bold text-neutral-900">Always Bypassed</p>
+                  <p className="text-xs font-medium text-neutral-900">Always Bypassed</p>
                 </div>
               </div>
               <ShieldAlert className="absolute -bottom-4 -right-4 w-16 h-16 text-neutral-200 opacity-20" />
@@ -434,8 +434,8 @@ const MaintenanceToggle = ({ label, isActive, onToggle, isDangerous = false }: a
       </div>
     </div>
     <div className="space-y-0.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Mode</p>
-      <p className={`text-sm font-bold transition-colors ${isActive ? "text-neutral-900" : "text-neutral-400"}`}>{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-widest opacity-60">Mode</p>
+      <p className={`text-sm font-medium transition-colors ${isActive ? "text-neutral-900" : "text-neutral-400"}`}>{label}</p>
     </div>
   </button>
 );

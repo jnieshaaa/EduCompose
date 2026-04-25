@@ -260,7 +260,7 @@ export function CoursesTab() {
             {getActiveCourses()
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((course: Course) => {
-            const isMyCourse = course.user_id === teacherInfo?.auth_user_id;
+            const isMyCourse = course.user_id === teacherInfo?.id;
             const isAdded = myLoadsIds.has(course.id);
 
             return (

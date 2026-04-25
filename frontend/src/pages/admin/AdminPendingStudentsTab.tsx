@@ -18,7 +18,7 @@ import Button from "../../components/ui/Button";
 import { useNotification } from "../../contexts/NotificationContext";
 import { authApi } from "../../api";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PendingBlock {
   block_name: string;
@@ -49,6 +49,7 @@ interface PendingStudent {
   teacher_id: string;
   processed: boolean;
   processed_at?: string;
+  birthday?: string;
   onboarding_completed?: boolean;
 }
 
@@ -59,6 +60,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
   const [blockStudents, setBlockStudents] = useState<PendingStudent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const { showNotification } = useNotification();
 
   const loadPendingBlocks = useCallback(async () => {
@@ -76,7 +78,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
           teacher_id,
           processed,
           processed_at,
-          programs_lookup:program_id (abbr),
+          programs_lookup!fk_pending_program (abbr),
           users:teacher_id (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
@@ -118,6 +120,12 @@ export const AdminPendingStudentsTab: React.FC = () => {
   }, [showNotification]);
 
   useEffect(() => {
+    const handleClickOutside = () => setOpenDropdown(null);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     loadPendingBlocks();
   }, [loadPendingBlocks]);
 
@@ -140,13 +148,14 @@ export const AdminPendingStudentsTab: React.FC = () => {
       if (block.processed && pendingData) {
         const studentCodes = pendingData.map(s => s.student_code);
         const { data: userData } = await supabase
-          .from("students")
-          .select("student_code, users(onboarding_completed)")
-          .in("student_code", studentCodes);
+          .from("users")
+          .select("student_code, onboarding_completed")
+          .in("student_code", studentCodes)
+          .eq("role", "student");
         
         const onboardingMap: Record<string, boolean> = {};
         userData?.forEach((u: any) => {
-          onboardingMap[u.student_code] = u.users?.onboarding_completed || false;
+          onboardingMap[u.student_code] = u.onboarding_completed || false;
         });
 
         const enriched = pendingData.map(s => ({
@@ -257,6 +266,76 @@ export const AdminPendingStudentsTab: React.FC = () => {
     }
   };
 
+  const approveIndividualStudent = async (student: PendingStudent) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const initialPassword = student.birthday ? String(student.birthday) : `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      const result = await authApi.enrollStudentAtomic({
+        email: student.email,
+        student_code: student.student_code,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        middle_name: student.middle_name,
+        teacher_id: student.teacher_id,
+        program_id: student.program_id,
+        year: student.year,
+        block_name: student.block_name,
+        password: initialPassword,
+        birthday: student.birthday
+      });
+
+      if (result.success) {
+        await supabase
+          .from("pending_student_registrations")
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq("id", student.id);
+        
+        await sendStudentWelcomeEmail({
+          to_name: `${student.first_name} ${student.last_name}`.trim(),
+          to_email: student.email,
+          student_code: student.student_code,
+          temp_password: initialPassword,
+        });
+
+        showNotification('success', `Approved ${student.first_name} ${student.last_name}.`);
+        
+        // Refresh
+        if (viewDetailBlock) loadBlockDetail(viewDetailBlock);
+        loadPendingBlocks();
+      } else {
+        throw new Error("Failed to enroll student.");
+      }
+    } catch (err: any) {
+      showNotification('error', err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const rejectIndividualStudent = async (student: PendingStudent) => {
+    if (!window.confirm(`Reject registration for ${student.first_name} ${student.last_name}?`)) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("pending_student_registrations")
+        .delete()
+        .eq("id", student.id);
+      
+      if (error) throw error;
+      showNotification('success', "Registration request removed.");
+      
+      // Refresh
+      if (viewDetailBlock) loadBlockDetail(viewDetailBlock);
+      loadPendingBlocks();
+    } catch (err: any) {
+      showNotification('error', err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const filteredBlocks = pendingBlocks.filter(b => 
     b.block_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.program_abbr.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -279,8 +358,8 @@ export const AdminPendingStudentsTab: React.FC = () => {
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
             <div>
-              <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">{viewDetailBlock.program_abbr} <span className="text-neutral-300 mx-1">•</span> {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
+              <h2 className="text-2xl font-medium text-neutral-900 tracking-tight">{viewDetailBlock.program_abbr} <span className="text-neutral-300 mx-1">•</span> {viewDetailBlock.year}{viewDetailBlock.block_name}</h2>
+              <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">
                 Added by <span className="text-primary">{viewDetailBlock.teacher_name}</span>
               </p>
             </div>
@@ -292,10 +371,10 @@ export const AdminPendingStudentsTab: React.FC = () => {
                className="rounded-xl bg-primary text-white shadow-xl shadow-primary/20 px-8 h-10 flex items-center gap-2"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck size={18} />}
-              <span className="text-[10px] font-bold uppercase tracking-widest">Approve All</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest">Approve All</span>
             </Button>
           ) : (
-            <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+            <div className="px-5 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100 flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest">
                <CheckCircle2 size={16} />
                Approved on {new Date(viewDetailBlock.processed_at!).toLocaleDateString()}
             </div>
@@ -307,38 +386,76 @@ export const AdminPendingStudentsTab: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-neutral-50/50">
-                  <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Student ID</th>
-                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Full Name</th>
-                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Email</th>
-                  {viewDetailBlock.processed && <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">Status</th>}
-                  <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Student ID</th>
+                  <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Full Name</th>
+                  <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Email</th>
+                  {viewDetailBlock.processed && <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest text-center">Status</th>}
+                  <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
                 {blockStudents.map((s) => (
                   <tr key={s.id} className="group hover:bg-neutral-50/30 transition-all duration-300">
                     <td className="px-8 py-4">
-                       <span className="text-xs font-bold text-neutral-500 font-mono tracking-tighter uppercase">{s.student_code}</span>
+                       <span className="text-xs font-medium text-neutral-500 font-mono tracking-tighter uppercase">{s.student_code}</span>
                     </td>
                     <td className="px-6 py-4">
-                       <span className="text-sm font-bold text-neutral-900 tracking-tight">{s.last_name}, {s.first_name}</span>
+                       <span className="text-sm font-medium text-neutral-900 tracking-tight">{s.last_name}, {s.first_name}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                       <span className="text-xs font-bold text-neutral-400 lowercase">{s.email}</span>
+                       <span className="text-xs font-medium text-neutral-400 lowercase">{s.email}</span>
                     </td>
                     {viewDetailBlock.processed && (
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           {s.onboarding_completed ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-green-100">Registered</span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-medium uppercase tracking-widest border border-green-100">Registered</span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-amber-100">Pending Setup</span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-medium uppercase tracking-widest border border-amber-100">Pending Setup</span>
                           )}
                         </div>
                       </td>
                     )}
-                    <td className="px-6 py-4 text-right">
-                       <button className="p-2 text-neutral-300 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all"><MoreVertical size={16} /></button>
+                    <td className="px-6 py-4 text-right relative">
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setOpenDropdown(openDropdown === s.id ? null : s.id);
+                         }}
+                         className={`p-2 rounded-xl transition-all ${openDropdown === s.id ? "bg-primary text-white" : "text-neutral-300 hover:text-neutral-900 hover:bg-neutral-100"}`}
+                       >
+                         <MoreVertical size={16} />
+                       </button>
+
+                       <AnimatePresence>
+                         {openDropdown === s.id && (
+                           <motion.div
+                             initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                             animate={{ opacity: 1, scale: 1, y: 0 }}
+                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                             className="absolute right-6 top-14 w-48 bg-white rounded-2xl shadow-xl border border-neutral-100 py-2 z-50"
+                           >
+                             <button
+                               onClick={() => {
+                                 setOpenDropdown(null);
+                                 approveIndividualStudent(s);
+                               }}
+                               className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors"
+                             >
+                               <UserCheck size={14} className="text-primary" /> Approve Student
+                             </button>
+                             <button
+                               onClick={() => {
+                                 setOpenDropdown(null);
+                                 rejectIndividualStudent(s);
+                               }}
+                               className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors"
+                             >
+                               <Trash2 size={14} /> Reject Student
+                             </button>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
                     </td>
                   </tr>
                 ))}
@@ -359,7 +476,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
              placeholder="Search by block or teacher..." 
              value={searchTerm} 
              onChange={(e) => setSearchTerm(e.target.value)} 
-             className="w-full h-10 pl-11 pr-4 bg-white border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
+             className="w-full h-10 pl-11 pr-4 bg-white border border-neutral-100 rounded-xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
           />
         </div>
         <Button 
@@ -369,22 +486,22 @@ export const AdminPendingStudentsTab: React.FC = () => {
            className="rounded-xl border-neutral-100 bg-white shadow-sm h-10 px-6 flex items-center gap-2 group"
         >
           <RefreshCw className={`w-4 h-4 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Refresh</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">Refresh</span>
         </Button>
       </div>
 
       {loading && pendingBlocks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32">
            <Loader2 className="w-12 h-12 animate-spin mb-6 text-primary/20" />
-           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest animate-pulse">Loading registrations...</p>
+           <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest animate-pulse">Loading registrations...</p>
         </div>
       ) : filteredBlocks.filter(b => !b.processed).length === 0 ? (
         <div className="bg-white p-20 rounded-[2.5rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
           <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center mb-6 border border-neutral-100">
             <ShieldCheck className="w-10 h-10 text-primary opacity-20" />
           </div>
-          <h3 className="text-xl font-bold text-neutral-900 tracking-tight">No Pending Requests</h3>
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-2 max-w-sm mx-auto">
+          <h3 className="text-xl font-medium text-neutral-900 tracking-tight">No Pending Requests</h3>
+          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-2 max-w-sm mx-auto">
             All student registration requests have been processed.
           </p>
         </div>
@@ -392,7 +509,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
         <div className="space-y-6">
            <div className="flex items-center gap-3 px-1">
              <Clock size={14} className="text-primary animate-pulse" />
-             <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Pending Approvals</h3>
+             <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Pending Approvals</h3>
            </div>
            
            <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm overflow-hidden">
@@ -400,10 +517,10 @@ export const AdminPendingStudentsTab: React.FC = () => {
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="bg-neutral-50/50">
-                     <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Class / Section</th>
-                     <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Students</th>
-                     <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Teacher</th>
-                     <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-right">Actions</th>
+                     <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Class / Section</th>
+                     <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Students</th>
+                     <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Teacher</th>
+                     <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-widest text-right">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-neutral-50">
@@ -419,17 +536,17 @@ export const AdminPendingStudentsTab: React.FC = () => {
                               <Layers size={20} />
                             </div>
                             <div>
-                               <span className="text-sm font-bold text-neutral-900 block leading-tight tracking-tight">
+                               <span className="text-sm font-medium text-neutral-900 block leading-tight tracking-tight">
                                  {block.program_abbr} {block.year}{block.block_name}
                                </span>
-                               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-[0.15em] mt-0.5 block">
+                               <span className="text-[10px] text-neutral-400 font-medium uppercase tracking-[0.15em] mt-0.5 block">
                                  {block.academic_year} • {block.term}
                                </span>
                             </div>
                          </div>
                        </td>
                        <td className="px-6 py-5">
-                         <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest border border-primary/5">
+                         <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-medium uppercase tracking-widest border border-primary/5">
                             {block.student_count} Students
                          </span>
                        </td>
@@ -439,8 +556,8 @@ export const AdminPendingStudentsTab: React.FC = () => {
                              <UserCircle size={16} />
                            </div>
                            <div className="flex flex-col">
-                             <span className="text-xs font-bold text-neutral-700 tracking-tight">{block.teacher_name}</span>
-                             <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Teacher</span>
+                             <span className="text-xs font-medium text-neutral-700 tracking-tight">{block.teacher_name}</span>
+                             <span className="text-[9px] text-neutral-400 font-medium uppercase tracking-widest">Teacher</span>
                            </div>
                          </div>
                        </td>
@@ -449,7 +566,7 @@ export const AdminPendingStudentsTab: React.FC = () => {
                             <Button 
                                onClick={(e) => { e?.stopPropagation(); enrollAllInBlock(block); }} 
                                disabled={isProcessing}
-                               className="rounded-xl bg-neutral-50 text-[10px] font-bold uppercase tracking-widest px-4 h-9 hover:bg-primary hover:text-white transition-all border border-neutral-100"
+                               className="rounded-xl bg-neutral-50 text-[10px] font-medium uppercase tracking-widest px-4 h-9 hover:bg-primary hover:text-white transition-all border border-neutral-100"
                             >
                               Approve All
                             </Button>

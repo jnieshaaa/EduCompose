@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, UserPlus, Mail, Lock } from "lucide-react";
 import { authApi } from "../../api";
 import { supabase } from "../../lib/supabaseClient";
@@ -144,11 +145,12 @@ export default function CreateUserModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[60]">
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[100]">
       <motion.div 
         initial={{ opacity: 0, scale: 0.98, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
         className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-100"
       >
         {/* Header Branding */}
@@ -158,11 +160,11 @@ export default function CreateUserModal({
               <UserPlus size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
-                {restrictedRole === 'admin' ? 'Create Administrator' : 'Create Account'}
+              <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
+                {restrictedRole === 'admin' ? 'Add Admin' : 'Create Account'}
               </h2>
-              <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-widest mt-0.5">
-                {restrictedRole === 'admin' ? 'Strategic platform management' : 'Create a new user account'}
+              <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">
+                {restrictedRole === 'admin' ? 'Add a new administrator' : 'Create a new user account'}
               </p>
             </div>
           </div>
@@ -178,13 +180,13 @@ export default function CreateUserModal({
           {/* Status Messages */}
           <AnimatePresence>
             {error && (
-              <motion.div initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1 }} className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+              <motion.div initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1 }} className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[10px] font-medium uppercase tracking-wider flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 {error}
               </motion.div>
             )}
             {success && (
-              <motion.div initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1 }} className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+              <motion.div initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1 }} className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-medium uppercase tracking-wider flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {success}
               </motion.div>
@@ -194,7 +196,7 @@ export default function CreateUserModal({
           {/* Institutional (Optional) */}
           <div className="grid grid-cols-1 gap-4 bg-neutral-50/50 p-4 rounded-2xl border border-neutral-100">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Assign School</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
               <select
                 value={schoolId}
                 onChange={(e) => setSchoolId(e.target.value)}
@@ -205,7 +207,7 @@ export default function CreateUserModal({
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Assign Department</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
               <select
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
@@ -218,11 +220,11 @@ export default function CreateUserModal({
           </div>
 
           <div className="space-y-5">
-            <h3 className="text-[9px] font-bold text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Personal Information</h3>
+            <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Personal Info</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
                 <input
                   required
                   value={firstName}
@@ -232,7 +234,7 @@ export default function CreateUserModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                 <input
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
@@ -244,7 +246,7 @@ export default function CreateUserModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
                 <input
                   required
                   value={lastName}
@@ -254,7 +256,7 @@ export default function CreateUserModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                 <select
                   value={suffix}
                   onChange={(e) => setSuffix(e.target.value)}
@@ -271,7 +273,7 @@ export default function CreateUserModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Birthday</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday</label>
                 <input
                   type="date"
                   value={birthday}
@@ -280,7 +282,7 @@ export default function CreateUserModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">ID / Code</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">ID / Code</label>
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
@@ -292,10 +294,10 @@ export default function CreateUserModal({
           </div>
 
           <div className="space-y-5">
-            <h3 className="text-[9px] font-bold text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Security</h3>
+            <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Security</h3>
             
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
               <div className="relative group">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                 <input
@@ -311,7 +313,7 @@ export default function CreateUserModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Password</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Password*</label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                   <input
@@ -325,7 +327,7 @@ export default function CreateUserModal({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Confirm Password</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Confirm Password*</label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                   <input
@@ -344,8 +346,8 @@ export default function CreateUserModal({
  
         <div className="px-6 py-4 bg-neutral-50 flex items-center justify-between border-t border-neutral-100">
           <div className="hidden sm:block">
-             <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Instant Access</p>
-             <p className="text-[10px] text-neutral-500">Available immediately.</p>
+             <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">Create Admin</h2>
+             <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Add Administrator</p>
           </div>
           <div className="flex gap-2.5">
             <Button
@@ -353,7 +355,7 @@ export default function CreateUserModal({
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="rounded-xl border-neutral-200 px-5 h-9 text-[9px] font-bold uppercase tracking-widest"
+              className="flex-1 sm:flex-none border-neutral-200 text-neutral-500 h-10 rounded-xl text-[10px] font-medium uppercase tracking-widest"
             >
               Cancel
             </Button>
@@ -361,13 +363,14 @@ export default function CreateUserModal({
                 type="submit"
                 form="provision-user-form"
                 disabled={isLoading}
-                className="rounded-xl bg-primary text-white shadow-md shadow-primary/20 px-6 h-9 text-[9px] font-bold uppercase tracking-widest"
+                className="flex-1 sm:flex-none bg-primary text-white shadow-lg shadow-primary/20 h-10 px-8 group rounded-xl text-[10px] font-medium uppercase tracking-widest"
             >
               {isLoading ? "Creating..." : "Create Account"}
             </Button>
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }

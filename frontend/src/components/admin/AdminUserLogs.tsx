@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Search, ChevronLeft, ChevronRight, Activity, FileText, User, X } from "lucide-react";
+import { ArrowLeft, Search, ChevronLeft, ChevronRight, Activity, FileText, User, X, Loader2 } from "lucide-react";
 import { adminApi } from "../../api";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
@@ -70,17 +70,17 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
           </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
-               <div className="p-1 px-2 rounded-md bg-primary-100 text-primary uppercase text-[9px] font-bold tracking-widest">Audit Logs</div>
+               <div className="p-1 px-2 rounded-md bg-primary-100 text-primary uppercase text-[9px] font-medium tracking-widest">Logs</div>
                <div className="w-1 h-1 rounded-full bg-neutral-300" />
-               <span className="text-[10px] font-bold text-neutral-400 tracking-wider">LIVE UPDATES</span>
+               <span className="text-[10px] font-medium text-neutral-400 tracking-wider">Updates</span>
             </div>
-            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">User Activity Logs</h1>
+            <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Activity Logs</h1>
             <div className="flex items-center gap-2 mt-0.5 text-neutral-500 text-xs">
               <User size={12} className="text-neutral-400" />
-              <span>Records for</span>
-              <span className="font-bold text-neutral-800">{item.first_name} {item.last_name}</span>
+              <span className="font-medium text-neutral-400 uppercase tracking-widest text-[9px]">Records for</span>
+              <span className="font-semibold text-neutral-800">{item.first_name} {item.last_name}</span>
               <span className="text-neutral-300">•</span>
-              <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+              <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded uppercase tracking-tighter text-neutral-600">
                 {item.email || item.student_code}
               </span>
             </div>
@@ -92,11 +92,11 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
       <Card className="rounded-3xl border border-neutral-100 bg-white shadow-xl shadow-neutral-100/50 p-6">
         <div className="flex flex-col lg:flex-row items-end gap-4">
           <div className="flex-1 w-full space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Logs</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Search Logs</label>
             <div className="relative group/search">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/search:text-primary transition-colors" />
               <input
-                placeholder="Search by action or description..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -108,7 +108,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
           </div>
           
           <div className="w-full lg:w-auto space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Date Range</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Date Range</label>
             <div className="flex items-center gap-2 p-1 bg-neutral-50 border border-neutral-100 rounded-2xl">
               <div className="relative flex-1">
                 <input
@@ -118,7 +118,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                     setStartDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full pl-4 pr-3 py-2 bg-transparent outline-none text-sm font-bold cursor-pointer"
+                  className="w-full pl-4 pr-3 py-2 bg-transparent outline-none text-sm font-medium cursor-pointer"
                 />
               </div>
               <div className="w-px h-6 bg-neutral-200" />
@@ -130,7 +130,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                     setEndDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full pl-4 pr-3 py-2 bg-transparent outline-none text-sm font-bold cursor-pointer"
+                  className="w-full pl-4 pr-3 py-2 bg-transparent outline-none text-sm font-medium cursor-pointer"
                 />
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                   setEndDate("");
                   setPage(1);
                 }}
-                className="rounded-2xl border-neutral-200 text-neutral-500 hover:bg-neutral-100 h-[52px] px-6"
+                className="rounded-2xl border-neutral-200 text-neutral-500 hover:bg-neutral-100 h-[52px] px-6 text-[10px] font-medium uppercase tracking-widest"
              >
                 <X size={16} className="mr-2" />
                 Reset
@@ -160,9 +160,9 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                <th className="px-8 py-5 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Date & Time</th>
-                <th className="px-6 py-5 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Action</th>
-                <th className="px-8 py-5 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Description</th>
+                <th className="px-8 py-5 text-left text-[11px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Date & Time</th>
+                <th className="px-6 py-5 text-left text-[11px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Action</th>
+                <th className="px-8 py-5 text-left text-[11px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Description</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
@@ -170,8 +170,8 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                 <tr>
                   <td colSpan={3} className="px-8 py-24 text-center">
                     <div className="flex flex-col items-center gap-3">
-                       <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                       <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Loading logs...</p>
+                       <Loader2 className="w-8 h-8 text-primary/30 animate-spin" />
+                       <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Loading logs...</p>
                     </div>
                   </td>
                 </tr>
@@ -180,7 +180,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                   <td colSpan={3} className="px-8 py-24 text-center">
                     <div className="flex flex-col items-center gap-4 opacity-40">
                        <Activity size={48} className="text-neutral-300" />
-                       <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest italic">No logs found</p>
+                       <p className="text-[10px] font-medium text-neutral-500 uppercase tracking-widest italic">No logs found</p>
                     </div>
                   </td>
                 </tr>
@@ -196,16 +196,16 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                     >
                       <td className="px-8 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
-                           <span className="text-xs font-bold text-neutral-900 tracking-tight">
+                           <span className="text-xs font-semibold text-neutral-900 tracking-tight">
                               {new Date(log.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                            </span>
-                           <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
+                           <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">
                               {new Date(log.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                            </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-neutral-900 text-white shadow-sm ring-4 ring-neutral-900/5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider bg-neutral-900 text-white shadow-sm ring-4 ring-neutral-900/5">
                           {log.action_type.replace(/_/g, " ")}
                         </span>
                       </td>
@@ -232,7 +232,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                <div className="w-8 h-8 rounded-full bg-white border border-neutral-100 flex items-center justify-center shadow-sm">
                   <FileText size={14} className="text-primary" />
                </div>
-               <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+               <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">
                 ENTRIES <span className="text-neutral-900">{(page - 1) * limit + 1}–{Math.min(page * limit, total)}</span> OF <span className="text-neutral-900">{total}</span>
                </p>
             </div>
@@ -258,7 +258,7 @@ export default function AdminUserLogs({ item, type, onBack }: AdminUserLogsProps
                     <button
                       key={i}
                       onClick={() => setPage(pNum)}
-                      className={`min-w-[40px] h-10 px-2 text-xs font-bold rounded-xl transition-all shadow-sm ${
+                      className={`min-w-[40px] h-10 px-2 text-xs font-medium rounded-xl transition-all shadow-sm ${
                         page === pNum
                           ? "bg-primary text-white shadow-primary/20 scale-105"
                           : "bg-white text-neutral-400 border border-neutral-100 hover:border-primary/20 hover:text-primary"

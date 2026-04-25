@@ -7,7 +7,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
@@ -33,7 +33,6 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -76,26 +75,6 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     }
   };
 
-  const routeLabels: Record<string, string> = {
-    "/Student/Dashboard": "Dashboard",
-    "/Student/Submit": "Submit Essay",
-    "/Student/Essays": "My Essays",
-    "/Student/Essays/Result": "Essay Transcript",
-    "/Student/Feedback": "AI Feedback",
-    "/Student/Progress": "Progress & Analytics",
-    "/Student/Rubric": "Rubric / Criteria",
-    "/Student/Notifications": "Notifications",
-    "/Student/Settings": "Settings",
-    "/Student/Help": "Support Center",
-    "/Student/Classes": "My Classes",
-  };
-
-  const getLabel = () => {
-    if (location.pathname.startsWith("/Student/Classes/")) return "Class Detail";
-    return routeLabels[location.pathname] || "Dashboard";
-  };
-
-  const currentLabel = getLabel();
 
   useEffect(() => {
     let timer: number;
@@ -155,8 +134,8 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
           )}
         </button>
 
-        <h1 className="text-base font-bold text-neutral-800 truncate tracking-tight">
-          {currentLabel}
+        <h1 className="text-lg font-black text-primary tracking-tighter">
+          EduCompose
         </h1>
       </div>
 

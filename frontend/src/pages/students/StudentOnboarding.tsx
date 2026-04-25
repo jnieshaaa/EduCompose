@@ -84,7 +84,7 @@ const StudentOnboarding: React.FC = () => {
         if (!authUser) return;
 
         const { data: initialData, error: initialError } = await supabase
-          .from("students")
+          .from("users")
           .select(
             `
             *,
@@ -101,7 +101,8 @@ const StudentOnboarding: React.FC = () => {
             )
           `,
           )
-          .eq("auth_user_id", authUser.id)
+          .eq("id", authUser.id)
+          .eq("role", "student")
           .maybeSingle();
 
         let data = initialData;
@@ -109,7 +110,7 @@ const StudentOnboarding: React.FC = () => {
 
         if (!data && authUser.email) {
           const { data: emailData, error: emailError } = await supabase
-            .from("students")
+            .from("users")
             .select(
               `
               *,
@@ -127,16 +128,12 @@ const StudentOnboarding: React.FC = () => {
             `,
             )
             .eq("email", authUser.email)
+            .eq("role", "student")
             .maybeSingle();
 
           if (!emailError && emailData) {
             data = emailData;
-            if (!emailData.auth_user_id) {
-              await supabase
-                .from("students")
-                .update({ auth_user_id: authUser.id })
-                .eq("id", emailData.id);
-            }
+            // No need to update auth_user_id since id is already the auth.users.id
           }
         }
 
@@ -192,10 +189,9 @@ const StudentOnboarding: React.FC = () => {
       }
 
       const { error: updateError } = await supabase
-        .from("students")
+        .from("users")
         .update({ 
-          onboarding_completed: true,
-          auth_user_id: authUser.id 
+          onboarding_completed: true
         })
         .eq("id", studentData.id);
 

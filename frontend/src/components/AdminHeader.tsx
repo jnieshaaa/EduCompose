@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Menu,
   X,
@@ -7,7 +8,7 @@ import {
   Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLoader } from "./ui/LoaderContext";
 import { useAuth } from "../contexts/AuthContext";
 import { NotificationDropdown } from "./ui/NotificationDropdown";
@@ -34,7 +35,6 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   const { loading } = useLoader();
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -75,19 +75,6 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     }
   };
 
-  const routeLabels: Record<string, string> = {
-    "/Admin/Dashboard": "Admin Dashboard",
-    "/Admin/Users": "User Management",
-    "/Admin/Students": "Student Directory",
-    "/Admin/Rubrics": "Platform Rubrics",
-    "/Admin/Content": "Content Management",
-    "/Admin/Schools": "Academics",
-    "/Admin/Settings": "System Settings",
-    "/Admin/Archive": "Archive Records",
-    "/Admin/Help": "Support Center",
-  };
-
-  const currentLabel = routeLabels[location.pathname] || "Admin Portal";
 
   useEffect(() => {
     let timer: number;
@@ -128,9 +115,9 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         >
           {isBurgerActive ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 truncate tracking-tight">
-          {currentLabel}
-        </h2>
+        <h1 className="text-xl font-black text-primary tracking-tighter">
+          EduCompose
+        </h1>
       </div>
 
       <div className='flex items-center space-x-2 sm:space-x-4'>
@@ -153,7 +140,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
 
           <div className='hidden md:flex ml-3 flex-col text-left'>
             <p className='font-bold text-sm text-neutral-900 truncate max-w-[140px] tracking-tight'>{userName}</p>
-            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Administrative Access</p>
+            <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Admin</p>
           </div>
 
           <AnimatePresence>
@@ -195,30 +182,33 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         />
       </div>
 
-      <AnimatePresence>
-        {showLogoutConfirm && (
-          <div className='fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4'>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className='bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs space-y-4 border border-neutral-100'
-            >
-              <div className="w-10 h-10 bg-error-default/10 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-error-default" />
-              </div>
-              <div>
-                <h3 className='text-base font-bold text-neutral-900'>Logout</h3>
-                <p className='text-sm text-neutral-400 mt-1 font-medium'>Are you sure you want to logout?</p>
-              </div>
-              <div className='flex gap-2 pt-1'>
-                <button className="flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-                <button className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-md shadow-red-500/15" onClick={confirmLogout}>Logout</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {typeof window !== "undefined" && createPortal(
+        <AnimatePresence>
+          {showLogoutConfirm && (
+            <div className='fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4'>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className='bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs space-y-4 border border-neutral-100'
+              >
+                <div className="w-10 h-10 bg-error-default/10 rounded-xl flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-error-default" />
+                </div>
+                <div>
+                  <h3 className='text-base font-bold text-neutral-900'>Logout</h3>
+                  <p className='text-sm text-neutral-400 mt-1 font-medium'>Are you sure you want to logout?</p>
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button className="flex-1 px-4 py-2.5 rounded-lg border border-neutral-200 text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-colors" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                  <button className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-md shadow-red-500/15" onClick={confirmLogout}>Logout</button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </header>
   );
 };

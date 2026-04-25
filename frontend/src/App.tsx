@@ -98,6 +98,12 @@ const AppContent: React.FC = () => {
 
   React.useEffect(() => {
     const checkMaintenance = async () => {
+      // Optimistically use cached value first
+      const cached = sessionStorage.getItem("maintenance_mode");
+      if (cached) {
+        setMaintenanceSettings(JSON.parse(cached));
+      }
+
       const { data } = await supabase
         .from("system_settings")
         .select("value")
@@ -106,6 +112,7 @@ const AppContent: React.FC = () => {
       
       if (data) {
         setMaintenanceSettings(data.value);
+        sessionStorage.setItem("maintenance_mode", JSON.stringify(data.value));
       }
     };
 

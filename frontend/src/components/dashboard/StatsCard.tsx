@@ -4,7 +4,7 @@ import Card from "../ui/Card";
 
 interface StatsCardProps {
   title: string;
-  value: string | number;
+  value: string;
   icon: React.ComponentType<{ className?: string }>;
   change?: {
     value: number;

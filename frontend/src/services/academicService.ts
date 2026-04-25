@@ -52,6 +52,25 @@ export const updateAcademicSettings = async (id: string, settings: Partial<Acade
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 };
+
+export const createAcademicSettings = async (settings: Partial<AcademicSettings>) => {
+  try {
+    const { data, error } = await supabase
+      .from("academic_settings")
+      .insert(settings)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error creating academic settings:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, data };
+  } catch (err) {
+    console.error("Unexpected error creating academic settings:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+};
 export const fetchAllTeacherLoads = async (academicYear?: string, term?: string) => {
   try {
     let query = supabase
@@ -64,7 +83,6 @@ export const fetchAllTeacherLoads = async (academicYear?: string, term?: string)
         course_id,
         users!teacher_id (
           id,
-          auth_user_id,
           first_name,
           last_name,
           email,

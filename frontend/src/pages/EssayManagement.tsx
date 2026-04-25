@@ -27,17 +27,17 @@ const EssayManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClass, setSelectedClass] = useState<string | number | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedEssay, setSelectedEssay] = useState<Essay | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [selectedEssays, setSelectedEssays] = useState<(string | number)[]>([]);
+  const [selectedEssays, setSelectedEssays] = useState<(string)[]>([]);
   const [showNewEssayModal, setShowNewEssayModal] = useState(false);
   const [newEssay, setNewEssay] = useState({
     title: "",
     content: "",
-    student_id: "" as string | number,
-    class_id: "" as string | number,
+    student_id: "" as string,
+    class_id: "" as string,
   });
 
   useEffect(() => {

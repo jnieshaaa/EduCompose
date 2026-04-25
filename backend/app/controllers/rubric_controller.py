@@ -85,23 +85,27 @@ async def generate_rubrics(
     
     # Try Gemini models sequentially
     if os.getenv("GEMINI_API_KEY"):
-        from google import genai
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         
         # Priority list of models to try
-        target_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+        target_models = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash-exp", "gemini-1.5-pro"]
         env_model = os.getenv("GEMINI_MODEL_NAME")
-        if env_model and env_model not in target_models:
+        if env_model:
+            # If specified in env, put it at the very top of the list
+            if env_model in target_models:
+                target_models.remove(env_model)
             target_models.insert(0, env_model)
             
         for model_name in target_models:
             try:
                 logger.info(f"Attempting rubric generation with model: {model_name}")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config={"temperature": 0.7}
+                model = genai.GenerativeModel(model_name=model_name)
+                response = model.generate_content(
+                    prompt,
+                    generation_config={"temperature": 0.7}
                 )
+                
                 if response and response.text:
                     llm_response = response.text
                     logger.info(f"Rubric generation success using Gemini ({model_name})")

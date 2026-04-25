@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Briefcase, Mail, UserCircle, Shield, GraduationCap, CheckCircle, AlertCircle } from "lucide-react";
 import { adminApi } from "../../api";
 import Button from "../ui/Button";
@@ -15,6 +16,7 @@ interface EditUserModalProps {
     nickname?: string;
     role: string;
     is_active: boolean;
+    enrollment_status?: string;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +37,7 @@ export default function EditUserModal({
     user.role as "admin" | "teacher" | "student",
   );
   const [isActive, setIsActive] = useState(user.is_active);
+  const [enrollmentStatus, setEnrollmentStatus] = useState(user.enrollment_status || "active");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +52,7 @@ export default function EditUserModal({
       setEmail(user.email);
       setRole(user.role as "admin" | "teacher" | "student");
       setIsActive(user.is_active);
+      setEnrollmentStatus(user.enrollment_status || "active");
     }
   }, [user]);
 
@@ -80,6 +84,7 @@ export default function EditUserModal({
         nickname: nickname.trim() || undefined,
         role,
         is_active: isActive,
+        enrollment_status: role === 'student' ? enrollmentStatus : undefined,
       });
 
       setSuccess("Profile updated successfully!");
@@ -96,11 +101,12 @@ export default function EditUserModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[60]">
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm z-[100]">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-neutral-100"
       >
         <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
@@ -109,8 +115,8 @@ export default function EditUserModal({
               <UserCircle size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Edit User</h2>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update user information</p>
+              <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">Edit User</h2>
+              <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Update User</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -121,12 +127,12 @@ export default function EditUserModal({
         <form id="edit-identity-form" onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
           <AnimatePresence>
             {error && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold uppercase tracking-wider">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-medium uppercase tracking-wider">
                 {error}
               </motion.div>
             )}
             {success && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium uppercase tracking-wider">
                 {success}
               </motion.div>
             )}
@@ -134,7 +140,7 @@ export default function EditUserModal({
 
           {/* Role Grid */}
           <div className="space-y-3">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">User Role</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">User Role</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'student', icon: GraduationCap, label: 'Student' },
@@ -152,19 +158,34 @@ export default function EditUserModal({
                   }`}
                 >
                   <r.icon size={20} />
-                  <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
+                  <span className="text-xs font-medium uppercase tracking-widest">{r.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
+          {role === 'student' && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Enrollment Status</label>
+              <select
+                value={enrollmentStatus}
+                onChange={(e) => setEnrollmentStatus(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer"
+              >
+                <option value="active">Active</option>
+                <option value="graduated">Graduated</option>
+                <option value="dropped">Dropped</option>
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title</label>
               <select
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none"
               >
                 <option value="">None</option>
                 <option value="Mr.">Mr.</option>
@@ -175,48 +196,48 @@ export default function EditUserModal({
               </select>
             </div>
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Platform Nickname</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
               <input
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="e.g. Antopina"
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                placeholder="Nickname"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
               <input
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
               <input
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
+              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
               <input
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
             <div className="relative group/mail">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={16} />
               <input
@@ -224,7 +245,7 @@ export default function EditUserModal({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
           </div>
@@ -244,8 +265,8 @@ export default function EditUserModal({
                   {isActive ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-bold uppercase tracking-widest">Account Status</p>
-                  <p className="text-[10px] opacity-70 font-bold uppercase tracking-tighter">
+                  <p className="text-sm font-medium uppercase tracking-widest">Account Status</p>
+                  <p className="text-[10px] opacity-70 font-medium uppercase tracking-tighter">
                     Account is currently {isActive ? "active" : "inactive"}
                   </p>
                 </div>
@@ -258,19 +279,20 @@ export default function EditUserModal({
         </form>
 
         <div className="px-8 py-6 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100">
-          <Button variant="outline" onClick={onClose} disabled={isLoading} className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-bold uppercase tracking-widest">
+          <Button variant="outline" onClick={onClose} disabled={isLoading} className="rounded-xl border-neutral-200 px-6 h-10 text-[10px] font-medium uppercase tracking-widest text-neutral-500">
             Cancel
           </Button>
           <Button 
             type="submit"
             form="edit-identity-form"
             disabled={isLoading} 
-            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 text-[10px] font-bold uppercase tracking-widest"
+            className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 text-[10px] font-medium uppercase tracking-widest"
           >
             {isLoading ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -76,8 +76,8 @@ export const AdminCoursesTab: React.FC = () => {
 
       const { data, error } = await supabase
         .from("users")
-        .select("auth_user_id, first_name, last_name")
-        .in("auth_user_id", contributorIds)
+        .select("id, first_name, last_name")
+        .in("id", contributorIds)
         .order("last_name");
 
       if (error) throw error;
@@ -291,7 +291,7 @@ export const AdminCoursesTab: React.FC = () => {
     <div className="space-y-8 pb-20">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Courses</h1>
+          <h1 className="text-3xl font-medium text-neutral-900 tracking-tight">Courses</h1>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage all courses and curriculum</p>
         </div>
                <Button
@@ -302,7 +302,7 @@ export const AdminCoursesTab: React.FC = () => {
           className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
         >
           <Plus size={18} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Add Course</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest">Add Course</span>
         </Button>
       </div>
 
@@ -310,52 +310,52 @@ export const AdminCoursesTab: React.FC = () => {
       <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-sm p-6 space-y-6">
         <div className="flex items-center gap-3">
           <Search size={16} className="text-neutral-400" />
-          <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Search Filters</h3>
+          <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Search Filters</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Search</label>
             <div className="relative group/search">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-primary transition-colors" size={14} />
               <input 
                 placeholder="Code or title..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Contributor</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Contributor</label>
             <select 
               value={filters.user} 
               onChange={(e) => setFilters({ ...filters, user: e.target.value })}
-              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none cursor-pointer"
+              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer"
             >
               <option value="">All Contributors</option>
               {users.map(u => (
-                <option key={u.auth_user_id} value={u.auth_user_id}>{u.first_name} {u.last_name}</option>
+                <option key={u.id} value={u.id}>{u.first_name} {u.last_name}</option>
               ))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">School</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
             <select 
               value={filters.school} 
               onChange={(e) => setFilters({ ...filters, school: e.target.value, dept: "", prog: "" })}
-              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none cursor-pointer"
+              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer"
             >
               <option value="">All Schools</option>
               {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
             <select 
               value={filters.dept} 
               disabled={!filters.school}
               onChange={(e) => setFilters({ ...filters, dept: e.target.value, prog: "" })}
-              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none cursor-pointer disabled:opacity-30"
+              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer disabled:opacity-30"
             >
               <option value="">All Departments</option>
               {filters.school && schools.find(s => s.id === filters.school)?.departments.map(d => (
@@ -364,12 +364,12 @@ export const AdminCoursesTab: React.FC = () => {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
             <select 
               value={filters.prog} 
               disabled={!filters.dept}
               onChange={(e) => setFilters({ ...filters, prog: e.target.value })}
-              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none cursor-pointer disabled:opacity-30"
+              className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer disabled:opacity-30"
             >
               <option value="">All Programs</option>
               {filters.dept && schools.find(s => s.id === filters.school)?.departments.find(d => d.id === filters.dept)?.programs?.map(p => (
@@ -385,27 +385,27 @@ export const AdminCoursesTab: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-neutral-50/50">
-                <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('course')}>
+                <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('course')}>
                   <div className="flex items-center gap-2">
                     Course {sortConfig?.key === 'course' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('units')}>
+                <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('units')}>
                   <div className="flex items-center gap-2">
                     Units {sortConfig?.key === 'units' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('year_sem')}>
+                <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('year_sem')}>
                   <div className="flex items-center gap-2">
                     Year & Semester {sortConfig?.key === 'year_sem' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('affiliation')}>
+                <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] cursor-pointer hover:text-neutral-900 transition-colors" onClick={() => requestSort('affiliation')}>
                   <div className="flex items-center gap-2">
                     Affiliation {sortConfig?.key === 'affiliation' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
@@ -414,7 +414,7 @@ export const AdminCoursesTab: React.FC = () => {
                   <td colSpan={5} className="px-8 py-32 text-center overflow-hidden">
                     <div className="flex flex-col items-center justify-center relative">
                       <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                      <p className="mt-6 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Loading Courses...</p>
+                      <p className="mt-6 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Loading Courses...</p>
                     </div>
                   </td>
                 </tr>
@@ -422,7 +422,7 @@ export const AdminCoursesTab: React.FC = () => {
                 <tr>
                   <td colSpan={5} className="px-8 py-32 text-center text-neutral-400">
                     <BookOpen size={48} className="mx-auto mb-4 opacity-10" />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em]">No courses found</p>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.2em]">No courses found</p>
                   </td>
                 </tr>
               ) : (
@@ -430,26 +430,26 @@ export const AdminCoursesTab: React.FC = () => {
                   <tr key={course.id} className="group hover:bg-neutral-50/50 transition-all duration-300">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center font-bold text-xs shadow-lg group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center font-medium text-xs shadow-lg group-hover:scale-110 transition-transform">
                           {course.course_code.substring(0, 2)}
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-neutral-900 tracking-tight">{course.course_code}</div>
-                          <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{course.course_title}</div>
+                          <div className="text-sm font-medium text-neutral-900 tracking-tight">{course.course_code}</div>
+                          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">{course.course_title}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-2">
-                        <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg uppercase tracking-widest">
+                        <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-medium rounded-lg uppercase tracking-widest">
                           {course.units} Units
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-5">
                       <div>
-                        <div className="text-xs font-bold text-neutral-700 uppercase tracking-tight">{course.year_level || "No Assignment"}</div>
-                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{course.semester || "--"} Semester</div>
+                        <div className="text-xs font-medium text-neutral-700 uppercase tracking-tight">{course.year_level || "No Assignment"}</div>
+                        <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">{course.semester || "--"} Semester</div>
                       </div>
                     </td>
                     <td className="px-8 py-5">
@@ -458,8 +458,8 @@ export const AdminCoursesTab: React.FC = () => {
                            <SchoolIcon size={14} />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-neutral-900 tracking-tight">{course.schools?.name}</div>
-                          <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest max-w-[180px] overflow-hidden truncate">
+                          <div className="text-xs font-medium text-neutral-900 tracking-tight">{course.schools?.name}</div>
+                          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest max-w-[180px] overflow-hidden truncate">
                             {course.departments?.code || "GEN"} • {course.programs_lookup?.abbr || "Core"}
                           </div>
                         </div>
@@ -506,8 +506,8 @@ export const AdminCoursesTab: React.FC = () => {
         {!isLoading && sortedCourses.length > 0 && (
           <div className="px-8 py-8 bg-white border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Showing rows</span>
-              <span className="text-sm font-bold text-neutral-900">
+              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Showing rows</span>
+              <span className="text-sm font-medium text-neutral-900">
                 {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedCourses.length)} <span className="text-neutral-300 mx-1">/</span> {sortedCourses.length.toLocaleString()}
               </span>
             </div>
@@ -524,12 +524,12 @@ export const AdminCoursesTab: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 {getPageNumbers().map((page, i) => (
                   page === "..." ? (
-                    <span key={`dots-${i}`} className="px-2 text-neutral-300 font-bold">•••</span>
+                    <span key={`dots-${i}`} className="px-2 text-neutral-300 font-medium">•••</span>
                   ) : (
                     <button
                       key={`page-${page}`}
                       onClick={() => setCurrentPage(Number(page))}
-                      className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-bold rounded-2xl transition-all ${
+                      className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-medium rounded-2xl transition-all ${
                         currentPage === page
                           ? "bg-primary text-white shadow-xl shadow-primary/20"
                           : "bg-neutral-50 text-neutral-400 hover:bg-neutral-100"
@@ -551,14 +551,14 @@ export const AdminCoursesTab: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Rows</span>
+              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Rows</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-bold text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
+                className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-medium text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
               >
                 {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -582,8 +582,8 @@ export const AdminCoursesTab: React.FC = () => {
                     <BookOpen size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingCourse ? "Update Course" : "Add Course"}</h2>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">Course Information</p>
+                    <h2 className="text-xl font-medium text-neutral-900 tracking-tight leading-tight">{editingCourse ? "Update Course" : "Add Course"}</h2>
+                    <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Course Information</p>
                   </div>
                 </div>
                 <button onClick={() => setShowCourseModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -595,11 +595,11 @@ export const AdminCoursesTab: React.FC = () => {
                 <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
                    <div className="flex items-center gap-3 mb-2">
                      <SchoolIcon size={14} className="text-primary" />
-                      <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Details</h3>
+                      <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Details</h3>
                    </div>
                    
                    <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Assigned Institution</label>
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Assigned Institution</label>
                     <select
                       required
                       value={selectedSchool}
@@ -608,7 +608,7 @@ export const AdminCoursesTab: React.FC = () => {
                         setSelectedDept("");
                         setSelectedProg("");
                       }}
-                      className="w-full h-12 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all appearance-none cursor-pointer"
+                      className="w-full h-12 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none cursor-pointer"
                     >
                       <option value="">Select School...</option>
                       {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -617,7 +617,7 @@ export const AdminCoursesTab: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
                       <select
                         value={selectedDept}
                         disabled={!selectedSchool}
@@ -625,7 +625,7 @@ export const AdminCoursesTab: React.FC = () => {
                           setSelectedDept(e.target.value);
                           setSelectedProg("");
                         }}
-                        className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all appearance-none disabled:bg-neutral-100 disabled:opacity-50"
+                        className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:bg-neutral-100 disabled:opacity-50"
                       >
                         <option value="">All Departments</option>
                         {selectedSchool && schools.find(s => s.id === selectedSchool)?.departments.map(d => (
@@ -634,12 +634,12 @@ export const AdminCoursesTab: React.FC = () => {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
                       <select
                         value={selectedProg}
                         disabled={!selectedDept}
                         onChange={(e) => setSelectedProg(e.target.value)}
-                        className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all appearance-none disabled:bg-neutral-100 disabled:opacity-50"
+                        className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:bg-neutral-100 disabled:opacity-50"
                       >
                         <option value="">All Programs</option>
                         {selectedDept && schools.find(s => s.id === selectedSchool)?.departments.find(d => d.id === selectedDept)?.programs?.map(p => (
@@ -653,30 +653,30 @@ export const AdminCoursesTab: React.FC = () => {
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 px-1">
                     <Type size={14} className="text-primary" />
-                    <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Details</h3>
+                    <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Details</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-1 space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Course Code</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Course Code</label>
                       <div className="relative group/code">
                         <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/code:text-primary transition-colors" size={14} />
                         <input
                           required
                           value={courseForm.course_code}
                           onChange={(e) => setCourseForm({ ...courseForm, course_code: e.target.value })}
-                          className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase font-mono"
+                          className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase font-mono"
                           placeholder="CS101"
                         />
                       </div>
                     </div>
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Course Title</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Course Title</label>
                       <input
                         required
                         value={courseForm.course_title}
                         onChange={(e) => setCourseForm({ ...courseForm, course_title: e.target.value })}
-                        className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                        className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                         placeholder="e.g. Introduction to Computational Logic"
                       />
                     </div>
@@ -684,36 +684,36 @@ export const AdminCoursesTab: React.FC = () => {
 
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
                       <select
                         value={courseForm.year_level}
                         onChange={(e) => setCourseForm({ ...courseForm, year_level: e.target.value })}
-                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none"
+                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none"
                       >
                         <option value="">Unassigned</option>
                         {["First", "Second", "Third", "Fourth", "Fifth"].map(y => <option key={y} value={`${y} Year`}>{y} Year</option>)}
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Semester</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Semester</label>
                       <select
                         value={courseForm.semester}
                         onChange={(e) => setCourseForm({ ...courseForm, semester: e.target.value })}
-                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all appearance-none"
+                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none"
                       >
                         <option value="">Broad</option>
                         {["First", "Second", "Summer"].map(s => <option key={s} value={s}>{s} Semester</option>)}
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Credit Units</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Credit Units</label>
                       <div className="relative group/units">
                         <Calculator className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/units:text-primary transition-colors" size={14} />
                         <input
                           type="number"
                           value={courseForm.units || ""}
                           onChange={(e) => setCourseForm({ ...courseForm, units: parseInt(e.target.value) || 0 })}
-                          className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
+                          className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                           placeholder="3"
                         />
                       </div>
@@ -723,7 +723,7 @@ export const AdminCoursesTab: React.FC = () => {
                   {editingCourse && (
                     <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-100 opacity-60">
                       <UserCircle size={14} className="text-neutral-400" />
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-left">
+                      <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest text-left">
                         Created By: <span className="text-neutral-600 ml-1">{editingCourse.users ? `${editingCourse.users.first_name} ${editingCourse.users.last_name}` : "System"}</span>
                       </div>
                     </div>

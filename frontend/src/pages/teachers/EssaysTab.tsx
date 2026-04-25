@@ -111,14 +111,12 @@ export function EssaysTab() {
           activity_id,
           student_id,
           essay_activities (title),
-          students (
+          users!student_id (
             id, 
             first_name, 
             last_name, 
             student_code,
-            student_programs (
-              programs (name)
-            )
+            programs_lookup (name)
           ),
           blocks (id, section_name)
         `);
@@ -137,8 +135,8 @@ export function EssaysTab() {
       if (error) throw error;
 
       const formatted: EssaySubmission[] = (data || []).map(e => {
-        const student = (e.students as any);
-        const program = student?.student_programs?.[0]?.programs?.name || "No Program";
+        const student = (e.users as any);
+        const program = student?.programs_lookup?.name || "No Program";
         const section = (e.blocks as any)?.section_name || "No Section";
         
         const statusDisplay = e.status === 'analyzed' ? 'Graded' : (e.status === 'submitted' ? 'Submitted' : 'Grading');

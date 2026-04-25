@@ -1,8 +1,8 @@
 export interface Essay {
   id: string;
   student_id: string;  // uuid
-  user_id: string | number;
-  class_id: string | number;
+  user_id: string;
+  class_id: string;
   title: string;
   content: string;
   submitted_at: string;
@@ -201,41 +201,45 @@ export interface ArgumentAnalysis {
 }
 
 export interface Student {
-  id: string;  // uuid
-  student_id: string;
+  id: string;  // uuid (primary identity)
+  student_code: string;
   first_name: string;
   last_name: string;
   middle_name?: string;
-  email?: string;
-  class_id: string | number;
+  email: string;
+  program_id?: string;
+  year?: number;
+  block_name?: string;
+  class_id?: string; // block identity reference
   created_at: string;
   is_active: boolean;
+  onboarding_completed?: boolean;
 }
 
 export interface Class {
-  id: string | number;
+  id: string;
   name: string;
   description?: string;
-  user_id: string | number;
+  user_id: string;
   created_at: string;
   is_active: boolean;
 }
 
 export interface User {
-  id: string | number;
+  id: string;
   email: string;
   username: string;
   first_name: string;
   last_name: string;
   title?: string;
   nickname?: string;
-  role: "teacher" | "admin";
+  role: "teacher" | "admin" | "student";
   is_active: boolean;
   created_at: string;
 }
 
 export interface AnalysisRequest {
-  essay_id: string | number;
+  essay_id: string;
   analysis_type:
     | "grammar"
     | "readability"
@@ -355,7 +359,7 @@ export interface DiagnosticSummary {
 }
 
 export interface AnalysisResponse {
-  essay_id: string | number;
+  essay_id: string;
   analysis_type: string;
   scores: {
     grammar: number;
@@ -371,7 +375,7 @@ export interface AnalysisResponse {
   word_count: number;
   generated_at: string;
   rubric_scores?: {
-    rubric_id?: string | number;
+    rubric_id?: string;
     rubric_name: string;
     total_points: number;
     max_points: number;
@@ -407,7 +411,7 @@ export interface TextAnalysisResponse {
   generated_at: string;
   processing_time_seconds?: number;
   rubric_scores?: {
-    rubric_id?: string | number;
+    rubric_id?: string;
     rubric_name: string;
     total_points: number;
     max_points: number;
@@ -427,7 +431,7 @@ export interface TextAnalysisResponse {
 }
 
 export interface BatchAnalysisRequest {
-  essay_ids: (string | number)[];
+  essay_ids: string[];
   analysis_type:
     | "grammar"
     | "readability"
@@ -442,7 +446,7 @@ export interface DashboardStats {
   total_students: number;
   recent_essays: Essay[];
   class_stats: Array<{
-    id: string | number;
+    id: string;
     name: string;
     essay_count: number;
     student_count: number;

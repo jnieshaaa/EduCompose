@@ -7,9 +7,11 @@ interface OnboardingCheckProps {
 }
 
 const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
-  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, user, isLoading: isAuthLoading, isInitialCheckComplete } = useAuth();
 
-  if (isAuthLoading) {
+  // If we are still doing the very first background verification, keep showing the loader
+  // even if optimistic user exists, to avoid flash of onboarding redirect if stale.
+  if (isAuthLoading || !isInitialCheckComplete) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white relative overflow-hidden">
         {/* Ambient blobs */}

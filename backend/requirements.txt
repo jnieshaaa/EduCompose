@@ -13,6 +13,7 @@
 fastapi
 uvicorn[standard]
 pydantic[email]
+email-validator
 python-multipart
 
 # ============================================
@@ -89,6 +90,7 @@ pyvis
 
 # Google Gemini API for grammar checking (optional)
 google-genai
+google-generativeai
 
 # ============================================
 # OCR Support (for PDF and image text extraction)

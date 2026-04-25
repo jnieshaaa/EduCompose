@@ -38,14 +38,6 @@ export class BatchUploadController {
 
     const errors: string[] = [];
     const imported: Program[] = [];
-    let nextId =
-      existingPrograms.length > 0
-        ? Math.max(
-            ...existingPrograms.map(
-              (p) => Number.parseInt(String(p.id), 10) || 0,
-            ),
-          ) + 1
-        : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
       const row = parseResult.data[i];
@@ -77,7 +69,7 @@ export class BatchUploadController {
         }
 
         const program: Program = {
-          id: String(nextId++),
+          id: crypto.randomUUID(),
           name: name.trim(),
         };
 
@@ -124,10 +116,6 @@ export class BatchUploadController {
 
     const errors: string[] = [];
     const imported: Section[] = [];
-    let nextId =
-      existingSections.length > 0
-        ? Math.max(...existingSections.map((s) => Number(s.id) || 0)) + 1
-        : 1;
 
     for (let i = 0; i < parseResult.data.length; i++) {
       const row = parseResult.data[i];
@@ -207,7 +195,7 @@ export class BatchUploadController {
         }
 
         const section: Section = {
-          id: nextId++,
+          id: crypto.randomUUID(),
           name: name.trim(),
           program: program.trim(),
           term: term.trim(),

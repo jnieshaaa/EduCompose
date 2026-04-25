@@ -26,7 +26,6 @@ import {
   Tooltip,
 } from "recharts";
 import { supabase } from "../../lib/supabaseClient";
-import { fetchTeacherUUID } from "../../services/rubricService";
 import {
   fetchCourses,
   fetchSections,
@@ -85,7 +84,7 @@ interface DashboardData {
     vocabularyComplexity: { value: string; trend: string; status: "up" | "down" | "neutral" };
   };
   recentActivity: Array<{
-    essayId: string | number;
+    essayId: string;
     student: string;
     action: string;
     essay: string;
@@ -200,12 +199,12 @@ const buildPerformanceActivityLines = (
 };
 
 interface EssayRow {
-  id: string | number;
+  id: string;
   title: string;
   submitted_at: string;
   status: string;
-  student_id: string | number;
-  activity_id: string | number | null;
+  student_id: string;
+  activity_id: string | null;
   overall_score: number | null;
   grammar_score: number | null;
   coherence_score: number | null;
@@ -213,7 +212,7 @@ interface EssayRow {
 }
 
 interface StudentNameRow {
-  id: string | number;
+  id: string;
   first_name: string;
   middle_name: string | null;
   last_name: string;
@@ -260,31 +259,39 @@ export function DashboardTab() {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        const teacherId = await fetchTeacherUUID();
+        const teacherId = user?.id;
         if (!teacherId) throw new Error("Teacher ID not available");
 
         const [allCourses, allSections, activities, teacherLoads] = await Promise.all([
-          fetchCourses(),
-          fetchSections(),
-          fetchTeacherActivities(),
-          fetchTeacherProgramLoads()
+          fetchCourses(teacherId),
+          fetchSections(undefined, teacherId),
+          fetchTeacherActivities(undefined, undefined, false, undefined, undefined, teacherId),
+          fetchTeacherProgramLoads(undefined, teacherId)
         ]);
 
         const activityMetaById = new Map();
         for (const a of activities) {
-          activityMetaById.set(String(a.id), {
+          activityMetaById.set(a.id, {
             courseIds: a.courseIds || [],
             blockIds: a.blockIds || [],
             title: a.title,
           });
         }
-        const activityIdsArray = activities.map(a => a.id);
+        const activityIdsArray = activities.map(a => a.id).filter(id => id && id !== "all");
 
-        const { data: essaysDataRows } = await (activityIdsArray.length > 0 
-          ? supabase.from("essays").select("id, title, submitted_at, status, student_id, activity_id, overall_score, grammar_score, coherence_score, argument_strength_score").in("activity_id", activityIdsArray)
-          : Promise.resolve({ data: [] as EssayRow[] }));
+        const { data: essaysDataRows, error: essaysError } = await (activityIdsArray.length > 0 
+          ? supabase
+              .from("essays")
+              .select("id, title, created_at, status, student_id, activity_id, overall_score")
+              .in("activity_id", activityIdsArray)
+          : Promise.resolve({ data: [] as any[], error: null }));
         
-        const essaysData = (essaysDataRows as EssayRow[]) || [];
+        if (essaysError) throw essaysError;
+
+        const essaysData = (essaysDataRows as any[] || []).map(e => ({
+          ...e,
+          submitted_at: e.created_at // Map back for UI consistency
+        })) as EssayRow[];
 
         const activeSectionIds = [...new Set(activities.flatMap(a => a.blockIds || []))];
 
@@ -307,27 +314,27 @@ export function DashboardTab() {
         const allEssayStudentIds = [...new Set(essaysData.map(e => String(e.student_id)))];
         const studentMap = new Map();
         if (allEssayStudentIds.length > 0) {
-          const { data: students } = await supabase.from("students").select("id, first_name, middle_name, last_name").in("id", allEssayStudentIds);
-          (students as StudentNameRow[] || []).forEach(s => studentMap.set(String(s.id), buildFullNameFromObject(s)));
+          const { data: students } = await supabase.from("users").select("id, first_name, middle_name, last_name").in("id", allEssayStudentIds).eq("role", "student");
+          (students as StudentNameRow[] || []).forEach(s => studentMap.set(s.id, buildFullNameFromObject(s)));
         }
 
         const recentActivity = essaysData.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).slice(0, 30).map(e => {
-          const meta = activityMetaById.get(String(e.activity_id));
+          const meta = activityMetaById.get(e.activity_id);
           return {
-            essayId: e.id, student: studentMap.get(String(e.student_id)) || "Unknown", action: e.status === 'submitted' ? "Submitted" : "Analyzed",
+            essayId: e.id, student: studentMap.get(e.student_id) || "Unknown", action: e.status === 'submitted' ? "Submitted" : "Analyzed",
             essay: e.title, time: formatTimeAgo(e.submitted_at), status: e.status === 'submitted' ? "new" : "evaluated",
             score: e.overall_score || undefined, courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [],
           } as DashboardData["recentActivity"][0];
         });
 
         const performanceEssays = essaysData.filter(e => e.overall_score != null).map(e => {
-          const meta = activityMetaById.get(String(e.activity_id));
+          const meta = activityMetaById.get(e.activity_id);
           const bid = meta?.blockIds?.[0];
           const sec = bid ? allSections.find(x => x.id === bid) : undefined;
           return {
             submitted_at: e.submitted_at, overall_score: e.overall_score, grammar_score: e.grammar_score, coherence_score: e.coherence_score,
-            student_id: String(e.student_id), studentName: studentMap.get(String(e.student_id)) || "Unknown",
-            courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [], activity_id: String(e.activity_id),
+            student_id: e.student_id, studentName: studentMap.get(e.student_id) || "Unknown",
+            courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [], activity_id: e.activity_id || "",
             activity_title: meta?.title || "Activity", program_id: sec ? loadIdToProgramId.get(sec.programLoadId) || "" : "",
           };
         });

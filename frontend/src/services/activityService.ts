@@ -16,9 +16,9 @@ export function isUuidString(value: string): boolean {
   return isUuid;
 }
 
-export function coerceEssayIdParam(id: string | number | null | undefined): string | null {
+export function coerceEssayIdParam(id: string | null | undefined): string | null {
   if (id == null) return null;
-  const s = String(id).trim();
+  const s = id.trim();
   return s || null;
 }
 
@@ -44,9 +44,10 @@ export async function resolveStudentIdForEssayFilter(
 
   try {
     const { data: byCode, error: lookupError } = await supabase
-      .from("students")
+      .from("users")
       .select("*")
       .eq("student_code", t)
+      .eq("role", "student")
       .maybeSingle();
     
     if (lookupError) {
@@ -201,8 +202,8 @@ type SupabaseActivityRow = {
   teacher_id: string | null;
   title: string;
   program_id: string[] | null;
-  block_id: string[] | null;
-  course_id: string[] | null;
+  block_id: string | null;
+  course_id: string | null;
   rubric_id: string | null;
   due_date: string | null;
   instructions: string | null;
@@ -223,9 +224,13 @@ export const fetchTeacherActivities = async (
   showArchived: boolean = false,
   currentAY?: string,
   currentTerm?: string,
+  teacherIdArg?: string,
 ): Promise<EssayActivity[]> => {
   try {
-    const teacherId = await fetchTeacherUUID();
+    let teacherId: string | null | undefined = teacherIdArg;
+    if (!teacherId) {
+      teacherId = await fetchTeacherUUID();
+    }
     if (!teacherId) {
       console.error("Teacher UUID not available");
       return [];
@@ -302,16 +307,10 @@ export const fetchTeacherActivities = async (
     ).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId:
-        Array.isArray(row.course_id) && row.course_id.length > 0
-          ? String(row.course_id[0])
-          : "all",
-      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId:
-        Array.isArray(row.block_id) && row.block_id.length > 0
-          ? String(row.block_id[0])
-          : "all",
-      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
+      courseId: row.course_id ? String(row.course_id) : "all",
+      courseIds: row.course_id ? [String(row.course_id)] : [],
+      blockId: row.block_id ? String(row.block_id) : "all",
+      blockIds: row.block_id ? [String(row.block_id)] : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       term: row.term || undefined,
       description: row.instructions || undefined,
@@ -339,24 +338,31 @@ export const fetchTeacherActivities = async (
 // Returns the number of rubrics successfully synced
 export const initializePlatformRubrics = async (): Promise<number> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isAdmin = user?.app_metadata?.role === 'admin' || user?.user_metadata?.role === 'admin';
+    
+    if (!isAdmin) {
+      // Non-admins shouldn't try to initialize global rubrics (RLS will block anyway)
+      return 0;
+    }
+
     const { platformRubrics } = await import("../data/rubricData");
 
     // Get all existing platform rubrics from database
-    // Fetch all rubrics and filter in JavaScript to avoid 406 error
+    // A rubric is a "platform rubric" if user_id is null OR if the owner is an admin
     const { data: allRubrics, error: fetchError } = await supabase
       .from("rubrics")
-      .select("id, name, teacher_id");
+      .select("id, name, user_id, owner:users!user_id(role)");
 
     if (fetchError) {
-      console.error("Error fetching existing rubrics:", fetchError);
-      // If we can't fetch, we can't check what exists, so skip initialization
+      console.error("Error fetching rubrics for sync:", fetchError);
       return 0;
     }
 
     const existingNames = new Set(
       (allRubrics || [])
-        .filter((r) => r.teacher_id === null)
-        .map((r) => r.name.toLowerCase()),
+        .filter((r: any) => r.user_id === null || r.owner?.role === "admin")
+        .map((r: any) => r.name.toLowerCase()),
     );
 
     let syncedCount = 0;
@@ -375,7 +381,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
             criteria: template.criteria,
             programs: [], // Platform rubrics don't have specific programs
             grading_intensity: template.type || "Basic",
-            teacher_id: null, // Platform rubric
+            user_id: null, // Platform rubric
           })
           .select("id")
           .single();
@@ -408,55 +414,65 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 // Since platform rubrics are now synced via initializePlatformRubrics,
 // we find them by name (database IDs are different from template IDs)
 const ensurePlatformRubricExists = async (
-  templateId: number,
-): Promise<number | null> => {
+  templateId: string,
+): Promise<string | null> => {
   try {
+    // Only admins can ensure/seed platform rubrics
+    const { data: { user } } = await supabase.auth.getUser();
+    const isAdmin = user?.app_metadata?.role === 'admin' || user?.user_metadata?.role === 'admin';
+    
     // Import template to get the name
     const { platformRubrics } = await import("../data/rubricData");
-    const template = platformRubrics.find((r) => r.id === templateId);
+    const template = platformRubrics.find((r) => String(r.id) === templateId);
 
     if (!template) {
       console.warn(`Template rubric with ID ${templateId} not found`);
       return null;
     }
 
-    // Find platform rubric by name (since database IDs differ from template IDs)
-    // Fetch all rubrics with this name and filter in JavaScript
+    // Find platform rubric by name
+    // A platform rubric is one where user_id is null OR the owner is an admin
     const { data: rubricsWithName } = await supabase
       .from("rubrics")
-      .select("id, teacher_id")
+      .select("id, user_id, owner:users!user_id(role)")
       .eq("name", template.name);
 
-    // Find the one that's a platform rubric (teacher_id is null)
-    const existing = rubricsWithName?.find((r) => r.teacher_id === null);
+    // Find the one that's a platform rubric
+    const existing = rubricsWithName?.find(
+      (r: any) => r.user_id === null || r.owner?.role === "admin",
+    );
 
     if (existing) {
       return existing.id;
     }
 
-    // If not found, create it (shouldn't happen if initializePlatformRubrics ran, but just in case)
-    const { data: newRubric, error } = await supabase
-      .from("rubrics")
-      .insert({
-        name: template.name,
-        description: template.description || "",
-        criteria: template.criteria,
-        programs: [], // Platform rubrics don't have specific programs
-        grading_intensity: template.type || "Basic",
-        teacher_id: null, // Platform rubric
-      })
-      .select("id")
-      .single();
+    // If not found and user is admin, create it
+    if (isAdmin) {
+      const { data: newRubric, error: insertError } = await supabase
+        .from("rubrics")
+        .insert({
+          name: template.name,
+          description: template.description || "",
+          criteria: template.criteria,
+          grading_intensity: template.type || "Basic",
+          user_id: null, // Platform rubric
+        })
+        .select("id")
+        .single();
 
-    if (error) {
-      console.error("Error creating platform rubric:", error);
-      return null;
+      if (insertError) {
+        console.error("Error creating platform rubric:", insertError);
+        return null;
+      }
+
+      console.log(
+        `Created platform rubric "${template.name}" with database ID ${newRubric.id}`,
+      );
+      return newRubric.id;
     }
 
-    console.log(
-      `Created platform rubric "${template.name}" with database ID ${newRubric.id}`,
-    );
-    return newRubric.id;
+    // If not found and not admin, we can't create it, so return null
+    return null;
   } catch (err) {
     console.error("Error ensuring platform rubric exists:", err);
     return null;
@@ -469,19 +485,18 @@ export const createActivity = async (
 ): Promise<EssayActivity[]> => {
   try {
     const teacherUUID = await fetchTeacherUUID();
-    const teacherId = await fetchTeacherId(); // Get numeric ID for bigint columns
+    const teacherId = await fetchTeacherId(); // Get UUID for standardized schema
     if (!teacherUUID || !teacherId) {
       throw new Error("Teacher identification not available");
     }
 
     // For now, store first selected course/section or null if empty (meaning "all")
 
-    // Handle rubric ID - ensure platform rubrics exist in database
-    let rubricId: string | null = null;
+    // Handle rubric ID
+    let rubricId: string | null = activity.rubricId || null;
 
-    if (activity.suggestedRubric) {
-      // 1. Save the AI suggested rubric first
-      // We use the numeric teacherId for the bigint column
+    // 1. If there's an AI suggested rubric, save it first (only if rubricId is 'ai-suggestion')
+    if (activity.suggestedRubric && activity.rubricId === "ai-suggestion") {
       const { data: newRubric, error: rubricError } = await supabase
         .from("rubrics")
         .insert({
@@ -489,7 +504,7 @@ export const createActivity = async (
           description: activity.suggestedRubric.description,
           criteria: activity.suggestedRubric.criteria,
           grading_intensity: activity.suggestedRubric.grading_intensity,
-          teacher_id: teacherId, // Use numeric ID (bigint)
+          user_id: teacherId, // AI generated rubrics go to teacher's private list
         })
         .select("id")
         .single();
@@ -497,23 +512,17 @@ export const createActivity = async (
       if (rubricError) {
         console.error("Error saving suggested rubric:", rubricError);
       } else if (newRubric) {
-        rubricId = newRubric.id; // This is a UUID string
+        rubricId = newRubric.id;
       }
-    } else if (activity.rubricId) {
-      if (activity.rubricId.startsWith("platform-")) {
-        // Template rubric - ensure it exists in database, then use its ID
-        // Note: ensurePlatformRubricExists should probably return string if it creates a UUID row
-        const numericId = activity.rubricId.replace("platform-", "");
-        const templateId = parseInt(numericId, 10);
-        if (!isNaN(templateId)) {
-          const resultId = await ensurePlatformRubricExists(templateId);
-          rubricId = resultId ? String(resultId) : null;
-        }
-      } else {
-        // Platform rubric from database - use ID directly (could be UUID string or number)
-        rubricId = activity.rubricId || null;
+    } else if (rubricId && rubricId.startsWith("platform-")) {
+      // 2. If it's a template ID, ensure it exists as a platform rubric (user_id: null)
+      const templateId = rubricId.replace("platform-", "");
+      if (templateId) {
+        const resultId = await ensurePlatformRubricExists(templateId);
+        rubricId = resultId;
       }
     }
+    // 3. Otherwise, use the rubricId as is (it's already a DB ID, either platform or private)
 
     const blockToProgram = new Map<string, string | null>();
     const studentIdsByBlock = new Map<string, string[]>();
@@ -534,7 +543,7 @@ export const createActivity = async (
 
       if (blocksData) {
         blocksData.forEach((b: {
-          id: string | number;
+          id: string;
           teacher_program_loads:
             | { program_id?: string | null }
             | Array<{ program_id?: string | null }>
@@ -544,7 +553,7 @@ export const createActivity = async (
             ? b.teacher_program_loads[0]
             : b.teacher_program_loads;
 
-          blockToProgram.set(String(b.id), tpl?.program_id || null);
+          blockToProgram.set(b.id, tpl?.program_id || null);
         });
       }
 
@@ -554,8 +563,8 @@ export const createActivity = async (
         .select(
           `
           block_id,
-          students (
-            auth_user_id
+          users!student_id (
+            id
           )
         `,
         )
@@ -570,20 +579,20 @@ export const createActivity = async (
 
       if (studentsData && studentsData.length > 0) {
         studentsData.forEach((row: {
-          block_id: string | number | null;
-          students?:
-            | { auth_user_id?: string | null }
-            | Array<{ auth_user_id?: string | null }>
+          block_id: string | null;
+          users?:
+            | { id?: string | null }
+            | Array<{ id?: string | null }>
             | null;
         }) => {
-          const authId = Array.isArray(row.students)
-            ? row.students[0]?.auth_user_id
-            : row.students?.auth_user_id;
+          const authId = Array.isArray(row.users)
+            ? row.users[0]?.id
+            : row.users?.id;
           if (authId && row.block_id) {
-            if (!studentIdsByBlock.has(String(row.block_id))) {
-              studentIdsByBlock.set(String(row.block_id), []);
+            if (!studentIdsByBlock.has(row.block_id)) {
+              studentIdsByBlock.set(row.block_id, []);
             }
-            studentIdsByBlock.get(String(row.block_id))?.push(authId);
+            studentIdsByBlock.get(row.block_id)?.push(authId);
           }
         });
       }
@@ -593,8 +602,8 @@ export const createActivity = async (
     const activityToInsert = {
       teacher_id: teacherId,
       title: activity.title.trim(),
-      course_id: activity.courseIds, // Now assigned as array
-      block_id: activity.sectionIds, // Now assigned as array
+      course_id: activity.courseIds?.[0] || null,
+      block_id: activity.sectionIds?.[0] || null,
       program_id: Array.from(
         new Set(Array.from(blockToProgram.values()).filter(Boolean)),
       ),
@@ -629,7 +638,7 @@ export const createActivity = async (
       }> = [];
 
       activity.sectionIds.forEach((blockId) => {
-        const targetStudentIds = studentIdsByBlock.get(String(blockId)) || [];
+        const targetStudentIds = studentIdsByBlock.get(blockId) || [];
 
         targetStudentIds.forEach((studentUserId) => {
           notificationsToInsert.push({
@@ -637,7 +646,7 @@ export const createActivity = async (
             type: "new_activity",
             title: "New Activity Assigned",
             message: `A new activity "${activity.title.trim()}" has been posted.`,
-            related_id: String(newActivity.id),
+            related_id: newActivity.id,
             related_type: "essay_activities",
           });
         });
@@ -659,16 +668,10 @@ export const createActivity = async (
     return (data as SupabaseActivityRow[]).map((row) => ({
       id: String(row.id),
       title: row.title,
-      courseId:
-        Array.isArray(row.course_id) && row.course_id.length > 0
-          ? String(row.course_id[0])
-          : "all",
-      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId:
-        Array.isArray(row.block_id) && row.block_id.length > 0
-          ? String(row.block_id[0])
-          : "all",
-      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
+      courseId: row.course_id ? String(row.course_id) : "all",
+      courseIds: row.course_id ? [String(row.course_id)] : [],
+      blockId: row.block_id ? String(row.block_id) : "all",
+      blockIds: row.block_id ? [String(row.block_id)] : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -711,27 +714,42 @@ export const updateActivity = async (
 
     // Get first selected program/section or null
 
-    // Handle rubric ID - ensure platform rubrics exist in database
-    let rubricId: string | null = null;
-    if (activityData.rubricId) {
-      if (activityData.rubricId.startsWith("platform-")) {
-        // Template rubric - ensure it exists in database, then use its ID
-        const numericId = activityData.rubricId.replace("platform-", "");
-        const templateId = parseInt(numericId, 10);
-        if (!isNaN(templateId)) {
-          const resultId = await ensurePlatformRubricExists(templateId);
-          rubricId = resultId ? String(resultId) : null;
-        }
-      } else {
-        // Platform rubric from database - use ID (UUID string) directly
-        rubricId = activityData.rubricId || null;
+    // Handle rubric ID
+    let rubricId: string | null = activityData.rubricId || null;
+
+    // 1. If there's an AI suggested rubric, save it first (only if rubricId is 'ai-suggestion')
+    if (activityData.suggestedRubric && activityData.rubricId === "ai-suggestion") {
+      const { data: newRubric, error: rubricError } = await supabase
+        .from("rubrics")
+        .insert({
+          name: activityData.suggestedRubric.name,
+          description: activityData.suggestedRubric.description,
+          criteria: activityData.suggestedRubric.criteria,
+          grading_intensity: activityData.suggestedRubric.grading_intensity,
+          user_id: teacherId, // AI generated rubrics go to teacher's private list
+        })
+        .select("id")
+        .single();
+      
+      if (rubricError) {
+        console.error("Error saving suggested rubric during update:", rubricError);
+      } else if (newRubric) {
+        rubricId = newRubric.id;
+      }
+    } else if (rubricId && rubricId.startsWith("platform-")) {
+      // 2. If it's a template ID, ensure it exists as a platform rubric (user_id: null)
+      const templateId = rubricId.replace("platform-", "");
+      if (templateId) {
+        const resultId = await ensurePlatformRubricExists(templateId);
+        rubricId = resultId;
       }
     }
+    // 3. Otherwise, use the rubricId as is (it's already a DB ID, either platform or private)
 
     const updateData: Record<string, unknown> = {
       title: activityData.title,
-      course_id: activityData.courseIds,
-      block_id: activityData.sectionIds,
+      course_id: activityData.courseIds?.[0] || null,
+      block_id: activityData.sectionIds?.[0] || null,
       rubric_id: rubricId,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
@@ -783,16 +801,10 @@ export const updateActivity = async (
     return {
       id: String(row.id),
       title: row.title,
-      courseId:
-        Array.isArray(row.course_id) && row.course_id.length > 0
-          ? String(row.course_id[0])
-          : "all",
-      courseIds: Array.isArray(row.course_id) ? row.course_id.map(String) : [],
-      blockId:
-        Array.isArray(row.block_id) && row.block_id.length > 0
-          ? String(row.block_id[0])
-          : "all",
-      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
+      courseId: row.course_id ? String(row.course_id) : "all",
+      courseIds: row.course_id ? [String(row.course_id)] : [],
+      blockId: row.block_id ? String(row.block_id) : "all",
+      blockIds: row.block_id ? [String(row.block_id)] : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -838,18 +850,22 @@ export const deleteActivity = async (activityId: string): Promise<void> => {
 };
 
 // Load courses for the current teacher (only those they are actually teaching)
-export const fetchCourses = async (): Promise<
+export const fetchCourses = async (teacherId?: string): Promise<
   { id: string; course_code: string; course_title: string }[]
 > => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return [];
+    let finalTeacherId: string | null | undefined = teacherId;
+    if (!finalTeacherId) {
+      const { data: userData } = await supabase.auth.getUser();
+      finalTeacherId = userData?.user?.id;
+    }
+    if (!finalTeacherId) return [];
 
     // Fetch courses through teacher_course_loads
     const { data, error } = await supabase
       .from("teacher_course_loads")
       .select("courses(id, course_code, course_title)")
-      .eq("teacher_id", userData.user.id);
+      .eq("teacher_id", finalTeacherId);
 
     if (error) {
       console.error("Error loading teacher courses:", error);
@@ -860,7 +876,7 @@ export const fetchCourses = async (): Promise<
       .flatMap((l: {
         courses:
           | Array<{
-              id: string | number;
+              id: string;
               course_code: string;
               course_title: string;
             }>
@@ -890,12 +906,17 @@ export const fetchCourses = async (): Promise<
 // Load program loads for the current teacher, optionally filtered by course
 export const fetchTeacherProgramLoads = async (
   courseId?: string,
+  teacherId?: string
 ): Promise<
   { id: string; program_id: string; program_name: string; course_id: string }[]
 > => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return [];
+    let finalTeacherId: string | null | undefined = teacherId;
+    if (!finalTeacherId) {
+      const { data: userData } = await supabase.auth.getUser();
+      finalTeacherId = userData?.user?.id;
+    }
+    if (!finalTeacherId) return [];
 
     let query = supabase
       .from("teacher_program_loads")
@@ -907,7 +928,7 @@ export const fetchTeacherProgramLoads = async (
         teacher_course_loads!inner(course_id)
       `,
       )
-      .eq("teacher_course_loads.teacher_id", userData.user.id);
+      .eq("teacher_course_loads.teacher_id", finalTeacherId);
 
     if (courseId && courseId !== "all") {
       query = query.eq("teacher_course_loads.course_id", courseId);
@@ -922,15 +943,15 @@ export const fetchTeacherProgramLoads = async (
 
     return (data || []).map(
       (row: {
-        id: string | number;
-        program_id: string | number;
+        id: string;
+        program_id: string;
         programs_lookup?:
           | Array<{ name?: string | null; abbr?: string | null }>
           | { name?: string | null; abbr?: string | null }
           | null;
         teacher_course_loads?:
-          | Array<{ course_id?: string | number | null }>
-          | { course_id?: string | number | null }
+          | Array<{ course_id?: string | null }>
+          | { course_id?: string | null }
           | null;
       }) => ({
         // Supabase nested joins can be array/object depending on relation metadata.
@@ -990,12 +1011,17 @@ export const fetchPrograms = async (): Promise<
 // Load sections (blocks) for dropdown, optionally filtered by program load
 export const fetchSections = async (
   programLoadId?: string,
+  teacherId?: string,
 ): Promise<
   { id: string; name: string; courseId: string; programLoadId: string }[]
 > => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return [];
+    let finalTeacherId: string | null | undefined = teacherId;
+    if (!finalTeacherId) {
+      const { data: userData } = await supabase.auth.getUser();
+      finalTeacherId = userData?.user?.id;
+    }
+    if (!finalTeacherId) return [];
 
     let query = supabase
       .from("blocks")
@@ -1017,7 +1043,7 @@ export const fetchSections = async (
         )
       `,
       )
-      .eq("teacher_id", userData.user.id);
+      .eq("teacher_id", finalTeacherId);
 
     if (programLoadId && programLoadId !== "all") {
       query = query.eq("program_load_id", programLoadId);
@@ -1031,10 +1057,10 @@ export const fetchSections = async (
     }
 
     return (data || []).map((block: {
-      id: string | number;
+      id: string;
       year?: number | null;
       name: string;
-      program_load_id: string | number | null;
+      program_load_id: string | null;
       teacher_program_loads?:
         | Array<{
             programs_lookup?:
@@ -1042,8 +1068,8 @@ export const fetchSections = async (
               | { abbr?: string | null; name?: string | null }
               | null;
             teacher_course_loads?:
-              | Array<{ course_id?: string | number | null }>
-              | { course_id?: string | number | null }
+              | Array<{ course_id?: string | null }>
+              | { course_id?: string | null }
               | null;
           }>
         | {
@@ -1052,8 +1078,8 @@ export const fetchSections = async (
               | { abbr?: string | null; name?: string | null }
               | null;
             teacher_course_loads?:
-              | Array<{ course_id?: string | number | null }>
-              | { course_id?: string | number | null }
+              | Array<{ course_id?: string | null }>
+              | { course_id?: string | null }
               | null;
           }
         | null;
@@ -1077,10 +1103,10 @@ export const fetchSections = async (
         .join(" ");
 
       return {
-        id: String(block.id),
+        id: block.id,
         name: fullName,
-        programLoadId: String(block.program_load_id),
-        courseId: String(teacherCourseLoad?.course_id || ""),
+        programLoadId: block.program_load_id || "",
+        courseId: teacherCourseLoad?.course_id || "",
       };
     });
   } catch (err) {
@@ -1103,22 +1129,22 @@ export const fetchRubrics = async (): Promise<{
     // First, ensure all platform rubrics are synced to database
     await initializePlatformRubrics();
 
-    // Fetch platform rubrics from database
+    // Fetch rubrics with owner role from database
     const { data: allRubricsData, error: allRubricsError } = await supabase
       .from("rubrics")
-      .select("id, name, description, grading_intensity, teacher_id")
+      .select("id, name, description, grading_intensity, user_id, owner:users!user_id(role)")
       .order("name", { ascending: true });
 
-    // Filter platform rubrics (teacher_id is null) in JavaScript
+    // Filter platform rubrics (user_id is null OR owner role is admin) in JavaScript
     const platformData =
-      allRubricsData?.filter((r) => r.teacher_id === null) || [];
+      allRubricsData?.filter((r: any) => r.user_id === null || r.owner?.role === "admin") || [];
     const platformError = allRubricsError;
 
     // Fetch teacher rubrics from database
     const { data: teacherData, error: teacherError } = await supabase
       .from("rubrics")
       .select("id, name, description, grading_intensity")
-      .eq("teacher_id", teacherId)
+      .eq("user_id", teacherId)
       .order("name", { ascending: true });
 
     if (platformError) {
@@ -1138,11 +1164,11 @@ export const fetchRubrics = async (): Promise<{
       // Fetch again after initialization
       const { data: refreshedAllRubrics } = await supabase
         .from("rubrics")
-        .select("id, name, description, grading_intensity, teacher_id")
+        .select("id, name, description, grading_intensity, user_id, owner:users!user_id(role)")
         .order("name", { ascending: true });
 
       const refreshedPlatform = (refreshedAllRubrics || []).filter(
-        (r) => r.teacher_id === null,
+        (r: any) => r.user_id === null || r.owner?.role === "admin",
       );
 
       if (refreshedPlatform.length > 0) {
@@ -1216,7 +1242,7 @@ export const fetchStudentsByCourseAndSection = async (
       await supabase
         .from("block_students")
         .select(
-          "student_id, students!inner(id, student_code, first_name, middle_name, last_name)",
+          "student_id, users!student_id!inner(id, student_code, first_name, middle_name, last_name)",
         )
         .eq("block_id", sectionId);
 
@@ -1235,7 +1261,7 @@ export const fetchStudentsByCourseAndSection = async (
     // Extract students from junction table results
     type BlockStudentRow = {
       student_id: string;  // uuid
-      students: {
+      users: {
         id: string;  // uuid
         student_code: string;
         first_name: string;
@@ -1245,7 +1271,7 @@ export const fetchStudentsByCourseAndSection = async (
     };
     const studentsData = (
       blockStudentsData as unknown as BlockStudentRow[]
-    ).map((bs) => bs.students);
+    ).map((bs) => bs.users);
 
     // Sort by full name in memory
     studentsData.sort((a, b) => {
@@ -1408,9 +1434,10 @@ export const uploadEssayFile = async (
     if (!isUuidString(studentId)) {
       // If studentId is a student_code, fetch the actual DB ID
       const { data: studentData } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
@@ -1472,9 +1499,10 @@ export const updateEssayFile = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
@@ -1579,9 +1607,10 @@ export const deleteEssay = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
@@ -1702,9 +1731,10 @@ export const fetchEssayByStudentAndActivity = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
@@ -1774,9 +1804,10 @@ export const checkEssayGraded = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
@@ -1871,19 +1902,21 @@ export const allowResubmission = async (
 
     if (!studentDbId) {
       const { data: studentData } = await supabase
-        .from("students")
-        .select("id, auth_user_id")
+        .from("users")
+        .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
-      authUserId = studentData?.auth_user_id || null;
       studentDbId = studentData?.id || null;
+      authUserId = studentDbId; // Now same as ID
     } else {
       const { data: studentData } = await supabase
-        .from("students")
-        .select("id, auth_user_id")
+        .from("users")
+        .select("id")
         .eq("id", studentDbId)
+        .eq("role", "student")
         .maybeSingle();
-      authUserId = studentData?.auth_user_id || null;
+      authUserId = studentData?.id || null;
     }
 
     if (!authUserId || !studentDbId) {
@@ -1956,25 +1989,27 @@ export const gradeEssay = async (
 
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("students")
-        .select("id, auth_user_id")
+        .from("users")
+        .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
         return { success: false, error: "Student not found" };
       }
       studentDbId = studentData.id;
-      authUserId = studentData.auth_user_id;
+      authUserId = studentData.id;
     } else {
       const { data: stdData } = await supabase
-        .from("students")
-        .select("auth_user_id")
+        .from("users")
+        .select("id")
         .eq("id", studentDbId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (stdData) {
-        authUserId = stdData.auth_user_id;
+        authUserId = stdData.id;
       }
     }
 
@@ -2738,9 +2773,10 @@ export const fetchStudentAnalysisResults = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("students")
+        .from("users")
         .select("id")
         .eq("student_code", studentId)
+        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
@@ -2931,11 +2967,11 @@ const generateContentHash = (text: string): string => {
 const processSimilarityGroups = (
   groups: Map<string, DuplicateEssayGroup["essays"]>,
   sourceData: Array<{
-    essay_id?: string | number;
+    essay_id?: string;
     original_text?: string | null;
     content?: string | null;
     essays?: unknown;
-    id?: string | number;
+    id?: string;
   }>,
   textField: "original_text" | "content",
 ): DuplicateEssayGroup[] => {
@@ -2949,7 +2985,7 @@ const processSimilarityGroups = (
     if (textField === "original_text") {
       // For original_text, extract essay ID from nested structure
       // Supabase returns essays as an object (not array) when using !inner
-      const essaysData = item.essays as { id?: string | number } | undefined;
+      const essaysData = item.essays as { id?: string } | undefined;
       essayId = essaysData?.id ? String(essaysData.id) : (item.essay_id ? String(item.essay_id) : undefined);
     } else {
       essayId = item.id ? String(item.id) : undefined;
@@ -3113,7 +3149,7 @@ export const fetchDuplicateEssays = async (
                const { data: relatedActivities } = await supabase
                 .from("essay_activities")
                 .select("id")
-                .overlaps("course_id", [courseId])
+                .eq("course_id", courseId)
                 .eq("title", activityData.title); // Only match same-named assignments
               
               if (relatedActivities && relatedActivities.length > 0) {
@@ -3132,7 +3168,7 @@ export const fetchDuplicateEssays = async (
       const { data: relatedByCol } = await supabase
         .from("essay_activities")
         .select("id")
-        .overlaps("course_id", Array.isArray(courseIdFromCol) ? courseIdFromCol : [courseIdFromCol])
+        .eq("course_id", Array.isArray(courseIdFromCol) ? courseIdFromCol[0] : courseIdFromCol)
         .eq("title", activityData.title); // Only match same-named assignments
       
       if (relatedByCol && relatedByCol.length > 0) {
@@ -3213,10 +3249,11 @@ export const fetchDuplicateEssays = async (
     });
 
     // Fetch students
-    const { data: studentsData } = await supabase
-      .from("students")
-      .select("id, first_name, middle_name, last_name, program_id, year, block_name")
-      .in("id", studentIds);
+    const { data: students } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, middle_name, suffix, student_code")
+      .in("id", studentIds)
+      .eq("role", "student");
       
     // Fetch blocks with their program_load_id
     const { data: blocksData } = await supabase
@@ -3235,7 +3272,7 @@ export const fetchDuplicateEssays = async (
     const programIds = [...new Set(loadsData?.map(l => l.program_id).filter(Boolean))];
     
     // Add programs directly attached to students
-    studentsData?.forEach(s => {
+    students?.forEach((s: any) => {
       if (s.program_id && !programIds.includes(s.program_id)) programIds.push(s.program_id);
     });
     
@@ -3247,7 +3284,7 @@ export const fetchDuplicateEssays = async (
 
     // Build Maps for fast lookup
     const studentsMap = new Map();
-    studentsData?.forEach(s => studentsMap.set(String(s.id), s));
+    students?.forEach((s: any) => studentsMap.set(String(s.id), s));
     
     const programsMap = new Map();
     programsData?.forEach(p => programsMap.set(String(p.id), p));
@@ -3267,7 +3304,7 @@ export const fetchDuplicateEssays = async (
     const metaMap = new Map();
     basicEssays?.forEach(m => metaMap.set(String(m.id), m));
     
-    console.log(`[fetchDuplicateEssays] Metadata fetched. Found ${basicEssays?.length} essays, ${studentsData?.length} students, ${blocksData?.length} blocks.`);
+    console.log(`[fetchDuplicateEssays] Metadata fetched. Found ${basicEssays?.length} essays, ${students?.length} students, ${blocksData?.length} blocks.`);
 
     // Group essays by content hash
     const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
@@ -3420,7 +3457,7 @@ export const fetchStudentsForActivity = async (
         id,
         student_id,
         block_id,
-        students!essays_student_id_fkey(
+        students:users!essays_student_id_fkey(
           id,
           first_name,
           middle_name,
@@ -3514,7 +3551,7 @@ export const fetchEssayTextsForStudents = async (
     const { data: essaysData, error: essaysError } = await supabase
       .from("essays")
       .select(
-        "id, student_id, students!essays_student_id_fkey(id, first_name, middle_name, last_name)",
+        "id, student_id, students:users!essays_student_id_fkey(id, first_name, middle_name, last_name)",
       )
       .eq("activity_id", activityDbId)
       .in("student_id", studentIds);
@@ -3861,7 +3898,7 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
           id,
           submitted_at,
           block_id,
-          students!essays_student_id_fkey(
+          students:users!essays_student_id_fkey(
             id,
             first_name,
             middle_name,
@@ -4152,7 +4189,7 @@ function getEmptyMetrics(): TeacherMetrics {
 // Save plagiarism check results to essay_analysis_results table
 // Can be called with either (studentId, activityId) or essayId
 export const savePlagiarismResult = async (
-  studentIdOrEssayId: string | number,
+  studentIdOrEssayId: string,
   activityIdOrResult:
     | string
     | import("../api").PlagiarismCheckResponse
@@ -4160,7 +4197,7 @@ export const savePlagiarismResult = async (
   plagiarismResult?: import("../api").PlagiarismCheckResponse,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    let essayId: string | number;
+    let essayId: string;
     let result: import("../api").PlagiarismCheckResponse;
 
     // Determine which overload is being used
@@ -4203,7 +4240,7 @@ export const savePlagiarismResult = async (
         return { success: false, error: "Essay not found" };
       }
 
-      essayId = essayData.id as string | number;
+      essayId = essayData.id as string;
       result = plagiarismResult;
     } else {
       return { success: false, error: "Invalid parameters" };
@@ -4276,11 +4313,11 @@ export const savePlagiarismResult = async (
 // Load saved plagiarism check results from essay_analysis_results table
 // Can be called with either (studentId, activityId) or essayId
 export const loadPlagiarismResult = async (
-  studentIdOrEssayId: string | number,
+  studentIdOrEssayId: string,
   activityId?: string,
 ): Promise<import("../api").PlagiarismCheckResponse | null> => {
   try {
-    let essayId: string | number | null;
+    let essayId: string | null;
 
     if (activityId !== undefined) {
       const studentId = studentIdOrEssayId as string;
@@ -4301,7 +4338,7 @@ export const loadPlagiarismResult = async (
         return null;
       }
 
-      essayId = essayData.id as string | number;
+      essayId = essayData.id as string;
     } else {
       if (typeof studentIdOrEssayId === "number") {
         essayId = Number.isNaN(studentIdOrEssayId)
@@ -4335,7 +4372,7 @@ export const loadPlagiarismResult = async (
 // Save AI detection results to essay_analysis_results table
 // Can be called with either (studentId, activityId) or essayId
 export const saveAIDetectionResult = async (
-  studentIdOrEssayId: string | number,
+  studentIdOrEssayId: string,
   activityIdOrResult:
     | string
     | import("../api").AIDetectionResponse
@@ -4343,7 +4380,7 @@ export const saveAIDetectionResult = async (
   aiDetectionResult?: import("../api").AIDetectionResponse,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    let essayId: string | number;
+    let essayId: string;
     let result: import("../api").AIDetectionResponse;
 
     if (typeof activityIdOrResult === "object" && activityIdOrResult !== null) {
@@ -4383,7 +4420,7 @@ export const saveAIDetectionResult = async (
         return { success: false, error: "Essay not found" };
       }
 
-      essayId = essayData.id as string | number;
+      essayId = essayData.id as string;
       result = aiDetectionResult;
     } else {
       return { success: false, error: "Invalid parameters" };
@@ -4446,11 +4483,11 @@ export const saveAIDetectionResult = async (
 // Load saved AI detection results from essay_analysis_results table
 // Can be called with either (studentId, activityId) or essayId
 export const loadAIDetectionResult = async (
-  studentIdOrEssayId: string | number,
+  studentIdOrEssayId: string,
   activityId?: string,
 ): Promise<import("../api").AIDetectionResponse | null> => {
   try {
-    let essayId: string | number | null;
+    let essayId: string | null;
 
     if (activityId !== undefined) {
       const studentId = studentIdOrEssayId as string;
@@ -4469,7 +4506,7 @@ export const loadAIDetectionResult = async (
       if (essayError || !essayData) {
         return null;
       }
-      essayId = essayData.id as string | number;
+      essayId = essayData.id as string;
     } else {
       if (typeof studentIdOrEssayId === "number") {
         essayId = Number.isNaN(studentIdOrEssayId)

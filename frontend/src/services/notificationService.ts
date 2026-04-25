@@ -36,7 +36,7 @@ export const mapNotificationRow = (notif: any): Notification => ({
   type: notif.type as Notification["type"],
   title: notif.title,
   message: notif.message,
-  read: notif.read,
+  read: notif.is_read,
   timestamp: formatTimestamp(notif.created_at),
   relatedId: notif.related_id || undefined,
 });
@@ -74,7 +74,7 @@ export const markNotificationAsRead = async (
   try {
     const { error } = await supabase
       .from("notifications")
-      .update({ read: true })
+      .update({ is_read: true })
       .eq("id", notificationId)
       .eq("user_id", teacherId);
 
@@ -97,9 +97,9 @@ export const markAllNotificationsAsRead = async (
   try {
     const { error } = await supabase
       .from("notifications")
-      .update({ read: true })
+      .update({ is_read: true })
       .eq("user_id", teacherId)
-      .eq("read", false);
+      .eq("is_read", false);
 
     if (error) {
       console.error("Error marking all notifications as read:", error);
@@ -165,7 +165,7 @@ export const createNotification = async (
           title: notification.title,
           message: notification.message,
           related_id: notification.relatedId,
-          read: false,
+          is_read: false,
         },
       ]);
 

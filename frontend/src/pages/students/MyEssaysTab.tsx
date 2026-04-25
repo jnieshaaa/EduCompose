@@ -47,10 +47,11 @@ export function MyEssaysTab() {
         if (!authUser?.user) return;
 
         const { data: student } = await supabase
-          .from('students')
+          .from('users')
           .select('id, student_code')
-          .eq('auth_user_id', authUser.user.id)
-          .single();
+          .eq('id', authUser.user.id)
+          .eq('role', 'student')
+          .maybeSingle();
 
         if (!student) return;
 

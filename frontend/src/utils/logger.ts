@@ -22,7 +22,7 @@ export type LogAction =
  * @param metadata Optional extra data (e.g., ID of the resource affected)
  */
 export async function logActivity(
-  userId: string | number,
+  userId: string,
   action: LogAction,
   description: string,
   metadata: any = {}

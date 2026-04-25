@@ -16,8 +16,8 @@ const getTeacherContext = async () => {
 
     const { data: userData, error: userTableError } = await supabase
       .from("users")
-      .select("id, auth_user_id, school_id, department_id")
-      .eq("auth_user_id", user.id)
+      .select("id, school_id, department_id")
+      .eq("id", user.id)
       .single();
 
     if (userTableError || !userData) return null;
@@ -104,7 +104,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
               programs_lookup (id, name, abbr)
             )
           `)
-          .eq("teacher_program_loads.teacher_course_loads.teacher_id", context.auth_user_id);
+          .eq("teacher_program_loads.teacher_course_loads.teacher_id", context.id);
 
         if (!showArchived) {
           if (currentAY) {
@@ -132,7 +132,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
         const { data: loadsData } = await supabase
           .from("teacher_course_loads")
           .select("courses(id, course_code, course_title)")
-          .eq("teacher_id", context.auth_user_id)
+          .eq("teacher_id", context.id)
           .eq("academic_year", currentAY)
           .eq("term", currentSemester);
 
@@ -248,7 +248,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
       const { data: loadData, error: loadError } = await supabase
         .from("teacher_course_loads")
         .select("id")
-        .eq("teacher_id", context.auth_user_id)
+        .eq("teacher_id", context.id)
         .eq("course_id", newSection.course_id)
         .eq("academic_year", currentAY)
         .eq("term", currentSemester)
@@ -308,7 +308,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
               program_load_id: tplData.id,
               year: blockDataToCreate.year,
               name: blockDataToCreate.name,
-              teacher_id: context.auth_user_id
+              teacher_id: context.id
             })
             .select(`
               id,
@@ -340,11 +340,12 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
             createdCount++;
             // Link existing students
             const { data: matchingStudents } = await supabase
-              .from("students")
+              .from("users")
               .select("id")
               .eq("program_id", newSection.program_id)
               .eq("year", blockDataToCreate.year)
-              .eq("block_name", blockDataToCreate.name);
+              .eq("block_name", blockDataToCreate.name)
+              .eq("role", "student");
 
             if (matchingStudents && matchingStudents.length > 0) {
               const enrollments = matchingStudents.map(s => ({

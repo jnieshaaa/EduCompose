@@ -122,7 +122,8 @@ export class UnifiedStudentUploadService {
              .from("teacher_program_loads")
              .insert({
                 course_load_id: loadData.id,
-                program_id: prog.id
+                program_id: prog.id,
+                teacher_id: teacherId
              })
              .select()
              .single();
@@ -199,11 +200,12 @@ export class UnifiedStudentUploadService {
               continue;
             }
 
-            // 1. Check if student already exists in OFFICIAL students table
+            // 1. Check if student already exists in OFFICIAL users table
             const { data: existingStudent } = await supabase
-              .from("students")
+              .from("users")
               .select("id, student_code")
               .eq("student_code", studentCode)
+              .eq("role", "student")
               .maybeSingle();
             
             if (existingStudent) {
@@ -260,7 +262,7 @@ export class UnifiedStudentUploadService {
           try {
             const { data: admins } = await supabase
               .from("users")
-              .select("auth_user_id")
+              .select("id")
               .eq("role", "admin");
 
             if (admins && admins.length > 0) {
@@ -271,7 +273,7 @@ export class UnifiedStudentUploadService {
 
               for (const admin of admins) {
                 await createNotification({
-                  user_id: admin.auth_user_id,
+                  user_id: admin.id,
                   type: "info",
                   title: "Pending Student Approvals",
                   message: `${teacherName} has submitted ${importedCount} students for approval.`,

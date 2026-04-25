@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
-  Archive,
   School,
   HelpCircle,
   Briefcase,
@@ -106,11 +105,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         icon: <BookOpen className="w-5 h-5" />,
         label: "Classes",
         path: "/Admin/Content",
-      },
-      {
-        icon: <Archive className="w-5 h-5" />,
-        label: "Archive",
-        path: "/Admin/Archive",
       },
       {
         icon: <Settings className="w-5 h-5" />,

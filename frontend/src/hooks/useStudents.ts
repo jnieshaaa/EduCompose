@@ -46,7 +46,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const selectQuery = blockId
         ? `
           *,
-          block_students!inner (
+          block_students!fk_block_students_user!inner (
             block_id,
             blocks (
               id,
@@ -62,7 +62,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         `
         : `
           *,
-          block_students (
+          block_students!fk_block_students_user (
             block_id,
             blocks (
               id,
@@ -77,7 +77,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
           )
         `;
 
-      let query = supabase.from("students").select(selectQuery);
+      let query = supabase.from("users").select(selectQuery).eq("role", "student");
 
       if (blockId) {
         // Filter by specific block, ignoring who originally created the student
@@ -90,23 +90,40 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const { data, error } = await query;
       if (error) throw error;
 
+      console.log("DEBUG: Students raw data from Supabase:", data?.length);
       let result = data || [];
 
       // Supabase embedded filters only filter the nested join data, not parent rows.
       // So we must manually exclude students whose block_students came back empty.
       if (blockId) {
-        result = result.filter(s => s.block_students && s.block_students.length > 0);
+        result = result.filter(s => {
+          const hasBlock = s.block_students && s.block_students.length > 0;
+          if (!hasBlock) console.log("DEBUG: Student filtered out because no block_students data", s.id);
+          return hasBlock;
+        });
       }
 
+      console.log("DEBUG: Current AY/Semester:", currentAY, currentSemester);
+      
       // Manual filtering for AY and Term since it's deep in the join
       if (!showArchived) {
         if (currentAY && currentSemester) {
-          result = result.filter(s => 
+          const filtered = result.filter(s => 
             s.block_students?.some((bs: any) => {
               const bcl = bs.blocks?.teacher_program_loads?.teacher_course_loads;
-              return bcl?.academic_year === currentAY && bcl?.term === currentSemester;
+              const match = bcl?.academic_year === currentAY && bcl?.term === currentSemester;
+              if (!match) console.log("DEBUG: Student block info mismatch:", bcl?.academic_year, bcl?.term, "vs", currentAY, currentSemester);
+              return match;
             })
           );
+          
+          if (filtered.length === 0 && result.length > 0) {
+            console.warn("DEBUG: ALL students filtered out by AY/Semester! Showing all for now to debug.");
+            // TEMPORARY: If filtering kills everything, show all to confirm data exists
+            // result = result; 
+          } else {
+            result = filtered;
+          }
         }
       } else {
         // Archive view: apply specific filters
@@ -143,7 +160,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
     } finally {
       setIsLoading(false);
     }
-  }, [blockId, ay, term]);
+  }, [blockId, ay, term, currentAY, currentSemester, showArchived, showError]);
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -229,7 +246,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
 
       // 1. Global Uniqueness Check (against active students)
       const { data: existingData, error: checkError } = await supabase
-        .from("students")
+        .from("users")
         .select(`
           id,
           student_code,
@@ -239,6 +256,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
             departments (code)
           )
         `)
+        .eq("role", "student")
         .or(`student_code.eq.${dataToUse.student_code}${dataToUse.email ? `,email.eq.${dataToUse.email}` : ""}`)
         .limit(1);
 
@@ -356,7 +374,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       try {
         const { data: admins } = await supabase
           .from("users")
-          .select("auth_user_id")
+          .select("id")
           .eq("role", "admin");
 
         if (admins && admins.length > 0) {
@@ -366,7 +384,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
 
           for (const admin of admins) {
             await createNotification({
-              user_id: admin.auth_user_id,
+              user_id: admin.id,
               type: "info",
               title: "Pending Student Registration",
               message: `${teacherName} submitted ${newP.first_name} ${newP.last_name} (${newP.student_code}) for approval.`,
@@ -398,7 +416,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
   const handleUpdateStudent = async (studentId: string, updates: Partial<Student>) => {
     try {
       const { data, error } = await supabase
-        .from("students")
+        .from("users")
         .update(updates)
         .eq("id", studentId)
         .select()
@@ -431,7 +449,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
             if (error) throw error;
           } else {
             const { error } = await supabase
-              .from("students")
+              .from("users")
               .delete()
               .eq("id", studentId);
             if (error) throw error;

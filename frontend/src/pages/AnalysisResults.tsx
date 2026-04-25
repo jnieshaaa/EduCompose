@@ -275,7 +275,7 @@ const AnalysisResults: React.FC = () => {
   const [previewRubric, setPreviewRubric] = useState<PlatformRubric | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [activityId, setActivityId] = useState<string | null>(null);
-  const [essayId, setEssayId] = useState<string | number | null>(null);
+  const [essayId, setEssayId] = useState<string | null>(null);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateEssayGroup[]>([]);
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
   const [filePath, setFilePath] = useState<string | null>(null);
@@ -296,7 +296,7 @@ const AnalysisResults: React.FC = () => {
     plagiarismResultSavedRef.current = false; // Reset when new result is set
   }, [plagiarismResult]);
 
-  const handleAnalyze = async (text: string, title: string, essayId?: string | number) => {
+  const handleAnalyze = async (text: string, title: string, essayId?: string) => {
     if (!text.trim() || text.trim().split(/\s+/).length < 150) {
       setError('Essay must be at least 150 words for analysis');
       return;
@@ -389,7 +389,7 @@ const AnalysisResults: React.FC = () => {
       analysis?: StoredAnalysisResult;
       text?: string;
       title?: string;
-      essayId?: string | number;
+      essayId?: string;
       error?: string;
       preview?: boolean;
       studentId?: string;
@@ -729,7 +729,7 @@ const AnalysisResults: React.FC = () => {
       // Fallback: check location.state if IDs aren't set
       if (!currentEssayId && !currentStudentId && !currentActivityId) {
         const state = location.state as {
-          essayId?: string | number;
+          essayId?: string;
           studentId?: string;
           activityId?: string;
         } | null;
@@ -868,7 +868,7 @@ const AnalysisResults: React.FC = () => {
       // Fallback: check location.state if IDs aren't set yet
       if (!currentEssayId && !currentStudentId && !currentActivityId) {
         const state = location.state as {
-          essayId?: string | number;
+          essayId?: string;
           studentId?: string;
           activityId?: string;
         } | null;
@@ -1251,23 +1251,21 @@ const AnalysisResults: React.FC = () => {
     if (!rubricData?.rubric_id) return;
 
     // 1. Try to find in platform rubrics first
-    let numericId: number | null = null;
+    let templateId: string | null = null;
     let isPlatformFormat = false;
 
-    if (typeof rubricData.rubric_id === 'number') {
-      numericId = rubricData.rubric_id;
-    } else if (typeof rubricData.rubric_id === 'string') {
+    if (typeof rubricData.rubric_id === 'string') {
       if (rubricData.rubric_id.startsWith('platform-')) {
         isPlatformFormat = true;
-        const numId = parseInt(rubricData.rubric_id.replace('platform-', ''));
-        if (!isNaN(numId)) numericId = numId;
-      } else if (!isNaN(parseInt(rubricData.rubric_id))) {
-        numericId = parseInt(rubricData.rubric_id);
+        templateId = rubricData.rubric_id.replace('platform-', '');
+      } else if (rubricData.rubric_id.length <= 2) {
+        templateId = rubricData.rubric_id;
+        isPlatformFormat = true;
       }
     }
 
-    if (numericId !== null && (isPlatformFormat || numericId <= 10)) {
-      const rubric = platformRubrics.find((r) => r.id === numericId);
+    if (templateId && isPlatformFormat) {
+      const rubric = platformRubrics.find((r) => String(r.id) === templateId);
       if (rubric) {
         setPreviewRubric(rubric);
         setShowRubricPreview(true);

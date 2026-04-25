@@ -116,7 +116,7 @@ export function UnifiedStudentBatchUploadDialog({
            const hasStudentHeaders = row3.some(h => String(h).toLowerCase().includes("id") || String(h).toLowerCase().includes("student"));
            
            if (hasStudentHeaders) {
-             const getMeta = (rowArr: string[], fallback: string | number) => {
+             const getMeta = (rowArr: string[], fallback: string) => {
                 if (rowArr.length === 0) return fallback;
                 if (rowArr.length === 1) return rowArr[0] || fallback;
                 const first = String(rowArr[0]).toLowerCase();
@@ -127,7 +127,7 @@ export function UnifiedStudentBatchUploadDialog({
              };
 
              initialConfig.program = String(getMeta(rows[0] || [], initialConfig.program || ""));
-             initialConfig.year = parseInt(String(getMeta(rows[1] || [], initialConfig.year || 1))) || 1;
+             initialConfig.year = parseInt(String(getMeta(rows[1] || [], String(initialConfig.year || 1)))) || 1;
              initialConfig.block = String(getMeta(rows[2] || [], initialConfig.block || "")).toUpperCase();
            }
          }

@@ -4,7 +4,7 @@
  */
 
 export type ParsedRow = {
-  [key: string]: string | number;
+  [key: string]: string;
 };
 
 export type ParseResult = {

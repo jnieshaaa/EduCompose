@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, UserPlus, Mail, Hash, Calendar, BookOpen, Briefcase } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabaseClient";
 import { authApi } from "../../api";
 import { sendUserWelcomeEmail } from "../../services/emailService";
@@ -147,19 +149,24 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
     }
   };
 
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+  return typeof window !== "undefined" ? createPortal(
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
+          >
         <div className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-secondary rounded-2xl text-white shadow-lg shadow-secondary/20">
               <Briefcase size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">Enroll Teacher</h2>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Faculty Academic Record</p>
+              <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">Enroll Teacher</h2>
+              <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Add Teacher</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -168,38 +175,45 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
         </div>
 
         <form id="enroll-teacher-form" onSubmit={handleSubmit} className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
-          {formError && (
-            <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold uppercase tracking-wider animate-in fade-in slide-in-from-top-1">
-              {formError}
-            </div>
-          )}
+          <AnimatePresence>
+            {formError && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-medium uppercase tracking-wider overflow-hidden"
+              >
+                {formError}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="space-y-6">
              <div className="flex items-center gap-3">
                 <Hash size={16} className="text-secondary" />
-                <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Identity Details</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Details</h3>
              </div>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Teacher Code*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Teacher ID*</label>
                   <input
                     required
                     placeholder="T-2024-001"
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.teacher_code}
                     onChange={(e) => setFormData({ ...formData, teacher_code: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
                   <div className="relative group">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-secondary transition-colors" size={16} />
                     <input
                       required
                       type="email"
                       placeholder="teacher@university.edu"
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -209,38 +223,38 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
 
              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className="sm:col-span-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
                   <input
                     required
                     placeholder="Juan"
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   />
                 </div>
                 <div className="sm:col-span-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                   <input
                     placeholder="Dela"
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.middle_name}
                     onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
                   />
                 </div>
                 <div className="sm:col-span-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
                   <input
                     required
                     placeholder="Cruz"
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   />
                 </div>
                 <div className="sm:col-span-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                   <select
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all cursor-pointer"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
                     value={formData.suffix}
                     onChange={(e) => setFormData({ ...formData, suffix: e.target.value })}
                   >
@@ -255,13 +269,13 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
              </div>
 
              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
                 <div className="relative group">
                   <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-secondary transition-colors" size={16} />
                   <input
                     required
                     type="date"
-                    className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-bold transition-all cursor-pointer"
+                    className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
                     value={formData.birthday}
                     onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                   />
@@ -275,15 +289,15 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
           <div className="p-8 bg-neutral-50/50 rounded-[2.5rem] border border-neutral-100 space-y-6">
              <div className="flex items-center gap-3">
                 <BookOpen size={16} className="text-secondary" />
-                <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Institutional Placement</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Placement</h3>
              </div>
 
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
                   <select
                     required
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-bold transition-all cursor-pointer"
+                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-medium transition-all cursor-pointer"
                     value={formData.department_id}
                     onChange={(e) => setFormData({ ...formData, department_id: e.target.value, program_id: "" })}
                   >
@@ -294,11 +308,11 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
                   <select
                     required
                     disabled={!formData.department_id}
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-bold transition-all cursor-pointer disabled:opacity-30"
+                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
                     value={formData.program_id}
                     onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
                   >
@@ -314,7 +328,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
 
         <div className="px-6 py-5 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between gap-4">
           <div className="hidden sm:block">
-             <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Portal Credentials</p>
+             <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest">Portal Credentials</p>
              <p className="text-[10px] text-neutral-500">Teacher can login immediately.</p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
@@ -322,7 +336,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                 variant="outline" 
                 onClick={onClose} 
                 disabled={loading}
-                className="flex-1 sm:flex-none border-neutral-200 text-neutral-500 h-10 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                className="flex-1 sm:flex-none border-neutral-200 text-neutral-500 h-10 rounded-xl text-[10px] font-medium uppercase tracking-widest"
             >
               Cancel
             </Button>
@@ -330,7 +344,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                 type="submit" 
                 form="enroll-teacher-form" 
                 disabled={loading}
-                className="flex-1 sm:flex-none bg-secondary text-white shadow-lg shadow-secondary/20 h-10 px-8 group rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                className="flex-1 sm:flex-none bg-secondary text-white shadow-lg shadow-secondary/20 h-10 px-8 group rounded-xl text-[10px] font-medium uppercase tracking-widest"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -343,9 +357,12 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
             </Button>
           </div>
         </div>
-      </div>
-    </div>
-  );
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
+  ) : null;
 };
 
 export default EnrollTeacherModal;

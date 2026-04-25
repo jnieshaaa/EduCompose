@@ -28,17 +28,19 @@ export function MyClassesTab() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Get student record
+        // 1. Get student record from unified users table
         let { data: student } = await supabase
-          .from("students")
+          .from("users")
           .select("id, email, year, block_name")
-          .eq("auth_user_id", user.id)
+          .eq("role", "student")
+          .eq("id", user.id)
           .maybeSingle();
 
         if (!student && user.email) {
           const { data: emailData } = await supabase
-            .from("students")
+            .from("users")
             .select("id, email, year, block_name")
+            .eq("role", "student")
             .eq("email", user.email)
             .maybeSingle();
           student = emailData;

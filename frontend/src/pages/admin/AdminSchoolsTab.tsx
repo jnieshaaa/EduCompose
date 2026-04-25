@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2, School as SchoolIcon, Layers, X, Hash, GraduationCap, Building2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import type { School, Department, Program } from "../../types/academic";
@@ -261,7 +262,7 @@ export const AdminSchoolsTab: React.FC = () => {
     <div className="space-y-8 pb-20">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Schools</h1>
+          <h1 className="text-3xl font-semibold text-neutral-900 tracking-tight">Schools</h1>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage schools, departments, and programs</p>
         </div>
                 <Button
@@ -269,7 +270,7 @@ export const AdminSchoolsTab: React.FC = () => {
           className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
         >
           <Plus size={18} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Add School</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest">Add School</span>
         </Button>
       </div>
 
@@ -280,12 +281,12 @@ export const AdminSchoolsTab: React.FC = () => {
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <div className="absolute inset-0 blur-xl bg-primary/20 animate-pulse rounded-full" />
             </div>
-            <p className="mt-6 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">Loading Data...</p>
+            <p className="mt-6 text-[10px] font-medium text-neutral-400 uppercase tracking-widest text-center">Loading Data...</p>
           </div>
         ) : schools.length === 0 ? (
           <div className="text-center py-32 bg-white rounded-[2.5rem] border-2 border-dashed border-neutral-200 text-neutral-400">
              <SchoolIcon size={48} className="mx-auto mb-4 opacity-20" />
-             <p className="text-[10px] font-bold uppercase tracking-widest">No schools found</p>
+             <p className="text-[10px] font-medium uppercase tracking-widest">No schools found</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -303,10 +304,10 @@ export const AdminSchoolsTab: React.FC = () => {
                       <SchoolIcon size={22} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-neutral-900 tracking-tight">{school.name}</h3>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">{school.code}</span>
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{school.departments.length} Departments</span>
+                      <h3 className="text-lg font-semibold text-neutral-900 tracking-tight">{school.name}</h3>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">{school.code}</span>
+                        <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">{school.departments.length} Departments</span>
                       </div>
                     </div>
                   </div>
@@ -356,12 +357,12 @@ export const AdminSchoolsTab: React.FC = () => {
                     >
                       <div className="p-8 space-y-6 bg-neutral-50/30">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Departments</h4>
+                          <h4 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Departments</h4>
                         </div>
                         
                         {school.departments.length === 0 ? (
                            <div className="py-12 bg-white rounded-3xl border-2 border-dashed border-neutral-100 text-center">
-                              <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">No departments found</p>
+                              <p className="text-[10px] font-medium text-neutral-300 uppercase tracking-widest">No departments found</p>
                            </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -406,12 +407,12 @@ export const AdminSchoolsTab: React.FC = () => {
                                       </div>
                                     </div>
                                     
-                                    <h5 className="font-bold text-neutral-900 tracking-tight leading-tight mb-1">{dept.name}</h5>
-                                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-4">{dept.code}</p>
+                                    <h5 className="font-semibold text-neutral-900 tracking-tight leading-tight mb-1">{dept.name}</h5>
+                                    <p className="text-[10px] font-medium text-primary uppercase tracking-widest mb-4">{dept.code}</p>
                                     
                                     <button 
                                       onClick={() => toggleDept(deptKey)}
-                                      className="w-full flex items-center justify-between p-3 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-colors text-xs font-bold text-neutral-500"
+                                      className="w-full flex items-center justify-between p-3 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-colors text-xs font-medium text-neutral-500"
                                     >
                                       <span>{dept.programs?.length || 0} Programs</span>
                                       <ChevronRight size={14} className={`transition-transform duration-300 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
@@ -431,8 +432,8 @@ export const AdminSchoolsTab: React.FC = () => {
                                             dept.programs.map((program) => (
                                               <div key={program.id || program.name} className="flex items-center justify-between p-3 bg-neutral-50/50 rounded-xl hover:bg-neutral-50 transition-colors group/prog">
                                                 <div>
-                                                  <p className="text-xs font-bold text-neutral-700 leading-none mb-1">{program.name}</p>
-                                                  {program.abbr && <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">{program.abbr}</p>}
+                                                  <p className="text-xs font-medium text-neutral-700 leading-none mb-1">{program.name}</p>
+                                                  {program.abbr && <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest">{program.abbr}</p>}
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover/prog:opacity-100 transition-opacity">
                                                   <button
@@ -456,7 +457,7 @@ export const AdminSchoolsTab: React.FC = () => {
                                               </div>
                                             ))
                                           ) : (
-                                            <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest text-center py-4 italic">No Programs</p>
+                                            <p className="text-[10px] font-medium text-neutral-300 uppercase tracking-widest text-center py-4 italic">No Programs</p>
                                           )}
                                         </div>
                                       </motion.div>
@@ -477,275 +478,275 @@ export const AdminSchoolsTab: React.FC = () => {
         )}
       </div>
 
-      {/* Add School Modal */}
-      <AnimatePresence>
-        {showSchoolModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
-            >
-              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary rounded-2xl text-white shadow-lg">
-                    <Building2 size={22} />
+      {/* Unified Portal Container */}
+      {typeof window !== "undefined" && createPortal(
+        <AnimatePresence mode="wait">
+          {showSchoolModal && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
+              >
+                <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary rounded-2xl text-white shadow-lg">
+                      <Building2 size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update School" : "Add School"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">School Details</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update School" : "Add School"}</h2>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">School Information</p>
-                  </div>
+                  <button onClick={() => { setShowSchoolModal(false); setEditingSchool(null); setSchoolForm({ name: "", code: "", departments: [] }); }} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                    <X size={20} />
+                  </button>
                 </div>
-                <button onClick={() => setShowSchoolModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
 
-              <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School Name</label>
+                      <input
+                        type="text"
+                        value={schoolForm.name}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
+                        className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                        placeholder="e.g. University of Perpetual Growth"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Short Name / Code</label>
+                      <div className="relative group">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
+                        <input
+                          type="text"
+                          value={schoolForm.code}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
+                          className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase"
+                          placeholder="UPG"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {!editingSchool && (
+                    <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
+                      <div>
+                        <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Quick Setup</h3>
+                        <p className="text-xs text-neutral-500">Add starting departments for this school.</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <input
+                          type="text"
+                          value={deptForm.name}
+                          onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                          className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all shadow-sm"
+                          placeholder="Department Name"
+                        />
+                        <input
+                          type="text"
+                          value={deptForm.code}
+                          onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                          className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all shadow-sm uppercase"
+                          placeholder="Code"
+                        />
+                      </div>
+                      <Button
+                        onClick={addDepartmentToSchoolForm}
+                        variant="outline"
+                        className="w-full rounded-xl border-neutral-200 text-neutral-500 h-10 text-[10px] font-medium uppercase tracking-widest"
+                      >
+                        <Plus size={16} className="mr-2" /> Add Department
+                      </Button>
+
+                      {schoolForm.departments.length > 0 && (
+                        <div className="space-y-2">
+                          {schoolForm.departments.map((d, i) => (
+                            <div key={i} className="flex justify-between items-center p-3 bg-white border border-neutral-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center text-neutral-500 font-medium text-[10px]">{d.code}</div>
+                                <span className="text-xs font-medium text-neutral-700">{d.name}</span>
+                              </div>
+                              <button
+                                onClick={() => setSchoolForm({ ...schoolForm, departments: schoolForm.departments.filter((_, idx) => idx !== i) })}
+                                className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowSchoolModal(false);
+                      setSchoolForm({ name: "", code: "", departments: [] });
+                      setEditingSchool(null);
+                    }}
+                    className="rounded-2xl border-neutral-200 px-6"
+                  >
+                    Discard
+                  </Button>
+                  <Button 
+                    onClick={addSchool} 
+                    className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px]"
+                  >
+                    {editingSchool ? "Save Changes" : "Save School"}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {showDeptModal && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <motion.div 
+                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                 className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
+              >
+                <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20">
+                      <Layers size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingDept ? "Edit Department" : "New Department"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Department Info</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowDeptModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="p-8 space-y-6">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Institutional Name</label>
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department Name</label>
                     <input
                       type="text"
-                      value={schoolForm.name}
-                      onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
-                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
-                      placeholder="e.g. University of Perpetual Growth"
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                      placeholder="e.g. College of Applied Science"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Acronym / Code</label>
-                    <div className="relative group">
-                      <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
-                      <input
-                        type="text"
-                        value={schoolForm.code}
-                        onChange={(e) => setSchoolForm({ ...schoolForm, code: e.target.value })}
-                        className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
-                        placeholder="UPG"
-                      />
-                    </div>
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Short Name / ID</label>
+                    <input
+                      type="text"
+                      value={deptForm.code}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase"
+                      placeholder="CAS"
+                    />
                   </div>
                 </div>
 
-                {!editingSchool && (
-                  <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
+                <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeptModal(false);
+                      setEditingDept(null);
+                      setDeptForm({ name: "", code: "", programs: [] });
+                    }}
+                    className="rounded-2xl border-neutral-200 px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={addDepartment} 
+                    className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[120px]"
+                  >
+                    {editingDept ? "Save Changes" : "Save Department"}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {showProgramModal && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <motion.div 
+                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                 className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
+              >
+                <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200">
+                      <GraduationCap size={22} />
+                    </div>
                     <div>
-                      <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Bootstrapping</h3>
-                      <p className="text-xs text-neutral-500">Initialize with foundational departmental units.</p>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Edit Program" : "New Program"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Program Info</p>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                        className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all shadow-sm"
-                        placeholder="Segment Name"
-                      />
-                      <input
-                        type="text"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                        className="h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-bold transition-all shadow-sm uppercase"
-                        placeholder="ID"
-                      />
-                    </div>
-                    <Button
-                      onClick={addDepartmentToSchoolForm}
-                      variant="outline"
-                      className="w-full h-10 rounded-xl bg-white border-neutral-200 hover:border-primary hover:text-primary transition-all text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      <Plus size={16} className="mr-2" /> Add Department To Queue
-                    </Button>
-
-                    {schoolForm.departments.length > 0 && (
-                      <div className="space-y-2">
-                        {schoolForm.departments.map((d, i) => (
-                          <div key={i} className="flex justify-between items-center p-3 bg-white border border-neutral-200 rounded-xl animate-in fade-in slide-in-from-top-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center text-neutral-500 font-bold text-[10px]">{d.code}</div>
-                              <span className="text-xs font-bold text-neutral-700">{d.name}</span>
-                            </div>
-                            <button
-                              onClick={() => setSchoolForm({ ...schoolForm, departments: schoolForm.departments.filter((_, idx) => idx !== i) })}
-                              className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                )}
-              </div>
+                  <button onClick={() => setShowProgramModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
 
-              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowSchoolModal(false);
-                    setSchoolForm({ name: "", code: "", departments: [] });
-                    setEditingSchool(null);
-                  }}
-                  className="rounded-2xl border-neutral-200 px-6"
-                >
-                  Discard
-                </Button>
-                <Button 
-                  onClick={addSchool} 
-                  className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px]"
-                >
-                  {editingSchool ? "Save Changes" : "Save School"}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Dept Modal */}
-      <AnimatePresence>
-        {showDeptModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: 20 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
-            >
-              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20">
-                    <Layers size={22} />
+                <div className="p-8 space-y-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program Name</label>
+                    <input
+                      type="text"
+                      value={programForm.name}
+                      onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                      placeholder="e.g. Bachelor of Science in Artificial Intelligence"
+                    />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingDept ? "Modify Segment" : "New Department"}</h2>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Academic Subdivision</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Short Name</label>
+                    <input
+                      type="text"
+                      value={programForm.abbr}
+                      onChange={(e) => setProgramForm({ ...programForm, abbr: e.target.value })}
+                      className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase"
+                      placeholder="BSAI"
+                    />
                   </div>
                 </div>
-                <button onClick={() => setShowDeptModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
 
-              <div className="p-8 space-y-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Official Segment Name</label>
-                  <input
-                    type="text"
-                    value={deptForm.name}
-                    onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
-                    placeholder="e.g. College of Applied Science"
-                  />
+                <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowProgramModal(false);
+                      setEditingProgram(null);
+                      setProgramForm({ name: "", abbr: "" });
+                    }}
+                    className="rounded-2xl border-neutral-200 px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={addProgram} 
+                    className="rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 px-8 h-10 min-w-[120px]"
+                  >
+                    {editingProgram ? "Save Changes" : "Save Program"}
+                  </Button>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Internal Reference ID</label>
-                  <input
-                    type="text"
-                    value={deptForm.code}
-                    onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
-                    placeholder="CAS"
-                  />
-                </div>
-              </div>
-
-              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowDeptModal(false);
-                    setEditingDept(null);
-                    setDeptForm({ name: "", code: "", programs: [] });
-                  }}
-                  className="rounded-2xl border-neutral-200 px-6"
-                >
-                  Abort
-                </Button>
-                <Button 
-                  onClick={addDepartment} 
-                  className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[120px]"
-                >
-                  {editingDept ? "Synchronize" : "Establish Unit"}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Program Modal */}
-      <AnimatePresence>
-        {showProgramModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: 20 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
-            >
-              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200">
-                    <GraduationCap size={22} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Refine Program" : "Curriculum Registry"}</h2>
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Degree Specification</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowProgramModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="p-8 space-y-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Official Program Title</label>
-                  <input
-                    type="text"
-                    value={programForm.name}
-                    onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
-                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all"
-                    placeholder="e.g. Bachelor of Science in Artificial Intelligence"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Abbreviation / Hash</label>
-                  <input
-                    type="text"
-                    value={programForm.abbr}
-                    onChange={(e) => setProgramForm({ ...programForm, abbr: e.target.value })}
-                    className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-bold transition-all uppercase"
-                    placeholder="BSAI"
-                  />
-                </div>
-              </div>
-
-              <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowProgramModal(false);
-                    setEditingProgram(null);
-                    setProgramForm({ name: "", abbr: "" });
-                  }}
-                  className="rounded-2xl border-neutral-200 px-6"
-                >
-                  Discard
-                </Button>
-                <Button 
-                  onClick={addProgram} 
-                  className="rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 px-8 h-10 min-w-[120px]"
-                >
-                  {editingProgram ? "Update Record" : "Integrate Program"}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };

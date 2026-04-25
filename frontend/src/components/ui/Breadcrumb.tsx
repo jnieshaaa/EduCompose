@@ -31,6 +31,7 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Teacher/Rubrics": { label: "Rubrics / Criteria", icon: <ClipboardCheck className="w-4 h-4" /> },
   "/Teacher/Metrics": { label: "Metrics", icon: <BarChart3 className="w-4 h-4" /> },
   "/Teacher/Settings": { label: "Settings", icon: <Settings className="w-4 h-4" /> },
+  "/Teacher/Archive": { label: "Archives", parent: "Settings", icon: <Archive className="w-4 h-4" /> },
   "/Teacher/Notifications": { label: "Notifications", icon: <Bell className="w-4 h-4" /> },
   
   // Student Dashboard
@@ -54,7 +55,6 @@ const routeConfig: Record<string, { label: string; parent?: string; icon?: React
   "/Admin/Schools": { label: "Schools & Departments", icon: <School className="w-4 h-4" /> },
   "/Admin/Settings": { label: "System Settings", icon: <Settings className="w-4 h-4" /> },
   "/Admin/Archive": { label: "Archive", icon: <Archive className="w-4 h-4" /> },
-  "/Teacher/Archive": { label: "Academic Archive", icon: <Archive className="w-4 h-4" /> },
   "/Student/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
   "/Teacher/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
   "/Admin/Help": { label: "Support Center", icon: <HelpCircle className="w-4 h-4" /> },
@@ -218,8 +218,15 @@ const Breadcrumb: React.FC = () => {
         const courseId = getParam("courseId");
         const courseCode = getParam("courseCode");
         
+        // Add Settings as parent
         items.push({
-          label: "Archive",
+          label: "Settings",
+          path: "/Teacher/Settings",
+          icon: <Settings className="w-4 h-4" />,
+        });
+
+        items.push({
+          label: "Archives",
           path: "/Teacher/Archive",
           icon: <Archive className="w-4 h-4" />,
         });
@@ -494,7 +501,7 @@ const Breadcrumb: React.FC = () => {
 
   return (
     <nav
-      className='flex items-center px-4 sm:px-6 py-1.5 bg-white border-b border-neutral-50 overflow-x-auto whitespace-nowrap scrollbar-hide'
+      className='flex items-center px-4 sm:px-6 py-1 bg-neutral-100/50 backdrop-blur-sm border-b border-neutral-200 overflow-x-auto whitespace-nowrap scrollbar-hide'
       aria-label='Breadcrumb'
     >
       <ol className='flex items-center gap-0.5'>

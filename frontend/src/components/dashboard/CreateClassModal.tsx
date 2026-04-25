@@ -55,10 +55,10 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
         apiError,
       );
       const fallbackClass: Class = {
-        id: Date.now(),
+        id: String(Date.now()),
         name: payload.name,
         description: payload.description,
-        user_id: 1,
+        user_id: '1',
         created_at: new Date().toISOString(),
         is_active: true,
       };

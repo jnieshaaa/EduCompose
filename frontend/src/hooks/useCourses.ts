@@ -17,8 +17,7 @@ const getTeacherInfo = async () => {
     const { data: userData, error: userTableError } = await supabase
       .from("users")
       .select(`
-        id,
-        auth_user_id, 
+        id, 
         school_id, 
         department_id,
         schools (
@@ -26,7 +25,7 @@ const getTeacherInfo = async () => {
           code
         )
       `)
-      .eq("auth_user_id", user.id)
+      .eq("id", user.id)
       .single();
 
     if (userTableError || !userData) return null;
@@ -109,7 +108,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
             programs_lookup(name, abbr)
           )
         `)
-        .eq("teacher_id", info.auth_user_id);
+        .eq("teacher_id", info.id);
 
       if (!showArchived) {
         if (currentAY) myQuery = myQuery.eq("academic_year", currentAY);
@@ -216,7 +215,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         .insert({
           ...courseData,
           school_id: teacherInfo.school_id,
-          teacher_id: teacherInfo.auth_user_id,
+          teacher_id: teacherInfo.id,
           department_id: teacherInfo.department_id,
           department: courseData.department || null,
         })
@@ -234,7 +233,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
       
       // Automatically add to loads with current AY and Term
       await supabase.from("teacher_course_loads").insert({
-        teacher_id: teacherInfo.auth_user_id,
+        teacher_id: teacherInfo.id,
         course_id: newCourse.id,
         academic_year: currentAY,
         term: currentSemester
@@ -265,7 +264,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         const { error } = await supabase
           .from("teacher_course_loads")
           .delete()
-          .eq("teacher_id", teacherInfo.auth_user_id)
+          .eq("teacher_id", teacherInfo.id)
           .eq("course_id", courseId)
           .eq("academic_year", currentAY)
           .eq("term", currentSemester);
@@ -283,7 +282,7 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
           const { error } = await supabase
             .from("teacher_course_loads")
             .insert({
-              teacher_id: teacherInfo.auth_user_id,
+              teacher_id: teacherInfo.id,
               course_id: courseId,
               academic_year: currentAY,
               term: currentSemester

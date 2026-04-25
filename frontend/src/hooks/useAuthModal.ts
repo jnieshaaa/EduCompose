@@ -6,6 +6,7 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { authApi } from "../api";
 import { sendCodeEmail, sendSignupCodeEmail } from "../services/emailService";
+import { useNotification } from "../contexts/NotificationContext";
 
 export type AuthView = "login" | "signup" | "forgot-password";
 
@@ -14,6 +15,7 @@ export type SignupStep = "form" | "accountCreated" | "verifyCode";
 export function useAuthModal(onClose: () => void) {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showNotification } = useNotification();
   const [view, setView] = useState<AuthView>("login");
 
   // Login form state
@@ -103,7 +105,7 @@ export function useAuthModal(onClose: () => void) {
         const { data: userData } = await supabase
           .from("users")
           .select("role, first_name, last_name")
-          .eq("auth_user_id", data.user.id)
+          .eq("id", data.user.id)
           .maybeSingle();
 
         let role = "teacher"; // Default
@@ -115,11 +117,12 @@ export function useAuthModal(onClose: () => void) {
           firstName = userData.first_name || firstName;
           lastName = userData.last_name || "";
         } else {
-          // If not in users table, check if it's a student
+          // If not in Teacher/Admin role, check if it's a student in users table
           const { data: studentData } = await supabase
-            .from("students")
+            .from("users")
             .select("id, first_name, last_name")
-            .eq("auth_user_id", data.user.id)
+            .eq("id", data.user.id)
+            .eq("role", "student")
             .maybeSingle();
           
           if (studentData) {
@@ -232,28 +235,9 @@ export function useAuthModal(onClose: () => void) {
 
       // 2. Create the unconfirmed auth user.
       // We deliberately do NOT confirm it here â€” confirmation happens after OTP verify.
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: signupPassword,
-        options: {
-          data: { display_name: normalizedEmail.split("@")[0], role: "teacher" },
-        },
-      });
+      // 2. We skip supabase.auth.signUp() to avoid 429 rate limits.
+      // We will create the user via RPC ONLY after they verify their email code.
 
-      if (signUpError) {
-        if (signUpError.message?.toLowerCase().includes("already registered") || signUpError.status === 422) {
-          setSignupError("Email already registered.");
-          setIsSigningUp(false);
-          return;
-        }
-        throw signUpError;
-      }
-
-      if (signUpData.user?.identities?.length === 0) {
-        setSignupError("Email already registered.");
-        setIsSigningUp(false);
-        return;
-      }
 
       // 3. Store OTP and send verification email
       const code = generateSignupCode();
@@ -326,46 +310,45 @@ export function useAuthModal(onClose: () => void) {
         return;
       }
 
-      // Step 2: Get the session from signUp() in handleSignUp.
-      // Confirm email must be OFF in Supabase Auth settings for this to work.
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!session || !user) {
-        setSignupSuccess("Email verified! Please log in with your password.");
-        setView("login");
-        setLoginEmail(signupEmail.trim());
-        return;
-      }
-
-      // Step 3: Explicitly upsert teacher record into public.users BEFORE login().
-      // The handle_new_user trigger may not reliably create this record,
-      // so we do it explicitly to ensure checkAuth() finds it immediately.
-      const { error: upsertError } = await supabase.from("users").upsert(
-        {
-          auth_user_id: user.id,
-          email: normalizedEmail,
-          role: "teacher",
-          first_name: normalizedEmail.split("@")[0],
-          is_active: true,
-        },
-        { onConflict: "auth_user_id" }
-      );
-
-      if (upsertError) {
-        console.error("[Signup] Failed to upsert public.users:", upsertError);
-        // Non-fatal — proceed anyway, user can still log in
-      }
-
-      // Step 4: Set user in context and navigate
-      login(session.access_token, {
-        id: user.id, auth_id: user.id,
-        email: normalizedEmail, username: normalizedEmail,
-        first_name: normalizedEmail.split("@")[0], last_name: "",
-        role: "teacher", is_active: true, email_verified: true,
+      // Step 2: Create the user account using standard Supabase Auth
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            first_name: normalizedEmail.split("@")[0],
+            role: "teacher"
+          }
+        }
       });
 
-      setTimeout(() => { navigate("/Teacher/Dashboard"); onClose(); }, 100);
+      if (signUpError) throw signUpError;
+      if (!signUpData.user) throw new Error("Failed to create account.");
+
+      // Step 3: Create the public profile via secure RPC (Bypasses RLS)
+      const { error: profileError } = await supabase.rpc('create_profile_v1', {
+        p_id: signUpData.user.id,
+        p_email: normalizedEmail,
+        p_role: 'teacher',
+        p_first_name: normalizedEmail.split("@")[0]
+      });
+
+      if (profileError) {
+        console.error("[Signup] Profile Creation Error:", profileError);
+      }
+
+      // Step 4: Show Success and Switch to Login View (As requested)
+      showNotification('success', "Account created! Please log in to continue.");
+      setSignupSuccess("Account created successfully! You can now log in.");
+      
+      // Delay slightly then switch view
+      setTimeout(() => {
+        setView("login");
+        setLoginEmail(signupEmail);
+        setSignupEmail("");
+        setSignupPassword("");
+        setSignupVerificationCode("");
+      }, 2000);
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -466,9 +449,7 @@ export function useAuthModal(onClose: () => void) {
 
       // If email doesn't exist, STOP here - don't send code
       if (!checkResult.exists) {
-        setForgotPasswordError(
-          checkResult.message || "No account found with this email address.",
-        );
+        setForgotPasswordError("No account found with this email address.");
         return;
       }
 
@@ -482,6 +463,7 @@ export function useAuthModal(onClose: () => void) {
       });
 
       setForgotPasswordSuccess("Verification code sent to your email!");
+      showNotification('success', "Verification code sent to your email!");
       setForgotPasswordStep("code");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -513,6 +495,7 @@ export function useAuthModal(onClose: () => void) {
       }
 
       setForgotPasswordStep("password");
+      showNotification('success', "Code verified! Please enter your new password.");
       setForgotPasswordSuccess(
         "Code verified! Please enter your new password.",
       );

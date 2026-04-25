@@ -74,9 +74,10 @@ export function SubmitEssayTab() {
         setError(null);
 
         const { data: studentData, error: studentError } = await supabase
-          .from('students')
+          .from('users')
           .select('id')
-          .eq('auth_user_id', user.auth_id)
+          .eq('id', user.auth_id)
+          .eq('role', 'student')
           .maybeSingle();
 
         if (studentError) throw studentError;
@@ -95,7 +96,7 @@ export function SubmitEssayTab() {
               nickname,
               first_name,
               last_name,
-              auth_user_id
+              id
             )
           `)
           .eq('id', activityIdParam)
@@ -104,11 +105,11 @@ export function SubmitEssayTab() {
         if (actError) throw actError;
 
         let courseCode = "N/A";
-        if (actRow.course_id && actRow.course_id.length > 0) {
+        if (actRow.course_id) {
           const { data: courseData } = await supabase
             .from('courses')
             .select('course_code, course_title')
-            .eq('id', actRow.course_id[0])
+            .eq('id', actRow.course_id)
             .maybeSingle();
           if (courseData) {
             courseCode = `${courseData.course_code}`;
@@ -130,10 +131,10 @@ export function SubmitEssayTab() {
              weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
           }) : "No deadline",
           instructions: actRow.instructions || "No instructions provided.",
-          courseId: actRow.course_id?.[0] || "",
+          courseId: actRow.course_id || "",
           term: actRow.term || "N/A",
-          teacherId: actRow.teacher?.auth_user_id || "",
-          teacherUUID: actRow.teacher?.auth_user_id || "",
+          teacherId: actRow.teacher?.id || "",
+          teacherUUID: actRow.teacher?.id || "",
           minWordCount: actRow.min_word_count || 150,
           rubricId: actRow.rubric_id || null
         });
@@ -172,11 +173,11 @@ export function SubmitEssayTab() {
           }
         }
 
-        if (actRow.course_id && actRow.course_id.length > 0) {
+        if (actRow.course_id) {
           const { data: allActs } = await supabase
             .from('essay_activities')
             .select('id, title, due_date')
-            .contains('course_id', [actRow.course_id[0]])
+            .eq('course_id', actRow.course_id)
             .order('created_at', { ascending: false })
             .limit(10);
 
@@ -220,19 +221,20 @@ export function SubmitEssayTab() {
       const { platformRubrics } = await import('../../data/rubricData');
       
       // 1. Try platform rubrics first
-      let numericId: number | null = null;
+      let templateId: string | null = null;
       let isPlatformFormat = false;
 
       if (activity.rubricId.startsWith('platform-')) {
         isPlatformFormat = true;
-        const numId = parseInt(activity.rubricId.replace('platform-', ''));
-        if (!isNaN(numId)) numericId = numId;
-      } else if (!isNaN(parseInt(activity.rubricId))) {
-        numericId = parseInt(activity.rubricId);
+        templateId = activity.rubricId.replace('platform-', '');
+      } else if (activity.rubricId.length <= 2) {
+        // Legacy fallback for short numeric string IDs
+        templateId = activity.rubricId;
+        isPlatformFormat = true;
       }
 
-      if (numericId !== null && (isPlatformFormat || numericId <= 10)) {
-        const rubric = platformRubrics.find((r) => r.id === numericId);
+      if (templateId && isPlatformFormat) {
+        const rubric = platformRubrics.find((r) => String(r.id) === templateId);
         if (rubric) {
           setPreviewRubric(rubric);
           setShowRubricPreview(true);

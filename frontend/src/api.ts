@@ -88,25 +88,20 @@ export const authApi = {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       
-      // 1. Check users table (Teachers/Admins)
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("email")
-        .eq("email", normalizedEmail)
-        .maybeSingle();
+      // Use RPC to bypass RLS for anonymous users (Forgot Password flow)
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "check_user_email_exists",
+        { p_email: normalizedEmail }
+      );
 
-      if (userError) throw userError;
-      if (userData) return { exists: true, message: "Email already registered." };
+      if (rpcError) throw rpcError;
+      
+      const userData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
 
-      // 2. Check students table
-      const { data: studentData, error: studentError } = await supabase
-        .from("students")
-        .select("email")
-        .eq("email", normalizedEmail)
-        .maybeSingle();
-
-      if (studentError) throw studentError;
-      if (studentData) return { exists: true, message: "Email already registered as a student account." };
+      if (userData && userData.user_exists) {
+        const roleLabel = userData.user_role === 'student' ? 'student account' : 'teacher/admin account';
+        return { exists: true, message: `Email already registered as a ${roleLabel}.` };
+      }
       
       return {
         exists: false,
@@ -120,24 +115,18 @@ export const authApi = {
 
   resetPassword: async (email: string, newPassword: string) => {
     try {
-      // First, get the user's auth ID from users table
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("auth_user_id")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
+      const normalizedEmail = email.trim().toLowerCase();
 
-      if (userError || !userData?.auth_user_id) {
-        return { success: false, message: "User not found." };
-      }
-
-      // Use RPC instead of direct admin client to avoid 403 browser locks
-      const { error: resetError } = await supabase.rpc(
-        "admin_reset_student_password",
-        { p_email: email.trim().toLowerCase(), p_new_password: newPassword.trim() }
+      // Use the correct RPC name and bypass RLS-restricted direct table queries
+      const { data: success, error: resetError } = await supabase.rpc(
+        "admin_reset_student_password_v1",
+        { p_email: normalizedEmail, p_new_password: newPassword.trim() }
       );
 
       if (resetError) throw resetError;
+      if (!success) {
+        return { success: false, message: "User not found or reset failed." };
+      }
 
       return { success: true, message: "Password reset successfully!" };
     } catch (err: unknown) {
@@ -261,19 +250,19 @@ export const authApi = {
       const normalizedEmail = payload.email.trim().toLowerCase();
 
       const { data: authId, error: enrollError } = await supabase.rpc(
-        "admin_enroll_student_v3",
+        "admin_enroll_student_v4",
         {
           p_email: normalizedEmail,
-          p_password: tempPassword,
+          p_student_code: payload.student_code,
           p_first_name: payload.first_name,
           p_last_name: payload.last_name,
-          p_student_code: payload.student_code,
-          p_teacher_id: payload.teacher_id,
+          p_middle_name: payload.middle_name || null,
+          p_suffix: (payload as any).suffix || null,
+          p_birthday: payload.birthday || null,
           p_program_id: payload.program_id,
           p_year: payload.year,
           p_block_name: payload.block_name,
-          p_middle_name: payload.middle_name || null,
-          p_birthday: payload.birthday || null,
+          p_teacher_id: payload.teacher_id,
         }
       );
 
@@ -381,7 +370,7 @@ export const classApi = {
           id,
           teacher_course_loads (
             id,
-            courses_lookup (
+            courses (
               id,
               course_title,
               course_code
@@ -398,15 +387,15 @@ export const classApi = {
 
     return (data || []).map((b: any) => ({
       id: b.id,
-      name: `${b.teacher_program_loads?.teacher_course_loads?.courses_lookup?.course_code || ""} - ${b.name}`,
-      description: `${b.teacher_program_loads?.teacher_course_loads?.courses_lookup?.course_title || ""} (Year ${b.year})`,
+      name: `${b.teacher_program_loads?.teacher_course_loads?.courses?.course_code || ""} - ${b.name}`,
+      description: `${b.teacher_program_loads?.teacher_course_loads?.courses?.course_title || ""} (Year ${b.year})`,
       user_id: b.teacher_id,
       created_at: b.created_at,
       is_active: b.is_active || true
     })) as Class[];
   },
 
-  getClass: async (id: string | number) => {
+  getClass: async (id: string) => {
     const { data, error } = await supabase
       .from("blocks")
       .select("*")
@@ -438,12 +427,12 @@ export const classApi = {
 
 // Student API
 export const studentApi = {
-  getStudentsByClass: async (classId: string | number) => {
+  getStudentsByClass: async (classId: string) => {
     const { data, error } = await supabase
       .from("block_students")
       .select(`
         student_id,
-        students (
+        users!student_id (
           id,
           student_code,
           first_name,
@@ -463,7 +452,7 @@ export const studentApi = {
     }
 
     return (data || [])
-      .map((item: any) => item.students)
+      .map((item: any) => item.users)
       .filter(Boolean)
       .map((s: any) => ({
         ...s,
@@ -476,7 +465,7 @@ export const studentApi = {
     first_name: string;
     last_name: string;
     email?: string;
-    class_id: string | number;
+    class_id: string;
   }) => {
     return apiRequest<Student>("/students", {
       method: "POST",
@@ -487,7 +476,7 @@ export const studentApi = {
 
 // Essay API
 export const essayApi = {
-  getEssays: async (classId?: string | number) => {
+  getEssays: async (classId?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
@@ -509,7 +498,7 @@ export const essayApi = {
     return (data || []) as Essay[];
   },
 
-  getEssay: async (id: string | number) => {
+  getEssay: async (id: string) => {
     const { data, error } = await supabase
       .from("essays")
       .select("*")
@@ -523,8 +512,8 @@ export const essayApi = {
   createEssay: async (essayData: {
     title: string;
     content: string;
-    student_id: string | number;
-    class_id: string | number;
+    student_id: string;
+    class_id: string;
   }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
@@ -547,7 +536,7 @@ export const essayApi = {
 
 // Essay Activity API (Assignments)
 export const essayActivityApi = {
-  getActivities: async (classId?: string | number) => {
+  getActivities: async (classId?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
@@ -555,7 +544,7 @@ export const essayActivityApi = {
       .from("essay_activities")
       .select(`
         *,
-        courses_lookup (
+        courses (
           course_title,
           course_code
         ),
@@ -577,15 +566,15 @@ export const essayActivityApi = {
 
     return (data || []).map((a: any) => ({
       ...a,
-      course_name: a.courses_lookup?.course_title,
+      course_name: a.courses?.course_title,
       class_name: a.blocks?.name
     }));
   },
 
-  getActivity: async (id: string | number) => {
+  getActivity: async (id: string) => {
     const { data, error } = await supabase
       .from("essay_activities")
-      .select("*, courses_lookup(*), blocks(*)")
+      .select("*, courses(*), blocks(*)")
       .eq("id", id)
       .single();
 
@@ -596,9 +585,9 @@ export const essayActivityApi = {
 
 // Knowledge Graph API
 export const kgApi = {
-  getKnowledgeGraph: async (essayId: string | number) => {
+  getKnowledgeGraph: async (essayId: string) => {
     return apiRequest<{
-      essay_id: string | number;
+      essay_id: string;
       nodes: Array<{
         id: string;
         label: string;
@@ -619,7 +608,7 @@ export const kgApi = {
     }>(`/kg/essay/${essayId}/knowledge-graph`);
   },
 
-  buildAndExportKG: async (essayId: string | number) => {
+  buildAndExportKG: async (essayId: string) => {
     return apiRequest<{
       success: boolean;
       data: {
@@ -643,7 +632,7 @@ export const kgApi = {
 // Analysis API
 export const analysisApi = {
   analyzeEssay: async (
-    essayId: string | number,
+    essayId: string,
     analysisType:
       | "grammar"
       | "readability"
@@ -658,7 +647,7 @@ export const analysisApi = {
   },
 
   batchAnalyze: async (
-    essayIds: (string | number)[],
+    essayIds: (string)[],
     analysisType:
       | "grammar"
       | "readability"
@@ -669,9 +658,9 @@ export const analysisApi = {
     return apiRequest<{
       total_analyzed: number;
       results: Array<{
-        essay_id: string | number;
+        essay_id: string;
         essay_title: string;
-        student_id: string | number;
+        student_id: string;
         analysis: AnalysisResponse;
         error?: string;
       }>;
@@ -850,8 +839,9 @@ export const adminApi = {
     let query = supabase
       .from("users")
       .select(
-        "id, email, first_name, middle_name, last_name, title, nickname, role, is_active, created_at, auth_user_id",
+        "id, email, first_name, middle_name, last_name, title, nickname, role, is_active, created_at",
       )
+      .eq("is_active", true)
       .order("created_at", { ascending: false });
 
     // Apply filters
@@ -897,6 +887,7 @@ export const adminApi = {
       nickname?: string;
       role?: string;
       is_active?: boolean;
+      enrollment_status?: string;
       school_id?: string;
       department_id?: string;
     },
@@ -911,42 +902,21 @@ export const adminApi = {
 
     // 2. If email is provided, update it in auth.users too
     if (data.email) {
-      // Get the auth_user_id first
-      const { data: user, error: fetchError } = await supabase
-        .from("users")
-        .select("auth_user_id")
-        .eq("id", userId)
-        .single();
-
-      if (fetchError || !user?.auth_user_id) {
-        console.warn("User record found but auth_user_id missing. Skipping auth email update.");
-      } else {
+        // Since id === auth_id in unified system, we use id directly
         // Use RPC instead of direct admin API to avoid browser 403 locks
         const { error: authError } = await supabase.rpc('admin_sync_user_email', {
-          p_auth_id: user.auth_user_id,
+          p_auth_id: userId,
           p_new_email: data.email
         });
         if (authError) throw new Error(`Auth sync failed via RPC: ${authError.message}`);
-      }
     }
 
     return { message: "User updated successfully", user: data };
   },
 
   deleteUser: async (userId: string) => {
-    // First get the auth_user_id
-    const { data: user, error: fetchError } = await supabase
-      .from("users")
-      .select("auth_user_id, email")
-      .eq("id", userId)
-      .single();
-
-    if (fetchError || !user?.auth_user_id) {
-      throw new Error("User not found");
-    }
-
     // Delete from auth.users (this will cascade to users table)
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(user.auth_user_id);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (error) {
       throw new Error(error.message);
@@ -956,14 +926,13 @@ export const adminApi = {
   },
 
   resetUserPassword: async (userId: string, newPassword: string) => {
-    // First get the auth_user_id
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("auth_user_id, email")
+      .select("email")
       .eq("id", userId)
       .single();
 
-    if (fetchError || !user?.auth_user_id) {
+    if (fetchError || !user?.email) {
       throw new Error("User not found");
     }
 
@@ -991,15 +960,11 @@ export const adminApi = {
   }) => {
     let query = supabase
       .from("activity_logs")
-      .select("*, users(first_name, last_name, email, role), students(first_name, last_name, email, student_code)", { count: "exact" })
+      .select("*, users(first_name, last_name, email, role)", { count: "exact" })
       .order("created_at", { ascending: false });
 
-    if (params?.userId) {
-      query = query.eq("user_id", params.userId);
-    }
-
-    if (params?.studentId) {
-      query = query.eq("student_id", params.studentId);
+    if (params?.userId || params?.studentId) {
+      query = query.eq("user_id", params.userId || params.studentId);
     }
 
     if (params?.search) {
@@ -1087,7 +1052,7 @@ export const adminApi = {
   getAllActivities: async () => {
     const { data, error } = await supabase
       .from("essay_activities")
-      .select("*, courses_lookup(name), blocks(name)")
+      .select("*, blocks(name)")
       .order("created_at", { ascending: false });
     
     if (error) throw new Error(error.message);
@@ -1106,10 +1071,12 @@ export const adminApi = {
 
   getStudents: async (params?: { search?: string; limit?: number }) => {
     let query = supabase
-      .from("students")
+      .from("users")
       .select(
         `id, student_code, first_name, middle_name, last_name, email, year, block_name, program_id, created_at, programs_lookup (id, name, abbr)`,
       )
+      .eq("role", "student")
+      .eq("enrollment_status", "active")
       .order("created_at", { ascending: false });
 
     if (params?.search) {

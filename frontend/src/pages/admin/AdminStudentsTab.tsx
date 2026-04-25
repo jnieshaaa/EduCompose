@@ -23,7 +23,7 @@ import {
   ChevronDown,
   UserCircle
 } from "lucide-react";
-import { supabase, supabaseAdmin } from "../../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 import EditStudentModal from "../../components/admin/EditStudentModal";
 import EnrollStudentModal from "../../components/admin/EnrollStudentModal.tsx";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
@@ -37,7 +37,6 @@ import Button from "../../components/ui/Button";
 
 interface Student {
   id: string;
-  auth_user_id?: string | null;
   student_code: string;
   first_name: string;
   middle_name?: string;
@@ -60,10 +59,7 @@ interface Student {
       code: string;
     };
   };
-  users?: {
-    is_active: boolean;
-    onboarding_completed: boolean;
-  };
+  onboarding_completed?: boolean;
 }
 
 export const AdminStudentsTab: React.FC = () => {
@@ -179,11 +175,10 @@ export const AdminStudentsTab: React.FC = () => {
       const to = from + itemsPerPage - 1;
 
       let query = supabase
-        .from("students")
+        .from("users")
         .select(`
           *,
-          users(is_active, onboarding_completed),
-          programs_lookup(
+          programs_lookup!fk_user_program (
             id,
             name,
             abbr,
@@ -193,7 +188,9 @@ export const AdminStudentsTab: React.FC = () => {
               code
             )
           )
-        `, { count: "exact" });
+        `, { count: "exact" })
+        .eq("role", "student")
+        .eq("enrollment_status", "active");
 
       if (searchTerm) {
         query = query.or(`student_code.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
@@ -239,7 +236,7 @@ export const AdminStudentsTab: React.FC = () => {
       const [deptsRes, progsRes, blocksRes] = await Promise.all([
         supabase.from("departments").select("*").order("name"),
         supabase.from("programs_lookup").select("*").order("name"),
-        supabase.from("students").select("block_name")
+        supabase.from("users").select("block_name").eq("role", "student")
       ]);
       setDepartments(deptsRes.data || []);
       setAllPrograms(progsRes.data || []);
@@ -263,7 +260,7 @@ export const AdminStudentsTab: React.FC = () => {
       const newStatus =
         student.enrollment_status === "active" ? "dropped" : "active";
       const { error: updateError } = await supabase
-        .from("students")
+        .from("users")
         .update({
           enrollment_status: newStatus,
           is_active: newStatus === "active",
@@ -293,22 +290,9 @@ export const AdminStudentsTab: React.FC = () => {
       setConfirmingAction(null);
       const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
 
-      let emailForAuthReset = student.email;
-      if (student.auth_user_id) {
-        const { data: linkedUser, error: linkedUserError } = await supabase
-          .from("users")
-          .select("email")
-          .eq("auth_user_id", student.auth_user_id)
-          .maybeSingle();
-
-        if (!linkedUserError && linkedUser?.email) {
-          emailForAuthReset = linkedUser.email;
-        }
-      }
-
       const { data: ok, error: rpcError } = await supabase.rpc(
         "admin_reset_student_password",
-        { p_email: emailForAuthReset, p_new_password: newPassword }
+        { p_email: student.email, p_new_password: newPassword }
       );
 
       if (rpcError) throw new Error(rpcError.message);
@@ -347,7 +331,7 @@ export const AdminStudentsTab: React.FC = () => {
       setConfirmingAction(null);
       const tempPassword = student.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const provisionResult = await authApi.provisionStudentAccount({
+      await authApi.provisionStudentAccount({
         email: student.email,
         student_code: student.student_code,
         first_name: student.first_name,
@@ -356,10 +340,7 @@ export const AdminStudentsTab: React.FC = () => {
         password: tempPassword
       });
 
-      const authId = provisionResult.auth_id;
-      if (authId) {
-        await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
-      }
+      // No need to update auth_user_id mapping separately anymore
 
       await sendStudentWelcomeEmail({
         to_name: `${student.first_name} ${student.last_name}`.trim(),
@@ -390,7 +371,7 @@ export const AdminStudentsTab: React.FC = () => {
       setLoading(true);
       setConfirmingAction(null);
       const { error: deleteError } = await supabase
-        .from("students")
+        .from("users")
         .delete()
         .eq("id", student.id);
 
@@ -432,7 +413,7 @@ export const AdminStudentsTab: React.FC = () => {
     try {
       const ids = Array.from(selectedIds);
       const { error } = await supabase
-        .from("students")
+        .from("users")
         .delete()
         .in("id", ids);
         
@@ -449,85 +430,13 @@ export const AdminStudentsTab: React.FC = () => {
   };
 
   const handleBulkProvision = async () => {
-    const selectedStudents = students.filter(s => selectedIds.has(s.id));
-    const needProvision = selectedStudents.filter(s => !s.auth_user_id);
-    if (needProvision.length === 0) {
-      showNotification('info', "All selected students already have accounts.");
-      return;
-    }
-    setConfirmingAction({ type: "bulk_provision" });
+    // In the unified system, all students in the users table are already provisioned.
+    showNotification('info', "All selected students already have active accounts.");
   };
 
   const executeBulkProvision = async () => {
-    const selectedStudents = students.filter(s => selectedIds.has(s.id));
-    const needProvision = selectedStudents.filter(s => !s.auth_user_id);
-    
-    setIsBulkProcessing(true);
-    setConfirmingAction(null);
-    setBulkProgress({ current: 0, total: needProvision.length });
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const student of needProvision) {
-      try {
-        const tempPassword = student.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
-        const normalizedEmail = student.email.trim().toLowerCase();
-
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email: normalizedEmail,
-          password: tempPassword,
-          email_confirm: true,
-            user_metadata: {
-              role: "student",
-              student_code: student.student_code,
-              first_name: student.first_name,
-              last_name: student.last_name,
-            }
-        });
-
-        let authId = authData?.user?.id;
-
-        if (authError?.message.includes("already registered")) {
-           const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-           const existing = userList.users.find(u => u.email === normalizedEmail);
-           if (existing) {
-             authId = existing.id;
-             await supabaseAdmin.auth.admin.updateUserById(authId, { password: tempPassword });
-           }
-        }
-
-        if (authId) {
-          await supabase.from("users").upsert({
-            auth_user_id: authId,
-            email: normalizedEmail,
-            first_name: student.first_name,
-            last_name: student.last_name,
-            role: "student",
-            is_active: true
-          }, { onConflict: "auth_user_id" });
-
-          await supabase.from("students").update({ auth_user_id: authId }).eq("id", student.id);
-        }
-
-        await sendStudentWelcomeEmail({
-          to_name: `${student.first_name} ${student.last_name}`.trim(),
-          to_email: student.email,
-          student_code: student.student_code,
-          temp_password: tempPassword,
-        });
-        successCount++;
-      } catch (err) {
-        console.error(`Failed to provision:`, err);
-        failCount++;
-      }
-      setBulkProgress(prev => ({ ...prev, current: prev.current + 1 }));
-    }
-
-    showNotification('success', `Bulk provisioning complete. Success: ${successCount}, Failed: ${failCount}`);
-    setSelectedIds(new Set());
-    await loadStudents();
-    setIsBulkProcessing(false);
+    // This is now obsolete as admin_enroll_student_v1 handles provisioning atomically.
+    showNotification('info', "Accounts are now automatically provisioned during enrollment.");
   };
 
   const handleBulkResendWelcome = async () => {
@@ -548,11 +457,11 @@ export const AdminStudentsTab: React.FC = () => {
         const newPassword = `Edu${Math.floor(100000 + Math.random() * 900000)}`;
         let emailForAuthReset = student.email;
         
-        if (student.auth_user_id) {
+        if (student.id) {
           const { data: linkedUser } = await supabase
             .from("users")
             .select("email")
-            .eq("auth_user_id", student.auth_user_id)
+            .eq("id", student.id)
             .maybeSingle();
           if (linkedUser?.email) emailForAuthReset = linkedUser.email;
         }
@@ -588,7 +497,6 @@ export const AdminStudentsTab: React.FC = () => {
     setSelectedIds(new Set());
   }, [searchTerm, deptFilter, progFilter, blockFilter]);
 
-  // With Server-side pagination, filteredStudents is effectively the students state
   const totalPages = Math.ceil(totalStudentsCount / itemsPerPage);
   const currentItems = students;
 
@@ -634,8 +542,8 @@ export const AdminStudentsTab: React.FC = () => {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Students</h1>
-          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage all enrolled students</p>
+          <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">Students</h1>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1">Manage enrolled students</p>
         </div>
         <div className="flex gap-3">
                    <Button 
@@ -644,14 +552,14 @@ export const AdminStudentsTab: React.FC = () => {
             className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-neutral-400 group-hover:rotate-180 transition-all duration-700 ${loading ? "animate-spin" : ""}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">Sync Data</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">Refresh</span>
           </Button>
           <Button 
             onClick={() => setIsEnrollModalOpen(true)}
             className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-5 h-10 flex items-center gap-2"
           >
             <UserPlus size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Add Student</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest">Add Student</span>
           </Button>
         </div>
       </div>
@@ -659,7 +567,7 @@ export const AdminStudentsTab: React.FC = () => {
       <div className="flex items-center gap-2 bg-neutral-100/50 p-1.5 rounded-[1.25rem] w-fit border border-neutral-100">
         <button
           onClick={() => setActiveTab("enrolled")}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all tracking-[0.15em] uppercase ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-medium transition-all tracking-[0.15em] uppercase ${
             activeTab === "enrolled"
               ? "bg-white text-primary shadow-sm border border-neutral-200"
               : "text-neutral-400 hover:text-neutral-600"
@@ -670,7 +578,7 @@ export const AdminStudentsTab: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab("pending")}
-          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-bold transition-all tracking-[0.15em] uppercase relative ${
+          className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-medium transition-all tracking-[0.15em] uppercase relative ${
             activeTab === "pending"
               ? "bg-white text-primary shadow-sm border border-neutral-200"
               : "text-neutral-400 hover:text-neutral-600"
@@ -703,24 +611,24 @@ export const AdminStudentsTab: React.FC = () => {
             <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <Search size={16} className="text-neutral-400" />
-                <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Search Filters</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Filters</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Search Students</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Search</label>
                   <div className="relative group/search">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/search:text-primary transition-colors" />
                     <input
                       placeholder="Name, ID, or Email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
                   <div className="relative group/dept">
                     <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/dept:text-primary transition-colors" />
                     <select
@@ -730,7 +638,7 @@ export const AdminStudentsTab: React.FC = () => {
                         setProgFilter("");
                         setBlockFilter("");
                       }}
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-medium appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
                     >
                       <option value="">All Departments</option>
                       {departments.map((d) => (
@@ -744,7 +652,7 @@ export const AdminStudentsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
                   <div className="relative group/prog">
                     <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300 group-focus-within/prog:text-primary transition-colors" />
                     <select
@@ -754,7 +662,7 @@ export const AdminStudentsTab: React.FC = () => {
                         setProgFilter(e.target.value);
                         setBlockFilter("");
                       }}
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-medium appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
                     >
                       <option value="">Broad View</option>
                       {allPrograms
@@ -770,14 +678,14 @@ export const AdminStudentsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Block Segment</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Block</label>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1 group/block">
                       <select
                         value={blockFilter}
                         disabled={!progFilter && !deptFilter}
                         onChange={(e) => setBlockFilter(e.target.value)}
-                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
+                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-medium appearance-none cursor-pointer focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none disabled:opacity-30"
                       >
                         <option value="">All Blocks</option>
                         {availableBlocks.map((b) => (
@@ -818,11 +726,11 @@ export const AdminStudentsTab: React.FC = () => {
                 >
                   <div className="flex items-center gap-6">
                     <div className="w-12 h-12 bg-white/10 rounded-xl flex flex-col items-center justify-center border border-white/10">
-                      <span className="text-lg font-bold text-white leading-none">{selectedIds.size}</span>
-                      <span className="text-[8px] font-bold uppercase tracking-wider text-white/50 mt-0.5">Units</span>
+                      <span className="text-lg font-medium text-white leading-none">{selectedIds.size}</span>
+                      <span className="text-[8px] font-medium uppercase tracking-wider text-white/50 mt-0.5">Units</span>
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-white tracking-widest uppercase">Bulk Operations</p>
+                      <p className="text-xs font-medium text-white tracking-widest uppercase">Bulk Operations</p>
                       <p className="text-[10px] font-medium text-white/60 tracking-wide">
                         Managing {selectedIds.size} selected student records
                       </p>
@@ -833,7 +741,7 @@ export const AdminStudentsTab: React.FC = () => {
                     {isBulkProcessing ? (
                       <div className="flex items-center gap-6 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1.5">Processing Accounts...</span>
+                            <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest mb-1.5">Processing Accounts...</span>
                             <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
                               <motion.div 
                                 initial={{ width: 0 }}
@@ -842,7 +750,7 @@ export const AdminStudentsTab: React.FC = () => {
                               />
                             </div>
                          </div>
-                         <div className="text-xs font-bold text-white">
+                         <div className="text-xs font-medium text-white">
                            {bulkProgress.current} <span className="text-white/30 mx-1">/</span> {bulkProgress.total}
                          </div>
                       </div>
@@ -850,19 +758,19 @@ export const AdminStudentsTab: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Button 
                           onClick={handleBulkProvision}
-                          className="rounded-xl bg-white text-primary text-[10px] font-bold uppercase tracking-widest px-6 h-10 hover:bg-neutral-100 shadow-lg shadow-black/10 transition-all"
+                          className="rounded-xl bg-white text-primary text-[10px] font-medium uppercase tracking-widest px-6 h-10 hover:bg-neutral-100 shadow-lg shadow-black/10 transition-all"
                         >
                           Provision Access
                         </Button>
                         <Button 
                           onClick={handleBulkResendWelcome}
-                          className="rounded-xl bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-white/30 transition-all border border-white/20"
+                          className="rounded-xl bg-white/20 text-white text-[10px] font-medium uppercase tracking-widest px-5 h-10 hover:bg-white/30 transition-all border border-white/20"
                         >
                           Dispatch Credentials
                         </Button>
                         <Button 
                           onClick={handleBulkDelete}
-                          className="rounded-xl bg-red-500/20 text-red-100 text-[10px] font-bold uppercase tracking-widest px-5 h-10 hover:bg-red-500/40 transition-all border border-red-500/30"
+                          className="rounded-xl bg-red-500/20 text-red-100 text-[10px] font-medium uppercase tracking-widest px-5 h-10 hover:bg-red-500/40 transition-all border border-red-500/30"
                         >
                           Bulk Delete
                         </Button>
@@ -891,10 +799,10 @@ export const AdminStudentsTab: React.FC = () => {
                           />
                         </div>
                       </th>
-                      <th className="px-4 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
-                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Placement</th>
-                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
-                      <th className="px-6 py-5 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                      <th className="px-4 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
+                      <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Placement</th>
+                      <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
+                      <th className="px-6 py-5 text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -903,7 +811,7 @@ export const AdminStudentsTab: React.FC = () => {
                         <td colSpan={5} className="px-8 py-32 text-center">
                           <div className="flex flex-col items-center justify-center gap-6">
                             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Loading Student Data...</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Loading Student Data...</p>
                           </div>
                         </td>
                       </tr>
@@ -912,7 +820,7 @@ export const AdminStudentsTab: React.FC = () => {
                         <td colSpan={5} className="px-8 py-32 text-center">
                           <div className="flex flex-col items-center justify-center opacity-40">
                             <UserCircle size={48} className="text-neutral-300 mb-4" />
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">No results found for your search</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">No results found for your search</p>
                           </div>
                         </td>
                       </tr>
@@ -935,10 +843,10 @@ export const AdminStudentsTab: React.FC = () => {
                                 <User size={20} />
                               </div>
                               <div>
-                                <div className="text-sm font-bold text-neutral-900 tracking-tight">
+                                <div className="text-sm font-medium text-neutral-900 tracking-tight">
                                   {student.last_name}, {student.first_name} {student.suffix || ""}
                                 </div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">{student.student_code} • {student.email}</div>
+                                <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">{student.student_code} • {student.email}</div>
                               </div>
                             </div>
                           </td>
@@ -948,10 +856,10 @@ export const AdminStudentsTab: React.FC = () => {
                                 <Layers size={14} />
                               </div>
                               <div>
-                                <div className="text-xs font-bold text-neutral-900 tracking-tight">
+                                <div className="text-xs font-medium text-neutral-900 tracking-tight">
                                   {student.programs_lookup?.abbr} {student.year}-{student.block_name}
                                 </div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                                <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
                                   {student.programs_lookup?.departments?.name}
                                 </div>
                               </div>
@@ -961,18 +869,18 @@ export const AdminStudentsTab: React.FC = () => {
                             <div className="flex flex-col items-center gap-2">
                                <div className="flex items-center gap-1.5">
                                  <span className={`w-1.5 h-1.5 rounded-full ${student.is_active ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`} />
-                                 <span className={`text-[10px] font-bold uppercase tracking-wider ${student.is_active ? 'text-green-600' : 'text-neutral-400'}`}>
+                                 <span className={`text-[10px] font-medium uppercase tracking-wider ${student.is_active ? 'text-green-600' : 'text-neutral-400'}`}>
                                    {student.enrollment_status}
                                  </span>
                                </div>
-                               {!student.auth_user_id ? (
-                                 <span className="text-[9px] font-bold bg-red-50 text-red-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">No Account</span>
-                               ) : student.users?.onboarding_completed ? (
-                                 <span className="text-[9px] font-bold bg-green-50 text-green-500 px-2 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1">
+                               {false ? (
+                                 <span className="text-[9px] font-medium bg-red-50 text-red-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">No Account</span>
+                               ) : student.onboarding_completed ? (
+                                 <span className="text-[9px] font-medium bg-green-50 text-green-500 px-2 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1">
                                    <ShieldCheck size={10} /> Active Account
                                  </span>
                                ) : (
-                                 <span className="text-[9px] font-bold bg-amber-50 text-amber-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Pending Setup</span>
+                                 <span className="text-[9px] font-medium bg-amber-50 text-amber-500 px-2 py-0.5 rounded-md uppercase tracking-tighter">Pending Setup</span>
                                )}
                             </div>
                           </td>
@@ -998,8 +906,8 @@ export const AdminStudentsTab: React.FC = () => {
               {!loading && totalStudentsCount > 0 && (
                 <div className="px-8 py-8 bg-white border-t border-neutral-100 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Showing rows</span>
-                    <span className="text-sm font-bold text-neutral-900">
+                    <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em]">Showing rows</span>
+                    <span className="text-sm font-medium text-neutral-900">
                       {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalStudentsCount)} <span className="text-neutral-300 mx-1">/</span> {totalStudentsCount.toLocaleString()}
                     </span>
                   </div>
@@ -1016,12 +924,12 @@ export const AdminStudentsTab: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       {getPageNumbers().map((page, i) => (
                         page === "..." ? (
-                          <span key={`dots-${i}`} className="px-2 text-neutral-300 font-bold">•••</span>
+                          <span key={`dots-${i}`} className="px-2 text-neutral-300 font-medium">•••</span>
                         ) : (
                           <button
                             key={`page-${page}`}
                             onClick={() => setCurrentPage(Number(page))}
-                            className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-bold rounded-2xl transition-all ${
+                            className={`min-w-[42px] h-[42px] flex items-center justify-center text-xs font-medium rounded-2xl transition-all ${
                               currentPage === page
                                 ? "bg-primary text-white shadow-xl shadow-primary/20"
                                 : "bg-neutral-50 text-neutral-400 hover:bg-neutral-100"
@@ -1043,14 +951,14 @@ export const AdminStudentsTab: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Rows</span>
+                    <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Rows</span>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1);
                       }}
-                      className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-bold text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
+                      className="h-10 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-medium text-neutral-900 outline-none focus:ring-4 focus:ring-primary/5 cursor-pointer"
                     >
                       {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
@@ -1110,14 +1018,14 @@ export const AdminStudentsTab: React.FC = () => {
               return (
                 <div className="flex flex-col focus:outline-none">
                   <div className="px-5 py-3 border-b border-neutral-50 mb-1">
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.15em] mb-0.5">Student Details</p>
-                    <p className="text-xs font-bold text-neutral-900 truncate">{s.first_name} {s.last_name}</p>
+                    <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.15em] mb-0.5">Student Details</p>
+                    <p className="text-xs font-medium text-neutral-900 truncate">{s.first_name} {s.last_name}</p>
                   </div>
 
                   <div className="py-1">
                     <button
                       onClick={() => { setEditingStudent(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <Edit2 size={14} className="text-neutral-400" />
                       Edit Student
@@ -1129,7 +1037,7 @@ export const AdminStudentsTab: React.FC = () => {
                         setSearchParams(searchParams);
                         setOpenDropdown(null);
                       }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <Activity size={14} className="text-neutral-400" />
                       Activity Logs
@@ -1137,10 +1045,10 @@ export const AdminStudentsTab: React.FC = () => {
                   </div>
 
                   <div className="py-1 border-t border-neutral-50">
-                    <p className="px-5 py-2 text-[8px] font-bold text-neutral-300 uppercase tracking-[0.2em]">Account Management</p>
+                    <p className="px-5 py-2 text-[8px] font-medium text-neutral-300 uppercase tracking-[0.2em]">Account Management</p>
                     <button
                       onClick={() => { handleResendPassword(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-primary uppercase tracking-widest hover:bg-primary/5 transition-colors"
                     >
                       <Mail size={14} />
                       Resend Email
@@ -1148,15 +1056,15 @@ export const AdminStudentsTab: React.FC = () => {
                     
                     <button
                       onClick={() => { handleProvisionAuthAccount(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-amber-600 uppercase tracking-widest hover:bg-amber-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-amber-600 uppercase tracking-widest hover:bg-amber-50 transition-colors"
                     >
                       <Zap size={14} />
-                      {s.auth_user_id ? "Repair / Provision" : "Provision Account"}
+                      {"Repair / Provision"}
                     </button>
 
                     <button
                       onClick={() => { handleToggleActive(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
                     >
                       <UserX size={14} className="text-neutral-400" />
                       Change Status
@@ -1166,7 +1074,7 @@ export const AdminStudentsTab: React.FC = () => {
                   <div className="py-1 border-t border-neutral-50">
                     <button
                       onClick={() => { handleDeleteStudent(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-bold text-red-500 uppercase tracking-widest hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-red-500 uppercase tracking-widest hover:bg-red-50 transition-colors"
                     >
                       <Trash2 size={14} />
                       Delete Student

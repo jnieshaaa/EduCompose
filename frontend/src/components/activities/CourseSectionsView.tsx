@@ -143,8 +143,8 @@ export function CourseSectionsView({
       const { error } = await supabase
         .from("essay_activities")
         .update({
-          course_id: uniqueCourseIds,
-          block_id: selectedSectionIds,
+          course_id: uniqueCourseIds?.[0] || null,
+          block_id: selectedSectionIds?.[0] || null,
           program_id: Array.from(uniqueProgramIds)
         })
         .eq("id", activity.id);

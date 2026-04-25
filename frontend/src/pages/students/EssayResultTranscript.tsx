@@ -95,9 +95,10 @@ export function EssayResultTranscript() {
         setEssay(essayData);
 
         const { data: student } = await supabase
-          .from("students")
+          .from("users")
           .select("id")
-          .eq("auth_user_id", user.auth_id)
+          .eq("id", user.auth_id)
+          .eq("role", "student")
           .maybeSingle();
 
         if (!student) {

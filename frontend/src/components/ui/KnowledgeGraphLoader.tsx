@@ -22,12 +22,12 @@ const KnowledgeGraphLoader: React.FC<KnowledgeGraphLoaderProps> = ({
 
   // Define node positions in a circular arrangement with 3D depth variation
   const nodes = [
-    { id: 0, x: centerX, y: centerY - 60, z: 0, label: "Essay" },
-    { id: 1, x: centerX + 50, y: centerY - 30, z: -20, label: "Grammar" },
-    { id: 2, x: centerX + 60, y: centerY + 40, z: 20, label: "Coherence" },
-    { id: 3, x: centerX, y: centerY + 60, z: -15, label: "Argument" },
-    { id: 4, x: centerX - 60, y: centerY + 40, z: 15, label: "Structure" },
-    { id: 5, x: centerX - 50, y: centerY - 30, z: -10, label: "Readability" },
+    { id: '0', x: centerX, y: centerY - 60, z: 0, label: "Essay" },
+    { id: '1', x: centerX + 50, y: centerY - 30, z: -20, label: "Grammar" },
+    { id: '2', x: centerX + 60, y: centerY + 40, z: 20, label: "Coherence" },
+    { id: '3', x: centerX, y: centerY + 60, z: -15, label: "Argument" },
+    { id: '4', x: centerX - 60, y: centerY + 40, z: 15, label: "Structure" },
+    { id: '5', x: centerX - 50, y: centerY - 30, z: -10, label: "Readability" },
   ];
 
   // Define edges (connections between nodes)

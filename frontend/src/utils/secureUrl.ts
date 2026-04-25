@@ -17,7 +17,7 @@
  * Encode an object of URL parameters into a single opaque base64 token.
  * A timestamp is appended to make each token unique and harder to replay.
  */
-export function encodeUrlParams(params: Record<string, string | number | undefined | null>): string {
+export function encodeUrlParams(params: Record<string, string | undefined | null>): string {
   // Filter out undefined/null values
   const cleanParams: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
@@ -55,7 +55,7 @@ export function decodeUrlParams(token: string): Record<string, string> | null {
  * Example: buildSecureUrl('/Teacher/Activities', { activityId: '18', courseName: 'Actg 5' })
  *   → '/Teacher/Activities?ref=eyJhY3Rpdml0eUlkIjoiMTgiLC...'
  */
-export function buildSecureUrl(basePath: string, params: Record<string, string | number | undefined | null>): string {
+export function buildSecureUrl(basePath: string, params: Record<string, string | undefined | null>): string {
   const token = encodeUrlParams(params);
   return `${basePath}?ref=${encodeURIComponent(token)}`;
 }

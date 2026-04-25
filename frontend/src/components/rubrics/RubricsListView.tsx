@@ -41,8 +41,8 @@ interface RubricsListViewProps {
       programsList?: string[];
     }
   ) => void;
-  onEditRubric: (rubricId: string | number) => void;
-  onDeleteRubric: (rubricId: string | number) => void;
+  onEditRubric: (rubricId: string) => void;
+  onDeleteRubric: (rubricId: string) => void;
 }
 
 export function RubricsListView({

@@ -82,16 +82,18 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
         if (!user) return;
 
         let { data: student } = await supabase
-          .from("students")
-          .select("id, email, auth_user_id")
-          .eq("auth_user_id", user.id)
+          .from("users")
+          .select("id, email")
+          .eq("id", user.id)
+          .eq("role", "student")
           .maybeSingle();
         
         if (!student && user.email) {
           const { data: emailData } = await supabase
-            .from("students")
-            .select("id, email, auth_user_id")
+            .from("users")
+            .select("id, email")
             .eq("email", user.email)
+            .eq("role", "student")
             .maybeSingle();
           student = emailData;
         }
