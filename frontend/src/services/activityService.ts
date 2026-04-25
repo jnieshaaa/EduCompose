@@ -2107,11 +2107,12 @@ export const gradeEssay = async (
         ? essayActivities[0]?.min_word_count
         : essayActivities?.min_word_count) || 150;
 
-    // Update essay with word count immediately
+    // Update essay with word count immediately to ensure the dashboard reflects it even if analysis fails later
     await supabase
       .from("essays")
       .update({
         word_count: wordCount,
+        content: extractedText, // Save content early too
         grading_error:
           wordCount < minWordCount
             ? `Essay will not be graded because it did not reach the minimum word count of ${minWordCount} words.`
@@ -2123,7 +2124,7 @@ export const gradeEssay = async (
       return {
         success: false,
         error:
-          "Failed to extract text from PDF. The file may be corrupted or unreadable.",
+          "Extracted essay text is too short or empty. Please check the uploaded document.",
       };
     }
 
@@ -2227,7 +2228,7 @@ export const gradeEssay = async (
         error:
           analysisErr instanceof Error
             ? analysisErr.message
-            : "Failed to analyze essay",
+            : "Failed to analyze essay content",
       };
     }
 
@@ -2238,7 +2239,8 @@ export const gradeEssay = async (
       const { error: updateError } = await supabase
         .from("essays")
         .update({
-          content: extractedText, // Save the OCR/Extracted text back to the essay content column for easy retrieval
+          content: extractedText,
+          word_count: wordCount, // Ensure word_count is persisted in final update
           grammar_score: analysisResult.scores?.grammar || null,
           readability_score: analysisResult.scores?.readability || null,
           coherence_score: analysisResult.scores?.coherence || null,

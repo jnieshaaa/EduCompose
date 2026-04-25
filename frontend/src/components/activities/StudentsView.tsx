@@ -397,6 +397,9 @@ export function StudentsView({
                                   if (result.success) {
                                     setGradedStudents((prev) => new Set(prev).add(student.id));
                                     if (onRefresh) await onRefresh();
+                                    showNotification('success', `Essay for ${student.name} graded successfully!`);
+                                  } else {
+                                    showNotification('error', `Grading failed: ${result.error}`);
                                   }
                                 }
                               }}

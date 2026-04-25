@@ -31,6 +31,8 @@ import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotification } from "../../contexts/NotificationContext";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
+import { gradeEssay } from "../../services/activityService";
+import { Wand2 } from "lucide-react";
 
 // Types
 type Program = { id: string; name: string; code: string };
@@ -83,6 +85,8 @@ export function EssayManagementTab() {
   const [selectedActivityForUpload, setSelectedActivityForUpload] = useState<string | "">("");
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [gradingStudents, setGradingStudents] = useState<Map<string, { progress: number; step: string }>>(new Map());
+  const [gradedEssays, setGradedEssays] = useState<Set<string>>(new Set());
 
   // New Activity Form State
   const [newActivity, setNewActivity] = useState({
@@ -234,40 +238,50 @@ export function EssayManagementTab() {
   }, []);
 
   // 3. Fetch Submissions for active activity
+  const fetchSubmissions = useCallback(async () => {
+    if (!activeActivityId) return;
+
+    const { data, error } = await supabase
+      .from('essays')
+      .select(`
+        *,
+        student:users!student_id (
+          first_name,
+          last_name,
+          nickname
+        )
+      `)
+      .eq('activity_id', activeActivityId);
+
+    if (error) {
+      console.error("Error fetching submissions:", error);
+      return;
+    }
+
+    if (data) {
+      setSubmissions(data.map(s => ({
+        id: s.id,
+        activityId: s.activity_id,
+        studentId: s.student_id,
+        studentName: buildFullNameFromObject(s.student),
+        fileName: s.title || s.file_path?.split('/').pop() || 'Submission',
+        status: s.status,
+        submittedAt: s.submitted_at,
+        score: s.overall_score
+      })));
+
+      // Update graded status
+      const gradedSet = new Set<string>();
+      data.forEach(s => {
+        if (s.status === 'analyzed' || s.overall_score !== null) {
+          gradedSet.add(s.id);
+        }
+      });
+      setGradedEssays(gradedSet);
+    }
+  }, [activeActivityId]);
+
   useEffect(() => {
-    const fetchSubmissions = async () => {
-      if (!activeActivityId) return;
-
-      const { data, error } = await supabase
-        .from('essays')
-        .select(`
-          *,
-          student:users!student_id (
-            first_name,
-            last_name,
-            nickname
-          )
-        `)
-        .eq('activity_id', activeActivityId);
-
-      if (error) {
-        console.error("Error fetching submissions:", error);
-        return;
-      }
-
-      if (data) {
-        setSubmissions(data.map(s => ({
-          id: s.id,
-          activityId: s.activity_id,
-          studentId: s.student_id,
-          studentName: buildFullNameFromObject(s.student),
-          fileName: s.title || s.file_path?.split('/').pop() || 'Submission',
-          status: s.status,
-          submittedAt: s.submitted_at
-        })));
-      }
-    };
-
     fetchSubmissions();
     
     // Also update student list based on activity scope
@@ -275,7 +289,7 @@ export function EssayManagementTab() {
     if (act) {
       fetchStudents(act.programId, act.blockId);
     }
-  }, [activeActivityId, activities, fetchStudents]);
+  }, [activeActivityId, activities, fetchStudents, fetchSubmissions]);
 
   // Derived Values
   const filteredBlocks = useMemo(
@@ -789,29 +803,69 @@ export function EssayManagementTab() {
                             <TableCell className="py-4 text-right pr-6">
                               {sub ? (
                                 <div className="flex items-center justify-end gap-3 text-primary font-medium text-sm">
-                                  <div className="flex flex-col items-end">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="w-3.5 h-3.5" />
-                                      <span className="truncate max-w-[120px] text-xs" title={sub.fileName}>{sub.fileName}</span>
+                                  {gradingStudents.has(student.id) ? (
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                      {gradingStudents.get(student.id)?.progress}%
                                     </div>
-                                  </div>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="h-8 px-3 border-primary/20 hover:bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest"
-                                    onClick={() => {
-                                      const url = buildSecureUrl("/Teacher/Evaluation", {
-                                        studentId: student.id,
-                                        activityId: activeActivityId || '',
-                                        activityTitle: sub.fileName,
-                                        studentName: student.name
-                                      });
-                                      navigate(url);
-                                    }}
-                                  >
-                                    <Eye className="w-3 h-3 mr-1.5" />
-                                    Grade
-                                  </Button>
+                                  ) : (
+                                    <Button 
+                                      size="sm" 
+                                      variant={gradedEssays.has(sub.id) ? "outline" : "primary"}
+                                      className={`h-8 px-3 text-[10px] font-bold uppercase tracking-widest ${
+                                        gradedEssays.has(sub.id) 
+                                          ? "border-primary/20 hover:bg-primary/5 text-primary" 
+                                          : "bg-primary text-white shadow-lg shadow-primary/20"
+                                      }`}
+                                      onClick={async () => {
+                                        if (gradedEssays.has(sub.id)) {
+                                          const url = buildSecureUrl("/Teacher/AnalysisResults", {
+                                            studentId: student.id,
+                                            activityId: activeActivityId || '',
+                                            activityTitle: sub.fileName,
+                                            studentName: student.name
+                                          });
+                                          navigate(url);
+                                        } else {
+                                          // Start grading
+                                          setGradingStudents(prev => new Map(prev).set(student.id, { progress: 0, step: "Starting..." }));
+                                          try {
+                                            const result = await gradeEssay(student.id, student.name, activeActivityId!, (progress, step) => {
+                                              setGradingStudents(prev => new Map(prev).set(student.id, { progress, step }));
+                                            });
+                                            
+                                            if (result.success) {
+                                              showNotification('success', `Essay for ${student.name} graded successfully!`);
+                                              setGradedEssays(prev => new Set(prev).add(sub.id));
+                                              fetchSubmissions(); // Refresh list to get scores
+                                            } else {
+                                              showNotification('error', `Grading failed: ${result.error}`);
+                                            }
+                                          } catch (err) {
+                                            showNotification('error', "Unexpected system error during grading.");
+                                          } finally {
+                                            setGradingStudents(prev => {
+                                              const next = new Map(prev);
+                                              next.delete(student.id);
+                                              return next;
+                                            });
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      {gradedEssays.has(sub.id) ? (
+                                        <>
+                                          <Eye className="w-3 h-3 mr-1.5" />
+                                          View
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Wand2 className="w-3 h-3 mr-1.5" />
+                                          Grade
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               ) : (
                                 <span className="text-neutral-300">---</span>

@@ -79,8 +79,12 @@ export function NotificationDropdown({
          activityId = rawRelatedId;
        }
     } else {
-      activityId = rawRelatedId || "";
-      essayId = rawRelatedId || "";
+      // Legacy or simple ID: Assume it's an activity ID unless the type suggests otherwise
+      if (notification.type === 'essay_graded' || notification.type === 'essay_feedback') {
+        essayId = rawRelatedId || "";
+      } else {
+        activityId = rawRelatedId || "";
+      }
     }
 
     if (role === 'Teacher') {
