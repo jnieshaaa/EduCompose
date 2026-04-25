@@ -293,7 +293,7 @@ CRITICAL INSTRUCTIONS:
                 model_name = os.getenv("GEMINI_MODEL_NAME")
                 if not model_name:
                     # Try to find a standard model
-                    for m in ["gemini-1.5-flash-latest", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
+                    for m in ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]:
                         try:
                             client.models.get(model=m)
                             model_name = m

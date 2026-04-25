@@ -4256,12 +4256,22 @@ export const savePlagiarismResult = async (
     }
 
       // 1. Primary path: Upsert to essay_analysis_results
-      // We use upsert to create the row if it doesn't exist yet (e.g., if plagiarism check is run before full analysis)
+      // We use upsert to create the row if it doesn't exist yet
+      // Fetch essay info first to get activity_id and student_id for RLS and data integrity
+      const { data: essayInfo } = await supabase
+        .from("essays")
+        .select("activity_id, student_id")
+        .eq("id", essayId)
+        .single();
+
       const { error: upsertError } = await supabase
         .from("essay_analysis_results")
         .upsert({
           essay_id: essayId,
+          activity_id: essayInfo?.activity_id,
+          student_id: essayInfo?.student_id,
           plagiarism_results: result,
+          plagiarism_score: result.plagiarism_percentage || 0,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'essay_id' });
 
@@ -4276,13 +4286,13 @@ export const savePlagiarismResult = async (
       // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
       // We wrap this in a try-catch and don't fail if it fails, because the schema cache might be stale
       try {
-        const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
-        const currentAnalysis = essayStatus?.analysis || {};
+        const { data: essayStatus } = await supabase.from("essays").select("argument_analysis").eq("id", essayId).maybeSingle();
+        const currentAnalysis = essayStatus?.argument_analysis || {};
         
         const { error: essayUpdateError } = await supabase
           .from("essays")
           .update({
-            analysis: {
+            argument_analysis: {
               ...currentAnalysis,
               plagiarism_results: result
             }
@@ -4436,11 +4446,21 @@ export const saveAIDetectionResult = async (
     }
 
     // 1. Primary path: Upsert to essay_analysis_results
+    // Fetch essay info first to get activity_id and student_id for RLS and data integrity
+    const { data: essayInfo } = await supabase
+      .from("essays")
+      .select("activity_id, student_id")
+      .eq("id", essayId)
+      .single();
+
     const { error: upsertError } = await supabase
       .from("essay_analysis_results")
       .upsert({
         essay_id: essayId,
+        activity_id: essayInfo?.activity_id,
+        student_id: essayInfo?.student_id,
         ai_detection_results: result,
+        ai_score: result.ai_score || 0,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'essay_id' });
 
@@ -4452,13 +4472,13 @@ export const saveAIDetectionResult = async (
 
     // 2. Secondary path: Save to essays table (as fallback)
     try {
-      const { data: essayStatus } = await supabase.from("essays").select("analysis").eq("id", essayId).maybeSingle();
-      const currentAnalysis = essayStatus?.analysis || {};
+      const { data: essayStatus } = await supabase.from("essays").select("argument_analysis").eq("id", essayId).maybeSingle();
+      const currentAnalysis = essayStatus?.argument_analysis || {};
       
       const { error: essayUpdateError } = await supabase
         .from("essays")
         .update({
-          analysis: {
+          argument_analysis: {
             ...currentAnalysis,
             ai_detection_results: result
           }

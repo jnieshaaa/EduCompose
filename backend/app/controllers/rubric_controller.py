@@ -89,7 +89,7 @@ async def generate_rubrics(
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         
         # Priority list of models to try
-        target_models = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash-exp", "gemini-1.5-pro"]
+        target_models = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
         env_model = os.getenv("GEMINI_MODEL_NAME")
         if env_model:
             # If specified in env, put it at the very top of the list

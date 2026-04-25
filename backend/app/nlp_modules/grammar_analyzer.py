@@ -111,11 +111,11 @@ class GrammarAnalyzer:
             # Reorder fallback candidates for better availability
             model_candidates = [
                 os.getenv("GEMINI_MODEL_NAME"),
-                'gemini-1.5-flash-latest',   # More stable slug
-                'gemini-1.5-flash',          # 1.5 flash has higher free-tier quota (1500/day) than 2.0 (20/day)
-                'gemini-2.0-flash',          # Fallback to 2.0 flash
+                'gemini-1.5-flash-latest',   # Most stable slug
+                'gemini-1.5-flash',          # High quota, stable
                 'gemini-1.5-pro',            # Pro version
                 'gemini-pro-latest',         # Legacy latest
+                'gemini-2.0-flash-exp',      # Experimental 2.0
             ]
             
             self.gemini_model = None
@@ -891,7 +891,7 @@ Return ONLY a valid JSON object with this exact structure:
         if not self.hf_api_token:
             return []
             
-        api_url = "https://api-inference.huggingface.co/models/vennify/t5-base-grammar-correction"
+        api_url = "https://api-inference.huggingface.co/models/pszemraj/flan-t5-large-grammar-synthesis"
         headers = {"Authorization": f"Bearer {self.hf_api_token}"}
         
         errors = []
