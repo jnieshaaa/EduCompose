@@ -204,14 +204,14 @@ class CopyscapeService:
                             "message": "Username or API key is missing from URL parameters."
                         }
                     
-                    logger.info(f"Making POST request to Copyscape API...")
-                    logger.info(f"URL params: u, k, o, f")
-                    logger.info(f"POST body: t (length={text_length})")
+                    # Use POST request with all parameters in the body (Standard Form Encoding)
+                    # This avoids mixing URL params and POST body which can cause 400 errors
+                    all_data = {**params, **data}
+                    logger.info(f"Using POST method - all parameters in body (length={text_length})")
                     
                     response = await client.post(
                         self.base_url,
-                        params=params,  # Auth params in URL
-                        data=data,  # Text in POST body
+                        data=all_data,
                         headers={"Content-Type": "application/x-www-form-urlencoded"}
                     )
                     
@@ -472,14 +472,22 @@ class CopyscapeService:
                 "t": text_to_check,
             }
 
+            all_data = {**params, **data}
+            logger.info(f"Calling Copyscape AI Detection API: POST {self.base_url}")
+            logger.info(f"AI params: o={params['o']}, f={params['f']} (auth included in body)")
+            logger.info(f"AI POST body: t=[text, length={len(text_to_check)}]")
+
             timeout = httpx.Timeout(60.0, connect=10.0)
             async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                 response = await client.post(
                     self.base_url,
-                    params=params,
-                    data=data,
+                    data=all_data,
                     headers={"Content-Type": "application/x-www-form-urlencoded"},
                 )
+                
+                if response.status_code != 200:
+                    logger.error(f"Copyscape AI API error response: {response.status_code} - {response.text}")
+                
                 response.raise_for_status()
 
                 import xml.etree.ElementTree as ET

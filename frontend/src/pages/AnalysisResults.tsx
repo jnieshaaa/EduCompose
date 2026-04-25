@@ -1003,10 +1003,10 @@ const AnalysisResults: React.FC = () => {
         // When no IDs are available, just show the result without saving
         // console.log('Plagiarism check completed. Results not saved (no identifiers available).');
       }
-    } catch {
-      const errorMessage = 'Failed to check for plagiarism';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check for plagiarism';
       setPlagiarismError(errorMessage);
-      // console.error('Error checking plagiarism:');
+      console.error('Error checking plagiarism:', err);
     } finally {
       setIsCheckingPlagiarism(false);
     }
@@ -1052,10 +1052,10 @@ const AnalysisResults: React.FC = () => {
       } else {
         // console.log('AI detection completed. Results not saved (no identifiers available).');
       }
-    } catch {
-      const errorMessage = 'Failed to check AI detection';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check AI detection';
       setAiDetectionError(errorMessage);
-      // console.error('Error checking AI detection:');
+      console.error('Error checking AI detection:', err);
     } finally {
       setIsCheckingAIDetection(false);
     }

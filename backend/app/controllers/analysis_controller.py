@@ -533,9 +533,12 @@ async def check_ai_detection(
     result = await copyscape_service.check_ai_detection(request.text)
 
     if "error" in result:
+        error_msg = result.get("message", "AI detection failed")
+        logger.error(f"AI detection failed: {error_msg}")
+        logger.debug(f"Full AI detection result: {result}")
         raise HTTPException(
             status_code=400,
-            detail=result.get("message", "AI detection failed")
+            detail=error_msg
         )
 
     return AIDetectionResponse(
