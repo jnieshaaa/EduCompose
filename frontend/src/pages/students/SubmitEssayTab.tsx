@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { buildFullNameFromObject } from '../../utils/nameUtils';
@@ -309,7 +309,7 @@ export function SubmitEssayTab() {
       if (uploadMode === 'file' && selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        filePath = `${user.auth_id}/${activityIdParam}/${fileName}`;
+        filePath = `${user?.auth_id || 'unknown'}/${activityIdParam}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('essays')
