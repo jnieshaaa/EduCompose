@@ -3,7 +3,6 @@ import {
   Home,
   Settings,
   ClipboardCheck,
-  BookOpen,
   LogOut,
   ChevronLeft,
   ChevronRight,

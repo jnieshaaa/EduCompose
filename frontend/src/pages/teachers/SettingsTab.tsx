@@ -26,7 +26,7 @@ import { DataManagement } from "../../components/settings/DataManagement";
 import { ChangePassword } from "../../components/settings/ChangePassword";
 
 export function SettingsTab() {
-  const { user, checkAuth } = useAuth();
+  const { checkAuth } = useAuth();
   const navigate = useNavigate();
   const { showSuccess, showError, AlertComponent } = useAlert();
   const [activeTab, setActiveTab] = useState("profile");

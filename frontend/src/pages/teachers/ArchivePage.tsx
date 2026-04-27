@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCourses } from "../../hooks/useCourses";
 import { useSections } from "../../hooks/useSections";

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { readSecureParams } from "../../utils/secureUrl";
-import { Trash2, Edit2, Loader2, BookOpen, Search, Filter, X } from "lucide-react";
+import { Trash2, Edit2, Loader2, BookOpen, Search, X } from "lucide-react";
 import { useCourses } from "../../hooks/useCourses";
 import type { Course } from "../../types/academic";
 import { CourseSectionsView } from "./CourseSectionsView";
@@ -237,7 +237,7 @@ export function CoursesTab() {
             {getActiveCourses()
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((course: Course) => {
-            const isMyCourse = course.user_id === teacherInfo?.id;
+            const isMyCourse = course.teacher_id === teacherInfo?.id;
             const isAdded = myLoadsIds.has(course.id);
 
             return (
