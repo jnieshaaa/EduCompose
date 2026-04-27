@@ -43,7 +43,6 @@ export function CoursesTab() {
     AlertComponent
   } = useCourses(false, undefined, undefined, activeTab);
 
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   // Sync department filter with tab
@@ -142,90 +141,68 @@ export function CoursesTab() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-3 rounded-2xl border border-neutral-100 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" size={14} />
-            <input
-              type="text"
-              placeholder="Search by code or title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50/50 border border-neutral-100 rounded-xl text-xs placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all"
-            />
-          </div>
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-              showFilters || selectedDeptId || selectedProgId
-                ? "bg-primary/5 border-primary/20 text-primary"
-                : "bg-white border-neutral-100 text-neutral-500 hover:bg-neutral-50"
-            }`}
-          >
-            <Filter size={14} /> 
-            Filters {(selectedDeptId || selectedProgId) ? "•" : ""}
-          </button>
+      {/* Search & Filters Hub */}
+      <div className="bg-white p-5 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={16} />
+          <input
+            type="text"
+            placeholder="Search by code or title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all font-medium"
+          />
         </div>
 
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Department Filter</label>
+            <select
+              value={selectedDeptId}
+              disabled={activeTab === "dept"}
+              onChange={(e) => {
+                setSelectedDeptId(e.target.value);
+                setSelectedProgId(""); 
+              }}
+              className={`w-full h-11 px-4 border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer ${
+                activeTab === "dept" ? "bg-neutral-50 text-neutral-500 cursor-not-allowed opacity-60" : "bg-white"
+              }`}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Department</label>
-                  <select
-                    value={selectedDeptId}
-                    disabled={activeTab === "dept"}
-                    onChange={(e) => {
-                      setSelectedDeptId(e.target.value);
-                      setSelectedProgId(""); 
-                    }}
-                    className={`w-full px-3 py-2 border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all ${
-                      activeTab === "dept" ? "bg-neutral-50 text-neutral-500 cursor-not-allowed" : "bg-white"
-                    }`}
-                  >
-                    <option value="">All Departments</option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>{dept.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Program</label>
-                  <select
-                    value={selectedProgId}
-                    onChange={(e) => setSelectedProgId(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all"
-                  >
-                    <option value="">All Programs</option>
-                    {availablePrograms.map((prog) => (
-                      <option key={prog.id} value={prog.id}>{prog.name}</option>
-                    ))}
-                  </select>
-                </div>
-                {(selectedDeptId || selectedProgId) && (
-                  <div className="md:col-span-2 flex justify-end">
-                    <button 
-                      onClick={() => {
-                        setSelectedDeptId("");
-                        setSelectedProgId("");
-                      }}
-                      className="text-[10px] font-bold uppercase tracking-wider text-neutral-300 hover:text-error-default transition-colors"
-                    >
-                      Clear All Filters
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <option value="">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Program Filter</label>
+            <select
+              value={selectedProgId}
+              onChange={(e) => setSelectedProgId(e.target.value)}
+              className="w-full h-11 px-4 bg-white border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer"
+            >
+              <option value="">All Programs</option>
+              {availablePrograms.map((prog) => (
+                <option key={prog.id} value={prog.id}>{prog.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {(selectedDeptId || selectedProgId) && (
+          <div className="flex justify-end pt-2 border-t border-neutral-50">
+            <button 
+              onClick={() => {
+                if (activeTab !== "dept") setSelectedDeptId("");
+                setSelectedProgId("");
+              }}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-error-default transition-all group"
+            >
+              <X size={12} className="group-hover:rotate-90 transition-transform" />
+              Clear Selection
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Course List */}

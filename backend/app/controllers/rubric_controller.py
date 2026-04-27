@@ -85,35 +85,54 @@ async def generate_rubrics(
     
     # Try Gemini models sequentially
     if os.getenv("GEMINI_API_KEY"):
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        
-        # Priority list of models to try
-        target_models = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
-        env_model = os.getenv("GEMINI_MODEL_NAME")
-        if env_model:
-            # If specified in env, put it at the very top of the list
-            if env_model in target_models:
-                target_models.remove(env_model)
-            target_models.insert(0, env_model)
+        try:
+            from google import genai
+            from google.genai import types
             
-        for model_name in target_models:
+            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            
+            # Priority list of models to try
+            target_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
+            env_model = os.getenv("GEMINI_MODEL_NAME")
+            if env_model:
+                # Remove suffix if it causes issues
+                clean_env_model = env_model.replace("-latest", "")
+                if clean_env_model in target_models:
+                    target_models.remove(clean_env_model)
+                target_models.insert(0, clean_env_model)
+            
+            for model_id in target_models:
+                try:
+                    logger.info(f"Attempting rubric generation with model: {model_id}")
+                    response = client.models.generate_content(
+                        model=model_id,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.7,
+                            response_mime_type="application/json"
+                        )
+                    )
+                    
+                    if response and response.text:
+                        llm_response = response.text
+                        logger.info(f"Rubric generation success using Gemini ({model_id})")
+                        break
+                except Exception as model_err:
+                    logger.warning(f"Gemini model {model_id} failed: {model_err}")
+                    continue
+        except Exception as sdk_err:
+            logger.error(f"Failed to use google-genai SDK: {sdk_err}")
+            # Fallback to old SDK if possible
             try:
-                logger.info(f"Attempting rubric generation with model: {model_name}")
-                model = genai.GenerativeModel(model_name=model_name)
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"temperature": 0.7}
-                )
-                
+                import google.generativeai as old_genai
+                old_genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+                model = old_genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(prompt)
                 if response and response.text:
                     llm_response = response.text
-                    logger.info(f"Rubric generation success using Gemini ({model_name})")
-                    break # Exit loop on success
-            except Exception as e:
-                logger.warning(f"Gemini model {model_name} failed: {e}")
-                # Continue to next model in loop
-                continue
+            except Exception as old_sdk_err:
+                logger.error(f"Old SDK fallback also failed: {old_sdk_err}")
+
 
     # Fallback to OpenAI if Gemini failed and OpenAI is available
     if not llm_response and os.getenv("OPENAI_API_KEY"):
@@ -134,11 +153,21 @@ async def generate_rubrics(
         except Exception as e:
             logger.error(f"OpenAI rubric generation failed: {e}")
 
+    # If both AI services failed, provide a hardcoded fallback from PLATFORM_RUBRICS
+    # to avoid 503 Service Unavailable errors.
     if not llm_response:
-        raise HTTPException(
-            status_code=503, 
-            detail="AI generation service currently unavailable. Please check API keys."
-        )
+        logger.warning("AI generation failed or keys missing. Providing hardcoded fallback from PLATFORM_RUBRICS.")
+        from ..platform_rubrics import PLATFORM_RUBRICS
+        # Select first 2 rubrics as fallback
+        fallback_suggestions = []
+        for r in PLATFORM_RUBRICS[:2]:
+            fallback_suggestions.append({
+                "name": r["name"],
+                "description": r["description"],
+                "grading_intensity": r["grading_intensity"],
+                "criteria": r["criteria"]
+            })
+        return RubricGenerateResponse(suggestions=fallback_suggestions)
 
     try:
         # Clean JSON markdown if any

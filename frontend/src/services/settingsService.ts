@@ -148,10 +148,8 @@ export const updateTeacherProfile = async (
       return { success: false, error: "Teacher not found" };
     }
 
-    // Don't allow email updates
-    if (profile.email !== undefined) {
-      console.warn("Email update attempted but not allowed");
-    }
+    // Email updates are not supported via this profile update method
+    // to prevent accidental lockouts or unauthorized changes.
 
     // Get current data to merge
     const { data: currentData, error: fetchError } = await supabase

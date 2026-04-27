@@ -24,12 +24,14 @@ import {
 import {
   fetchTeacherUUID,
   fetchTeacherRubrics,
+  fetchPlatformRubrics,
   saveRubric,
   saveTemplateRubric,
   deleteRubric,
   updateRubric,
   fetchRubricById,
 } from "../../services/rubricService";
+import { platformRubrics as staticPlatformRubrics } from "../../components/rubrics/types";
 
 export function RubricsTab() {
   const [searchParams] = useSearchParams();
@@ -49,6 +51,7 @@ export function RubricsTab() {
       programsList?: string[];
     })[]
   >([]);
+  const [platformRubrics, setPlatformRubrics] = useState<PlatformRubric[]>(staticPlatformRubrics);
   const [isLoadingRubrics, setIsLoadingRubrics] = useState(true);
   const [teacherId, setTeacherId] = useState<string | null>(null);
 
@@ -73,8 +76,23 @@ export function RubricsTab() {
         const id = await fetchTeacherUUID();
         if (id) {
           setTeacherId(id);
-          const rubrics = await fetchTeacherRubrics();
-          setSavedRubrics(rubrics);
+          const [myRubrics, dbPlatformRubrics] = await Promise.all([
+            fetchTeacherRubrics(),
+            fetchPlatformRubrics()
+          ]);
+          
+          setSavedRubrics(myRubrics);
+          
+          // Merge static examples with database platform rubrics
+          // Filter out duplicates if any (by name)
+          const mergedPlatform = [...dbPlatformRubrics];
+          staticPlatformRubrics.forEach(staticR => {
+            if (!mergedPlatform.some(dbR => dbR.name.toLowerCase() === staticR.name.toLowerCase())) {
+              mergedPlatform.push(staticR);
+            }
+          });
+          
+          setPlatformRubrics(mergedPlatform);
         }
       } catch (err) {
         console.error("Error loading rubrics:", err);
@@ -402,6 +420,7 @@ export function RubricsTab() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           savedRubrics={savedRubrics}
+          platformRubrics={platformRubrics}
           isLoadingRubrics={isLoadingRubrics}
           onCreateClick={handleCreateClick}
           onPreviewRubric={handlePreviewRubric}

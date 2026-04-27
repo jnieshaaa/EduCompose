@@ -78,9 +78,9 @@ export function RubricDetailsForm({
     <div className="space-y-6">
       {/* ─── Header ─── */}
       <div>
-        <h4 className="text-xl font-bold text-neutral-900">Rubric Details</h4>
+        <h4 className="text-xl font-bold text-neutral-900">Rubric Info</h4>
         <p className="text-sm text-neutral-400 mt-1 font-medium">
-          Configure basic settings before building your criteria
+          Set basic settings before adding criteria.
         </p>
       </div>
 
@@ -104,10 +104,10 @@ export function RubricDetailsForm({
         {/* Grading Intensity */}
         <div>
           <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-2 block">
-            Grading Intensity <span className="text-tertiary">*</span>
+            Grading Tightness <span className="text-tertiary">*</span>
           </label>
           <p className="text-xs text-neutral-400 mb-3 font-medium">
-            Controls how strict or lenient the AI grading will be
+            How strict the AI should be when grading.
           </p>
           <div className="flex gap-1.5">
             {gradingIntensities.map((intensity) => (
@@ -133,7 +133,7 @@ export function RubricDetailsForm({
               Programs <span className="text-tertiary">*</span>
             </label>
             <p className="text-xs text-neutral-400 mb-3 font-medium">
-              This rubric will be available for courses within the selected program(s)
+              Which programs can use this rubric?
             </p>
             {isLoadingPrograms ? (
               <div className="flex items-center gap-2 py-3">
@@ -180,7 +180,7 @@ export function RubricDetailsForm({
           onClick={onContinue}
           disabled={!isFormValid}
         >
-          Continue
+          Next
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
@@ -221,7 +221,7 @@ export function RubricCriteriaEditor({
       title: `Criteria ${newId}`,
       scores: [
         { id: '1', title: "Excellent", points: 4, description: "" },
-        { id: '2', title: "Proficient", points: 3, description: "" },
+        { id: '2', title: "Good", points: 3, description: "" },
         { id: '3', title: "Developing", points: 2, description: "" },
         { id: '4', title: "Beginning", points: 1, description: "" },
       ],
@@ -333,7 +333,7 @@ export function RubricCriteriaEditor({
             onClick={() => setActiveSubTab("create")}
           >
             <Pencil className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
-            Build
+            Edit
           </button>
           <button
             className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
@@ -459,7 +459,7 @@ export function RubricCriteriaEditor({
             disabled={criteriaList.length === 0}
           >
             <Save className="w-4 h-4 mr-1.5" />
-            Save Rubric
+            Seal & Create
           </Button>
         </div>
       </div>

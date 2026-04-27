@@ -139,20 +139,32 @@ export function SubmitEssayTab() {
           rubricId: actRow.rubric_id || null
         });
 
-        const { data: essayData } = await supabase
+        const { data: essayData, error: essayError } = await supabase
           .from('essays')
           .select('*')
           .eq('activity_id', activityIdParam)
           .eq('student_id', studentData.id)
+          .order('submitted_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
+        if (essayError) {
+          console.error("Error fetching essay for student:", essayError);
+          // Optionally show this to the user if you want more transparency
+        }
+
         if (essayData) {
+          console.log("[SubmitEssayTab] Fetched essay for student:", {
+            id: essayData.id,
+            status: essayData.status,
+            overall_score: essayData.overall_score
+          });
           setIsSubmitted(true);
           setEssayContent(essayData.content || '');
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleDateString(undefined, {
              month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
           }));
-          setEssayScore(essayData.overall_score || null);
+          setEssayScore(essayData.overall_score ?? null);
           if (essayData.title) {
             setSelectedFileName(essayData.title);
           } else if (essayData.file_path) {
@@ -211,6 +223,34 @@ export function SubmitEssayTab() {
     };
 
     loadContent();
+
+    // Set up real-time subscription for this essay
+    let essaySubscription: any = null;
+    
+    if (user?.auth_id && activityIdParam) {
+      essaySubscription = supabase
+        .channel(`essay-changes-${activityIdParam}-${user.auth_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'essays',
+            filter: `student_id=eq.${user.auth_id}`
+          },
+          (payload) => {
+            console.log('[SubmitEssayTab] Real-time essay change detected:', payload.eventType);
+            loadContent(); // Refresh everything when a change occurs
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (essaySubscription) {
+        supabase.removeChannel(essaySubscription);
+      }
+    };
   }, [user?.auth_id, activityIdParam]);
 
   const handlePreviewRubric = async () => {
@@ -682,7 +722,7 @@ export function SubmitEssayTab() {
                       </motion.div>
                     )}
 
-                    {!essayScore && (
+                    {essayScore === null && (
                       <div className="bg-white py-8 px-6 rounded-[1.5rem] border border-neutral-100 shadow-lg shadow-neutral-900/5 flex flex-col items-center text-center">
                         <div className="w-12 h-12 bg-neutral-50 rounded-xl flex items-center justify-center mb-4 text-neutral-200">
                           <Clock size={24} />

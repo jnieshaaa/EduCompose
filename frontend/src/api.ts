@@ -288,17 +288,22 @@ export const authApi = {
     last_name: string;
     middle_name?: string;
     suffix?: string;
+    title?: string;
+    nickname?: string;
     code?: string;
     birthday?: string;
     password?: string;
+    school_id?: string;
+    department_id?: string;
+    program_id?: string;
   }): Promise<{ success: boolean; auth_id: string; role: string; temp_password: string; email: string }> => {
     try {
-      const tempPassword = payload.password || payload.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
-      // Use the ultra-safe v6 RPC with all fields
+      // Use the ultra-safe v1 RPC with all fields (updated to v2 signature internally)
       const { data: authId, error: provisionError } = await supabase.rpc(
-        "create_new_portal_user_v6",
+        "create_new_portal_user_v1",
         {
           p_email: normalizedEmail,
           p_password: tempPassword,
@@ -307,10 +312,13 @@ export const authApi = {
           p_role: payload.role,
           p_middle_name: payload.middle_name || null,
           p_suffix: payload.suffix || null,
-          p_code: payload.code || null,
+          p_title: payload.title || null,
+          p_nickname: payload.nickname || null,
+          p_school_id: payload.school_id || null,
+          p_department_id: payload.department_id || null,
+          p_program_id: payload.program_id || null,
           p_birthday: payload.birthday || null,
-          p_school_id: (payload as any).school_id || null,
-          p_department_id: (payload as any).department_id || null
+          p_code: payload.code || null
         }
       );
 
@@ -1050,13 +1058,117 @@ export const adminApi = {
   },
 
   getAllActivities: async () => {
-    const { data, error } = await supabase
+    // 1. Fetch raw activities
+    const { data: activities, error: activityError } = await supabase
       .from("essay_activities")
-      .select("*, blocks(name)")
+      .select("*")
       .order("created_at", { ascending: false });
     
-    if (error) throw new Error(error.message);
-    return data || [];
+    if (activityError) throw new Error(activityError.message);
+
+    // 2. Fetch all blocks and their program relationships
+    const { data: blocks } = await supabase
+      .from("blocks")
+      .select(`
+        id, 
+        name, 
+        year,
+        program_load_id,
+        teacher_program_loads!program_load_id(program_id)
+      `);
+    
+    // 3. Fetch student counts from users table grouped by block_name
+    const { data: studentCounts } = await supabase
+      .from("users")
+      .select("block_name")
+      .eq("role", "student");
+    
+    const countMap: Record<string, number> = (studentCounts || []).reduce((acc: any, s: any) => {
+      if (s.block_name) {
+        acc[s.block_name] = (acc[s.block_name] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // Create a map from program_id to list of blocks
+    const programToBlocks: Record<string, any[]> = {};
+    (blocks || []).forEach((b: any) => {
+      const pId = Array.isArray(b.teacher_program_loads) 
+        ? b.teacher_program_loads[0]?.program_id 
+        : b.teacher_program_loads?.program_id;
+      
+      if (pId) {
+        if (!programToBlocks[pId]) programToBlocks[pId] = [];
+        programToBlocks[pId].push({
+          ...b,
+          student_count: countMap[b.name] || 0
+        });
+      }
+    });
+
+    // 4. Fetch all teachers (users with role='teacher')
+    const { data: teachers } = await supabase
+      .from("users")
+      .select("id, first_name, last_name, email")
+      .eq("role", "teacher");
+
+    // 5. Fetch all programs
+    const { data: programs } = await supabase
+      .from("programs_lookup")
+      .select("id, name, abbr");
+
+    // Create lookup maps for efficiency
+    const blockMap = (blocks || []).reduce((acc: any, b: any) => {
+      acc[b.id] = {
+        ...b,
+        student_count: countMap[b.name] || 0
+      };
+      return acc;
+    }, {});
+
+    const teacherMap = (teachers || []).reduce((acc: any, t: any) => {
+      acc[t.id] = `${t.first_name} ${t.last_name}`;
+      return acc;
+    }, {});
+
+    const programMap = (programs || []).reduce((acc: any, p: any) => {
+      acc[p.id] = p;
+      return acc;
+    }, {});
+
+    // 6. Map everything together
+    return (activities || []).map(activity => {
+      const teacherName = activity.teacher_id ? teacherMap[activity.teacher_id] : "Unknown";
+      
+      // Resolve programs from array of IDs
+      const pIds = Array.isArray(activity.program_id) ? activity.program_id : activity.program_id ? [activity.program_id] : [];
+      const resolvedPrograms = pIds.map((id: string) => programMap[id]).filter(Boolean);
+
+      // Find ALL blocks associated with these programs
+      const deployments: any[] = [];
+      
+      // Add the specific block if it exists
+      if (activity.block_id && blockMap[activity.block_id]) {
+        deployments.push(blockMap[activity.block_id]);
+      }
+
+      pIds.forEach((pId: string) => {
+        if (programToBlocks[pId]) {
+          deployments.push(...programToBlocks[pId]);
+        }
+      });
+
+      // Remove duplicate blocks if any
+      const uniqueDeployments = Array.from(new Map(deployments.map(d => [d.id, d])).values());
+
+      return {
+        ...activity,
+        deployments: uniqueDeployments,
+        teacher_name: teacherName,
+        student_count: uniqueDeployments.reduce((sum, d) => sum + d.student_count, 0),
+        programs_lookup: resolvedPrograms
+      };
+    });
   },
 
   getAllRubrics: async () => {

@@ -30,6 +30,8 @@ export const sendCodeEmail = async (params: {
       {
         to_email: params.toEmail,
         verification_code: params.code,
+        password_label: "Verification Code",
+        instruction: "To reset your password, please use the following verification code:",
         message: `Your verification code is: ${params.code}`,
       },
       PUBLIC_KEY
@@ -51,7 +53,9 @@ export const sendUserWelcomeEmail = async (params: {
   student_code?: string;
 }) => {
   const isStudent = params.role.toLowerCase() === 'student';
-  const templateId = isStudent ? (STUDENT_WELCOME_TEMPLATE_ID || FORGOT_PASSWORD_TEMPLATE_ID) : FORGOT_PASSWORD_TEMPLATE_ID;
+  const templateId = isStudent 
+    ? (STUDENT_WELCOME_TEMPLATE_ID || FORGOT_PASSWORD_TEMPLATE_ID) 
+    : FORGOT_PASSWORD_TEMPLATE_ID;
 
   if (!SERVICE_ID || !templateId || !PUBLIC_KEY) {
     console.warn("EmailJS not configured. Skipping email.");
@@ -72,9 +76,13 @@ export const sendUserWelcomeEmail = async (params: {
         role: params.role,
         student_code: params.student_code || "N/A",
         temp_password: params.temp_password,
-        verification_code: params.temp_password, // Alias for templates expecting this field
+        verification_code: params.temp_password, // For backward compatibility
+        password_label: isStudent ? "Initial Password" : "Temporary Password",
+        instruction: isStudent 
+          ? "Welcome! Please use your student code and the initial password below to access your account."
+          : "Please use the code below as your initial password to log in.",
         login_url: loginUrl,
-        message: `Welcome to EduCompose! Your ${params.role} account has been created. Password: ${params.temp_password}`,
+        message: `Welcome to EduCompose! Your ${params.role} account has been created. Please use this password to log in: ${params.temp_password}`,
       },
       PUBLIC_KEY
     );

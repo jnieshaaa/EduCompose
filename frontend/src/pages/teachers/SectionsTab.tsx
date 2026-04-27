@@ -55,7 +55,7 @@ export function SectionsTab() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl text-neutral-900 font-bold">Classes</h1>
-          <p className="text-sm text-neutral-500 mt-1">Manage your classes and student groups</p>
+          <p className="text-sm text-neutral-500 mt-1">Manage your classes and students.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -77,7 +77,7 @@ export function SectionsTab() {
         <div className="md:col-span-2 relative">
           <input
             type="text"
-            placeholder="Search classes..."
+            placeholder="Search for a class..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary/20"
@@ -114,13 +114,13 @@ export function SectionsTab() {
         <Card className="p-12 text-center">
           <Users className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-neutral-700 mb-2">No classes found</h3>
-          <p className="text-sm text-neutral-500 mb-4">You don't have any classes for the current academic term.</p>
+          <p className="text-sm text-neutral-500 mb-4">You don't have any classes for this term.</p>
           <Button
             className="bg-primary hover:bg-primary-300"
             onClick={() => setIsAddDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Your First Class
+            Add a Class
           </Button>
         </Card>
       ) : (
@@ -131,9 +131,9 @@ export function SectionsTab() {
                 <th className="px-6 py-4 font-semibold">Class Name</th>
                 <th className="px-6 py-4 font-semibold">Year/Level</th>
                 <th className="px-6 py-4 font-semibold">Course</th>
-                <th className="px-6 py-4 font-semibold">Academic Term</th>
+                <th className="px-6 py-4 font-semibold">Term</th>
                 <th className="px-6 py-4 font-semibold">Students</th>
-                <th className="px-6 py-4 font-semibold">Actions</th>
+                <th className="px-6 py-4 font-semibold">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -240,7 +240,7 @@ export function SectionsTab() {
               {newSection.program_id && programWideBlocks.length > 0 && (
                 <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex flex-col gap-2">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                    Select Existing Classes
+                    Choose from Classes
                   </span>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
@@ -308,11 +308,11 @@ export function SectionsTab() {
                 </select>
                 <p className="text-xxs text-neutral-400 mt-1 flex items-center">
                     <Calendar className="w-3 h-3 mr-1" />
-                    Automatically associated with current Academic Year
+                    Automatically linked to current Academic Year
                 </p>
               </div>
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase">Est. Students</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase">Number of Students (Est.)</label>
                 <input
                     type="number"
                     placeholder="0"

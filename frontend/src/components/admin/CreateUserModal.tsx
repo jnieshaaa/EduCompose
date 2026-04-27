@@ -32,6 +32,8 @@ export default function CreateUserModal({
   const [birthday, setBirthday] = useState("");
   const [code, setCode] = useState("");
   const [suffix, setSuffix] = useState("");
+  const [title, setTitle] = useState("");
+  const [nickname, setNickname] = useState("");
   const [schoolId, setSchoolId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   
@@ -95,6 +97,8 @@ export default function CreateUserModal({
         first_name: firstName.trim(),
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim(),
+        title: title.trim() || undefined,
+        nickname: nickname.trim() || undefined,
         birthday: birthday || undefined,
         code: code.trim() || undefined,
         suffix: suffix || undefined,
@@ -121,6 +125,8 @@ export default function CreateUserModal({
       setFirstName("");
       setMiddleName("");
       setLastName("");
+      setTitle("");
+      setNickname("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
@@ -220,6 +226,28 @@ export default function CreateUserModal({
           </div>
 
           <div className="space-y-5">
+            <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Teacher Info</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title (Mr, Ms, etc)</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="EX: PROF."
+                  className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
+                <input
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="EX: DOC SMITH"
+                  className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
+                />
+              </div>
+            </div>
+
             <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Personal Info</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

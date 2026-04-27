@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Check,
   X
 } from "lucide-react";
 import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
@@ -59,6 +60,7 @@ export function CourseSectionsView({
   const [selectedDept, setSelectedDept] = useState<string>(course.department_id || "");
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
   const [newBlock, setNewBlock] = useState({ year: 1, name: "" });
+  const [selectedBlocksFromList, setSelectedBlocksFromList] = useState<{year: number, name: string}[]>([]);
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -316,62 +318,110 @@ export function CourseSectionsView({
     );
   };
 
+  const toggleBlockSelection = (b: {year: number, name: string}) => {
+    setSelectedBlocksFromList(prev => {
+      const exists = prev.find(item => item.year === b.year && item.name === b.name);
+      if (exists) {
+        return prev.filter(item => !(item.year === b.year && item.name === b.name));
+      }
+      return [...prev, b];
+    });
+  };
+
   const handleCreateBlock = async () => {
-    if (!selectedProgramLoad || !newBlock.name) return;
+    if (!selectedProgramLoad) return;
+    
+    // Combine manual input (if any) and list selections
+    const blocksToCreate = [...selectedBlocksFromList];
+    
+    if (newBlock.name.trim()) {
+      const normalizedName = newBlock.name.toUpperCase().trim();
+      // Check if already in our selection list
+      const alreadyInSelection = blocksToCreate.find(
+        b => b.year === newBlock.year && b.name === normalizedName
+      );
+      // Check if already exists in the course blocks
+      const alreadyExists = blocks.find(
+        b => b.year === newBlock.year && b.name === normalizedName
+      );
+
+      if (!alreadyInSelection && !alreadyExists) {
+        blocksToCreate.push({ year: newBlock.year, name: normalizedName });
+      } else if (alreadyExists && blocksToCreate.length === 0) {
+        showWarning(`Section ${newBlock.year}${normalizedName} is already in this course.`);
+        return;
+      }
+    }
+
+    if (blocksToCreate.length === 0) return;
+
     setIsCreating(true);
     try {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData?.user) throw new Error("Not authenticated");
 
-      const { data: block, error } = await supabase
-        .from("blocks")
-        .insert({
-          program_load_id: selectedProgramLoad.id,
-          year: newBlock.year,
-          name: newBlock.name.toUpperCase(),
-          teacher_id: authData.user.id
-        })
-        .select()
-        .single();
+      let totalEnrolled = 0;
+      let createdCount = 0;
 
-      if (error) {
-        if (error.code === "23505")
-          throw new Error("A block with this year and name already exists.");
-        throw error;
-      }
+      for (const b of blocksToCreate) {
+        // 1. Create the block
+        const { data: block, error } = await supabase
+          .from("blocks")
+          .insert({
+            program_load_id: selectedProgramLoad.id,
+            year: b.year,
+            name: b.name.toUpperCase(),
+            teacher_id: authData.user.id
+          })
+          .select()
+          .single();
 
-      let enrollmentCount = 0;
-      if (block) {
-        const { data: matchingStudents } = await supabase
-          .from("users")
-          .select("id")
-          .eq("role", "student")
-          .eq("program_id", selectedProgramLoad.program_id)
-          .eq("year", newBlock.year)
-          .eq("block_name", newBlock.name.toUpperCase());
+        if (error) {
+          if (error.code === "23505") continue; // Skip if exists
+          throw error;
+        }
 
-        if (matchingStudents && matchingStudents.length > 0) {
-          enrollmentCount = matchingStudents.length;
-          const enrollments = matchingStudents.map(s => ({
-            block_id: block.id,
-            student_id: s.id
-          }));
-          
-          const { error: enrollError } = await supabase
-            .from("block_students")
-            .insert(enrollments);
+        createdCount++;
+
+        // 2. Auto-enroll students
+        if (block) {
+          const { data: matchingStudents } = await supabase
+            .from("users")
+            .select("id")
+            .eq("role", "student")
+            .eq("program_id", selectedProgramLoad.program_id)
+            .eq("year", b.year)
+            .eq("block_name", b.name.toUpperCase());
+
+          if (matchingStudents && matchingStudents.length > 0) {
+            totalEnrolled += matchingStudents.length;
+            const enrollments = matchingStudents.map(s => ({
+              block_id: block.id,
+              student_id: s.id
+            }));
             
-          if (enrollError) console.error("Auto-enroll error:", enrollError);
+            const { error: enrollError } = await supabase
+              .from("block_students")
+              .insert(enrollments);
+              
+            if (enrollError) console.error("Auto-enroll error:", enrollError);
+          }
         }
       }
 
-      showSuccess(`Block created successfully! ${enrollmentCount > 0 ? `${enrollmentCount} students auto-enrolled.` : "No matching students found."}`);
+      if (createdCount === 0) {
+        showWarning("These sections were already added.");
+      } else {
+        showSuccess(`${createdCount} section(s) created! ${totalEnrolled > 0 ? `${totalEnrolled} students auto-enrolled.` : ""}`);
+      }
+      
       setIsAddBlockOpen(false);
       setNewBlock({ year: 1, name: "" });
+      setSelectedBlocksFromList([]);
       fetchBlocks();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      showError(msg || "Failed to create block.");
+      showError(msg || "Failed to create section(s).");
     } finally {
       setIsCreating(false);
     }
@@ -771,38 +821,52 @@ export function CourseSectionsView({
 
                 {selectedProgramLoad && programWideBlocks.length > 0 && (
                   <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 space-y-3">
-                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-1">Inherit Existing</span>
+                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-1">Available from Program</span>
                     <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
-                      {programWideBlocks.sort((a,b) => a.year - b.year || a.name.localeCompare(b.name)).map((b, idx) => {
-                        const active = newBlock.year === b.year && newBlock.name === b.name;
+                      {programWideBlocks
+                        .filter(pwb => !blocks.some(b => b.year === pwb.year && b.name === pwb.name))
+                        .sort((a,b) => a.year - b.year || a.name.localeCompare(b.name))
+                        .map((b, idx) => {
+                        const isSelected = selectedBlocksFromList.some(item => item.year === b.year && item.name === b.name);
                         return (
                           <button
                             key={idx}
-                            onClick={() => setNewBlock({ ...newBlock, year: b.year, name: b.name })}
-                            className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                              active ? 'bg-white border-primary shadow-sm' : 'bg-white/50 border-neutral-100 hover:border-primary/20'
+                            type="button"
+                            onClick={() => toggleBlockSelection({ year: b.year, name: b.name })}
+                            className={`flex items-center justify-between p-2.5 rounded-xl border-2 transition-all ${
+                              isSelected ? 'bg-primary/5 border-primary shadow-sm ring-2 ring-primary/5' : 'bg-white border-neutral-100 hover:border-primary/20'
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                               <div className={`w-3 h-3 rounded-full border transition-all ${active ? 'bg-primary border-primary' : 'bg-neutral-200 border-neutral-200'}`} />
-                               <span className={`text-[11px] font-bold uppercase ${active ? 'text-primary' : 'text-neutral-500'}`}>{b.year}{b.name}</span>
+                               <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-primary' : 'bg-white border-neutral-200'}`}>
+                                 {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />}
+                               </div>
+                               <span className={`text-[11px] font-bold uppercase ${isSelected ? 'text-primary' : 'text-neutral-500'}`}>{b.year}{b.name}</span>
                             </div>
                             <span className="text-[9px] font-bold text-neutral-300 uppercase">{b.student_count} Students</span>
                           </button>
                         );
                       })}
+                      {programWideBlocks.filter(pwb => !blocks.some(b => b.year === pwb.year && b.name === pwb.name)).length === 0 && (
+                        <p className="text-[10px] text-neutral-300 text-center py-2 italic">No more sections to link from this program.</p>
+                      )}
                     </div>
                   </div>
                 )}
+
               </div>
 
               <div className="px-6 py-4 bg-neutral-50/50 border-t border-neutral-50 flex justify-end gap-2">
-                 <button onClick={() => setIsAddBlockOpen(false)} className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Abort</button>
+                 <button onClick={() => {
+                   setIsAddBlockOpen(false);
+                   setSelectedBlocksFromList([]);
+                   setNewBlock({ year: 1, name: "" });
+                 }} className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors">Cancel</button>
                  <button
                     onClick={handleCreateBlock}
                      className="bg-primary text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                  >
-                    {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Seal & Create"}
+                    {isCreating ? <Loader2 size={16} className="animate-spin" /> : "Create Section"}
                  </button>
               </div>
             </motion.div>

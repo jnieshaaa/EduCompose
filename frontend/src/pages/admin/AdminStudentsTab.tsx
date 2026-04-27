@@ -1094,21 +1094,21 @@ export const AdminStudentsTab: React.FC = () => {
           onClose={() => setConfirmingAction(null)}
           type={["delete", "bulk_delete"].includes(confirmingAction.type) ? "error" : "warning"}
           title={
-            confirmingAction.type === "delete" ? "Record Decommission" :
-            confirmingAction.type === "bulk_delete" ? "Institutional Purge" :
-            confirmingAction.type === "resend" ? "Credential Dispatch" :
-            confirmingAction.type === "bulk_resend" ? "Global Credential Dispatch" :
-            confirmingAction.type === "provision" ? "Identity Provisioning" : "Global Provisioning"
+            confirmingAction.type === "delete" ? "Delete Student" :
+            confirmingAction.type === "bulk_delete" ? "Batch Delete" :
+            confirmingAction.type === "resend" ? "Send Password" :
+            confirmingAction.type === "bulk_resend" ? "Send Passwords" :
+            confirmingAction.type === "provision" ? "Create Account" : "Create Accounts"
           }
           message={
-            confirmingAction.type === "delete" ? `Confirm decommissioning of ${confirmingAction.student?.student_code}. All pedagogical data will be permanently detached.` :
-            confirmingAction.type === "bulk_delete" ? `Initialize purge of ${selectedIds.size} student records. This action is irreversible.` :
-            confirmingAction.type === "resend" || confirmingAction.type === "provision" ? `Begin credential calculation and dispatch for ${confirmingAction.student?.email}.` :
-            `Initialize instructional onboarding for ${selectedIds.size} entities across the global registry.`
+            confirmingAction.type === "delete" ? `Are you sure you want to delete student ${confirmingAction.student?.student_code}? All data will be lost.` :
+            confirmingAction.type === "bulk_delete" ? `Are you sure you want to delete ${selectedIds.size} student records? This cannot be undone.` :
+            confirmingAction.type === "resend" || confirmingAction.type === "provision" ? `Sending login credentials to ${confirmingAction.student?.email}.` :
+            `Creating accounts for ${selectedIds.size} students.`
           }
           showCancel
-          confirmText="Confirm Execution"
-          cancelText="Abort Operation"
+          confirmText="Yes, Continue"
+          cancelText="Cancel"
           onConfirm={
             confirmingAction.type === "delete" ? executeDelete :
             confirmingAction.type === "resend" ? executeResend :

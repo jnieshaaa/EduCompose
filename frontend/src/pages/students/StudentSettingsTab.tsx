@@ -6,12 +6,14 @@ import { Loader2, Check, User, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
 import { ChangePassword } from "../../components/settings/ChangePassword";
+import { useAuth } from "../../contexts/AuthContext";
 
 export function StudentSettingsTab() {
   const [studentData, setStudentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { showNotification } = useNotification();
+  const { checkAuth } = useAuth();
   
   const [profile, setProfile] = useState({
     firstName: "",
@@ -123,7 +125,7 @@ export function StudentSettingsTab() {
         }
       });
 
-      // No need for separate users sync as we already updated users table
+      await checkAuth(); // Refresh header
         
       showNotification('success', "All settings saved!");
     } catch (err) {

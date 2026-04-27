@@ -1,214 +1,222 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import { 
-  BookOpen, 
-  ClipboardCheck, 
   Search, 
   Loader2, 
-  Layers, 
   ChevronRight,
+  ChevronDown,
   Activity,
-  Zap,
-  Box
+  Calendar,
+  Users,
+  BookOpen,
+  Layout
 } from "lucide-react";
 import { adminApi } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AdminContentTab() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get("view") as "programs" | "activities" | "rubrics") || "programs";
-  
-  const setActiveTab = (tab: "programs" | "activities" | "rubrics") => {
-    searchParams.set("view", tab);
-    setSearchParams(searchParams);
-  };
-
-  const [programs, setPrograms] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
-  const [rubrics, setRubrics] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadContent();
-  }, [activeTab]);
+    loadActivities();
+  }, []);
 
-  const loadContent = async () => {
+  const loadActivities = async () => {
     try {
       setLoading(true);
-      if (activeTab === "programs") {
-        const data = await adminApi.getAllPrograms();
-        setPrograms(data);
-      } else if (activeTab === "activities") {
-        const data = await adminApi.getAllActivities();
-        setActivities(data);
-      } else if (activeTab === "rubrics") {
-        const data = await adminApi.getAllRubrics();
-        setRubrics(data);
-      }
+      const data = await adminApi.getAllActivities();
+      setActivities(data);
     } catch (err) {
-      console.error("Error loading content:", err);
+      console.error("Error loading activities:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredContent = () => {
-    const content = activeTab === "programs" ? programs : activeTab === "activities" ? activities : rubrics;
-    if (!searchTerm) return content;
-    
-    const term = searchTerm.toLowerCase();
-    return content.filter((item) => {
-      if (activeTab === "programs") {
-        return item.name?.toLowerCase().includes(term) || item.description?.toLowerCase().includes(term);
-      } else if (activeTab === "activities") {
-        return item.title?.toLowerCase().includes(term);
-      } else {
-        return item.name?.toLowerCase().includes(term) || item.description?.toLowerCase().includes(term);
-      }
-    });
-  };
+  const filteredActivities = activities.filter((activity) =>
+    activity.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.teacher_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const getIcon = (tab: string) => {
-    switch (tab) {
-      case "programs": return <BookOpen size={20} />;
-      case "activities": return <Activity size={20} />;
-      case "rubrics": return <ClipboardCheck size={20} />;
-      default: return <Layers size={20} />;
-    }
-  };
-
-  const getLabel = (tab: string) => {
-    switch (tab) {
-      case "programs": return "Programs";
-      case "activities": return "Activities";
-      case "rubrics": return "Rubrics";
-      default: return tab;
-    }
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
   };
 
   return (
-    <div className="space-y-10 pb-20">
-      {/* Premium Integrated Header */}
-      <div className="flex flex-col sm:flex-row items-end justify-between gap-8">
+    <div className="space-y-8 pb-20">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-medium text-neutral-900 tracking-tight">Resources</h1>
-          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-1 flex items-center gap-2">
-            <Box size={14} className="text-primary/50" />
-            View and manage programs, activities, and rubrics
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Class Activities</h1>
+          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+            <Layout size={14} className="text-primary/50" />
+            Centralized monitoring of all academic activities
           </p>
         </div>
         
-        {/* Modern Tab HUD */}
-        <div className="p-1.5 bg-neutral-100/50 rounded-2xl flex items-center gap-1 border border-neutral-100">
-          {[
-            { id: "programs", label: "Curriculums", icon: BookOpen },
-            { id: "activities", label: "Activities", icon: Activity },
-            { id: "rubrics", label: "Rubrics", icon: ClipboardCheck },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-xs font-medium uppercase tracking-widest transition-all ${
-                activeTab === tab.id
-                  ? "bg-white text-primary shadow-sm border border-neutral-100"
-                  : "text-neutral-400 hover:text-neutral-600"
-              }`}
-            >
-              <tab.icon className={activeTab === tab.id ? "text-primary" : "text-neutral-300"} size={16} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Telemetry Search */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-100 shadow-sm flex flex-col md:flex-row gap-6">
-        <div className="flex-1 relative group">
+        {/* Search Bar */}
+        <div className="w-full sm:w-80 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={18} />
           <input
-            placeholder={`Search ${activeTab}...`}
+            placeholder="Search activities or teachers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 pl-12 pr-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl text-sm font-medium placeholder:text-neutral-300 focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none shadow-sm"
+            className="w-full h-11 pl-11 pr-4 bg-white border border-neutral-200 rounded-2xl text-sm font-medium placeholder:text-neutral-300 focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none shadow-sm"
           />
         </div>
       </div>
 
-      {/* Content Canvas */}
-      <AnimatePresence mode="wait">
+      {/* Main Content Area */}
+      <div className="bg-white rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-neutral-200/20 overflow-hidden">
         {loading ? (
-          <motion.div 
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center py-40 bg-white rounded-[3.5rem] border border-neutral-100 shadow-sm"
-          >
+          <div className="flex flex-col items-center justify-center py-40">
             <Loader2 className="animate-spin text-primary/30 w-12 h-12 mb-6" />
-            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 animate-pulse">Loading resources...</p>
-          </motion.div>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 animate-pulse">Synchronizing activities...</p>
+          </div>
+        ) : filteredActivities.length === 0 ? (
+          <div className="py-32 text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mb-6">
+              <Activity className="w-8 h-8 text-neutral-200" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-900">No activities found</h3>
+            <p className="text-xs text-neutral-400 mt-1 uppercase tracking-widest font-medium">Try adjusting your search filters</p>
+          </div>
         ) : (
-          <motion.div 
-            key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {filteredContent().map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="group bg-white rounded-[2.5rem] border border-neutral-100 shadow-sm hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 overflow-hidden outline-none flex flex-col"
-              >
-                <div className="p-8 space-y-6 flex-1">
-                  <div className="flex items-start justify-between">
-                    <div className="w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                      {getIcon(activeTab)}
-                    </div>
-                    <span className="text-[9px] font-medium text-neutral-300 uppercase tracking-widest bg-neutral-50 px-3 py-1.5 rounded-xl">ID: {item.id.toString().slice(-6)}</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-medium text-neutral-900 tracking-tight leading-tight group-hover:text-primary transition-colors">
-                      {item.name || item.title}
-                    </h3>
-                    {item.description && (
-                      <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest line-clamp-2 leading-relaxed opacity-80">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-4 border-t border-neutral-50 flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-                        <Zap size={14} className="text-primary/40" />
-                        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400">{getLabel(activeTab)}</span>
-                     </div>
-                     <span className="text-[9px] font-medium text-neutral-300 uppercase tracking-tighter">
-                        Log: {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
-                     </span>
-                  </div>
-                </div>
-                
-                <button className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white">
-                   <span className="text-[10px] font-medium uppercase tracking-widest">View Details</span>
-                   <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-neutral-400">Activity Name</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-neutral-400">Instructor</th>
+                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-neutral-400">Date Created</th>
+                  <th className="w-16"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {filteredActivities.map((activity) => (
+                  <React.Fragment key={activity.id}>
+                    <tr 
+                      onClick={() => toggleExpand(activity.id)}
+                      className={`group cursor-pointer transition-all ${expandedId === activity.id ? "bg-primary/[0.02]" : "hover:bg-neutral-50/50"}`}
+                    >
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${expandedId === activity.id ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-neutral-50 text-neutral-400 group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"}`}>
+                            <Activity size={18} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-neutral-900 leading-tight group-hover:text-primary transition-colors">{activity.title}</p>
+                            <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-widest mt-1">ID: {activity.id.slice(0, 8)}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500 font-black text-[10px]">
+                            {activity.teacher_name?.charAt(0)}
+                          </div>
+                          <span className="text-[13px] font-semibold text-neutral-700">{activity.teacher_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-2 text-neutral-500">
+                          <Calendar size={14} className="text-neutral-300" />
+                          <span className="text-xs font-medium">{new Date(activity.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        {expandedId === activity.id ? (
+                          <ChevronDown size={18} className="text-primary" />
+                        ) : (
+                          <ChevronRight size={18} className="text-neutral-300 group-hover:text-neutral-600 transition-colors" />
+                        )}
+                      </td>
+                    </tr>
+                    
+                    {/* Expandable Content */}
+                    <AnimatePresence>
+                      {expandedId === activity.id && (
+                        <tr>
+                          <td colSpan={4} className="p-0 border-none bg-neutral-50/30">
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-20 py-8">
+                                <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden">
+                                  <div className="px-6 py-4 bg-neutral-50/50 border-b border-neutral-100 flex items-center justify-between">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                                      <BookOpen size={14} className="text-primary" />
+                                      Deployment Details
+                                    </p>
+                                    <span className="text-[10px] font-bold text-neutral-400">{activity.student_count} Total Students</span>
+                                  </div>
+                                  <table className="w-full text-left">
+                                     <thead>
+                                       <tr className="bg-white">
+                                         <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-50">Program(s)</th>
+                                         <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-50">Class/Block</th>
+                                         <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-50 text-right">Capacity</th>
+                                       </tr>
+                                     </thead>
+                                     <tbody>
+                                       {(activity.deployments || []).map((deployment: any) => (
+                                         <tr key={deployment.id} className="hover:bg-neutral-50/30 transition-colors border-b border-neutral-50 last:border-0">
+                                           <td className="px-6 py-4">
+                                             <div className="flex flex-wrap gap-1.5">
+                                               {activity.programs_lookup && (Array.isArray(activity.programs_lookup) ? activity.programs_lookup : [activity.programs_lookup]).map((p: any) => (
+                                                 <span key={p.id} className="px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded text-[10px] font-bold uppercase tracking-tighter">
+                                                   {p.abbr || p.name}
+                                                 </span>
+                                               ))}
+                                               {!activity.programs_lookup && <span className="text-neutral-400 text-xs">—</span>}
+                                             </div>
+                                           </td>
+                                           <td className="px-6 py-4">
+                                             <span className="text-xs font-bold text-neutral-700">Section {deployment.name || "N/A"}</span>
+                                             <span className="block text-[10px] text-neutral-400 font-medium uppercase mt-0.5">{deployment.year || "1st"} Year</span>
+                                           </td>
+                                           <td className="px-6 py-4 text-right">
+                                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 text-primary rounded-lg">
+                                               <Users size={12} />
+                                               <span className="text-xs font-black">{deployment.student_count || 0}</span>
+                                             </div>
+                                           </td>
+                                         </tr>
+                                       ))}
+                                       {(!activity.deployments || activity.deployments.length === 0) && (
+                                         <tr>
+                                           <td colSpan={3} className="px-6 py-10 text-center text-xs text-neutral-400 italic font-medium uppercase tracking-widest">
+                                             No deployments found for this activity
+                                           </td>
+                                         </tr>
+                                       )}
+                                     </tbody>
+                                   </table>
+                                  {activity.instructions && (
+                                    <div className="px-6 py-5 bg-neutral-50/20 border-t border-neutral-100">
+                                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-2">Instructions</p>
+                                      <p className="text-xs text-neutral-600 leading-relaxed italic">"{activity.instructions}"</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          </td>
+                        </tr>
+                      )}
+                    </AnimatePresence>
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </AnimatePresence>
-
-      {filteredContent().length === 0 && !loading && (
-        <div className="bg-white p-20 rounded-[3.5rem] border border-neutral-100 text-center flex flex-col items-center shadow-sm">
-           <Layers className="w-16 h-16 text-neutral-100 mb-6" />
-           <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">No {activeTab} found</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

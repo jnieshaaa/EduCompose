@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import type {
   RubricTemplate,
   CriteriaRow,
+  PlatformRubric,
 } from "../types/rubricTypes";
 // Helper function to get type badge color
 export const getTypeBadgeColor = (type: string): string => {
@@ -133,6 +134,43 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
     return mappedRubrics;
   } catch (err) {
     console.error("Unexpected error loading rubrics:", err);
+    return [];
+  }
+};
+
+// Load platform rubrics (admin-created rubrics OR system defaults)
+export const fetchPlatformRubrics = async (): Promise<PlatformRubric[]> => {
+  try {
+    // We fetch rubrics and join with users to check roles
+    const { data, error } = await supabase
+      .from("rubrics")
+      .select("id, name, description, criteria, grading_intensity, created_at, user_id, owner:users!user_id(role)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading platform rubrics:", error);
+      return [];
+    }
+
+    // Filter: user_id is null OR owner's role is 'admin'
+    const platformData = (data || []).filter((r: any) => 
+      r.user_id === null || r.owner?.role === "admin"
+    );
+
+    return platformData.map((r: any) => {
+      const criteriaData = extractCriteriaFromSupabase(r.criteria) || [];
+      return {
+        id: r.id,
+        name: r.name,
+        description: r.description || "",
+        type: (r.grading_intensity as any) || "Basic",
+        criteria: criteriaData,
+        programs: 0,
+        lastUpdated: r.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+      };
+    });
+  } catch (err) {
+    console.error("Unexpected error loading platform rubrics:", err);
     return [];
   }
 };

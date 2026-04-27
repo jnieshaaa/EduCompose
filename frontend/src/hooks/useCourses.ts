@@ -113,6 +113,19 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
       if (!showArchived) {
         if (currentAY) myQuery = myQuery.eq("academic_year", currentAY);
         if (currentSemester) myQuery = myQuery.eq("term", currentSemester);
+      } else {
+        // Archive mode: Apply filters if specified
+        if (ay && ay !== "all") {
+          myQuery = myQuery.eq("academic_year", ay);
+        }
+        if (term && term !== "all") {
+          myQuery = myQuery.eq("term", term);
+        }
+
+        // ALWAYS exclude the EXACT current context from the archive
+        if (currentAY && currentSemester) {
+           myQuery = myQuery.or(`academic_year.neq.${currentAY},term.neq.${currentSemester}`);
+        }
       }
 
       const { data: loadsData } = await myQuery;
@@ -146,14 +159,23 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
         programs_lookup: Array.isArray(c.programs_lookup) ? c.programs_lookup[0] : c.programs_lookup
       });
 
-      const userLoads = (loadsData || []).map(l => ({
+      // De-duplicate loads (Teacher's personal list)
+      const userLoadsRaw = (loadsData || []).map(l => ({
         ...normalizeCourse(l.courses),
         academic_year: l.academic_year,
         term: l.term
-      })) as unknown as Course[];
-      setMyCourses(userLoads.filter(c => c && c.id));
-      setDepartmentCourses(((deptData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
-      setSchoolCourses(((schoolData || []) as any[]).map(normalizeCourse) as unknown as Course[]);
+      })).filter(c => c && c.id);
+      
+      const uniqueMy = Array.from(new Map(userLoadsRaw.map(c => [c.id, c])).values());
+      setMyCourses(uniqueMy);
+
+      // De-duplicate Department Courses
+      const uniqueDept = Array.from(new Map((deptData || []).map(c => [c.id, normalizeCourse(c)])).values());
+      setDepartmentCourses(uniqueDept);
+
+      // De-duplicate School Courses
+      const uniqueSchool = Array.from(new Map((schoolData || []).map(c => [c.id, normalizeCourse(c)])).values());
+      setSchoolCourses(uniqueSchool);
     } catch (err) {
       console.error("Error loading courses:", err);
       setLoadError("Unable to load courses.");

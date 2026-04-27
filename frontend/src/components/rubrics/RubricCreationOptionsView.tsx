@@ -16,9 +16,9 @@ export function RubricCreationOptionsView({
     desc: string;
     mode: BuilderMode;
   }[] = [
-    { icon: Upload, title: "Import File", desc: "Upload Excel or JSON", mode: "upload" },
-    { icon: FileCheck, title: "Use Template", desc: "Start from a preset", mode: "template" },
-    { icon: Edit, title: "From Scratch", desc: "Build your own rubric", mode: "scratch" },
+    { icon: Upload, title: "Upload File", desc: "Excel or JSON file", mode: "upload" },
+    { icon: FileCheck, title: "Use Template", desc: "Start from a template", mode: "template" },
+    { icon: Edit, title: "Create New", desc: "Build from scratch", mode: "scratch" },
   ];
 
   return (

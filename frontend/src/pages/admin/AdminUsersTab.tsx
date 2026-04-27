@@ -505,11 +505,11 @@ export function AdminUsersTab() {
           isOpen={!!deletingUser}
           onClose={() => setDeletingUser(null)}
           type="error"
-          title="Institutional Purge"
-          message={`Confirm permanent decommissioning of ${deletingUser.email}. All associated data and audit trails will be irreversibly detached from the global cluster.`}
+          title="Delete User"
+          message={`Are you sure you want to delete user ${deletingUser.email}? All records and activity logs will be permanently removed.`}
           showCancel
-          confirmText="Execute Purge"
-          cancelText="Abort Deletion"
+          confirmText="Yes, Delete"
+          cancelText="Cancel"
           onConfirm={confirmDelete}
         />
       )}

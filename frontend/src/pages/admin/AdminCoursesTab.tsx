@@ -32,7 +32,7 @@ export const AdminCoursesTab: React.FC = () => {
     course_code: "", 
     course_title: "", 
     units: 0,
-    user_id: "",
+    teacher_id: "",
     year_level: "",
     semester: ""
   });
@@ -53,37 +53,25 @@ export const AdminCoursesTab: React.FC = () => {
     setIsLoading(true);
     await Promise.all([
       fetchSchools(),
-      fetchUsers(),
-      fetchCourses()
+      fetchUsers()
     ]);
+    // Fetch courses after users to ensure manual join has user data
+    await fetchCourses();
     setIsLoading(false);
   };
 
   const fetchUsers = async () => {
     try {
-      const { data: courseUsers, error: courseError } = await supabase
-        .from("courses")
-        .select("user_id");
-      
-      if (courseError) throw courseError;
-      
-      const contributorIds = [...new Set(courseUsers?.map(c => c.user_id).filter(Boolean))];
-      
-      if (contributorIds.length === 0) {
-        setUsers([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("users")
         .select("id, first_name, last_name")
-        .in("id", contributorIds)
+        .eq("role", "teacher")
         .order("last_name");
 
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error("Error fetching contributing users:", error);
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -95,13 +83,22 @@ export const AdminCoursesTab: React.FC = () => {
           *,
           schools(name),
           departments(name, code),
-          programs_lookup(id, name, abbr),
-          users:user_id(first_name, last_name)
+          programs_lookup(id, name, abbr)
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setAllCourses(data || []);
+      
+      // Manual join in memory
+      const coursesWithUsers = (data || []).map(course => {
+        const teacher = users.find(u => u.id === course.teacher_id);
+        return {
+          ...course,
+          users: teacher ? { first_name: teacher.first_name, last_name: teacher.last_name } : null
+        };
+      });
+
+      setAllCourses(coursesWithUsers);
     } catch (error) {
       console.error("Error fetching courses:", error);
     }
@@ -135,7 +132,7 @@ export const AdminCoursesTab: React.FC = () => {
         school_id: selectedSchool,
         department_id: selectedDept || null,
         program_id: selectedProg || null,
-        user_id: courseForm.user_id || null,
+        teacher_id: courseForm.teacher_id || null,
         course_code: courseForm.course_code.toUpperCase(),
         course_title: courseForm.course_title,
         units: courseForm.units,
@@ -151,7 +148,7 @@ export const AdminCoursesTab: React.FC = () => {
         if (error) throw error;
       } else {
         const { data: userData } = await supabase.auth.getUser();
-        const finalData = { ...courseData, user_id: userData.user?.id || null };
+        const finalData = { ...courseData, teacher_id: userData.user?.id || null };
         const { error } = await supabase.from("courses").insert(finalData);
         if (error) throw error;
       }
@@ -185,7 +182,7 @@ export const AdminCoursesTab: React.FC = () => {
       course_code: "", 
       course_title: "", 
       units: 0,
-      user_id: "",
+      teacher_id: "",
       year_level: "",
       semester: ""
     });
@@ -204,7 +201,7 @@ export const AdminCoursesTab: React.FC = () => {
   };
 
   const filteredCourses = allCourses.filter(c => {
-    if (filters.user && c.user_id !== filters.user) return false;
+    if (filters.user && c.teacher_id !== filters.user) return false;
     if (filters.school && c.school_id !== filters.school) return false;
     if (filters.dept && c.department_id !== filters.dept) return false;
     if (filters.prog && c.program_id !== filters.prog) return false;
@@ -239,8 +236,8 @@ export const AdminCoursesTab: React.FC = () => {
             bValue = `${b.year_level || ''} ${b.semester || ''}`.toLowerCase();
             break;
           case 'added_by':
-            aValue = a.users ? `${a.users.first_name} ${a.users.last_name}`.toLowerCase() : "";
-            bValue = b.users ? `${b.users.first_name} ${b.users.last_name}`.toLowerCase() : "";
+            aValue = a.users ? `${(a.users as any).first_name} ${(a.users as any).last_name}`.toLowerCase() : "";
+            bValue = b.users ? `${(b.users as any).first_name} ${(b.users as any).last_name}`.toLowerCase() : "";
             break;
           case 'affiliation':
             aValue = a.schools?.name.toLowerCase() || "";
@@ -474,7 +471,7 @@ export const AdminCoursesTab: React.FC = () => {
                               course_code: course.course_code, 
                               course_title: course.course_title, 
                               units: course.units,
-                              user_id: course.user_id || "",
+                              teacher_id: course.teacher_id || "",
                               year_level: course.year_level || "",
                               semester: course.semester || ""
                             });

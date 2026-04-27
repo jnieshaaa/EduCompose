@@ -13,9 +13,9 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { supabase } from "../../lib/supabaseClient";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import ArgumentKnowledgeGraph from "../../components/essay/ArgumentKnowledgeGraph";
+import { exportTranscriptNative } from "../../services/pdfExportService";
+import html2canvas from "html2canvas";
 
 // --- Types ---
 interface AnalysisData {
@@ -79,6 +79,7 @@ export function EssayResultTranscript() {
   const [loading, setLoading] = useState(true);
   const [duplicates, setDuplicates] = useState<any[]>([]);
   const reportRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -87,7 +88,7 @@ export function EssayResultTranscript() {
         setLoading(true);
         const { data: essayData, error: essayError } = await supabase
           .from("essays")
-          .select("*, essay_activities(id, title, rubrics(id, name, criteria))")
+          .select("*, essay_activities(id, title, rubrics(id, name, criteria)), student:users!essays_student_id_fkey(first_name, last_name)")
           .eq("id", essayId)
           .single();
 
@@ -117,16 +118,32 @@ export function EssayResultTranscript() {
         if (analysisData) {
           const baseData = analysisData.analysis_data as any || {};
           const fallbackText = analysisData.original_text || baseData?.original_text || baseData?.text || essayData?.content || "";
+          
+          // Normalize scores from analysis results table
+          const scores = {
+            overall: analysisData.overall_score || baseData?.scores?.overall || 0,
+            grammar: analysisData.grammar_score || baseData?.scores?.grammar || 0,
+            readability: analysisData.readability_score || baseData?.scores?.readability || 0,
+            coherence: analysisData.coherence_score || baseData?.scores?.coherence || 0,
+            argument_strength: analysisData.argument_strength_score || baseData?.scores?.argument_strength || 0
+          };
+
+          const detailedAnalysis = analysisData.detailed_analysis || baseData?.detailed_analysis || {};
+          
           setAnalysis({
             ...baseData,
-            scores: {
-                overall: analysisData.overall_score || baseData?.scores?.overall || 0,
-                grammar: analysisData.grammar_score || baseData?.scores?.grammar || 0,
-                readability: analysisData.readability_score || baseData?.scores?.readability || 0,
-                coherence: analysisData.coherence_score || baseData?.scores?.coherence || 0,
-                argument_strength: analysisData.argument_strength_score || baseData?.scores?.argument_strength || 0
+            scores,
+            detailed_analysis: {
+              ...detailedAnalysis,
+              // Ensure argumentation is properly structured even if it's flat in the source
+              argumentation: detailedAnalysis.argumentation || detailedAnalysis.argument_structure || {
+                argument_structure: {
+                  total_claims: detailedAnalysis.total_claims || 0,
+                  total_grounds: detailedAnalysis.total_grounds || 0,
+                  total_rebuttals: detailedAnalysis.total_rebuttals || 0
+                }
+              }
             },
-            detailed_analysis: analysisData.detailed_analysis || baseData?.detailed_analysis || {},
             recommendations: analysisData.recommendations || baseData?.recommendations || [],
             diagnostic_summary: analysisData.diagnostic_summary || baseData?.diagnostic_summary || {},
             original_text: fallbackText,
@@ -134,16 +151,19 @@ export function EssayResultTranscript() {
             ai_detection: analysisData.ai_detection_results
           });
         } else {
+          // Fallback to essay table columns
           const fallbackPayload = essayData?.analysis_payload as any || {};
+          const scores = {
+            overall: Number(essayData.overall_score) || fallbackPayload?.scores?.overall || 0,
+            grammar: Number(essayData.grammar_score) || fallbackPayload?.scores?.grammar || 0,
+            readability: Number(essayData.readability_score) || fallbackPayload?.scores?.readability || 0,
+            coherence: Number(essayData.coherence_score) || fallbackPayload?.scores?.coherence || 0,
+            argument_strength: Number(essayData.argument_strength_score) || fallbackPayload?.scores?.argument_strength || 0
+          };
+
           setAnalysis({
             ...fallbackPayload,
-            scores: {
-              overall: Number(essayData.overall_score) || fallbackPayload?.scores?.overall || 0,
-              grammar: Number(essayData.grammar_score) || fallbackPayload?.scores?.grammar || 0,
-              readability: Number(essayData.readability_score) || fallbackPayload?.scores?.readability || 0,
-              coherence: Number(essayData.coherence_score) || fallbackPayload?.scores?.coherence || 0,
-              argument_strength: Number(essayData.argument_score) || fallbackPayload?.scores?.argument_strength || 0
-            },
+            scores,
             detailed_analysis: {
                 grammar: {
                     errors: essayData.grammar_errors || fallbackPayload?.detailed_analysis?.grammar?.errors || []
@@ -178,15 +198,32 @@ export function EssayResultTranscript() {
   }, [essayId, user?.auth_id]);
 
   const handleDownload = async () => {
-    if (!reportRef.current) return;
-    const canvas = await html2canvas(reportRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`EduCompose_Report_${essay?.title || "Essay"}.pdf`);
+    try {
+      setLoading(true);
+      
+      // Capture the graph as an image for the native PDF
+      let graphImage = null;
+      if (graphRef.current) {
+          const canvas = await html2canvas(graphRef.current, {
+              scale: 2,
+              backgroundColor: '#ffffff',
+              useCORS: true
+          });
+          graphImage = canvas.toDataURL("image/png");
+      }
+
+      // Use the native vector-based export instead of a screenshot
+      await exportTranscriptNative({
+        essay,
+        analysis,
+        scores,
+        graphImage
+      });
+    } catch (err) {
+      console.error("Native PDF Export Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const scores = useMemo(() => ({
@@ -218,17 +255,19 @@ export function EssayResultTranscript() {
         </Button>
       </div>
 
-      <div ref={reportRef} className="max-w-6xl mx-auto space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl border border-neutral-100">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center border-b border-neutral-100 pb-12">
+      <div 
+        ref={reportRef} 
+        className="max-w-6xl mx-auto space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl border border-neutral-100 relative overflow-hidden"
+      > 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center border-b border-neutral-100 pb-12 relative z-10">
           <div>
             <Badge variant="outline" className="mb-4 uppercase tracking-widest font-bold text-[10px] py-1 px-3 border-primary/20 text-primary bg-primary/5">Official Diagnostic Transcript</Badge>
             <h1 className="text-4xl font-bold text-neutral-900 tracking-tight leading-none mb-4">
-              {essay?.title || "Untitled Essay"}
+              {essay?.essay_activities?.title || essay?.title || "Untitled Essay"}
             </h1>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-neutral-400 font-medium">
+              <span>File: {essay?.title}</span>
               <span>Submitted: {essay?.submitted_at ? new Date(essay.submitted_at).toLocaleDateString() : "N/A"}</span>
-              <span>Activity: {essay?.essay_activities?.title}</span>
             </div>
           </div>
 
@@ -326,7 +365,7 @@ export function EssayResultTranscript() {
         <div className="pt-12 border-t border-neutral-100">
              <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500" />Argument Architecture</h3>
              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                 <div className="lg:col-span-3 bg-neutral-50/50 border border-neutral-100 rounded-[2.5rem] min-h-[450px] shadow-inner relative group p-6">
+                 <div ref={graphRef} className="lg:col-span-3 bg-white border border-neutral-100 rounded-[2.5rem] min-h-[450px] shadow-inner relative group p-6 overflow-hidden">
                     <ArgumentKnowledgeGraph 
                        graph={analysis?.detailed_analysis?.argumentation?.graph || analysis?.detailed_analysis?.knowledge_graph} 
                        metrics={analysis?.detailed_analysis?.argumentation?.metrics}

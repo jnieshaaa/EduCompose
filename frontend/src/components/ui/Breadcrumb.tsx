@@ -512,7 +512,7 @@ const Breadcrumb: React.FC = () => {
           return (
             <li key={`${item.path}-${index}`} className='flex items-center'>
               {index > 0 && (
-                <ChevronRight className='w-3 h-3 text-neutral-200 mx-1 flex-shrink-0' />
+                <ChevronRight className='w-3 h-3 text-neutral-400 mx-1 flex-shrink-0' />
               )}
               {isLast ? (
                 <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${isFirst ? "bg-primary/5 text-primary" : "text-neutral-700"}`}>

@@ -31,7 +31,7 @@ export interface Course {
   school_id: string;
   department_id?: string;
   program_id?: string; // If not null, it's a major course
-  user_id?: string;
+  teacher_id?: string;
   course_code: string;
   course_title: string;
   units: number;

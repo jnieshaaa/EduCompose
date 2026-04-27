@@ -3,7 +3,6 @@ import {
   Search, 
   UserPlus, 
   Mail, 
-  Hash, 
   Trash2, 
   Edit2, 
   RefreshCw,
@@ -74,19 +73,22 @@ export const AdminTeachersTab: React.FC = () => {
     t.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleArchive = async (id: string) => {
-    if (!window.confirm("Are you sure you want to archive this teacher? They will be moved to the archives and will no longer be able to log in.")) return;
+  const handleHardDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to COMPLETELY DELETE ${name}? This will remove them from the database and authentication system. This action cannot be undone.`)) return;
+    
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ is_active: false, archived_at: new Date().toISOString() })
-        .eq("id", id);
+      setLoading(true);
+      const { error } = await supabase.rpc("hard_delete_user_v1", {
+        p_user_id: id
+      });
         
       if (error) throw error;
-      showNotification('success', "Teacher moved to archives.");
+      showNotification('success', "Teacher completely removed from system.");
       loadTeachers();
     } catch (err: any) {
-      showNotification('error', err.message);
+      showNotification('error', err.message || "Failed to delete teacher");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,7 +142,6 @@ export const AdminTeachersTab: React.FC = () => {
               <tr className="bg-neutral-50/50 border-b border-neutral-100">
                 <th className="px-8 py-5 text-left text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Faculty Info</th>
                 <th className="px-6 py-5 text-left text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Contact</th>
-                <th className="px-6 py-5 text-left text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Teacher Code</th>
                 <th className="px-6 py-5 text-left text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Status</th>
                 <th className="px-8 py-5 text-right text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Actions</th>
               </tr>
@@ -191,15 +192,7 @@ export const AdminTeachersTab: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex items-center gap-2.5">
-                        <Hash size={14} className="text-secondary" />
-                        <span className="text-xs font-medium text-neutral-900 tracking-wider">
-                          {teacher.code || "---"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
                         <div className={`w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
                           teacher.is_active 
                             ? "bg-green-50 text-green-600 border border-green-100" 
@@ -209,9 +202,8 @@ export const AdminTeachersTab: React.FC = () => {
                           {teacher.is_active ? "Active" : "Disabled"}
                         </div>
                         {teacher.onboarding_completed && (
-                          <div className="w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-1.5">
-                            <ShieldCheck size={10} />
-                            Verified
+                          <div className="text-blue-500 flex items-center" title="Verified Account">
+                            <ShieldCheck size={16} />
                           </div>
                         )}
                       </div>
@@ -226,9 +218,9 @@ export const AdminTeachersTab: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                         <button 
-                          onClick={() => handleArchive(teacher.id)}
+                          onClick={() => handleHardDelete(teacher.id, `${teacher.first_name} ${teacher.last_name}`)}
                           className="p-2 h-9 w-9 flex items-center justify-center bg-white border border-neutral-100 text-neutral-400 hover:text-red-500 hover:border-red-100 hover:shadow-lg hover:shadow-red-500/5 rounded-lg transition-all"
-                          title="Archive Faculty"
+                          title="Delete Faculty Permanently"
                         >
                           <Trash2 size={16} />
                         </button>

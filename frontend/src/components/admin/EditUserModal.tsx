@@ -4,6 +4,7 @@ import { X, Briefcase, Mail, UserCircle, Shield, GraduationCap, CheckCircle, Ale
 import { adminApi } from "../../api";
 import Button from "../ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface EditUserModalProps {
   user: {
@@ -41,6 +42,7 @@ export default function EditUserModal({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { user: currentUser, checkAuth } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -88,6 +90,12 @@ export default function EditUserModal({
       });
 
       setSuccess("Profile updated successfully!");
+      
+      // If editing self, refresh header
+      if (user.id === currentUser?.id) {
+        await checkAuth();
+      }
+
       setTimeout(() => {
         onClose();
       }, 1000);

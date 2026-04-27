@@ -109,15 +109,26 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
     setShowLogoutConfirm(false);
   };
 
-  const getDisplayName = () => {
-    if (user?.first_name) {
-      return user.first_name;
-    }
-    return user?.username?.split('@')[0] || "Student";
-  };
+  const displayName = React.useMemo(() => {
+    if (!user) return "Student";
 
-  const userName = getDisplayName();
-  const userInitial = (user?.first_name || userName).charAt(0).toUpperCase();
+    const nickname = (user.nickname || "").trim();
+    const firstName = (user.first_name || "").trim();
+    const lastName = (user.last_name || "").trim();
+
+    const capitalize = (s: string) =>
+      s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+
+    if (nickname) {
+      return capitalize(nickname);
+    }
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    return firstName ? capitalize(firstName) : (user?.email?.split('@')[0] || "Student");
+  }, [user]);
+
+  const userInitial = (user?.nickname || user?.first_name || displayName || "S").charAt(0).toUpperCase();
 
   return (
     <header className="relative bg-white border-b border-neutral-100 h-14 flex items-center justify-between px-4 sm:px-6 z-40">
@@ -158,13 +169,13 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
           {/* User Avatar */}
           <div
             className='w-8 h-8 rounded-lg flex items-center justify-center bg-primary text-white text-sm font-bold flex-shrink-0'
-            title={userName}
+            title={displayName}
           >
             {userInitial}
           </div>
 
           <div className='hidden md:flex ml-3 flex-col text-left'>
-            <p className='font-bold text-sm text-neutral-800 whitespace-nowrap truncate max-w-[140px] tracking-tight'>{userName}</p>
+            <p className='font-bold text-sm text-neutral-800 whitespace-nowrap truncate max-w-[140px] tracking-tight'>{displayName}</p>
             <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Student</p>
           </div>
 
@@ -180,7 +191,7 @@ const StudentHeader: React.FC<StudentHeaderProps> = ({
                 <div className='bg-white shadow-lg rounded-xl overflow-hidden border border-neutral-100 p-1'>
                   <div className='px-3.5 py-3 border-b border-neutral-50 mb-0.5'>
                     <p className='text-sm font-bold text-neutral-900 truncate tracking-tight'>
-                      {userName}
+                      {displayName}
                     </p>
                     <p className='text-[11px] font-bold text-neutral-400 truncate uppercase tracking-widest mt-0.5'>
                       {user?.email || ""}

@@ -67,15 +67,24 @@ const TeacherOnboarding: React.FC = () => {
   // Pre-populate data if user already has some info
   useEffect(() => {
     if (user) {
+      console.log("[Onboarding] User data detected, patching state:", {
+        title: user.title,
+        nickname: user.nickname,
+        school_id: user.school_id,
+        department_id: user.department_id,
+        first_name: user.first_name,
+        last_name: user.last_name
+      });
+      
       setData(prev => ({
         ...prev,
-        title: user.title || prev.title,
-        nickname: user.nickname || prev.nickname,
-        firstName: user.first_name || prev.firstName,
-        lastName: user.last_name || prev.lastName,
-        email: user.email || prev.email,
-        school: (user as any).school_id || prev.school,
-        department: (user as any).department_id || prev.department,
+        title: user.title || prev.title || "",
+        nickname: user.nickname || prev.nickname || "",
+        firstName: user.first_name || prev.firstName || "",
+        lastName: user.last_name || prev.lastName || "",
+        email: user.email || prev.email || "",
+        school: user.school_id || prev.school || "",
+        department: user.department_id || prev.department || "",
       }));
     }
   }, [user]);
@@ -122,15 +131,40 @@ const TeacherOnboarding: React.FC = () => {
     { value: "Other", label: "Other" },
   ];
 
-  const handleNext = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+  const { setLoading: setGlobalLoading } = useLoader();
+
+  const saveStepProgress = async (stepData: Partial<OnboardingData>) => {
+    if (!user?.id) return;
+    try {
+      await supabase
+        .from("users")
+        .update({
+          title: stepData.title || data.title,
+          nickname: stepData.nickname || data.nickname,
+          school_id: stepData.school || data.school,
+          department_id: stepData.department || data.department,
+          first_name: stepData.firstName || data.firstName,
+          last_name: stepData.lastName || data.lastName,
+          middle_name: stepData.middleName || data.middleName,
+          suffix: stepData.suffix || data.suffix,
+        })
+        .eq("id", user.id);
+    } catch (err) {
+      console.error("[Onboarding] Failed to auto-save progress:", err);
+    }
+  };
+
+  const handleNext = async () => {
+    if (currentStep < 3) {
+      // Auto-save progress to DB so refresh doesn't clear it
+      await saveStepProgress(data);
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const handleBack = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
-
-  const { setLoading: setGlobalLoading } = useLoader();
 
   const handleComplete = async () => {
     setIsLoading(true);
@@ -192,8 +226,8 @@ const TeacherOnboarding: React.FC = () => {
 
   const stepsContent = [
     {
-      title: "Elevate Your Teaching",
-      desc: "EduCompose empowers educators with AI-driven insights to transform classroom engagement.",
+      title: "Enhance Your Teaching",
+      desc: "EduCompose gives teachers AI-driven insights for more active classes.",
       icon: <Sparkles className="w-12 h-12 text-primary" />,
       features: [
         "Personalized Feedback",
@@ -202,14 +236,14 @@ const TeacherOnboarding: React.FC = () => {
       ],
     },
     {
-      title: "Designed for Excellence",
-      desc: "A professional platform tailored for modern academic workflows and student success.",
+      title: "For Better Classes",
+      desc: "A professional platform made for modern teaching and student success.",
       icon: <Presentation className="w-12 h-12 text-secondary" />,
       features: ["Class Management", "Resource Sharing", "Growth Tracking"],
     },
     {
-      title: "Join the Community",
-      desc: "Connect with educators worldwide and simplify your administrative tasks.",
+      title: "Join Our Community",
+      desc: "Connect with other teachers and simplify your administrative tasks.",
       icon: <Users className="w-12 h-12 text-accent" />,
       features: [
         "Collaborative Tools",
@@ -261,7 +295,7 @@ const TeacherOnboarding: React.FC = () => {
                   <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-xl">
                       <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
-                      <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white">Instructional Evolution</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white">Modern Teaching</span>
                     </div>
                     <h1 className="text-4xl font-medium leading-[1.1] text-white tracking-tighter">
                       {stepsContent[currentStep - 1].title}
@@ -337,7 +371,7 @@ const TeacherOnboarding: React.FC = () => {
                     </div>
                     <div className="flex flex-col">
                       <span className={`text-[10px] font-medium uppercase tracking-widest leading-none ${currentStep >= step ? "text-neutral-900" : "text-neutral-300"}`}>
-                        {step === 1 ? "Organization" : step === 2 ? "Identity" : "Deployment"}
+                        {step === 1 ? "School" : step === 2 ? "Profile" : "Confirmation"}
                       </span>
                       <div className={`h-[2px] w-full mt-1.5 transition-all duration-500 ${currentStep >= step ? "bg-primary" : "bg-neutral-100"}`} />
                     </div>
@@ -372,8 +406,8 @@ const TeacherOnboarding: React.FC = () => {
                       className="space-y-6"
                     >
                       <div className="space-y-3">
-                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Institutional Node</label>
-                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Where is your<br/>Academic Hub?</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">School Info</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Where do you<br/>teach?</h2>
                       </div>
 
                       <div className="space-y-4">
@@ -393,7 +427,7 @@ const TeacherOnboarding: React.FC = () => {
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Professional Alias</label>
+                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname (How should we call you?)</label>
                             <input
                               type="text"
                               value={data.nickname}
@@ -406,7 +440,7 @@ const TeacherOnboarding: React.FC = () => {
 
                         <div className="space-y-3 pt-2">
                           <div className="space-y-2">
-                             <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Host Institution</label>
+                             <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
                              <div className="relative group">
                                 <School className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-300 group-focus-within:text-primary transition-colors" />
                                 <select
@@ -427,7 +461,7 @@ const TeacherOnboarding: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-2"
                               >
-                                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Academic Department</label>
+                                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
                                 <div className="relative group">
                                   <Building2 className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 group-focus-within:text-primary transition-colors" />
                                   <select
@@ -457,12 +491,12 @@ const TeacherOnboarding: React.FC = () => {
                     >
                       <div className="space-y-3">
                         <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Profile Identity</label>
-                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">How shall we<br/>Recognize you?</h2>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Who will<br/>use this?</h2>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Given Name</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name</label>
                            <input
                              type="text"
                              value={data.firstName}
@@ -482,7 +516,7 @@ const TeacherOnboarding: React.FC = () => {
                            />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Family Name</label>
+                           <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name</label>
                            <input
                              type="text"
                              value={data.lastName}
@@ -502,7 +536,7 @@ const TeacherOnboarding: React.FC = () => {
                            />
                         </div>
                         <div className="sm:col-span-2 space-y-2">
-                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Communication Endpoint</label>
+                            <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative group">
                               <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 group-focus-within:text-primary transition-colors" />
                               <input
@@ -527,8 +561,8 @@ const TeacherOnboarding: React.FC = () => {
                       className="space-y-6"
                     >
                       <div className="space-y-3 text-center sm:text-left">
-                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Operational Readiness</label>
-                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Ready for<br/>Deployment?</h2>
+                        <label className="text-[11px] font-medium text-primary uppercase tracking-[0.3em]">Are you ready?</label>
+                        <h2 className="text-4xl font-medium text-neutral-900 tracking-tighter leading-tight">Ready to<br/>start?</h2>
                       </div>
 
                       <div className="bg-neutral-50/50 p-10 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-8 relative overflow-hidden group">
@@ -539,7 +573,7 @@ const TeacherOnboarding: React.FC = () => {
                             <User className="text-primary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Authorised User</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Teacher</p>
                             <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none">
                               {data.title && `${data.title} `}{data.nickname}
                             </p>
@@ -551,7 +585,7 @@ const TeacherOnboarding: React.FC = () => {
                             <School className="text-secondary w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Operational Post</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">School</p>
                             <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none truncate max-w-[240px]">
                               {schools.find((s) => s.id === data.school)?.name || "Academic Entity"}
                             </p>
@@ -560,7 +594,7 @@ const TeacherOnboarding: React.FC = () => {
 
                         <div className="p-6 bg-white rounded-2xl border border-dashed border-neutral-200 text-center italic relative">
                           <p className="text-xs font-medium text-neutral-400 leading-relaxed uppercase tracking-wider">
-                            "Initializing high-fidelity academic orchestration protocols."
+                            "Preparing your professional teacher workspace."
                           </p>
                         </div>
                       </div>
@@ -580,7 +614,7 @@ const TeacherOnboarding: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center group-hover:bg-neutral-100 transition-colors">
                   <ChevronLeft className="w-5 h-5 text-neutral-500" />
                 </div>
-                <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] ml-2">Previous</span>
+                <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] ml-2">Back</span>
               </button>
 
               <button
@@ -592,7 +626,7 @@ const TeacherOnboarding: React.FC = () => {
                 `}
               >
                 <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500 italic" />
-                <span className="relative z-10">{currentStep === 3 ? "Initialize Launch" : "Synchronize Step"}</span>
+                <span className="relative z-10">{currentStep === 3 ? "Get Started!" : "Next"}</span>
                 <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center relative z-10 group-hover:translate-x-2 transition-transform">
                   {currentStep === 3 ? <ArrowRight className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </div>

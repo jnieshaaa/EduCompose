@@ -1924,25 +1924,34 @@ export const allowResubmission = async (
     }
 
     // 2. Remove existing submission if it exists
-    // We do this first so the student can immediately see the upload prompt
-    const { data: existingEssay } = await supabase
+    // We fetch all submissions for this student/activity and delete them
+    const { data: existingEssays, error: fetchError } = await supabase
       .from("essays")
       .select("id, file_path")
       .eq("student_id", studentDbId)
-      .eq("activity_id", activityId)
-      .maybeSingle();
+      .eq("activity_id", activityId);
 
-    if (existingEssay) {
-      // Delete file from storage
-      if (existingEssay.file_path) {
-        await supabase.storage.from("essays").remove([existingEssay.file_path]);
+    if (fetchError) {
+      console.error("[allowResubmission] Error fetching existing essays:", fetchError);
+    }
+
+    if (existingEssays && existingEssays.length > 0) {
+      console.log(`[allowResubmission] Found ${existingEssays.length} essays to delete for resubmission.`);
+      
+      for (const essay of existingEssays) {
+        // Delete file from storage
+        if (essay.file_path) {
+          await supabase.storage.from("essays").remove([essay.file_path]);
+        }
+
+        // Delete database record (cascades to analysis results)
+        const { error: delError } = await supabase.from("essays").delete().eq("id", essay.id);
+        if (delError) {
+           console.error(`[allowResubmission] Error deleting essay ${essay.id}:`, delError);
+        } else {
+           console.log(`[allowResubmission] Deleted essay ${essay.id}`);
+        }
       }
-
-      // Delete database record (cascades to analysis results)
-      await supabase.from("essays").delete().eq("id", existingEssay.id);
-      console.log(
-        `Deleted existing essay ${existingEssay.id} for resubmission.`,
-      );
     }
 
     // 3. Create notification
@@ -2026,7 +2035,9 @@ export const gradeEssay = async (
       )
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
-      .single();
+      .order("submitted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (essayError || !essayData) {
       console.error("Error fetching essay:", essayError);
@@ -2108,6 +2119,7 @@ export const gradeEssay = async (
         : essayActivities?.min_word_count) || 150;
 
     // Update essay with word count immediately to ensure the dashboard reflects it even if analysis fails later
+    console.log("[gradeEssay] Updating essay ID:", essayData.id);
     await supabase
       .from("essays")
       .update({
@@ -2236,21 +2248,22 @@ export const gradeEssay = async (
 
     // Step 3: Save analysis results to Supabase
     // First, update the essay record with basic scores
-      const { error: updateError } = await supabase
-        .from("essays")
+    console.log("[gradeEssay] Saving final scores for essay ID:", essayData.id, analysisResult.scores);
+    const { error: updateError } = await supabase
+      .from("essays")
         .update({
           content: extractedText,
           word_count: wordCount, // Ensure word_count is persisted in final update
-          grammar_score: analysisResult.scores?.grammar || null,
-          readability_score: analysisResult.scores?.readability || null,
-          coherence_score: analysisResult.scores?.coherence || null,
+          grammar_score: analysisResult.scores?.grammar ?? null,
+          readability_score: analysisResult.scores?.readability ?? null,
+          coherence_score: analysisResult.scores?.coherence ?? null,
           argument_strength_score:
-            analysisResult.scores?.argument_strength || null,
-          overall_score: analysisResult.scores?.overall || null,
+            analysisResult.scores?.argument_strength ?? null,
+          overall_score: analysisResult.scores?.overall ?? null,
           grammar_errors:
-            analysisResult.detailed_analysis?.grammar?.errors || null,
+            analysisResult.detailed_analysis?.grammar?.errors ?? null,
           style_issues:
-            analysisResult.detailed_analysis?.readability?.issues || null,
+            analysisResult.detailed_analysis?.readability?.issues ?? null,
           argument_analysis: {
             argumentation: analysisResult.detailed_analysis?.argumentation,
             knowledge_graph: analysisResult.detailed_analysis?.knowledge_graph,
@@ -2399,7 +2412,7 @@ export const gradeEssay = async (
         type: "essay_graded",
         title: "Essay Graded",
         message: `${studentName}'s essay for "${activityTitle}" has been graded successfully.`,
-        read: false,
+        is_read: false,
         related_id: JSON.stringify({
           essayId: String(essayData.id),
           studentId: String(studentDbId),
@@ -2417,7 +2430,7 @@ export const gradeEssay = async (
           type: "essay_graded",
           title: "Grade Available",
           message: `Your essay for "${activityTitle}" has been graded. You can now view your results and feedback.`,
-          read: false,
+          is_read: false,
           related_id: JSON.stringify({
             essayId: String(essayData.id),
             activityId: String(activityDbId),
@@ -2429,6 +2442,7 @@ export const gradeEssay = async (
 
     onProgress?.(100, "Complete!");
 
+    console.log("[gradeEssay] Successfully completed grading for essay ID:", essayData.id);
     return { success: true };
   } catch (err) {
     console.error("Error grading essay:", err);
@@ -2463,14 +2477,19 @@ export const fetchEssayAnalysis = async (
       .select("id, title, file_path")
       .eq("student_id", studentDbId)
       .eq("activity_id", activityDbId)
+      .order("submitted_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    if (essayError || !essayData) {
-      return null;
+    if (essayError) {
+      console.error("[fetchEssayAnalysis] Essay query error:", essayError);
+      throw new Error(`Database error: ${essayError.message}`);
     }
 
-    // Fetch complete analysis results from essay_analysis_results table
-    // If table doesn't exist, fall back to essays.analysis_payload
+    if (!essayData) {
+      throw new Error("No submission found for this activity. Please ensure you have submitted your essay.");
+    }
+
     let analysisData = null;
     let analysisError = null;
 
@@ -2479,20 +2498,18 @@ export const fetchEssayAnalysis = async (
         .from("essay_analysis_results")
         .select("*")
         .eq("essay_id", essayData.id)
+        .order("generated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       analysisData = result.data;
       analysisError = result.error;
-    } catch {
-      // Table might not exist - will fall back to essays.analysis_payload
-      console.log(
-        "essay_analysis_results table not accessible, using fallback",
-      );
-      analysisError = { code: "TABLE_NOT_FOUND" };
+    } catch (e) {
+      console.error("[fetchEssayAnalysis] Analysis results fetch error:", e);
+      analysisError = { code: "FETCH_ERROR" };
     }
 
     if (analysisError || !analysisData) {
-      // Fallback: try to get from essays table directly (both analysis_payload and individual columns)
       const { data: fallbackEssay, error: fallbackError } = await supabase
         .from("essays")
         .select(`
@@ -2506,259 +2523,100 @@ export const fetchEssayAnalysis = async (
         .maybeSingle();
 
       if (fallbackError || !fallbackEssay) {
-        return null;
+        throw new Error("Analysis results not found. Please wait for the teacher to grade your work or for the AI analysis to complete.");
       }
 
-      // If we have a complete payload, use it
       if (fallbackEssay.analysis_payload) {
-        let text = fallbackEssay.content || "";
-        if (!text && fallbackEssay.file_path) {
-          try {
-            const { data: urlData } = await supabase.storage
-              .from("essays")
-              .createSignedUrl(fallbackEssay.file_path, 3600);
-
-            if (urlData?.signedUrl) {
-              const response = await fetch(urlData.signedUrl);
-              if (response.ok) {
-                const blob = await response.blob();
-                const file = new File(
-                  [blob],
-                  fallbackEssay.file_path.split("/").pop() || "essay.pdf",
-                );
-                const { ocrApi } = await import("../api");
-                const ocrResult = await ocrApi.extractTextFromFile(file);
-                text = ocrResult.text;
-              }
-            }
-          } catch (err) {
-            console.error("Error extracting text for display:", err);
-          }
-        }
-        return {
-          analysis: fallbackEssay.analysis_payload,
-          text: text,
-          title: fallbackEssay.title || "Essay Analysis",
-          filePath: fallbackEssay.file_path,
-        };
-      }
-
-      // If no payload, but we have individual columns, reconstruct it
-      if (fallbackEssay.overall_score !== null) {
-        return {
-          analysis: {
-            analysis_type: "reconstructed",
-            scores: {
-              grammar: fallbackEssay.grammar_score || 0,
-              readability: fallbackEssay.readability_score || 0,
-              coherence: fallbackEssay.coherence_score || 0,
-              argument_strength: fallbackEssay.argument_strength_score || 0,
-              knowledge_graph: 0,
-              overall: fallbackEssay.overall_score || 0,
-            },
-            detailed_analysis: {
-              grammar: {
-                score: fallbackEssay.grammar_score || 0,
-                errors: fallbackEssay.grammar_errors || [],
-                error_count: (fallbackEssay.grammar_errors || []).length,
-                syntax_patterns: {
-                  sentence_types: {
-                    simple: 0,
-                    compound: 0,
-                    complex: 0,
-                    compound_complex: 0,
-                  },
-                  dependency_tags: {},
-                  pos_tags: {},
-                  complexity_score: 0,
-                  avg_dependency_depth: 0,
-                },
-              },
-              readability: {
-                score: fallbackEssay.readability_score || 0,
-                flesch_reading_ease: 0,
-                flesch_kincaid_grade: 0,
-                smog_index: 0,
-                coleman_liau_index: 0,
-                lexical_diversity: 0,
-                issues: fallbackEssay.style_issues || [],
-              },
-              coherence: {
-                score: fallbackEssay.coherence_score || 0,
-                entity_grid_score: 0,
-                semantic_similarity_score: 0,
-                transition_score: 0,
-                paragraph_unity: 0,
-                topic_sentences: [],
-                transitional_elements: [],
-                coherence_issues: [],
-                structure_analysis: {
-                  has_introduction: false,
-                  has_body: false,
-                  has_conclusion: false,
-                  paragraph_count: 0,
-                  sentence_count: 0,
-                  structure_quality: "unknown",
-                },
-              },
-              argumentation: {
-                score: fallbackEssay.argument_strength_score || 0,
-                claim_score: 0,
-                evidence_score: 0,
-                warrant_score: 0,
-                rebuttal_score: 0,
-                claims: [],
-                grounds: [],
-                warrants: [],
-                rebuttals: [],
-                argument_structure: {
-                  total_claims: 0,
-                  total_grounds: 0,
-                  total_warrants: 0,
-                  total_rebuttals: 0,
-                  grounds_per_claim: 0,
-                  has_thesis: false,
-                  has_evidence: false,
-                  has_reasoning: false,
-                  has_counterarguments: false,
-                },
-                toulmin_analysis: {
-                  has_claim: false,
-                  has_ground: false,
-                  has_warrant: false,
-                  has_rebuttal: false,
-                  completeness_score: 0,
-                },
-                argument_issues: [],
-              },
-              knowledge_graph: {
-                score: 0,
-                concepts: [],
-                relationships: [],
-                graph_structure: {
-                  nodes: 0,
-                  edges: 0,
-                  density: 0,
-                  clusters: 0,
-                  avg_clustering: 0,
-                  is_connected: false,
-                },
-                concept_coverage: {
-                  coverage_score: 0,
-                  concept_distribution: {},
-                },
-                conceptual_gaps: [],
-                connectivity_score: 0,
-                depth_score: 0,
-              },
-            },
-            recommendations: [],
-            diagnostic_summary: {
-              overall_score: fallbackEssay.overall_score || 0,
-              strengths: [],
-              weaknesses: [],
-              critical_issues: [],
-              dimension_scores: {},
-            },
-            word_count: fallbackEssay.word_count || 0,
-            generated_at: new Date().toISOString(),
+        analysisData = fallbackEssay.analysis_payload;
+      } else if (fallbackEssay.overall_score !== null) {
+        analysisData = {
+          scores: {
+            overall: fallbackEssay.overall_score,
+            grammar: fallbackEssay.grammar_score,
+            readability: fallbackEssay.readability_score,
+            coherence: fallbackEssay.coherence_score,
+            argument_strength: fallbackEssay.argument_strength_score,
+            knowledge_graph: 0
           },
-          text: fallbackEssay.content || "",
-          title: fallbackEssay.title || "Essay Analysis",
-          filePath: fallbackEssay.file_path,
+          detailed_analysis: {
+            grammar: { errors: fallbackEssay.grammar_errors },
+            readability: { issues: fallbackEssay.style_issues },
+            argumentation: fallbackEssay.argument_analysis?.argumentation,
+            knowledge_graph: fallbackEssay.argument_analysis?.knowledge_graph,
+            coherence: fallbackEssay.argument_analysis?.coherence
+          }
         };
       }
 
-      return null;
-    }
-
-    // Reconstruct the analysis response from the database record
-    // This preserves ALL interactive data including:
-    // - Grammar errors with offset/errorLength for hover/highlighting
-    // - Readability metrics for display
-    // - Argument structure for visualization
-    // - Knowledge graph data for graph display
-    // - Coherence analysis for feedback
-    const analysis: Omit<
-      import("../types/Essay").AnalysisResponse,
-      "essay_id"
-    > = {
-      analysis_type: analysisData.analysis_type || "comprehensive",
-      scores: {
-        grammar: analysisData.grammar_score || 0,
-        readability: analysisData.readability_score || 0,
-        coherence: analysisData.coherence_score || 0,
-        argument_strength: analysisData.argument_strength_score || 0,
-        knowledge_graph: analysisData.knowledge_graph_score || 0,
-        overall: analysisData.overall_score || 0,
-      },
-      detailed_analysis: analysisData.detailed_analysis || {},
-      recommendations: analysisData.recommendations || [],
-      diagnostic_summary: analysisData.diagnostic_summary || undefined,
-      word_count: analysisData.word_count || undefined,
-      generated_at: analysisData.generated_at || new Date().toISOString(),
-    };
-
-    const plagiarismResults = analysisData.plagiarism_results || null;
-    const aiDetectionResults = analysisData.ai_detection_results || null;
-
-    if (aiDetectionResults && !aiDetectionResults.is_ai_generated && aiDetectionResults.is_ai !== undefined) {
-      aiDetectionResults.is_ai_generated = !!aiDetectionResults.is_ai;
-    }
-
-    // Add rubric_scores if present (for TextAnalysisResponse compatibility)
-    if (analysisData.rubric_scores) {
-      (
-        analysis as import("../types/Essay").TextAnalysisResponse
-      ).rubric_scores = analysisData.rubric_scores;
-    } else {
-      // If rubric_scores is missing but we have a rubric_id, try to fetch it from the activity
-      if (analysisData.activity_id) {
-        const { data: activity } = await supabase
-          .from("essay_activities")
-          .select("rubric_id, rubrics(id, name)")
-          .eq("id", analysisData.activity_id)
-          .single();
-
-        if (activity?.rubrics) {
-          // Rubric found but no scores in analysis - provide basic rubric info
-          const rubricInfo = Array.isArray(activity.rubrics) ? activity.rubrics[0] : activity.rubrics;
-          (analysis as any).rubric_scores = {
-            rubric_id: rubricInfo.id,
-            rubric_name: rubricInfo.name,
-            rubric_applied: false, // Mark as not applied to show "Rubric Not Applied" with the name
-            criteria_scores: []
-          };
-        }
+      if (!analysisData) {
+        throw new Error("Analysis results are not yet available.");
       }
+
+      let text = fallbackEssay.content || "";
+      return {
+        analysis: analysisData,
+        text: text,
+        title: fallbackEssay.title || "Essay Analysis",
+        filePath: fallbackEssay.file_path,
+      };
     }
 
-    // Normalize legacy AI fields
-    const normalizedAIDetection = aiDetectionResults ? { ...aiDetectionResults } : null;
-    if (normalizedAIDetection) {
-      if (normalizedAIDetection.is_ai_generated === undefined && (normalizedAIDetection as any).is_ai !== undefined) {
-        normalizedAIDetection.is_ai_generated = !!(normalizedAIDetection as any).is_ai;
-      }
-      if (normalizedAIDetection.ai_score === undefined && (normalizedAIDetection as any).score !== undefined) {
-        normalizedAIDetection.ai_score = (normalizedAIDetection as any).score;
+    // Normalize analysisData from essay_analysis_results if it doesn't have the expected structure
+    // This happens when data is stored in individual columns instead of a single 'results' or 'scores' JSON
+    if (analysisData && !analysisData.scores) {
+      // Priority 1: Check legacy 'results' column which might contain the full object
+      if (analysisData.results && analysisData.results.scores) {
+        analysisData = {
+          ...analysisData,
+          ...analysisData.results
+        };
+      } 
+      // Priority 2: Map individual columns added in Migration 18
+      else if (analysisData.overall_score !== undefined && analysisData.overall_score !== null) {
+        analysisData = {
+          ...analysisData,
+          scores: {
+            overall: analysisData.overall_score || 0,
+            grammar: analysisData.grammar_score || 0,
+            readability: analysisData.readability_score || 0,
+            coherence: analysisData.coherence_score || 0,
+            argument_strength: analysisData.argument_strength_score || 0,
+            knowledge_graph: analysisData.knowledge_graph_score || 0
+          },
+          detailed_analysis: analysisData.detailed_analysis || {
+            grammar: { 
+              score: analysisData.grammar_score || 0,
+              errors: analysisData.grammar_errors || [] 
+            },
+            readability: { 
+              score: analysisData.readability_score || 0,
+              issues: analysisData.style_issues || [] 
+            },
+            coherence: { 
+              score: analysisData.coherence_score || 0,
+              analysis: analysisData.argument_analysis?.coherence
+            },
+            argumentation: { 
+              score: analysisData.argument_strength_score || 0,
+              analysis: analysisData.argument_analysis?.argumentation
+            }
+          }
+        };
       }
     }
 
     return {
-      analysis: analysis,
-      text: analysisData.original_text || "",
+      analysis: analysisData,
+      text: analysisData.original_text || analysisData.content || "",
       title: essayData.title || "Essay Analysis",
-      plagiarismResults,
-      aiDetectionResults: normalizedAIDetection,
-      filePath: essayData.file_path,
+      filePath: essayData.file_path || analysisData.file_path,
     };
   } catch (err) {
-    console.error("Error fetching essay analysis:", err);
-    return null;
+    console.error("[fetchEssayAnalysis] Error:", err);
+    throw err;
   }
 };
 
-// Fetch all analysis results for a student (useful for notifications)
 export const fetchStudentAnalysisResults = async (
   studentId: string,
 ): Promise<
@@ -3891,36 +3749,33 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
     }
 
     // Fetch all analysis results for this teacher
+    // We filter by teacher_id by joining with essays -> essay_activities
     const { data: analysisResults, error: analysisError } = await supabase
       .from("essay_analysis_results")
       .select(
         `
         *,
-        essays!essays_id_fkey(
+        essays:essays!fk_essay!inner(
           id,
           submitted_at,
           block_id,
-          students:users!essays_student_id_fkey(
+          activity_id,
+          essay_activities:essay_activities!fk_activity!inner(teacher_id),
+          students:users!fk_student(
             id,
             first_name,
             middle_name,
             last_name
           ),
-          blocks!essays_block_id_fkey(
+          blocks:blocks!essays_block_id_fkey(
             id,
             name,
-            teacher_program_loads!fk_block_program_load(
-              programs_lookup(
-                id,
-                name,
-                abbr
-              )
-            )
+            year
           )
         )
       `,
       )
-      .eq("user_id", teacherId)
+      .eq("essays.essay_activities.teacher_id", teacherId)
       .order("generated_at", { ascending: false });
 
     if (analysisError) {
@@ -3965,18 +3820,10 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
     // Calculate section performance
     const sectionMap = new Map<string, { total: number; count: number }>();
     for (const result of analysisResults) {
-      type EssayWithNested = {
-        students?: {
-          sections?: {
-            name?: string;
-          };
-        };
-      };
-      const essay = result.essays as EssayWithNested | null | undefined;
-      const student = essay?.students;
-      const section = student?.sections;
-      if (section?.name && result.overall_score !== null) {
-        const sectionName = section.name;
+      const essay = result.essays as any;
+      const block = essay?.blocks;
+      if (block?.name && result.overall_score !== null) {
+        const sectionName = `${block.year || ""}${block.name}`;
         const existing = sectionMap.get(sectionName) || { total: 0, count: 0 };
         sectionMap.set(sectionName, {
           total: existing.total + (result.overall_score || 0),
@@ -3988,7 +3835,7 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
       sectionMap.entries(),
     ).map(([section, data]) => ({
       section,
-      avgScore: data.count > 0 ? data.total / data.count : 0,
+      avgScore: data.count > 0 ? Math.round(data.total / data.count) : 0,
     }));
 
     // Calculate grammar trends (weekly)
@@ -4094,29 +3941,22 @@ export const fetchTeacherMetrics = async (): Promise<TeacherMetrics> => {
 
     // Calculate top performers
     const studentScores = new Map<
-      number,
+      string,
       { name: string; scores: number[]; essayCount: number }
     >();
     for (const result of analysisResults) {
-      type EssayWithStudent = {
-        students?: {
-          id?: number;
-          first_name?: string;
-          middle_name?: string | null;
-          last_name?: string;
-        };
-      };
-      const essay = result.essays as EssayWithStudent | null | undefined;
+      const essay = result.essays as any;
       const student = essay?.students;
       if (student?.id && result.overall_score !== null) {
-        const existing = studentScores.get(student.id) || {
+        const studentId = String(student.id);
+        const existing = studentScores.get(studentId) || {
           name: buildFullNameFromObject(student, "Unknown"),
           scores: [],
           essayCount: 0,
         };
         existing.scores.push(result.overall_score || 0);
         existing.essayCount++;
-        studentScores.set(student.id, existing);
+        studentScores.set(studentId, existing);
       }
     }
     const topPerformers = Array.from(studentScores.entries())
@@ -4270,8 +4110,8 @@ export const savePlagiarismResult = async (
           essay_id: essayId,
           activity_id: essayInfo?.activity_id,
           student_id: essayInfo?.student_id,
+          analysis_type: 'plagiarism',
           plagiarism_results: result,
-          plagiarism_score: result.plagiarism_percentage || 0,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'essay_id' });
 
@@ -4459,6 +4299,7 @@ export const saveAIDetectionResult = async (
         essay_id: essayId,
         activity_id: essayInfo?.activity_id,
         student_id: essayInfo?.student_id,
+        analysis_type: 'ai_detection',
         ai_detection_results: result,
         ai_score: result.ai_score || 0,
         updated_at: new Date().toISOString(),

@@ -137,10 +137,10 @@ export const AdminSchoolsTab: React.FC = () => {
       setSchoolForm({ name: "", code: "", departments: [] });
       setEditingSchool(null);
       setShowSchoolModal(false);
-      showNotification('success', editingSchool ? "Academic unit synchronized." : "Institutional record established.");
+      showNotification('success', editingSchool ? "Record updated." : "School saved.");
     } catch (error) {
       console.error("Error saving school:", error);
-      showNotification('error', "Error saving school. Unique ID conflict or database timeout.");
+      showNotification('error', "Error saving school. Check if the code already exists.");
     }
   };
 
@@ -217,7 +217,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteSchool = async (id: string) => {
-    if (confirm("Terminate institutional record and cascading dependencies?")) {
+    if (confirm("Are you sure you want to delete this school and all its data?")) {
       try {
         const { error } = await supabase.from("schools").delete().eq("id", id);
         if (error) throw error;
@@ -229,7 +229,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteDepartment = async (id: string) => {
-    if (confirm("Decommission department and associated curriculum?")) {
+    if (confirm("Are you sure you want to delete this department?")) {
       try {
         const { error } = await supabase
           .from("departments")
@@ -244,7 +244,7 @@ export const AdminSchoolsTab: React.FC = () => {
   };
 
   const deleteProgram = async (id: string) => {
-    if (confirm("Purge program registry?")) {
+    if (confirm("Are you sure you want to delete this program?")) {
       try {
         const { error } = await supabase
           .from("programs_lookup")

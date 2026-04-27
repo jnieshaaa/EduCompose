@@ -6,9 +6,11 @@ import { useActivities } from "../../hooks/useActivities";
 import { useStudents } from "../../hooks/useStudents";
 import { Archive, BookOpen, Layers, GitCompare, ChevronRight, Users, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { ActivitiesListView } from "../../components/activities/ActivitiesListView";
+import { useAcademicContext } from "../../hooks/useAcademicContext";
 
 export function ArchivePage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currentAY } = useAcademicContext();
   const selectedCourseId = searchParams.get("courseId");
   
   const setSelectedCourseId = (id: string | null) => {
@@ -26,6 +28,17 @@ export function ArchivePage() {
   const [activeDetailTab, setActiveDetailTab] = useState<"activities" | "blocks" | "students">("activities");
   const [ayFilter, setAyFilter] = useState("all");
   const [termFilter, setTermFilter] = useState("all");
+  const [allAYs, setAllAYs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadAYs = async () => {
+      const { fetchAllAcademicSettings } = await import("../../services/academicService");
+      const settings = await fetchAllAcademicSettings();
+      const formattedAYs = settings.map(s => `${s.ay_start}-${s.ay_end}`);
+      setAllAYs(formattedAYs);
+    };
+    loadAYs();
+  }, []);
   
   const { 
     myCourses: archivedCourses, 
@@ -241,8 +254,9 @@ export function ArchivePage() {
             className="px-4 py-3 border border-neutral-200 rounded-xl text-sm font-bold bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all shadow-sm"
           >
             <option value="all">All Academic Years</option>
-            <option value="2024-2025">2024-2025</option>
-            <option value="2025-2026">2025-2026</option>
+            {allAYs.filter(ay => ay !== currentAY).map(ay => (
+              <option key={ay} value={ay}>{ay}</option>
+            ))}
           </select>
  
           <select

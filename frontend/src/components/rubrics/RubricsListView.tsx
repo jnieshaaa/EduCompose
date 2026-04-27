@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import type { RubricTemplate, PlatformRubric } from "../../types/rubricTypes";
-import { platformRubrics } from "./types";
 import { EmptyRubricState } from "./EmptyRubricState";
 import { PlatformRubricCard } from "./PlatformRubricCard";
 
@@ -32,6 +31,7 @@ interface RubricsListViewProps {
     fullData?: Record<string, unknown>;
     programsList?: string[];
   })[];
+  platformRubrics: PlatformRubric[];
   isLoadingRubrics: boolean;
   onCreateClick: () => void;
   onPreviewRubric: (rubric: PlatformRubric) => void;
@@ -51,6 +51,7 @@ export function RubricsListView({
   searchQuery,
   onSearchChange,
   savedRubrics,
+  platformRubrics,
   isLoadingRubrics,
   onCreateClick,
   onPreviewRubric,

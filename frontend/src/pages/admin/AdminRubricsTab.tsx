@@ -58,12 +58,16 @@ export function AdminRubricsTab() {
         return;
       }
 
-      // 2. Query rubrics that belong to any admin (using user_id as the standard UUID column)
-      const { data, error } = await supabase
-        .from("rubrics")
-        .select("*")
-        .in("user_id", adminIds)
-        .order("created_at", { ascending: false });
+      // 2. Query rubrics that belong to any admin OR are platform-wide (user_id is null)
+      let query = supabase.from("rubrics").select("*");
+      
+      if (adminIds.length > 0) {
+        query = query.or(`user_id.in.(${adminIds.join(',')}),user_id.is.null`);
+      } else {
+        query = query.is("user_id", null);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       setPlatformRubrics(data || []);
@@ -356,7 +360,10 @@ export function AdminRubricsTab() {
                 </div>
               </div>
               
-               <button className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white group-hover:border-primary/20">
+               <button 
+                  onClick={() => handlePreviewRubric(rubric)}
+                  className="w-full py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-center gap-3 group/btn transition-colors hover:bg-primary hover:text-white group-hover:border-primary/20"
+                >
                   <span className="text-[10px] font-medium uppercase tracking-widest">View Rubric</span>
                   <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                </button>

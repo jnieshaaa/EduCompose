@@ -183,8 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { user: mappedUser, error: mapError } = await mapSupabaseUser(session.user);
       
       if (mapError) {
-        console.warn("Database lookup failed during checkAuth but auth session exists. Retaining session for now.");
-        // We stay in current state (keep user if we had one)
+        // Database lookup failed but auth session exists. Retaining session for now.
         return;
       }
 
@@ -229,7 +228,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem("user", JSON.stringify(mappedUser));
             setUser(mappedUser);
           } else if (mapError) {
-            console.warn("[AuthContext] DB lookup error (possibly timeout). Skipping state update.", mapError);
+            // DB lookup error (possibly timeout). Skipping state update.
           } else {
             // No record found in DB — but this can be a NEW teacher/student mid-signup.
             // Check if the signup flow is in progress (gives it time to create the record).

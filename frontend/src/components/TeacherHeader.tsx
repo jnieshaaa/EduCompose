@@ -38,11 +38,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [teacherProfile, setTeacherProfile] = useState<{
-    title: string | null;
-    nickname: string | null;
-    email: string | null;
-  } | null>(null);
 
   // Load and Subscribe to Notifications
   useEffect(() => {
@@ -79,33 +74,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Header identity should come from users table (not auth metadata)
-  useEffect(() => {
-    const loadTeacherProfile = async () => {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        if (authError || !authData?.user) return;
-
-        const { data: dbUser } = await supabase
-          .from("users")
-          .select("title, nickname, email")
-          .eq("id", authData.user.id)
-          .maybeSingle();
-
-        if (dbUser) {
-          setTeacherProfile({
-            title: dbUser.title ?? null,
-            nickname: dbUser.nickname ?? null,
-            email: dbUser.email ?? null,
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load teacher profile for header:", err);
-      }
-    };
-
-    loadTeacherProfile();
-  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -158,11 +126,14 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
   };
 
   // Display only title + nickname from users table.
+  // Display name logic using user from useAuth
   const displayName = React.useMemo(() => {
-    if (!teacherProfile) return "User";
+    if (!user) return "User";
 
-    const title = (teacherProfile.title || "").trim();
-    const nickname = (teacherProfile.nickname || "").trim();
+    const title = (user.title || "").trim();
+    const nickname = (user.nickname || "").trim();
+    const firstName = (user.first_name || "").trim();
+    const lastName = (user.last_name || "").trim();
 
     const capitalize = (s: string) =>
       s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
@@ -173,11 +144,14 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
     if (nickname) {
       return capitalize(nickname);
     }
-    return title ? capitalize(title) : "User";
-  }, [teacherProfile]);
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    return firstName || title ? capitalize(title || firstName) : "User";
+  }, [user]);
 
   // Generate initials from nickname or display name
-  const userInitial = (teacherProfile?.nickname || displayName || "U")
+  const userInitial = (user?.nickname || user?.first_name || displayName || "U")
     .charAt(0)
     .toUpperCase();
 
@@ -242,7 +216,7 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
                       {displayName}
                     </p>
                     <p className="text-[11px] font-bold text-neutral-400 truncate uppercase tracking-wide mt-0.5">
-                      {teacherProfile?.email || user?.email || ""}
+                      {user?.email || ""}
                     </p>
                   </div>
                   <div className="space-y-0.5">

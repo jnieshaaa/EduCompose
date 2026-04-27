@@ -20,11 +20,13 @@ import type {
   TeacherSettings,
   TeacherProfile,
 } from "../../types/settingsTypes";
+import { useAuth } from "../../contexts/AuthContext";
 import { ProfileInformation } from "../../components/settings/ProfileInformation";
 import { DataManagement } from "../../components/settings/DataManagement";
 import { ChangePassword } from "../../components/settings/ChangePassword";
 
 export function SettingsTab() {
+  const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
   const { showSuccess, showError, AlertComponent } = useAlert();
   const [activeTab, setActiveTab] = useState("profile");
@@ -77,6 +79,7 @@ export function SettingsTab() {
     try {
       const result = await updateTeacherProfile(settings.profile);
       if (result.success) {
+        await checkAuth(); // Refresh header
         showSuccess("Profile updated successfully!");
       } else {
         showError(result.error || "Failed to update profile");

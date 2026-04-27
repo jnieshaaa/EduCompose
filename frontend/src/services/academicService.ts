@@ -33,6 +33,24 @@ export const fetchAcademicSettings = async (): Promise<AcademicSettings | null> 
   }
 };
 
+export const fetchAllAcademicSettings = async (): Promise<AcademicSettings[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("academic_settings")
+      .select("*")
+      .order('ay_start', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all academic settings:", error);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.error("Unexpected error fetching all academic settings:", err);
+    return [];
+  }
+};
+
 export const updateAcademicSettings = async (id: string, settings: Partial<AcademicSettings>) => {
   try {
     const { data, error } = await supabase

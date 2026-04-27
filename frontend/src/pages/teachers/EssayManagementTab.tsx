@@ -251,7 +251,8 @@ export function EssayManagementTab() {
           nickname
         )
       `)
-      .eq('activity_id', activeActivityId);
+      .eq('activity_id', activeActivityId)
+      .order('submitted_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching submissions:", error);

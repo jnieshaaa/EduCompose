@@ -196,7 +196,7 @@ export function CreateActivityModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Create Activity"
+      title="Gumawa ng Activity"
       size="lg"
     >
       <div className="space-y-6">
@@ -220,7 +220,7 @@ export function CreateActivityModal({
           <div className="flex items-center gap-2 mb-1">
             <LayoutGrid className="w-3.5 h-3.5 text-neutral-400" />
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em]">
-              Assign To <span className="text-tertiary">*</span>
+              I-assign sa <span className="text-tertiary">*</span>
             </span>
           </div>
 
@@ -271,30 +271,47 @@ export function CreateActivityModal({
             </div>
 
             {/* Sections */}
-            <div>
-              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
-                Classes
+            <div className="md:col-span-1">
+              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-2 block">
+                Classes / Blocks
               </label>
-              <div className="border border-neutral-200 rounded-lg bg-white overflow-y-auto max-h-32 p-1.5">
+              <div className="border border-neutral-200 rounded-lg bg-white overflow-y-auto max-h-48 p-2">
                 {filteredSections.length === 0 ? (
-                  <p className="text-[11px] text-neutral-300 p-1.5 text-center italic">
-                    {selectedProgramLoadIds.length > 0 ? "No sections" : "Select programs first"}
+                  <p className="text-[11px] text-neutral-300 p-3 text-center italic">
+                    {selectedProgramLoadIds.length > 0 ? "No blocks found" : "Select programs first"}
                   </p>
                 ) : (
-                  filteredSections.map((s) => (
-                    <label key={s.id} className="flex items-center gap-2 text-xs cursor-pointer px-2 py-1.5 hover:bg-primary/[0.03] rounded-md transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedSectionIds.includes(s.id)}
-                        onChange={() => handleSectionToggle(s.id)}
-                        className="w-3.5 h-3.5 text-primary border-neutral-300 rounded focus:ring-primary accent-primary"
-                      />
-                      <span className="text-neutral-700">{s.name}</span>
-                    </label>
-                  ))
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {filteredSections.map((s) => {
+                      const isSelected = selectedSectionIds.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleSectionToggle(s.id)}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-lg border-2 transition-all text-left ${
+                            isSelected 
+                              ? "border-primary bg-primary/5 text-primary ring-2 ring-primary/5" 
+                              : "border-neutral-100 bg-white text-neutral-600 hover:border-neutral-200"
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">{s.name}</span>
+                            <span className="text-[9px] opacity-70 uppercase tracking-tighter">Block/Section</span>
+                          </div>
+                          {isSelected && (
+                            <div className="bg-primary rounded-full p-0.5 shadow-sm scale-110">
+                              <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
+
           </div>
         </div>
 
@@ -302,7 +319,7 @@ export function CreateActivityModal({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] block">
-              Grading Rubric
+              Pamantayan (Rubric)
             </label>
             <button
               type="button"
@@ -315,7 +332,7 @@ export function CreateActivityModal({
               ) : (
                 <Wand2 className="w-3 h-3 group-hover:rotate-12 transition-transform" />
               )}
-              {aiSuggestions.length > 0 ? "Regenerate AI" : "Generate with AI"}
+              {aiSuggestions.length > 0 ? "Pa-generate ulit sa AI" : "AI ang gumawa"}
             </button>
           </div>
 
@@ -324,7 +341,7 @@ export function CreateActivityModal({
             <div className="space-y-2">
               <div className="flex items-center gap-2 px-1">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-neutral-100 to-transparent"></div>
-                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">AI Suggested Rubrics</span>
+                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Suhestyon ng AI</span>
                 <div className="h-px flex-1 bg-gradient-to-r from-neutral-100 via-neutral-100 to-transparent"></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -381,7 +398,7 @@ export function CreateActivityModal({
             {rubrics.platform.length > 0 && (
               <div className="space-y-2">
                 <div className="px-1">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Platform Library</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Mga Rubric sa System</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {rubrics.platform.map((rubric) => (
@@ -435,7 +452,7 @@ export function CreateActivityModal({
             {rubrics.teacher.length > 0 && (
               <div className="space-y-2">
                 <div className="px-1 pt-2 border-t border-neutral-50">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Your Private Rubrics</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Iyong mga Rubric</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {rubrics.teacher.map((rubric) => (
@@ -498,7 +515,7 @@ export function CreateActivityModal({
           {/* Due Date */}
           <div>
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-              Due Date & Time
+              Deadline
               <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
             </label>
             <div className="flex gap-2">
@@ -534,14 +551,14 @@ export function CreateActivityModal({
               />
             </div>
             <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
-              Future dates only. Defaults to 11:59 PM.
+              Pumili ng petsa sa hinaharap. Defaults to 11:59 PM.
             </p>
           </div>
 
           {/* Min Word Count */}
           <div>
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-              Min. Word Count
+              Haba ng Essay (Salita)
             </label>
             <input
               type="number"
@@ -555,7 +572,7 @@ export function CreateActivityModal({
               className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
             />
             <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
-              Essays below this count won't auto-grade.
+              Hindi ito gagraduhan kung kulang ang salita.
             </p>
           </div>
         </div>
@@ -563,7 +580,7 @@ export function CreateActivityModal({
         {/* ─── Section 5: Instructions ─── */}
         <div>
           <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-            Instructions
+            Mga Panuto
             <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
           </label>
           <textarea
@@ -603,12 +620,12 @@ export function CreateActivityModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating…
+                  Ginagawa na…
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-1.5" />
-                  Create Activity
+                  Gumawa ng Activity
                 </>
               )}
             </Button>

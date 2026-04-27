@@ -103,8 +103,32 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     navigate("/");
   };
 
-  const userName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "Admin";
-  const userInitial = userName.charAt(0).toUpperCase();
+  const displayName = React.useMemo(() => {
+    if (!user) return "Admin";
+
+    const title = (user.title || "").trim();
+    const nickname = (user.nickname || "").trim();
+    const firstName = (user.first_name || "").trim();
+    const lastName = (user.last_name || "").trim();
+
+    const capitalize = (s: string) =>
+      s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+
+    if (title && nickname) {
+      return `${capitalize(title)} ${capitalize(nickname)}`;
+    }
+    if (nickname) {
+      return capitalize(nickname);
+    }
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    return firstName || title ? capitalize(title || firstName) : "Admin";
+  }, [user]);
+
+  const userInitial = (user?.nickname || user?.first_name || displayName || "A")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <header className='relative bg-white border-b border-neutral-200 h-16 flex items-center justify-between px-4 sm:px-6 z-40'>
@@ -139,7 +163,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           </div>
 
           <div className='hidden md:flex ml-3 flex-col text-left'>
-            <p className='font-bold text-sm text-neutral-900 truncate max-w-[140px] tracking-tight'>{userName}</p>
+            <p className='font-bold text-sm text-neutral-900 truncate max-w-[140px] tracking-tight'>{displayName}</p>
             <p className='text-[11px] uppercase tracking-[0.14em] font-bold text-neutral-400'>Admin</p>
           </div>
 
@@ -153,7 +177,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
               >
                 <div className='bg-white shadow-xl rounded-xl overflow-hidden border border-neutral-100 p-1'>
                   <div className='px-4 py-3 border-b border-neutral-50 mb-1'>
-                    <p className='font-bold text-neutral-900 truncate'>{userName}</p>
+                    <p className='font-bold text-neutral-900 truncate'>{displayName}</p>
                     <p className='text-xs text-neutral-500 truncate'>{user?.email}</p>
                   </div>
                   <button

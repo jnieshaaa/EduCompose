@@ -1524,7 +1524,7 @@ const AnalysisResults: React.FC = () => {
                                 plagiarismResult.is_plagiarized ? 'text-red-700' : 'text-green-700'
                               }`}>
                                 {plagiarismResult.is_plagiarized
-                                  ? `Found ${plagiarismResult.match_count} potential match${plagiarismResult.match_count !== 1 ? 'es' : ''} with ${plagiarismResult.plagiarism_percentage.toFixed(1)}% similarity`
+                                  ? `Found ${plagiarismResult.match_count} potential match${plagiarismResult.match_count !== 1 ? 'es' : ''} in the web.`
                                   : 'Your essay appears to be original'}
                               </p>
                             </div>
@@ -1532,13 +1532,7 @@ const AnalysisResults: React.FC = () => {
                         </div>
 
                         {/* Statistics */}
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="bg-neutral-50 rounded-lg p-4">
-                            <div className="text-2xl font-bold text-neutral-900">
-                              {plagiarismResult.plagiarism_percentage.toFixed(1)}%
-                            </div>
-                            <div className="text-xs text-neutral-600 mt-1">Similarity</div>
-                          </div>
+                        <div className="grid grid-cols-2 gap-4">
                           <div className="bg-neutral-50 rounded-lg p-4">
                             <div className="text-2xl font-bold text-neutral-900">
                               {plagiarismResult.match_count}

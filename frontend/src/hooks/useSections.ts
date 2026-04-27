@@ -122,6 +122,12 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
             query = query.eq("teacher_program_loads.teacher_course_loads.term", term);
           }
           
+          // ALWAYS exclude the EXACT current context from the archive
+          if (currentAY && currentSemester) {
+            query = query.or(
+              `teacher_program_loads.teacher_course_loads.academic_year.neq.${currentAY},teacher_program_loads.teacher_course_loads.term.neq.${currentSemester}`
+            );
+          }
         }
 
         const { data: blocksData, error: blocksError } = await query;
@@ -176,14 +182,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           };
         });
 
-        let finalSections = mappedSections;
-        if (showArchived && currentAY && currentSemester) {
-          finalSections = mappedSections.filter(s => 
-            s.academic_year !== currentAY || s.term !== currentSemester
-          );
-        }
-
-        setSections(finalSections);
+        setSections(mappedSections);
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading sections:", error);

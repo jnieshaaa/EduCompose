@@ -101,11 +101,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         label: "Rubrics",
         path: "/Admin/Rubrics",
       },
-      {
+      /* {
         icon: <BookOpen className="w-5 h-5" />,
         label: "Classes",
         path: "/Admin/Content",
-      },
+      }, */
       {
         icon: <Settings className="w-5 h-5" />,
         label: "Settings",

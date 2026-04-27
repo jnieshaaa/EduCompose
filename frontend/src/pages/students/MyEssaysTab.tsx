@@ -5,12 +5,10 @@ import {
   Download, 
   FileText, 
   AlertCircle, 
-  MoreVertical, 
   CheckCircle, 
   Clock, 
   Zap, 
   Filter,
-  // ArrowRight,
   Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,12 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,7 +33,7 @@ export function MyEssaysTab() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchEssays() {
+    const fetchEssays = async () => {
       try {
         const { data: authUser } = await supabase.auth.getUser();
         if (!authUser?.user) return;
@@ -84,8 +76,41 @@ export function MyEssaysTab() {
       } finally {
         setLoading(false);
       }
-    }
+    };
+
     fetchEssays();
+
+    // Realtime listener for essay updates (grading/deletion)
+    let channel: any;
+    
+    const setupSubscription = async () => {
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) return;
+
+      channel = supabase
+        .channel(`student-essays-${authUser.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'essays',
+            filter: `student_id=eq.${authUser.user.id}`,
+          },
+          () => {
+            fetchEssays();
+          }
+        )
+        .subscribe();
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, []);
 
   const filteredEssays = useMemo(() => {
@@ -98,7 +123,7 @@ export function MyEssaysTab() {
     const total = essaysData.length;
     const reviewed = essaysData.filter(e => e.hasTeacherFeedback).length;
     const pending = total - reviewed;
-    const scores = essaysData.filter(e => e.aiScore).map(e => e.aiScore);
+    const scores = essaysData.filter(e => e.aiScore !== null).map(e => e.aiScore);
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) + '%' : '0%';
     
     return { total, reviewed, pending, avgScore };
@@ -254,90 +279,85 @@ export function MyEssaysTab() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right px-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-2.5 rounded-xl hover:bg-white hover:shadow-md transition-all text-neutral-400 hover:text-neutral-900 border border-transparent hover:border-neutral-100">
-                            <MoreVertical size={16} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-2xl border-neutral-100 p-2 shadow-xl">
-                          <DropdownMenuItem 
-                            className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700"
-                            onClick={() => {
-                              const url = buildSecureUrl("/Student/Essays/Result", {
-                                essayId: essay.id,
-                                activityId: essay.activityId,
-                                activityTitle: essay.title,
-                                studentId: essay.studentCode,
-                                fromEssays: "true"
-                              });
-                              navigate(url);
-                            }}
-                          >
-                            <Eye size={14} className="mr-2 text-primary" />
-                            See Score
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="cursor-pointer rounded-xl py-2.5 font-bold text-[10px] uppercase tracking-widest text-neutral-700"
-                            onClick={async () => {
-                              try {
-                                if (essay.filePath) {
-                                  // Download from storage
-                                  const { data, error } = await supabase.storage
-                                    .from('essays')
-                                    .download(essay.filePath);
-                                  
-                                  if (error) {
-                                    if (error.message.includes("Object not found")) {
-                                      alert("The file could not be found in storage. It may have been removed.");
-                                    } else if (error.message.includes("download is not allowed")) {
-                                      alert("Access denied. Please check if the storage bucket permissions are set correctly.");
-                                    } else {
-                                      throw error;
-                                    }
-                                    return;
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => {
+                            const url = buildSecureUrl("/Student/Essays/Result", {
+                              essayId: essay.id,
+                              activityId: essay.activityId,
+                              activityTitle: essay.title,
+                              studentId: essay.studentCode,
+                              fromEssays: "true"
+                            });
+                            navigate(url);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all group/btn"
+                          title="See Score"
+                        >
+                          <Eye size={14} />
+                          <span className="text-[9px] font-black uppercase tracking-tighter">Score</span>
+                        </button>
+                        
+                        <button 
+                          onClick={async () => {
+                            try {
+                              if (essay.filePath) {
+                                // Download from storage
+                                const { data, error } = await supabase.storage
+                                  .from('essays')
+                                  .download(essay.filePath);
+                                
+                                if (error) {
+                                  if (error.message.includes("Object not found")) {
+                                    alert("The file could not be found in storage. It may have been removed.");
+                                  } else if (error.message.includes("download is not allowed")) {
+                                    alert("Access denied. Please check if the storage bucket permissions are set correctly.");
+                                  } else {
+                                    throw error;
                                   }
-                                  
-                                  const url = window.URL.createObjectURL(data);
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  
-                                  // Clean filename - use filename if provided, else derive from path
-                                  let finalFilename = essay.filename || 'essay-file';
-                                  if (finalFilename === 'No name' && essay.filePath) {
-                                    finalFilename = essay.filePath.split('/').pop() || 'essay-file';
-                                  }
-                                  
-                                  link.setAttribute('download', finalFilename);
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  link.remove();
-                                  window.URL.revokeObjectURL(url);
-                                } else if (essay.content) {
-                                  // Download content as text file
-                                  const blob = new Blob([essay.content], { type: 'text/plain' });
-                                  const url = window.URL.createObjectURL(blob);
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  link.setAttribute('download', `${essay.title || 'essay'}.txt`);
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  link.remove();
-                                  window.URL.revokeObjectURL(url);
-                                } else {
-                                  alert("No file or content available for this essay.");
+                                  return;
                                 }
-                              } catch (err: any) {
-                                console.error("Download failed:", err);
-                                alert(`Download failed: ${err.message || "Unknown error"}`);
+                                
+                                const url = window.URL.createObjectURL(data);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                
+                                // Clean filename - use filename if provided, else derive from path
+                                let finalFilename = essay.filename || 'essay-file';
+                                if (finalFilename === 'No name' && essay.filePath) {
+                                  finalFilename = essay.filePath.split('/').pop() || 'essay-file';
+                                }
+                                
+                                link.setAttribute('download', finalFilename);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.URL.revokeObjectURL(url);
+                              } else if (essay.content) {
+                                // Download content as text file
+                                const blob = new Blob([essay.content], { type: 'text/plain' });
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', `${essay.title || 'essay'}.txt`);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.URL.revokeObjectURL(url);
+                              } else {
+                                alert("No file or content available for this essay.");
                               }
-                            }}
-                          >
-                            <Download size={14} className="mr-2 text-neutral-400" />
-                            Get File
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            } catch (err: any) {
+                              console.error("Download failed:", err);
+                              alert(`Download failed: ${err.message || "Unknown error"}`);
+                            }
+                          }}
+                          className="p-2.5 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-all border border-transparent hover:border-neutral-200"
+                          title="Download File"
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
                     </TableCell>
                   </motion.tr>
                 ))}

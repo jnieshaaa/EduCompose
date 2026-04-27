@@ -3,221 +3,144 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Confirm Your Signup - EduCompose</title>
+    <title>Portal Access - EduCompose</title>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         line-height: 1.6;
-        color: #333;
-        background-color: #f5f5f5;
+        color: #0F172A;
+        background-color: #f8fafc;
       }
       .email-container {
         max-width: 600px;
         margin: 40px auto;
         background-color: #ffffff;
-        border-radius: 12px;
+        border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
       }
       .email-header {
-        background: linear-gradient(135deg, #0791b2 0%, #10c9f6 100%);
+        background: linear-gradient(135deg, #045568 0%, #067D99 50%, #08A5CB 100%);
         padding: 40px 30px;
         text-align: center;
-      }
-      .logo-container {
-        margin-bottom: 20px;
-      }
-      .logo {
-        width: 64px;
-        height: 64px;
-        background-color: #ffffff;
-        border-radius: 12px;
-        display: inline-block;
-        padding: 12px;
-      }
-      .logo img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
       }
       .email-header h1 {
         color: #ffffff;
         font-size: 28px;
-        font-weight: 700;
+        font-weight: 800;
         margin: 0;
-        letter-spacing: -0.5px;
+        letter-spacing: -1px;
       }
       .email-header p {
         color: rgba(255, 255, 255, 0.9);
-        font-size: 16px;
+        font-size: 14px;
         margin-top: 8px;
-      }
-      .email-body {
-        padding: 40px 30px;
-      }
-      .email-body h2 {
-        color: #0791b2;
-        font-size: 24px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         font-weight: 600;
-        margin-bottom: 20px;
+      }
+      .email-body { padding: 40px 35px; }
+      .email-body h2 {
+        color: #0F172A;
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 12px;
       }
       .email-body p {
         color: #475569;
-        font-size: 16px;
-        margin-bottom: 16px;
-        line-height: 1.7;
+        font-size: 15px;
+        margin-bottom: 24px;
       }
-      .button-container {
-        text-align: center;
-        margin: 30px 0;
+      .credentials-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
       }
+      .label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748B;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+      .value {
+        font-size: 20px;
+        font-weight: 800;
+        color: #067D99;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+      }
+      .button-container { text-align: center; margin: 35px 0; }
       .confirm-button {
         display: inline-block;
-        background: linear-gradient(135deg, #0791b2 0%, #10c9f6 100%);
+        background-color: #067D99;
         color: #ffffff !important;
         text-decoration: none;
-        padding: 16px 40px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 16px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(7, 145, 178, 0.3);
+        padding: 16px 45px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        box-shadow: 0 4px 15px rgba(6, 125, 153, 0.25);
       }
-      .confirm-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(7, 145, 178, 0.4);
-      }
-      .email-footer {
-        background-color: #f8fafc;
+      .footer {
         padding: 30px;
         text-align: center;
+        background-color: #f8fafc;
         border-top: 1px solid #e2e8f0;
       }
-      .email-footer p {
-        color: #64748b;
-        font-size: 14px;
-        margin: 8px 0;
-      }
-      .email-footer a {
-        color: #0791b2;
-        text-decoration: none;
-      }
-      .email-footer a:hover {
-        text-decoration: underline;
-      }
-      .divider {
-        height: 1px;
-        background-color: #e2e8f0;
-        margin: 30px 0;
-      }
-      .alternative-link {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #f1f5f9;
+      .footer p { color: #94a3b8; font-size: 12px; margin: 5px 0; }
+      .tip-box {
+        background-color: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 15px 20px;
         border-radius: 8px;
-        border-left: 4px solid #0791b2;
+        margin-top: 30px;
       }
-      .alternative-link p {
-        font-size: 14px;
-        color: #64748b;
-        margin: 0;
-      }
-      .alternative-link a {
-        color: #0791b2;
-        word-break: break-all;
-        text-decoration: none;
-      }
-      @media only screen and (max-width: 600px) {
-        .email-container {
-          margin: 20px;
-          border-radius: 8px;
-        }
-        .email-header {
-          padding: 30px 20px;
-        }
-        .email-body {
-          padding: 30px 20px;
-        }
-        .email-footer {
-          padding: 20px;
-        }
-        .confirm-button {
-          padding: 14px 30px;
-          font-size: 15px;
-        }
-      }
+      .tip-box p { margin: 0; color: #92400e; font-size: 13px; font-weight: 500; }
     </style>
   </head>
   <body>
     <div class="email-container">
       <div class="email-header">
-        <div class="logo-container">
-          <div class="logo">
-            <!-- TODO: Replace with your actual logo URL or base64 encoded image -->
-            <!-- Option 1: Host your logo and use the URL -->
-            <!-- <img src="https://yourdomain.com/logo.png" alt="EduCompose Logo" /> -->
-            <!-- Option 2: Use base64 encoded image -->
-            <!-- <img src="data:image/png;base64,YOUR_BASE64_STRING" alt="EduCompose Logo" /> -->
-            <!-- Placeholder (replace this): -->
-            <img
-              src="https://via.placeholder.com/40x40/0791B2/ffffff?text=E"
-              alt="EduCompose Logo"
-            />
-          </div>
-        </div>
-        <h1>EduCompose</h1>
-        <p>Teacher's Companion for Essay Evaluation</p>
+        <h1>Edu<span style="color: #10C9F6;">Compose</span></h1>
+        <p>{{role}} Portal Access</p>
       </div>
 
       <div class="email-body">
-        <h2>Confirm your signup</h2>
-        <p>
-          Welcome to EduCompose! We're excited to have you join our community of
-          educators.
-        </p>
-        <p>
-          To complete your registration and start using our platform, please
-          confirm your email address by clicking the button below:
-        </p>
+        <h2>Hello, {{to_name}}!</h2>
+        <p>{{instruction}}</p>
+
+        <div class="credentials-box">
+          <div style="margin-bottom: 20px;">
+            <span class="label">{{password_label}}</span>
+            <span class="value">{{temp_password}}</span>
+          </div>
+          <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+            Please use this code to access your account securely.
+          </p>
+        </div>
 
         <div class="button-container">
-          <a href="{{ .ConfirmationURL }}" class="confirm-button"
-            >Confirm your email</a
-          >
+          <a href="{{login_url}}" class="confirm-button">Go to Login Page</a>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="alternative-link">
+        <div class="tip-box">
           <p>
-            <strong>Button not working?</strong> Copy and paste this link into
-            your browser:
+            <strong>Security Tip:</strong> For your security, please change your password after logging in for the first time.
           </p>
-          <p><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
         </div>
-
-        <p style="margin-top: 30px; font-size: 14px; color: #94a3b8">
-          If you didn't create an account with EduCompose, you can safely ignore
-          this email.
-        </p>
       </div>
 
-      <div class="email-footer">
+      <div class="footer">
         <p><strong>EduCompose</strong></p>
         <p>Teacher's Companion for Essay Evaluation</p>
-        <p style="margin-top: 15px">
-          <a href="{{ .SiteURL }}">Visit our website</a> |
-          <a href="mailto:support@educompose.com">Contact Support</a>
-        </p>
-        <p style="margin-top: 15px; font-size: 12px; color: #94a3b8">
-          © 2024 EduCompose. All rights reserved.
-        </p>
+        <p>© 2025 EduCompose. All rights reserved.</p>
       </div>
     </div>
   </body>
