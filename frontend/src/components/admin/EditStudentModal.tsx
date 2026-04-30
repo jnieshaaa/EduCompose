@@ -173,7 +173,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-neutral-100"
+        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
       >
         <div className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div className="flex items-center gap-3">

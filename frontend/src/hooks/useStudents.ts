@@ -12,6 +12,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
   const [searchQuery, setSearchQuery] = useState("");
   const { showSuccess, showError, showWarning, AlertComponent } = useAlert();
   const { currentAY, currentSemester } = useAcademicContext();
+  const [pendingStudents, setPendingStudents] = useState<any[]>([]);
 
   // Filters for StudentsTab
   const [programFilter, setProgramFilter] = useState("All Programs");
@@ -153,6 +154,40 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       }
 
       setStudents(result);
+
+      // Fetch pending students if in a block context
+      if (blockId) {
+        try {
+          const { data: bData } = await supabase
+            .from("blocks")
+            .select(`
+              name, 
+              year, 
+              teacher_program_loads!fk_block_program_load (program_id)
+            `)
+            .eq("id", blockId)
+            .single();
+          
+          if (bData) {
+            const tpl = Array.isArray(bData.teacher_program_loads) ? bData.teacher_program_loads[0] : bData.teacher_program_loads;
+            const programId = tpl?.program_id;
+
+            const { data: pendingData } = await supabase
+              .from("pending_student_registrations")
+              .select("*")
+              .eq("processed", false)
+              .eq("block_name", bData.name)
+              .eq("year", bData.year)
+              .eq("program_id", programId);
+            
+            setPendingStudents(pendingData || []);
+          }
+        } catch (pendingErr) {
+          console.error("Error fetching pending students:", pendingErr);
+        }
+      } else {
+        setPendingStudents([]);
+      }
     } catch (err) {
       console.error("Error fetching students:", err);
       setLoadError("Failed to load students.");
@@ -488,6 +523,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
     setProgramFilter,
     sectionFilter,
     setSectionFilter,
+    pendingStudents,
     isAddDialogOpen,
     setIsAddDialogOpen,
     isEditDialogOpen,

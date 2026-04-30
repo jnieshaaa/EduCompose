@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { Plus, GraduationCap } from "lucide-react";
+import { Plus, GraduationCap, Clock } from "lucide-react";
 import { useAlert } from "../../hooks/useAlert";
 import { useStudents } from "../../hooks/useStudents";
 import { AddStudentDialog } from "../../components/students/AddStudentDialog";
@@ -48,6 +48,7 @@ export function StudentsTab() {
     handleClearProgramFilter,
     handleClearSectionFilter,
     refreshStudents,
+    pendingStudents,
   } = useStudents(urlBlockId || undefined);
 
   const handleViewEssayHistory = (student: { id: string }) => {
@@ -94,6 +95,25 @@ export function StudentsTab() {
         students={students}
         hasActiveFilters={hasActiveFilters}
       />
+
+      {/* Pending Approval Notice */}
+      {pendingStudents && pendingStudents.length > 0 && (
+        <div className="bg-amber-50/50 border border-amber-100/50 rounded-[2rem] p-6 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shrink-0 shadow-sm shadow-amber-200/50">
+              <Clock className="w-6 h-6 animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider">
+                {pendingStudents.length} {pendingStudents.length === 1 ? "Registration" : "Registrations"} Pending Approval
+              </h3>
+              <p className="text-xs text-amber-700/80 leading-relaxed max-w-2xl">
+                The students you recently added are currently in the administrative approval queue. They will automatically appear in this class list once an admin verifies their information.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <StudentsFilters
