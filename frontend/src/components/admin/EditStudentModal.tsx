@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, User, Mail, Hash, BookOpen, Layers, CheckCircle, AlertTriangle, GraduationCap } from "lucide-react";
+import { X, Loader2, User, Mail, Hash, BookOpen, Layers, CheckCircle, AlertTriangle, GraduationCap, Building2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
+
+interface School {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  school_id: string;
+}
 
 interface Program {
   id: string;
   name: string;
   abbr: string;
   department_id: string;
-  departments?: {
-    name: string;
-    code: string;
-    school_id: string;
-  };
 }
 
 interface EditStudentModalProps {
@@ -26,9 +34,14 @@ interface EditStudentModalProps {
 
 const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, onSuccess, student }) => {
   const [loading, setLoading] = useState(false);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+  const [isLoadingAcademic, setIsLoadingAcademic] = useState(true);
   const [formError, setFormError] = useState<string>("");
+  
+  const [selectedSchool, setSelectedSchool] = useState("");
+  const [selectedDept, setSelectedDept] = useState("");
   
   const [formData, setFormData] = useState({
     student_code: "",
@@ -61,34 +74,41 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
   }, [student]);
 
   useEffect(() => {
-    const fetchPrograms = async () => {
+    const fetchAcademicData = async () => {
       try {
-        setIsLoadingPrograms(true);
-        const { data, error } = await supabase
-          .from("programs_lookup")
-          .select(`
-            *,
-            departments(
-              name,
-              code,
-              school_id
-            )
-          `)
-          .order("name");
+        setIsLoadingAcademic(true);
+        const [schoolsRes, deptsRes, progsRes] = await Promise.all([
+          supabase.from("schools").select("*").order("name"),
+          supabase.from("departments").select("*").order("name"),
+          supabase.from("programs_lookup").select("*").order("name")
+        ]);
         
-        if (error) throw error;
-        setPrograms(data || []);
+        setSchools(schoolsRes.data || []);
+        setDepartments(deptsRes.data || []);
+        setPrograms(progsRes.data || []);
+
+        // Pre-populate selections if editing
+        if (student?.program_id && progsRes.data && deptsRes.data) {
+          const prog = progsRes.data.find(p => p.id === student.program_id);
+          if (prog) {
+            setSelectedDept(prog.department_id);
+            const dept = deptsRes.data.find(d => d.id === prog.department_id);
+            if (dept) {
+              setSelectedSchool(dept.school_id);
+            }
+          }
+        }
       } catch (err) {
-        console.error("Error fetching programs:", err);
+        console.error("Error fetching academic data:", err);
       } finally {
-        setIsLoadingPrograms(false);
+        setIsLoadingAcademic(false);
       }
     };
 
     if (isOpen) {
-      fetchPrograms();
+      fetchAcademicData();
     }
-  }, [isOpen]);
+  }, [isOpen, student]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,9 +264,58 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* School Select */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
+                <div className="relative group/school">
+                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/school:text-primary transition-colors" size={14} />
+                  <select
+                    value={selectedSchool}
+                    onChange={(e) => {
+                      setSelectedSchool(e.target.value);
+                      setSelectedDept("");
+                      setFormData({ ...formData, program_id: "" });
+                    }}
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none"
+                  >
+                    <option value="">Select School</option>
+                    {schools.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Department Select */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                <div className="relative group/dept">
+                  <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/dept:text-primary transition-colors" size={14} />
+                  <select
+                    value={selectedDept}
+                    disabled={!selectedSchool}
+                    onChange={(e) => {
+                      setSelectedDept(e.target.value);
+                      setFormData({ ...formData, program_id: "" });
+                    }}
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:opacity-50"
+                  >
+                    <option value="">Select Department</option>
+                    {departments
+                      .filter(d => d.school_id === selectedSchool)
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Program Select */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
-              {isLoadingPrograms ? (
+              {isLoadingAcademic ? (
                 <div className="h-11 flex items-center gap-2 text-xs font-medium text-neutral-400 px-4">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   LOADING...
@@ -256,16 +325,17 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                   <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/select:text-primary transition-colors shadow-none" size={14} />
                   <select
                     value={formData.program_id}
+                    disabled={!selectedDept}
                     onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none"
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:opacity-50"
                     required
                   >
                     <option value="">Select Program</option>
-                    {programs.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        [{p.departments?.code}] {p.name}
-                      </option>
-                    ))}
+                    {programs
+                      .filter(p => p.department_id === selectedDept)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
                   </select>
                 </div>
               )}

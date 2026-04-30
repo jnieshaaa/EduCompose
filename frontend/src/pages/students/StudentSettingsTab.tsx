@@ -43,7 +43,16 @@ export function StudentSettingsTab() {
           .from("users")
           .select(`
             *,
-            programs_lookup!fk_user_program (name, abbr)
+            programs_lookup!fk_user_program (
+              name, 
+              abbr,
+              departments (
+                name,
+                schools (
+                  name
+                )
+              )
+            )
           `)
           .eq("id", authData.user.id)
           .eq("role", "student")
@@ -251,15 +260,33 @@ export function StudentSettingsTab() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Course</Label>
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">School</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.programs_lookup?.name || studentData?.programs_lookup?.abbr || "N/A"}
+                  {studentData?.programs_lookup?.departments?.schools?.name || "N/A"}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Group</Label>
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Department</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.year && studentData?.block_name ? `${studentData.year} - ${studentData.block_name}` : studentData?.block_name || "N/A"}
+                  {studentData?.programs_lookup?.departments?.name || "N/A"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Program</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
+                  {studentData?.programs_lookup?.name || "N/A"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Year Level</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
+                  {studentData?.year || "N/A"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Block</Label>
+                <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
+                  {studentData?.block_name || "N/A"}
                 </div>
               </div>
             </div>

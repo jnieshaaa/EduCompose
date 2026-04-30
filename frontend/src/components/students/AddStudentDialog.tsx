@@ -34,6 +34,13 @@ export function AddStudentDialog({
     block_name: "",
   });
 
+  const [blockInfo, setBlockInfo] = useState<{
+    programName: string;
+    deptName: string;
+    year: number;
+    blockName: string;
+  } | null>(null);
+
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
   const [existingStudents, setExistingStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
@@ -47,14 +54,20 @@ export function AddStudentDialog({
           const { data: userData } = await supabase.auth.getUser();
           if (!userData?.user) return;
           
-          // Fetch block info first to filter students
+          // Fetch block info first to filter students and show context
           const { data: bData } = await supabase
             .from("blocks")
             .select(`
               name,
               year,
               teacher_program_loads!fk_block_program_load (
-                program_id
+                program_id,
+                programs_lookup (
+                  name,
+                  departments (
+                    name
+                  )
+                )
               )
             `)
             .eq("id", blockId)
@@ -64,7 +77,22 @@ export function AddStudentDialog({
 
           const blockName = bData.name;
           const year = bData.year;
-          const programId = (bData.teacher_program_loads as any)?.program_id;
+          const tplRaw = bData.teacher_program_loads;
+          const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+          const programId = tpl?.program_id;
+          
+          const programsLookupRaw = tpl?.programs_lookup;
+          const programsLookup = Array.isArray(programsLookupRaw) ? programsLookupRaw[0] : programsLookupRaw;
+          
+          const departmentsRaw = programsLookup?.departments;
+          const department = Array.isArray(departmentsRaw) ? departmentsRaw[0] : departmentsRaw;
+          
+          setBlockInfo({
+            programName: programsLookup?.name || "N/A",
+            deptName: department?.name || "N/A",
+            year: year,
+            blockName: blockName
+          });
 
           let query = supabase
             .from("users")
@@ -363,6 +391,35 @@ export function AddStudentDialog({
                 />
               </div>
             </div>
+
+            {blockId && blockInfo && (
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-neutral-100">
+                <div className="col-span-2">
+                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Academic Department</label>
+                   <div className="px-4 py-2.5 bg-neutral-100 rounded-xl text-xs font-bold text-neutral-400 cursor-not-allowed mt-1 truncate">
+                     {blockInfo.deptName}
+                   </div>
+                </div>
+                <div className="col-span-2">
+                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Enrolled Program</label>
+                   <div className="px-4 py-2.5 bg-neutral-100 rounded-xl text-xs font-bold text-neutral-400 cursor-not-allowed mt-1 truncate">
+                     {blockInfo.programName}
+                   </div>
+                </div>
+                <div>
+                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Year Level</label>
+                   <div className="px-4 py-2.5 bg-neutral-100 rounded-xl text-xs font-bold text-neutral-400 cursor-not-allowed mt-1">
+                     Year {blockInfo.year}
+                   </div>
+                </div>
+                <div>
+                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Section Block</label>
+                   <div className="px-4 py-2.5 bg-neutral-100 rounded-xl text-xs font-bold text-neutral-400 cursor-not-allowed mt-1 uppercase">
+                     Block {blockInfo.blockName}
+                   </div>
+                </div>
+              </div>
+            )}
 
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-neutral-500 uppercase block mb-1.5 ml-1">Birthday*</label>

@@ -335,13 +335,23 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
           .single();
         
         if (bData) {
-          const tpl = bData.teacher_program_loads as any;
-          finalPendingData.program_id = tpl.program_id;
-          finalPendingData.year = bData.year;
-          finalPendingData.block_name = bData.name;
-          finalPendingData.course_id = tpl.teacher_course_loads?.course_id;
-          finalPendingData.academic_year = tpl.teacher_course_loads?.academic_year;
-          finalPendingData.term = tpl.teacher_course_loads?.term;
+          const tplRaw = bData.teacher_program_loads;
+          const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+          
+          if (tpl) {
+            finalPendingData.program_id = tpl.program_id;
+            finalPendingData.year = bData.year;
+            finalPendingData.block_name = bData.name;
+            
+            const tclRaw = tpl.teacher_course_loads;
+            const tcl = Array.isArray(tclRaw) ? tclRaw[0] : tclRaw;
+            
+            if (tcl) {
+              finalPendingData.course_id = tcl.course_id;
+              finalPendingData.academic_year = tcl.academic_year;
+              finalPendingData.term = tcl.term;
+            }
+          }
         }
       }
 
