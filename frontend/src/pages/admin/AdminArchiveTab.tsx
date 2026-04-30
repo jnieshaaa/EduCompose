@@ -18,7 +18,8 @@ import {
   UserX,
   GraduationCap,
   Briefcase,
-  ArrowLeft
+  ArrowLeft,
+  RotateCcw
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
@@ -99,6 +100,34 @@ export function AdminArchiveTab() {
       showNotification('error', "Failed to load archived users.");
     } else {
       setArchivedUsers(data || []);
+    }
+  };
+
+  const handleRestoreUser = async (user: any) => {
+    if (!window.confirm(`Restore access for ${user.first_name} ${user.last_name}?`)) return;
+    
+    try {
+      setIsLoading(true);
+      const updates: any = { is_active: true };
+      
+      // If student, move back to active enrollment
+      if (user.role === 'student') {
+        updates.enrollment_status = 'active';
+      }
+      
+      const { error } = await supabase
+        .from("users")
+        .update(updates)
+        .eq("id", user.id);
+        
+      if (error) throw error;
+      
+      showNotification('success', `${user.first_name}'s account has been restored.`);
+      await loadArchivedUsers();
+    } catch (err: any) {
+      showNotification('error', "Failed to restore user: " + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -446,7 +475,8 @@ export function AdminArchiveTab() {
                   <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Role</th>
                   <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Identification</th>
                   <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Archive Reason</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Join Date</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Join Date</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
@@ -489,10 +519,19 @@ export function AdminArchiveTab() {
                         {user.enrollment_status || (!user.is_active ? "Resigned/Inactive" : "Unknown")}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-6 py-5">
                       <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
                         {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </span>
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                       <button 
+                         onClick={() => handleRestoreUser(user)}
+                         className="p-2 h-9 w-9 flex items-center justify-center bg-white border border-neutral-100 text-neutral-400 hover:text-primary hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 rounded-lg transition-all"
+                         title="Restore User Access"
+                       >
+                         <RotateCcw size={16} />
+                       </button>
                     </td>
                   </tr>
                 ))}

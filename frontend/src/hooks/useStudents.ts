@@ -354,21 +354,8 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
 
       if (error) throw error;
 
-      // 4. Send Notification Email with their birthday as password
-      if (newP.email) {
-        try {
-          // Format password as birthday (standardized)
-          const temp_password = newP.birthday || "Student2024!";
-          await sendStudentWelcomeEmail({
-            to_name: `${newP.first_name} ${newP.last_name}`,
-            to_email: newP.email,
-            student_code: newP.student_code,
-            temp_password,
-          });
-        } catch (emailErr) {
-          console.warn("Failed to send welcome email:", emailErr);
-        }
-      }
+      // 4. Notification sent to student is deferred until Admin Approval
+      // (Removed redundant email dispatch to prevent confusion since student cannot login yet)
 
       // 5. Notify Admins
       try {

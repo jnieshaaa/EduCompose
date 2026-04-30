@@ -153,11 +153,23 @@ export function AdminUsersTab() {
   }, [loadUsers]);
 
   const handleDeleteUser = async (userId: string, email: string) => {
+    if (userId === currentUser?.id) {
+      showNotification('warning', "Security Restriction: You cannot delete your own administrative account.");
+      return;
+    }
     setDeletingUser({ id: userId, email });
   };
 
   const confirmDelete = async () => {
     if (!deletingUser) return;
+    
+    // Final safety check
+    if (deletingUser.id === currentUser?.id) {
+      showNotification('error', "Security Protocol: Self-deletion is strictly prohibited.");
+      setDeletingUser(null);
+      return;
+    }
+
     try {
       setLoading(true);
       await adminApi.deleteUser(deletingUser.id);
@@ -455,7 +467,7 @@ export function AdminUsersTab() {
                     </button>
                   ))}
                   
-                  {isSuperAdmin && (
+                  {isSuperAdmin && user.id !== currentUser?.id && (
                     <div className="mt-2 pt-2 border-t border-neutral-50">
                       <button
                         onClick={() => { handleDeleteUser(user.id, user.email); setOpenDropdown(null); }}

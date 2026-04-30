@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, UserPlus, Mail, Hash, Calendar, BookOpen, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,16 +7,6 @@ import { authApi } from "../../api";
 import { sendUserWelcomeEmail } from "../../services/emailService";
 import Button from "../ui/Button";
 
-interface Program {
-  id: string;
-  name: string;
-  abbr: string;
-  department_id: string;
-  departments?: {
-    name: string;
-    code: string;
-  };
-}
 
 interface EnrollTeacherModalProps {
   isOpen: boolean;
@@ -27,7 +17,6 @@ interface EnrollTeacherModalProps {
 const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
   const [formError, setFormError] = useState<string>("");
   
@@ -50,18 +39,15 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [deptsRes, progsRes, schoolsRes] = await Promise.all([
+        const [deptsRes, schoolsRes] = await Promise.all([
           supabase.from("departments").select("*").order("name"),
-          supabase.from("programs_lookup").select("*").order("name"),
           supabase.from("schools").select("id, name").order("name")
         ]);
         
         if (deptsRes.error) throw deptsRes.error;
-        if (progsRes.error) throw progsRes.error;
         if (schoolsRes.error) throw schoolsRes.error;
 
         setDepartments(deptsRes.data || []);
-        setPrograms(progsRes.data || []);
         setSchools(schoolsRes.data || []);
       } catch (err) {
         console.error("Error fetching metadata:", err);
@@ -73,9 +59,6 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
     }
   }, [isOpen]);
 
-  const filteredPrograms = formData.department_id 
-    ? programs.filter(p => p.department_id === formData.department_id)
-    : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,33 +303,18 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                 </div>
              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+             <div className="grid grid-cols-1 gap-6 pt-2">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
                   <select
                     required
                     className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-medium transition-all cursor-pointer"
                     value={formData.department_id}
-                    onChange={(e) => setFormData({ ...formData, department_id: e.target.value, program_id: "" })}
+                    onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
                   >
                     <option value="">Select Department</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>[{d.code}] {d.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
-                  <select
-                    required
-                    disabled={!formData.department_id}
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:border-secondary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
-                    value={formData.program_id}
-                    onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                  >
-                    <option value="">Select Program</option>
-                    {filteredPrograms.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>

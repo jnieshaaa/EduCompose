@@ -1061,14 +1061,6 @@ export const AdminStudentsTab: React.FC = () => {
                       <Zap size={14} />
                       {"Repair / Provision"}
                     </button>
-
-                    <button
-                      onClick={() => { handleToggleActive(s); setOpenDropdown(null); }}
-                      className="w-full flex items-center gap-3 px-5 py-2.5 text-[10px] font-medium text-neutral-600 uppercase tracking-widest hover:bg-neutral-50 transition-colors"
-                    >
-                      <UserX size={14} className="text-neutral-400" />
-                      Change Status
-                    </button>
                   </div>
 
                   <div className="py-1 border-t border-neutral-50">
