@@ -3,7 +3,6 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "./useAlert";
 import type { Student, Program, Section } from "../types/academic";
 import { useAcademicContext } from "./useAcademicContext";
-import { sendStudentWelcomeEmail } from "../services/emailService";
 import { createNotification } from "../services/notificationService";
 
 export function useStudents(blockId?: string, ay?: string, term?: string, showArchived: boolean = false) {

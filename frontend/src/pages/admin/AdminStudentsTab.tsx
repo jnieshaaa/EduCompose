@@ -5,7 +5,6 @@ import {
   Search,
   Edit2,
   Trash2,
-  UserX,
   MoreVertical,
   RefreshCw,
   ChevronLeft,
@@ -255,26 +254,7 @@ export const AdminStudentsTab: React.FC = () => {
     fetchFiltersData();
   }, [loadStudents, fetchFiltersData]);
 
-  const handleToggleActive = async (student: Student) => {
-    try {
-      const newStatus =
-        student.enrollment_status === "active" ? "dropped" : "active";
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({
-          enrollment_status: newStatus,
-          is_active: newStatus === "active",
-        })
-        .eq("id", student.id);
 
-      if (updateError) throw updateError;
-      await loadStudents();
-      setOpenDropdown(null);
-      showNotification('success', `Student status transitioned to ${newStatus}.`);
-    } catch (err: any) {
-      showNotification('error', err.message || "Failed to update status.");
-    }
-  };
 
   const handleResendPassword = async (student: Student) => {
     if (!student.email) return;
