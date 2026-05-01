@@ -84,10 +84,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserFromTable = async (authUserId: string, _roleHint?: string): Promise<{ user: User | null; error: any }> => {
     try {
-      // Fetching from unified users table (Admin/Teacher/Student)
+      // Fetching from unified users table with role-specific profile joins
       const userResult: any = await safeDbQuery(
         supabase.from("users")
-          .select("id, email, first_name, last_name, role, is_active, onboarding_completed, title, nickname, student_code, program_id, year, block_name, school_id, department_id")
+          .select(`
+            *,
+            admin_profiles!user_id(*),
+            teacher_profiles!user_id(*),
+            student_profiles!user_id(*)
+          `)
           .eq("id", authUserId)
           .maybeSingle()
       );
@@ -98,6 +103,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (userResult.data) {
         const data = userResult.data;
+        const role = data.role || "teacher";
+        
+        // Flatten role-specific profile data (handles both array and single object formats)
+        let profile: any = {};
+        if (role === 'admin') {
+          profile = (data.admin_profiles as any)?.[0] || data.admin_profiles || {};
+        } else if (role === 'teacher') {
+          profile = (data.teacher_profiles as any)?.[0] || data.teacher_profiles || {};
+        } else if (role === 'student') {
+          profile = (data.student_profiles as any)?.[0] || data.student_profiles || {};
+        }
+
         return {
           user: {
             id: data.id.toString(),
@@ -106,18 +123,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             username: data.email ?? "",
             first_name: data.first_name || "",
             last_name: data.last_name || "",
-            role: data.role || "teacher",
+            role: role,
             is_active: data.is_active ?? true,
             email_verified: true,
-            onboarding_completed: data.onboarding_completed ?? false,
-            title: data.title,
-            nickname: data.nickname,
-            student_code: data.student_code,
-            program_id: data.program_id,
-            year: data.year,
-            block_name: data.block_name,
-            school_id: data.school_id,
-            department_id: data.department_id,
+            onboarding_completed: profile.onboarding_completed ?? false,
+            title: profile.title,
+            nickname: profile.nickname,
+            student_code: profile.student_code,
+            program_id: profile.program_id,
+            year: profile.year,
+            block_name: profile.block_name,
+            school_id: profile.school_id,
+            department_id: profile.department_id,
           },
           error: null
         };
@@ -187,18 +204,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      if (!mappedUser) {
-        // DB record missing — could be a mid-signup state or a deleted account.
-        // Don't force signOut() (causes 403 on expired tokens & breaks signup flows).
-        // Just clear local state so the user sees the login screen naturally.
-        console.warn("Session exists but no DB record found. Clearing local state.");
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("user");
+      if (mappedUser) {
+        localStorage.setItem("user", JSON.stringify(mappedUser));
+        setUser(mappedUser);
+      } else {
         setUser(null);
-        return;
       }
-      
-      setUser(mappedUser);
     } catch (error) {
       console.error("Auth check failed:", error);
     } finally {

@@ -31,7 +31,7 @@ export function MyClassesTab() {
         // 1. Get student record from unified users table
         let { data: student } = await supabase
           .from("users")
-          .select("id, email, year, block_name")
+          .select("id, email")
           .eq("role", "student")
           .eq("id", user.id)
           .maybeSingle();
@@ -39,7 +39,7 @@ export function MyClassesTab() {
         if (!student && user.email) {
           const { data: emailData } = await supabase
             .from("users")
-            .select("id, email, year, block_name")
+            .select("id, email")
             .eq("role", "student")
             .eq("email", user.email)
             .maybeSingle();
@@ -73,8 +73,10 @@ export function MyClassesTab() {
                   users:teacher_id (
                     first_name,
                     last_name,
-                    title,
-                    nickname
+                    teacher_profiles!user_id (
+                      title,
+                      nickname
+                    )
                   )
                 )
               )
@@ -99,14 +101,19 @@ export function MyClassesTab() {
 
             tcls.forEach((tcl: any) => {
               if (tcl && tcl.courses) {
+                const instrProfile = tcl.users?.teacher_profiles?.[0] || tcl.users?.teacher_profiles;
+                const instrTitle = instrProfile?.title || "";
+                const instrName = instrProfile?.nickname || tcl.users?.first_name || "";
+                const instrLast = tcl.users?.last_name || "";
+
                 flattenedClasses.push({
                   id: tcl.id,
                   code: tcl.courses.course_code,
                   name: tcl.courses.course_title,
                   instructor: tcl.users 
-                    ? (tcl.users.title && tcl.users.nickname 
-                      ? `${tcl.users.title} ${tcl.users.nickname}` 
-                      : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name}` : tcl.users.last_name))
+                    ? (instrTitle && instrName 
+                      ? `${instrTitle} ${instrName} ${instrLast}` 
+                      : (instrTitle ? `${instrTitle} ${instrLast}` : instrLast))
                     : "No Teacher yet",
                   term: tcl.term || "---",
                   academicYear: tcl.academic_year || "---",

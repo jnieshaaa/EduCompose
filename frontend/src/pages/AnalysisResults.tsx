@@ -912,11 +912,11 @@ const AnalysisResults: React.FC = () => {
           
           if (!isUuidString(currentStudentId)) {
             const { data: studentData } = await supabase
-              .from('students')
-              .select('id')
+              .from('student_profiles')
+              .select('user_id')
               .eq('student_code', currentStudentId)
               .maybeSingle();
-            if (studentData) studentDbId = studentData.id;
+            if (studentData) studentDbId = studentData.user_id;
           }
           
           const activityDbId = currentActivityId;

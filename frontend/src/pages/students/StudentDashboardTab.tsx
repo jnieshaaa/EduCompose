@@ -59,12 +59,15 @@ export function StudentDashboardTab() {
 
         const { data: student } = await supabase
           .from('users')
-          .select('id, student_code')
+          .select(`
+            id,
+            student_profiles!user_id ( student_code )
+          `)
           .eq('id', authUser.user.id)
-          .eq('role', 'student')
           .maybeSingle();
 
         if (!student) return;
+        const studentCode = (student.student_profiles as any)?.[0]?.student_code;
 
         const { data, error } = await supabase
           .from('essays')
@@ -77,7 +80,7 @@ export function StudentDashboardTab() {
           ...e,
           activityId: (e.essay_activities as any)?.id,
           activityTitle: (e.essay_activities as any)?.title,
-          studentCode: student.student_code,
+          studentCode: studentCode,
         })));
       } catch (error) {
         console.error('Error fetching essays:', error);

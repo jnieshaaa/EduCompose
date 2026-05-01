@@ -239,7 +239,9 @@ export const authApi = {
     last_name: string;
     middle_name?: string;
     password?: string;
-    teacher_id: string;
+    teacher_id?: string;
+    school_id?: string;
+    department_id?: string;
     program_id: string;
     year: number;
     block_name: string;
@@ -262,7 +264,9 @@ export const authApi = {
           p_program_id: payload.program_id,
           p_year: payload.year,
           p_block_name: payload.block_name,
-          p_teacher_id: payload.teacher_id,
+          p_teacher_id: payload.teacher_id || null,
+          p_school_id: payload.school_id || null,
+          p_department_id: payload.department_id || null,
         }
       );
 
@@ -272,7 +276,7 @@ export const authApi = {
 
       return {
         success: true,
-        student_id: authId as string, // Note: the RPC now returns students.id
+        student_id: authId as string, 
         temp_password: tempPassword
       };
     } catch (err: any) {
@@ -296,13 +300,43 @@ export const authApi = {
     school_id?: string;
     department_id?: string;
     program_id?: string;
+    year?: number;
+    block_name?: string;
   }): Promise<{ success: boolean; auth_id: string; role: string; temp_password: string; email: string }> => {
     try {
       const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
-      // Use the ultra-safe v1 RPC with all fields (updated to v2 signature internally)
-      const { data: authId, error: provisionError } = await supabase.rpc(
+      // 1. Create the Auth Account using Admin client
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { 
+          role: payload.role,
+          first_name: payload.first_name,
+          last_name: payload.last_name
+        }
+      });
+
+      if (authError && authError.message !== 'User already registered') {
+        console.error("Auth creation failed:", authError);
+        throw new Error(`Auth Error: ${authError.message}`);
+      }
+
+      // If user exists, we might need to look up their ID
+      let authId = authData.user?.id;
+      if (!authId && authError?.message === 'User already registered') {
+        const { data: existingUser } = await supabaseAdmin.from('users').select('id').eq('email', normalizedEmail).maybeSingle();
+        authId = existingUser?.id;
+      }
+
+      if (!authId) {
+        throw new Error("Could not determine User ID for provisioning.");
+      }
+
+      // 2. Use the ultra-safe v1 RPC to sync the profile and details
+      const { error: provisionError } = await supabase.rpc(
         "create_new_portal_user_v1",
         {
           p_email: normalizedEmail,
@@ -318,12 +352,15 @@ export const authApi = {
           p_department_id: payload.department_id || null,
           p_program_id: payload.program_id || null,
           p_birthday: payload.birthday || null,
-          p_code: payload.code || null
+          p_code: payload.code || null,
+          p_year: payload.year || null,
+          p_block_name: payload.block_name || null
         }
       );
 
       if (provisionError) {
-        throw new Error(`Provisioning Error: ${provisionError.message}`);
+        console.error("RPC Provisioning Error:", provisionError);
+        throw new Error(`Sync Error: ${provisionError.message}`);
       }
 
       return {
@@ -442,14 +479,17 @@ export const studentApi = {
         student_id,
         users!student_id (
           id,
-          student_code,
           first_name,
           last_name,
           email,
-          year,
-          block_name,
           created_at,
-          is_active
+          is_active,
+          student_profiles!inner (
+            student_code,
+            year,
+            block_name,
+            enrollment_status
+          )
         )
       `)
       .eq("block_id", classId);
@@ -460,12 +500,16 @@ export const studentApi = {
     }
 
     return (data || [])
-      .map((item: any) => item.users)
-      .filter(Boolean)
-      .map((s: any) => ({
-        ...s,
-        class_id: classId
-      })) as Student[];
+      .map((item: any) => {
+        const u = item.users;
+        const p = Array.isArray(u.student_profiles) ? u.student_profiles[0] : u.student_profiles;
+        return {
+          ...u,
+          ...p,
+          class_id: classId
+        };
+      })
+      .filter(Boolean) as Student[];
   },
 
   createStudent: async (studentData: {
@@ -846,9 +890,12 @@ export const adminApi = {
   }) => {
     let query = supabase
       .from("users")
-      .select(
-        "id, email, first_name, middle_name, last_name, title, nickname, role, is_active, created_at",
-      )
+      .select(`
+        id, email, first_name, middle_name, last_name, role, is_active, created_at,
+        teacher_profiles (title, nickname, school_id, department_id),
+        admin_profiles (is_super_admin),
+        student_profiles (student_code, year, block_name, enrollment_status)
+      `)
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 
@@ -876,11 +923,20 @@ export const adminApi = {
       throw new Error(error.message);
     }
 
-    // Map to include email_verified from auth.users if needed
-    return data.map((user) => ({
-      ...user,
-      email_verified: true, // Default to true, can be enhanced later
-    }));
+    // Map to include profile data and email_verified
+    return data.map((user) => {
+      const teacher = Array.isArray(user.teacher_profiles) ? user.teacher_profiles[0] : user.teacher_profiles;
+      const admin = Array.isArray(user.admin_profiles) ? user.admin_profiles[0] : user.admin_profiles;
+      const student = Array.isArray(user.student_profiles) ? user.student_profiles[0] : user.student_profiles;
+      
+      return {
+        ...user,
+        ...(teacher || {}),
+        ...(admin || {}),
+        ...(student || {}),
+        email_verified: true,
+      };
+    });
   },
 
   updateUser: async (
@@ -898,15 +954,66 @@ export const adminApi = {
       enrollment_status?: string;
       school_id?: string;
       department_id?: string;
+      student_code?: string;
+      year?: number;
+      block_name?: string;
+      program_id?: string;
     },
   ) => {
-    // 1. Update the metadata/profile in "users" table first
-    const { error: dbError } = await supabase
-      .from("users")
-      .update(data)
-      .eq("id", userId);
+    // 1. Separate users table fields from profile fields
+    const userTableFields = ['email', 'first_name', 'middle_name', 'last_name', 'suffix', 'role', 'is_active'];
+    const teacherFields = ['title', 'nickname', 'school_id', 'department_id'];
+    const studentFields = ['student_code', 'year', 'block_name', 'enrollment_status', 'program_id', 'school_id', 'department_id'];
+    const adminFields = ['is_super_admin'];
 
-    if (dbError) throw new Error(dbError.message);
+    const userData: any = {};
+    const profileData: any = {};
+    
+    // Determine profile table based on role or specific fields
+    let profileTable = data.role === 'admin' ? 'admin_profiles' : 
+                       data.role === 'teacher' ? 'teacher_profiles' : 
+                       data.role === 'student' ? 'student_profiles' : '';
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (userTableFields.includes(key)) {
+        userData[key] = value;
+      } else {
+        // If profileTable not determined by role, try to guess from fields
+        if (!profileTable) {
+          if (['student_code', 'year', 'block_name'].includes(key)) profileTable = 'student_profiles';
+          else if (['title', 'nickname'].includes(key)) profileTable = 'teacher_profiles';
+          else if (['is_super_admin'].includes(key)) profileTable = 'admin_profiles';
+        }
+        
+        // Add to profile data if it belongs to any profile table
+        if (teacherFields.includes(key) || studentFields.includes(key) || adminFields.includes(key)) {
+          profileData[key] = value;
+        }
+      }
+    });
+
+    // 2. Update users table if needed
+    if (Object.keys(userData).length > 0) {
+      const { error: dbError } = await supabase
+        .from("users")
+        .update(userData)
+        .eq("id", userId);
+      if (dbError) throw new Error(dbError.message);
+    }
+
+    // 3. Update profile table if needed (Use upsert to create if missing)
+    if (Object.keys(profileData).length > 0 && profileTable) {
+      const { error: profileError } = await supabase
+        .from(profileTable)
+        .upsert({ 
+          ...profileData, 
+          user_id: userId 
+        }, { 
+          onConflict: 'user_id' 
+        });
+        
+      if (profileError) throw new Error(`Profile sync failed: ${profileError.message}`);
+    }
 
     // 2. If email is provided, update it in auth.users too
     if (data.email) {
@@ -1184,11 +1291,15 @@ export const adminApi = {
   getStudents: async (params?: { search?: string; limit?: number }) => {
     let query = supabase
       .from("users")
-      .select(
-        `id, student_code, first_name, middle_name, last_name, email, year, block_name, program_id, created_at, programs_lookup (id, name, abbr)`,
-      )
+      .select(`
+        id, first_name, middle_name, last_name, email, created_at,
+        student_profiles!inner (
+          student_code, year, block_name, program_id, enrollment_status
+        ),
+        programs_lookup:student_profiles(program_id, programs_lookup(id, name, abbr))
+      `)
       .eq("role", "student")
-      .eq("enrollment_status", "active")
+      .eq("student_profiles.enrollment_status", "active")
       .order("created_at", { ascending: false });
 
     if (params?.search) {
@@ -1201,7 +1312,15 @@ export const adminApi = {
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return (data || []) as unknown as {
+
+    return (data || []).map((user: any) => {
+      const sp = Array.isArray(user.student_profiles) ? user.student_profiles[0] : user.student_profiles;
+      return {
+        ...user,
+        ...sp,
+        programs_lookup: sp?.programs_lookup
+      };
+    }) as unknown as {
       id: string;
       student_code: string;
       first_name: string;

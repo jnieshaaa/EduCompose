@@ -158,26 +158,43 @@ BEGIN
   VALUES (v_user_id, v_user_id, jsonb_build_object('sub', v_user_id, 'email', lower(trim(p_email))), 'email', lower(trim(p_email)), now(), now(), now())
   ON CONFLICT (provider, provider_id) DO NOTHING;
 
-  -- 3. Insert into public.users (Profile data)
+  -- 3. Insert into public.users (Core shared data)
   INSERT INTO public.users (
-    id, email, first_name, middle_name, last_name, suffix, title, nickname,
-    role, school_id, department_id, birthday, is_active
+    id, email, first_name, middle_name, last_name, suffix, 
+    role, birthday, is_active
   ) VALUES (
-    v_user_id, lower(trim(p_email)), p_first_name, p_middle_name, p_last_name, p_suffix, p_title, p_nickname,
-    p_role, p_school_id, p_department_id, p_birthday, true
+    v_user_id, lower(trim(p_email)), p_first_name, p_middle_name, p_last_name, p_suffix,
+    p_role, p_birthday, true
   ) ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     first_name = EXCLUDED.first_name,
     middle_name = EXCLUDED.middle_name,
     last_name = EXCLUDED.last_name,
     suffix = EXCLUDED.suffix,
-    title = EXCLUDED.title,
-    nickname = EXCLUDED.nickname,
     role = EXCLUDED.role,
-    school_id = EXCLUDED.school_id,
-    department_id = EXCLUDED.department_id,
     birthday = EXCLUDED.birthday,
     is_active = EXCLUDED.is_active;
+
+  -- 4. Insert into role-specific profile tables
+  IF p_role = 'admin' THEN
+    INSERT INTO public.admin_profiles (user_id) VALUES (v_user_id) 
+    ON CONFLICT (user_id) DO NOTHING;
+  ELSIF p_role = 'teacher' THEN
+    INSERT INTO public.teacher_profiles (user_id, title, nickname, school_id, department_id)
+    VALUES (v_user_id, p_title, p_nickname, p_school_id, p_department_id)
+    ON CONFLICT (user_id) DO UPDATE SET
+      title = EXCLUDED.title,
+      nickname = EXCLUDED.nickname,
+      school_id = EXCLUDED.school_id,
+      department_id = EXCLUDED.department_id;
+  ELSIF p_role = 'student' THEN
+    INSERT INTO public.student_profiles (user_id, student_code, school_id, department_id)
+    VALUES (v_user_id, COALESCE(p_title, v_user_id::text), p_school_id, p_department_id)
+    ON CONFLICT (user_id) DO UPDATE SET
+      student_code = EXCLUDED.student_code,
+      school_id = EXCLUDED.school_id,
+      department_id = EXCLUDED.department_id;
+  END IF;
 
   RETURN v_user_id;
 END;
@@ -218,20 +235,29 @@ BEGIN
   END IF;
 
   INSERT INTO public.users (
-    id, email, student_code, first_name, last_name, middle_name, suffix, 
-    birthday, program_id, year, block_name, teacher_id, role, onboarding_completed
+    id, email, first_name, last_name, middle_name, suffix, 
+    birthday, role
   ) VALUES (
-    v_user_id, lower(trim(p_email)), p_student_code, p_first_name, p_last_name, p_middle_name, p_suffix,
-    p_birthday, p_program_id, p_year, p_block_name, p_teacher_id, 'student', false
+    v_user_id, lower(trim(p_email)), p_first_name, p_last_name, p_middle_name, p_suffix,
+    p_birthday, 'student'
   )
   ON CONFLICT (id) DO UPDATE SET
-    student_code = EXCLUDED.student_code,
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
     email = EXCLUDED.email,
+    birthday = EXCLUDED.birthday;
+
+  INSERT INTO public.student_profiles (
+    user_id, student_code, program_id, year, block_name, teacher_id
+  ) VALUES (
+    v_user_id, p_student_code, p_program_id, p_year, p_block_name, p_teacher_id
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    student_code = EXCLUDED.student_code,
     program_id = EXCLUDED.program_id,
     year = EXCLUDED.year,
-    block_name = EXCLUDED.block_name;
+    block_name = EXCLUDED.block_name,
+    teacher_id = EXCLUDED.teacher_id;
 
   RETURN v_user_id;
 END;
@@ -256,10 +282,11 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        u.id, u.student_code, u.email, u.first_name, u.middle_name, u.last_name, 
-        u.is_active, u.onboarding_completed, u.birthday
+        u.id, sp.student_code, u.email, u.first_name, u.middle_name, u.last_name, 
+        u.is_active, sp.onboarding_completed, u.birthday
     FROM public.users u
-    WHERE u.student_code = p_student_code
+    JOIN public.student_profiles sp ON u.id = sp.user_id
+    WHERE sp.student_code = p_student_code
       AND u.role = 'student';
 END;
 $$;
@@ -329,8 +356,8 @@ CREATE OR REPLACE FUNCTION public.admin_enroll_student_v3(p_email text, p_passwo
 RETURNS uuid AS $$
 DECLARE v_id uuid;
 BEGIN
-  v_id := public.create_new_portal_user_v1($1, $2, $3, $4, 'student', $10, NULL, $5, $11);
-  UPDATE public.users SET teacher_id = $6, program_id = $7, year = $8, block_name = $9 WHERE id = v_id;
+  v_id := public.create_new_portal_user_v1($1, $2, $3, $4, 'student', $10, NULL, $5, NULL, NULL, NULL, $11);
+  UPDATE public.student_profiles SET program_id = $7, year = $8, block_name = $9, teacher_id = $6 WHERE user_id = v_id;
   RETURN v_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

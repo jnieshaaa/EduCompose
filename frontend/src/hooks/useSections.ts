@@ -16,12 +16,22 @@ const getTeacherContext = async () => {
 
     const { data: userData, error: userTableError } = await supabase
       .from("users")
-      .select("id, school_id, department_id")
+      .select(`
+        id, 
+        teacher_profiles!user_id(school_id, department_id)
+      `)
       .eq("id", user.id)
       .single();
 
     if (userTableError || !userData) return null;
-    return userData;
+    
+    // Flatten teacher profile data
+    const tp = (userData as any).teacher_profiles?.[0] || {};
+    return {
+      id: userData.id,
+      school_id: tp.school_id,
+      department_id: tp.department_id
+    };
   } catch (err) {
     console.error("Unexpected error fetching teacher context:", err);
     return null;
@@ -125,7 +135,8 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
           // ALWAYS exclude the EXACT current context from the archive
           if (currentAY && currentSemester) {
             query = query.or(
-              `teacher_program_loads.teacher_course_loads.academic_year.neq.${currentAY},teacher_program_loads.teacher_course_loads.term.neq.${currentSemester}`
+              `academic_year.neq."${currentAY}",term.neq."${currentSemester}"`,
+              { foreignTable: "teacher_program_loads.teacher_course_loads" }
             );
           }
         }
@@ -339,17 +350,16 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
             createdCount++;
             // Link existing students
             const { data: matchingStudents } = await supabase
-              .from("users")
-              .select("id")
+              .from("student_profiles")
+              .select("user_id")
               .eq("program_id", newSection.program_id)
               .eq("year", blockDataToCreate.year)
-              .eq("block_name", blockDataToCreate.name)
-              .eq("role", "student");
+              .eq("block_name", blockDataToCreate.name);
 
             if (matchingStudents && matchingStudents.length > 0) {
               const enrollments = matchingStudents.map(s => ({
                 block_id: blockRecord.id,
-                student_id: s.id
+                student_id: s.user_id
               }));
               await supabase.from("block_students").insert(enrollments);
               totalEnrollment += matchingStudents.length;

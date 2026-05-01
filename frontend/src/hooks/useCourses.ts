@@ -18,18 +18,33 @@ const getTeacherInfo = async () => {
       .from("users")
       .select(`
         id, 
-        school_id, 
-        department_id,
-        schools (
-          name,
-          code
+        teacher_profiles!user_id (
+          school_id, 
+          department_id,
+          schools:school_id (
+            name,
+            code
+          )
         )
       `)
       .eq("id", user.id)
       .single();
 
     if (userTableError || !userData) return null;
-    return userData;
+    
+    // Flatten the teacher profile data
+    const profile = Array.isArray(userData.teacher_profiles) 
+      ? userData.teacher_profiles[0] 
+      : userData.teacher_profiles;
+
+    if (!profile) return null;
+
+    return {
+      id: userData.id,
+      school_id: profile.school_id,
+      department_id: profile.department_id,
+      schools: profile.schools
+    };
   } catch (err) {
     console.error("Unexpected error fetching teacher info:", err);
     return null;

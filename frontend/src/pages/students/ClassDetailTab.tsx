@@ -65,8 +65,10 @@ export function ClassDetailTab() {
             users!teacher_id (
               first_name,
               last_name,
-              title,
-              nickname
+              teacher_profiles!user_id (
+                title,
+                nickname
+              )
             )
           `)
           .eq("id", classId)
@@ -112,16 +114,19 @@ export function ClassDetailTab() {
 
         setBlockId(currentBlockId);
 
-        const instructors = Array.isArray(tcl.users) ? tcl.users : (tcl.users ? [tcl.users] : []);
-        const instructorObj = instructors[0] as any;
+        const instructorObj = (Array.isArray(tcl.users) ? tcl.users[0] : tcl.users) as any;
+        const instructorProfile = instructorObj?.teacher_profiles?.[0] || instructorObj?.teacher_profiles;
+        const instrTitle = instructorProfile?.title || "";
+        const instrNick = instructorProfile?.nickname || instructorObj?.first_name || "";
+        const instrLast = instructorObj?.last_name || "";
 
         setClassData({
           code: (tcl.courses as any).course_code,
           name: (tcl.courses as any).course_title,
           instructor: instructorObj 
-          ? (instructorObj.title && instructorObj.nickname 
-            ? `${instructorObj.title} ${instructorObj.nickname}` 
-            : (instructorObj.title ? `${instructorObj.title} ${instructorObj.last_name}` : instructorObj.last_name))
+          ? (instrTitle && instrNick 
+            ? `${instrTitle} ${instrNick} ${instrLast}` 
+            : (instrTitle ? `${instrTitle} ${instrLast}` : (instrLast || "TBA")))
           : "TBA",
           term: `${tcl.term} A.Y. ${tcl.academic_year}`,
           section: sectionName

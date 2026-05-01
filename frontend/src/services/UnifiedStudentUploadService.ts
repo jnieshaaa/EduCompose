@@ -202,10 +202,9 @@ export class UnifiedStudentUploadService {
 
             // 1. Check if student already exists in OFFICIAL users table
             const { data: existingStudent } = await supabase
-              .from("users")
-              .select("id, student_code")
+              .from("student_profiles")
+              .select("user_id, student_code")
               .eq("student_code", studentCode)
-              .eq("role", "student")
               .maybeSingle();
             
             if (existingStudent) {

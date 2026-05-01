@@ -115,7 +115,7 @@ export function EssaysTab() {
             id, 
             first_name, 
             last_name, 
-            student_code,
+            student_profiles (student_code),
             programs_lookup (name)
           ),
           blocks (id, section_name)
@@ -146,7 +146,7 @@ export function EssaysTab() {
           activityId: e.activity_id,
           studentId: e.student_id,
           studentName: `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || "Unknown",
-          studentCode: student?.student_code || "---",
+          studentCode: (Array.isArray(student?.student_profiles) ? student.student_profiles[0]?.student_code : student?.student_profiles?.student_code) || "---",
           title: e.title || "Untitled",
           program: program,
           section: section,

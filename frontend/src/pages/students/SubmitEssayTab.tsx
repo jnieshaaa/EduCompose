@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
-import { buildFullNameFromObject } from '../../utils/nameUtils';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -92,11 +91,13 @@ export function SubmitEssayTab() {
           .select(`
             *,
             teacher:users (
-              title,
-              nickname,
               first_name,
               last_name,
-              id
+              id,
+              teacher_profiles!user_id (
+                title,
+                nickname
+              )
             )
           `)
           .eq('id', activityIdParam)
@@ -116,10 +117,15 @@ export function SubmitEssayTab() {
           }
         }
 
+        const instrProfile = actRow.teacher?.teacher_profiles?.[0] || actRow.teacher?.teacher_profiles;
+        const instrTitle = instrProfile?.title || "";
+        const instrNick = instrProfile?.nickname || actRow.teacher?.first_name || "";
+        const instrLast = actRow.teacher?.last_name || "";
+
         const instructorName = actRow.teacher 
-          ? (actRow.teacher.title && actRow.teacher.nickname 
-              ? `${actRow.teacher.title} ${actRow.teacher.nickname}` 
-              : buildFullNameFromObject(actRow.teacher))
+          ? (instrTitle && instrNick 
+              ? `${instrTitle} ${instrNick} ${instrLast}` 
+              : (instrTitle ? `${instrTitle} ${instrLast}` : (instrLast || "TBA")))
           : "TBA";
 
         setActivity({

@@ -136,19 +136,27 @@ const TeacherOnboarding: React.FC = () => {
   const saveStepProgress = async (stepData: Partial<OnboardingData>) => {
     if (!user?.id) return;
     try {
+      // 1. Update basic user info
       await supabase
         .from("users")
         .update({
-          title: stepData.title || data.title,
-          nickname: stepData.nickname || data.nickname,
-          school_id: stepData.school || data.school,
-          department_id: stepData.department || data.department,
           first_name: stepData.firstName || data.firstName,
           last_name: stepData.lastName || data.lastName,
           middle_name: stepData.middleName || data.middleName,
           suffix: stepData.suffix || data.suffix,
         })
         .eq("id", user.id);
+
+      // 2. Update teacher profile info
+      await supabase
+        .from("teacher_profiles")
+        .upsert({
+          user_id: user.id,
+          title: stepData.title || data.title,
+          nickname: stepData.nickname || data.nickname,
+          school_id: stepData.school || data.school,
+          department_id: stepData.department || data.department,
+        }, { onConflict: 'user_id' });
     } catch (err) {
       console.error("[Onboarding] Failed to auto-save progress:", err);
     }
@@ -190,13 +198,10 @@ const TeacherOnboarding: React.FC = () => {
         },
       });
 
-      const { error, data: updatedData } = await supabase
+      // 1. Update users table
+      const { error: userTableError } = await supabase
         .from("users")
         .update({
-          title: capitalizedTitle,
-          nickname: data.nickname,
-          school_id: data.school, // Use UUID column
-          department_id: data.department, // Use UUID column
           first_name: data.firstName,
           middle_name: data.middleName,
           last_name: data.lastName,
@@ -204,18 +209,24 @@ const TeacherOnboarding: React.FC = () => {
           email: data.email,
           onboarding_completed: true,
         })
-        .eq("id", authUser.id)
-        .select()
-        .single();
+        .eq("id", authUser.id);
 
-      if (error) throw error;
+      if (userTableError) throw userTableError;
+
+      // 2. Update teacher_profiles table
+      const { error: profileError } = await supabase
+        .from("teacher_profiles")
+        .upsert({
+          user_id: authUser.id,
+          title: capitalizedTitle,
+          nickname: data.nickname,
+          school_id: data.school,
+          department_id: data.department,
+        }, { onConflict: 'user_id' });
+
+      if (profileError) throw profileError;
       await checkAuth();
-
-      if (updatedData?.onboarding_completed) {
-        navigate("/Teacher/Dashboard");
-      } else {
-        navigate("/Teacher/Dashboard");
-      }
+      navigate("/Teacher/Dashboard");
     } catch (error) {
       console.error("Error completing onboarding:", error);
     } finally {

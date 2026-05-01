@@ -17,8 +17,9 @@ export function StudentSettingsTab() {
   
   const [profile, setProfile] = useState({
     firstName: "",
+    middleName: "",
     lastName: "",
-    nickname: ""
+    suffix: ""
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -43,13 +44,16 @@ export function StudentSettingsTab() {
           .from("users")
           .select(`
             *,
-            programs_lookup!fk_user_program (
-              name, 
-              abbr,
-              departments (
-                name,
-                schools (
-                  name
+            student_profiles!user_id (
+              *,
+              programs_lookup (
+                name, 
+                abbr,
+                departments (
+                  name,
+                  schools (
+                    name
+                  )
                 )
               )
             )
@@ -62,8 +66,9 @@ export function StudentSettingsTab() {
         setStudentData(data);
         setProfile({
           firstName: data.first_name || "",
+          middleName: data.middle_name || "",
           lastName: data.last_name || "",
-          nickname: data.nickname || ""
+          suffix: data.suffix || ""
         });
 
         const savedPrefs = localStorage.getItem(`student_prefs_${data.id}`);
@@ -118,8 +123,9 @@ export function StudentSettingsTab() {
         .from("users")
         .update({
           first_name: profile.firstName,
+          middle_name: profile.middleName,
           last_name: profile.lastName,
-          nickname: profile.nickname
+          suffix: profile.suffix
         })
         .eq("id", studentData.id);
 
@@ -129,8 +135,9 @@ export function StudentSettingsTab() {
       await supabase.auth.updateUser({
         data: {
           first_name: profile.firstName,
+          middle_name: profile.middleName,
           last_name: profile.lastName,
-          nickname: profile.nickname
+          suffix: profile.suffix
         }
       });
 
@@ -217,6 +224,16 @@ export function StudentSettingsTab() {
                 />
               </div>
               <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Middle Name</Label>
+                <input
+                  type="text"
+                  value={profile.middleName}
+                  placeholder="Optional"
+                  onChange={(e) => setProfile(prev => ({ ...prev, middleName: sanitizeName(e.target.value) }))}
+                  className="w-full px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1 flex justify-between">
                   <span>Last Name</span>
                   {errors.lastName && <span className="text-red-500 normal-case tracking-normal">{errors.lastName}</span>}
@@ -232,29 +249,23 @@ export function StudentSettingsTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1 flex justify-between">
-                  <span>Nickname</span>
-                  {errors.nickname && <span className="text-red-500 normal-case tracking-normal">{errors.nickname}</span>}
-                </Label>
+                <Label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest ml-1">Suffix</Label>
                 <input
                   type="text"
-                  value={profile.nickname}
-                  placeholder="Optional"
-                  onChange={(e) => {
-                    setProfile(prev => ({ ...prev, nickname: sanitizeName(e.target.value) }));
-                    if (errors.nickname) setErrors(prev => ({ ...prev, nickname: '' }));
-                  }}
-                  className={`w-full px-5 py-4 bg-neutral-50 rounded-2xl border text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20 ${errors.nickname ? 'border-red-500' : 'border-neutral-50'}`}
+                  value={profile.suffix}
+                  placeholder="Jr., III, etc. (Optional)"
+                  onChange={(e) => setProfile(prev => ({ ...prev, suffix: e.target.value }))}
+                  className="w-full px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-600 outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My ID Number</Label>
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">School ID</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.student_code || "---"}
+                  {(studentData?.student_profiles?.student_code || studentData?.student_profiles?.[0]?.student_code) || "---"}
                 </div>
               </div>
-              <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">My Email</Label>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Email</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 truncate cursor-not-allowed">
                   {studentData?.email || "---"}
                 </div>
@@ -262,31 +273,31 @@ export function StudentSettingsTab() {
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">School</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.programs_lookup?.departments?.schools?.name || "N/A"}
+                  {(studentData?.student_profiles?.programs_lookup || studentData?.student_profiles?.[0]?.programs_lookup)?.departments?.schools?.name || "N/A"}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Department</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.programs_lookup?.departments?.name || "N/A"}
+                  {(studentData?.student_profiles?.programs_lookup || studentData?.student_profiles?.[0]?.programs_lookup)?.departments?.name || "N/A"}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="col-span-1 md:col-span-2 space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Program</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.programs_lookup?.name || "N/A"}
+                  {(studentData?.student_profiles?.programs_lookup || studentData?.student_profiles?.[0]?.programs_lookup)?.name || "N/A"}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Year Level</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.year || "N/A"}
+                  {studentData?.student_profiles?.year || studentData?.student_profiles?.[0]?.year || "N/A"}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest ml-1">Block</Label>
                 <div className="px-5 py-4 bg-neutral-50 rounded-2xl border border-neutral-50 text-sm font-bold text-neutral-400 cursor-not-allowed">
-                  {studentData?.block_name || "N/A"}
+                  {studentData?.student_profiles?.block_name || studentData?.student_profiles?.[0]?.block_name || "N/A"}
                 </div>
               </div>
             </div>

@@ -40,114 +40,150 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
     setIsLoading(true);
     setLoadError(null);
     try {
+      console.log("DEBUG: fetchStudents triggered for blockId:", blockId);
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const selectQuery = blockId
+      const selectQuery = blockId 
         ? `
-          *,
-          block_students!fk_block_students_user!inner (
-            block_id,
-            blocks (
-              id,
-              name,
-              teacher_program_loads!fk_block_program_load (
-                teacher_course_loads (
-                  academic_year,
-                  term
+            *,
+            student_profiles (*),
+            block_students (
+              block_id,
+              blocks (
+                id,
+                name,
+                teacher_program_loads (
+                  teacher_course_loads (
+                    academic_year,
+                    term
+                  )
                 )
               )
             )
-          )
-        `
+          `
         : `
-          *,
-          block_students!fk_block_students_user (
-            block_id,
-            blocks (
-              id,
-              name,
-              teacher_program_loads!fk_block_program_load (
-                teacher_course_loads (
-                  academic_year,
-                  term
+            *,
+            student_profiles (*),
+            block_students (
+              block_id,
+              blocks (
+                id,
+                name,
+                teacher_program_loads (
+                  teacher_course_loads (
+                    academic_year,
+                    term
+                  )
                 )
               )
             )
-          )
-        `;
+          `;
 
       let query = supabase.from("users").select(selectQuery).eq("role", "student");
 
       if (blockId) {
-        // Filter by specific block, ignoring who originally created the student
+        // Filter by specific block
         query = query.eq("block_students.block_id", blockId);
       } else {
-        // For the general students tab, show students created by this teacher
-        query = query.eq("teacher_id", userData.user.id);
+        // For the general students tab, show students managed by this teacher
+        query = query.eq("student_profiles.teacher_id", userData.user.id);
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
       console.log("DEBUG: Students raw data from Supabase:", data?.length);
-      let result = data || [];
+      
+      let result = (data || []).map((s: any) => {
+        // Flatten student_profiles academic data into the main object
+        const spRaw = s.student_profiles;
+        const sp = Array.isArray(spRaw) ? spRaw[0] : spRaw;
+        
+        if (!sp) {
+          console.warn(`DEBUG: Student ${s.id} has NO profile record! Check RLS or profile creation logic.`);
+        }
 
-      // Supabase embedded filters only filter the nested join data, not parent rows.
-      // So we must manually exclude students whose block_students came back empty.
-      if (blockId) {
-        result = result.filter(s => {
-          const hasBlock = s.block_students && s.block_students.length > 0;
-          if (!hasBlock) console.log("DEBUG: Student filtered out because no block_students data", s.id);
-          return hasBlock;
-        });
-      }
+        return {
+          ...s,
+          student_code: sp?.student_code || "N/A",
+          year: sp?.year || 1,
+          block_name: sp?.block_name || "N/A",
+          program_id: sp?.program_id || "",
+          enrollment_status: sp?.enrollment_status || "active",
+          id: s.id // Ensure user ID is not overwritten by profile ID
+        };
+      });
 
       console.log("DEBUG: Current AY/Semester:", currentAY, currentSemester);
       
+      // Filter by blockId in JS if we removed !inner from the query
+      if (blockId) {
+        const preFilterCount = result.length;
+        result = result.filter(s => 
+          (s.block_students || []).some((bs: any) => bs.block_id === blockId)
+        );
+        console.log(`DEBUG: Filtered by blockId ${blockId}. Count: ${preFilterCount} -> ${result.length}`);
+      }
+
       // Manual filtering for AY and Term since it's deep in the join
       if (!showArchived) {
         if (currentAY && currentSemester) {
           const filtered = result.filter(s => 
-            s.block_students?.some((bs: any) => {
-              const bcl = bs.blocks?.teacher_program_loads?.teacher_course_loads;
-              const match = bcl?.academic_year === currentAY && bcl?.term === currentSemester;
-              if (!match) console.log("DEBUG: Student block info mismatch:", bcl?.academic_year, bcl?.term, "vs", currentAY, currentSemester);
+            (s.block_students || []).some((bs: any) => {
+              // Handle potential arrays from Supabase joins
+              const tplRaw = bs.blocks?.teacher_program_loads;
+              const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+              const tclRaw = tpl?.teacher_course_loads;
+              const tcl = Array.isArray(tclRaw) ? tclRaw[0] : tclRaw;
+
+              const match = tcl?.academic_year === currentAY && tcl?.term === currentSemester;
+              if (!match && blockId) {
+                console.log(`DEBUG: Student ${s.id} block mismatch. Block AY/Term: ${tcl?.academic_year}/${tcl?.term} vs Expected: ${currentAY}/${currentSemester}`);
+              }
               return match;
             })
           );
           
           if (filtered.length === 0 && result.length > 0) {
-            console.warn("DEBUG: ALL students filtered out by AY/Semester! Showing all for now to debug.");
-            // TEMPORARY: If filtering kills everything, show all to confirm data exists
-            // result = result; 
-          } else {
-            result = filtered;
+            console.warn("DEBUG: ALL students filtered out by AY/Semester! This suggests the block is linked to a different academic period.");
           }
+          result = filtered;
         }
       } else {
         // Archive view: apply specific filters
         if (ay && ay !== "all") {
           result = result.filter(s => 
-            s.block_students?.some((bs: any) => 
-              bs.blocks?.teacher_program_loads?.teacher_course_loads?.academic_year === ay
-            )
+            (s.block_students || []).some((bs: any) => {
+              const tplRaw = bs.blocks?.teacher_program_loads;
+              const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+              const tclRaw = tpl?.teacher_course_loads;
+              const tcl = Array.isArray(tclRaw) ? tclRaw[0] : tclRaw;
+              return tcl?.academic_year === ay;
+            })
           );
         }
         if (term && term !== "all") {
           result = result.filter(s => 
-            s.block_students?.some((bs: any) => 
-              bs.blocks?.teacher_program_loads?.teacher_course_loads?.term === term
-            )
+            (s.block_students || []).some((bs: any) => {
+              const tplRaw = bs.blocks?.teacher_program_loads;
+              const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+              const tclRaw = tpl?.teacher_course_loads;
+              const tcl = Array.isArray(tclRaw) ? tclRaw[0] : tclRaw;
+              return tcl?.term === term;
+            })
           );
         }
 
         // ALWAYS exclude current when archiving if context available
         if (currentAY && currentSemester) {
           result = result.filter(s => 
-            s.block_students?.every((bs: any) => {
-              const bcl = bs.blocks?.teacher_program_loads?.teacher_course_loads;
-              return bcl?.academic_year !== currentAY || bcl?.term !== currentSemester;
+            (s.block_students || []).every((bs: any) => {
+              const tplRaw = bs.blocks?.teacher_program_loads;
+              const tpl = Array.isArray(tplRaw) ? tplRaw[0] : tplRaw;
+              const tclRaw = tpl?.teacher_course_loads;
+              const tcl = Array.isArray(tclRaw) ? tclRaw[0] : tclRaw;
+              return tcl?.academic_year !== currentAY || tcl?.term !== currentSemester;
             })
           );
         }
@@ -283,21 +319,31 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         .from("users")
         .select(`
           id,
-          student_code,
           email,
-          programs_lookup (
-            abbr,
-            departments (code)
+          student_profiles (
+            student_code,
+            program_id,
+            programs_lookup (
+              abbr,
+              departments (code)
+            )
           )
         `)
         .eq("role", "student")
-        .or(`student_code.eq.${dataToUse.student_code}${dataToUse.email ? `,email.eq.${dataToUse.email}` : ""}`)
-        .limit(1);
+        .or(`email.eq.${dataToUse.email ? dataToUse.email : "null"}`);
+
+      // Check student_code separately as it's now in a different table
+      const { data: existingProfile } = await supabase
+        .from("student_profiles")
+        .select("user_id")
+        .eq("student_code", dataToUse.student_code)
+        .maybeSingle();
 
       if (checkError) console.error("Check error:", checkError);
 
-      if (existingData && existingData.length > 0) {
-        const field = existingData[0].student_code === dataToUse.student_code ? "Student ID" : "Email";
+      if ((existingData && existingData.length > 0) || existingProfile) {
+        const isEmailConflict = existingData && existingData.some(u => u.email === dataToUse.email);
+        const field = isEmailConflict ? "Email" : "Student ID";
         throw new Error(`${field} already exists in active student list.`);
       }
 
@@ -446,21 +492,39 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
 
   const handleUpdateStudent = async (studentId: string, updates: Partial<Student>) => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .update(updates)
-        .eq("id", studentId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      setStudents(prev => prev.map(s => s.id === studentId ? (data as Student) : s));
+      const userTableFields = ['email', 'first_name', 'middle_name', 'last_name', 'suffix', 'is_active'];
+      const studentFields = [
+        'student_code', 'year', 'block_name', 'enrollment_status', 
+        'program_id', 'school_id', 'department_id', 'onboarding_completed'
+      ];
+
+      const userData: any = {};
+      const profileData: any = {};
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (userTableFields.includes(key)) userData[key] = value;
+        else if (studentFields.includes(key)) profileData[key] = value;
+      });
+
+      if (Object.keys(userData).length > 0) {
+        const { error } = await supabase.from("users").update(userData).eq("id", studentId);
+        if (error) throw error;
+      }
+
+      if (Object.keys(profileData).length > 0) {
+        const { error } = await supabase.from("student_profiles").update(profileData).eq("user_id", studentId);
+        if (error) throw error;
+      }
+
+      // Re-fetch to get complete updated state
+      await fetchStudents();
       showSuccess("Student updated.");
       setIsEditDialogOpen(false);
       setEditingStudent(null);
-      return data;
+      return true;
     } catch (err) {
       showError("Failed to update student.");
+      return false;
     }
   };
 

@@ -351,12 +351,19 @@ const Login: React.FC = () => {
         localStorage.removeItem("rememberedStudentCode");
       }
 
-      // Navigate to Onboarding
+      // Navigate to Onboarding with FULL data for instant display
       navigate("/Student/Onboarding", {
         state: {
           student: {
             ...pendingStudent,
             id: authUserId as string,
+            // Ensure nested objects are reconstructed for the Onboarding UI
+            programs_lookup: {
+              name: (pendingStudent as any).program_name,
+              departments: {
+                name: (pendingStudent as any).department_name
+              }
+            }
           },
         },
       });
@@ -475,7 +482,20 @@ const Login: React.FC = () => {
             localStorage.removeItem("rememberedStudentCode");
           }
           
-          navigate("/Student/Onboarding", { state: { student: { ...studentIdentity, id: effectiveAuthId } } });
+          navigate("/Student/Onboarding", { 
+            state: { 
+              student: { 
+                ...studentIdentity, 
+                id: effectiveAuthId,
+                programs_lookup: {
+                  name: (studentIdentity as any).program_name,
+                  departments: {
+                    name: (studentIdentity as any).department_name
+                  }
+                }
+              } 
+            } 
+          });
           return;
         }
       }

@@ -27,7 +27,8 @@ interface EnrollStudentModalProps {
 
 const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [schools, setSchools] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string; code: string; school_id: string }[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [formError, setFormError] = useState<string>("");
   const { showNotification } = useNotification();
@@ -39,6 +40,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
     last_name: "",
     suffix: "",
     email: "",
+    school_id: "",
     department_id: "",
     program_id: "",
     year: 1,
@@ -49,14 +51,17 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [deptsRes, progsRes] = await Promise.all([
+        const [schoolsRes, deptsRes, progsRes] = await Promise.all([
+          supabase.from("schools").select("*").order("name"),
           supabase.from("departments").select("*").order("name"),
           supabase.from("programs_lookup").select("*").order("name")
         ]);
         
+        if (schoolsRes.error) throw schoolsRes.error;
         if (deptsRes.error) throw deptsRes.error;
         if (progsRes.error) throw progsRes.error;
 
+        setSchools(schoolsRes.data || []);
         setDepartments(deptsRes.data || []);
         setPrograms(progsRes.data || []);
       } catch (err) {
@@ -70,6 +75,10 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
       fetchMetadata();
     }
   }, [isOpen]);
+
+  const filteredDepartments = formData.school_id
+    ? departments.filter(d => d.school_id === formData.school_id)
+    : [];
 
   const filteredPrograms = formData.department_id 
     ? programs.filter(p => p.department_id === formData.department_id)
@@ -88,31 +97,40 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
       const normalizedEmail = formData.email.trim().toLowerCase();
 
-      // 1. Check for duplicate student code or email across users table
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id, student_code, email")
-        .or(`student_code.eq.${formData.student_code.trim()},email.eq.${normalizedEmail}`)
+      // 1. Check for duplicate student code or email separately
+      const { data: existingProfile } = await supabase
+        .from("student_profiles")
+        .select("student_code")
+        .eq("student_code", formData.student_code.trim())
         .maybeSingle();
 
-      if (existingUser) {
-        if (existingUser.student_code?.toLowerCase() === formData.student_code.trim().toLowerCase()) {
-          setFormError(`Student ID ${formData.student_code} is already registered.`);
-        } else {
-          setFormError(`Email ${normalizedEmail} is already registered.`);
-        }
+      if (existingProfile) {
+        setFormError(`Student ID ${formData.student_code} is already registered.`);
         return;
       }
 
-      // 2. Perform enrollment using unified atomic RPC
-      const enrollResult = await authApi.enrollStudentAtomic({
+      const { data: existingEmail } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (existingEmail) {
+        setFormError(`Email ${normalizedEmail} is already registered.`);
+        return;
+      }
+
+      // 2. Perform enrollment using unified atomic provisioner
+      const enrollResult = await authApi.provisionUserV2({
         email: normalizedEmail,
-        student_code: formData.student_code.trim(),
+        role: "student",
+        code: formData.student_code.trim(),
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
         middle_name: formData.middle_name.trim() || undefined,
-        password: formData.birthday, // Use birthday with dashes as initial password
-        teacher_id: (supabase.auth.getUser() as any).id, // Or just NULL if admin
+        suffix: formData.suffix || undefined,
+        school_id: formData.school_id,
+        department_id: formData.department_id,
         program_id: formData.program_id,
         year: formData.year,
         block_name: formData.block_name,
@@ -130,7 +148,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
             to_name: `${formData.first_name.trim()} ${formData.last_name.trim()}`,
             to_email: normalizedEmail,
             student_code: formData.student_code.trim(),
-            temp_password: enrollResult.temp_password,
+            temp_password: enrollResult.temp_password || formData.birthday || "",
           });
         } catch (emailErr) {
           console.error("Email failed:", emailErr);
@@ -138,6 +156,32 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
       }
 
       showNotification('success', "Student successfully enrolled! Welcome email dispatched.");
+      
+      // 5. Auto-link to matching blocks
+      try {
+        const { data: blocks } = await supabase
+          .from("blocks")
+          .select(`
+            id,
+            teacher_program_loads!fk_block_program_load!inner (
+              program_id
+            )
+          `)
+          .eq("year", formData.year)
+          .eq("name", formData.block_name.toUpperCase())
+          .eq("teacher_program_loads.program_id", formData.program_id);
+
+        if (blocks && blocks.length > 0) {
+          const links = blocks.map(b => ({
+            block_id: b.id,
+            student_id: enrollResult.auth_id
+          }));
+          await supabase.from("block_students").insert(links);
+        }
+      } catch (linkErr) {
+        console.error("Auto-link error:", linkErr);
+      }
+
       onSuccess();
       onClose();
       // Reset form
@@ -148,6 +192,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
         last_name: "",
         suffix: "",
         email: "",
+        school_id: "",
         department_id: "",
         program_id: "",
         year: 1,
@@ -203,7 +248,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
           <div className="space-y-6">
              <div className="flex items-center gap-3">
                 <Hash size={16} className="text-primary" />
-                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Details</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Core Identity</h3>
              </div>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -211,30 +256,29 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Student ID*</label>
                   <input
                     required
-                    placeholder="2024-0001"
+                    placeholder="000-0000"
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                     value={formData.student_code}
                     onChange={(e) => setFormData({ ...formData, student_code: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
                   <div className="relative group">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
                     <input
                       required
-                      type="email"
-                      placeholder="student@university.edu"
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      type="date"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer"
+                      value={formData.birthday}
+                      onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                     />
                   </div>
                 </div>
              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="sm:col-span-1 space-y-1.5">
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
                   <input
                     required
@@ -244,7 +288,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   />
                 </div>
-                <div className="sm:col-span-1 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                   <input
                     placeholder="Dela"
@@ -253,7 +297,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
                   />
                 </div>
-                <div className="sm:col-span-1 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
                   <input
                     required
@@ -263,7 +307,10 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   />
                 </div>
-                <div className="sm:col-span-1 space-y-1.5">
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                   <select
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer"
@@ -279,46 +326,66 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                   </select>
                 </div>
              </div>
-
-             <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
-                <div className="relative group">
-                  <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
-                  <input
-                    required
-                    type="date"
-                    className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer"
-                    value={formData.birthday}
-                    onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-                  />
-                </div>
-                <p className="text-[9px] text-neutral-400 italic mt-1.5 px-1.5">
-                  The initial password will be set to the student''s birthday (YYYY-MM-DD format).
-                </p>
-             </div>
           </div>
 
           <div className="p-8 bg-neutral-50/50 rounded-[2.5rem] border border-neutral-100 space-y-6">
              <div className="flex items-center gap-3">
                 <BookOpen size={16} className="text-primary" />
-                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Placement</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Placement & Contact</h3>
              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* School and Email in one row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School*</label>
+                  <select
+                    required
+                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer"
+                    value={formData.school_id}
+                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value, department_id: "", program_id: "" })}
+                  >
+                    <option value="">Select School</option>
+                    {schools.map((s) => (
+                      <option key={s.id} value={s.id}>[{s.code}] {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email*</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
+                    <input
+                      required
+                      type="email"
+                      placeholder="student@university.edu"
+                      className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
                   <select
                     required
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer"
+                    disabled={!formData.school_id}
+                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
                     value={formData.department_id}
                     onChange={(e) => setFormData({ ...formData, department_id: e.target.value, program_id: "" })}
                   >
                     <option value="">Select Department</option>
-                    {departments.map((d) => (
+                    {filteredDepartments.map((d) => (
                       <option key={d.id} value={d.id}>[{d.code}] {d.name}</option>
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Program solo in one row */}
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
                   <select
@@ -334,9 +401,10 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     ))}
                   </select>
                 </div>
-             </div>
+              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Year level and block in one row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Year Level*</label>
                   <select
@@ -364,7 +432,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     ))}
                   </select>
                 </div>
-             </div>
+              </div>
           </div>
         </form>
 

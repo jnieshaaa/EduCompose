@@ -44,10 +44,9 @@ export async function resolveStudentIdForEssayFilter(
 
   try {
     const { data: byCode, error: lookupError } = await supabase
-      .from("users")
-      .select("*")
+      .from("student_profiles")
+      .select("user_id")
       .eq("student_code", t)
-      .eq("role", "student")
       .maybeSingle();
     
     if (lookupError) {
@@ -61,7 +60,7 @@ export async function resolveStudentIdForEssayFilter(
       return null;
     }
     
-    return byCode?.id || null;
+    return byCode?.user_id || null;
   } catch (err) {
     console.error("[resolveStudentIdForEssayFilter] Unexpected error in lookup:", err);
     return null;
@@ -1241,9 +1240,13 @@ export const fetchStudentsByCourseAndSection = async (
     const { data: blockStudentsData, error: blockStudentsError } =
       await supabase
         .from("block_students")
-        .select(
-          "student_id, users!student_id!inner(id, student_code, first_name, middle_name, last_name)",
-        )
+        .select(`
+          student_id, 
+          users!student_id!inner(
+            id, first_name, middle_name, last_name,
+            student_profiles!user_id(student_code)
+          )
+        `)
         .eq("block_id", sectionId);
 
     if (blockStudentsError) {
@@ -1259,19 +1262,12 @@ export const fetchStudentsByCourseAndSection = async (
     }
 
     // Extract students from junction table results
-    type BlockStudentRow = {
-      student_id: string;  // uuid
-      users: {
-        id: string;  // uuid
-        student_code: string;
-        first_name: string;
-        middle_name: string | null;
-        last_name: string;
-      };
-    };
     const studentsData = (
-      blockStudentsData as unknown as BlockStudentRow[]
-    ).map((bs) => bs.users);
+      blockStudentsData as unknown as any[]
+    ).map((bs) => ({
+      ...bs.users,
+      student_code: bs.users?.student_profiles?.[0]?.student_code || ""
+    }));
 
     // Sort by full name in memory
     studentsData.sort((a, b) => {
@@ -1434,16 +1430,15 @@ export const uploadEssayFile = async (
     if (!isUuidString(studentId)) {
       // If studentId is a student_code, fetch the actual DB ID
       const { data: studentData } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
         return { success: false, error: "Student not found with code: " + studentId };
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Parse activity ID
@@ -1499,16 +1494,15 @@ export const updateEssayFile = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
         return { success: false, error: "Student not found with code: " + studentId };
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Parse activity ID
@@ -1607,16 +1601,15 @@ export const deleteEssay = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (!studentData) {
         return { success: false, error: "Student not found with code: " + studentId };
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Parse activity ID
@@ -1731,17 +1724,16 @@ export const fetchEssayByStudentAndActivity = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
         console.error("Error finding student:", studentError || "No student found with code: " + studentId);
         return null;
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Parse activity ID
@@ -1804,16 +1796,15 @@ export const checkEssayGraded = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
         return false;
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Activity ID is now a UUID string
@@ -1902,12 +1893,11 @@ export const allowResubmission = async (
 
     if (!studentDbId) {
       const { data: studentData } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
-      studentDbId = studentData?.id || null;
+      studentDbId = studentData?.user_id || null;
       authUserId = studentDbId; // Now same as ID
     } else {
       const { data: studentData } = await supabase
@@ -1998,17 +1988,16 @@ export const gradeEssay = async (
 
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
         return { success: false, error: "Student not found" };
       }
-      studentDbId = studentData.id;
-      authUserId = studentData.id;
+      studentDbId = studentData.user_id;
+      authUserId = studentData.user_id;
     } else {
       const { data: stdData } = await supabase
         .from("users")
@@ -2633,16 +2622,15 @@ export const fetchStudentAnalysisResults = async (
     let studentDbId = studentId;
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
-        .from("users")
-        .select("id")
+        .from("student_profiles")
+        .select("user_id")
         .eq("student_code", studentId)
-        .eq("role", "student")
         .maybeSingle();
 
       if (studentError || !studentData) {
         return [];
       }
-      studentDbId = studentData.id;
+      studentDbId = studentData.user_id;
     }
 
     // Fetch all analysis results for this student
@@ -3109,11 +3097,16 @@ export const fetchDuplicateEssays = async (
     });
 
     // Fetch students
-    const { data: students } = await supabase
+    const { data: studentsRaw } = await supabase
       .from("users")
-      .select("id, first_name, last_name, middle_name, suffix, student_code")
+      .select("id, first_name, last_name, middle_name, suffix, student_profiles(student_code)")
       .in("id", studentIds)
       .eq("role", "student");
+      
+    const students = (studentsRaw || []).map((s: any) => ({
+      ...s,
+      student_code: s.student_profiles?.[0]?.student_code || ""
+    }));
       
     // Fetch blocks with their program_load_id
     const { data: blocksData } = await supabase

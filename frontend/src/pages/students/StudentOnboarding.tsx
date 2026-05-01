@@ -79,40 +79,16 @@ const StudentOnboarding: React.FC = () => {
     const fetchStudentData = async () => {
       try {
         const {
-          data: { user: authUser },
+          data: { user },
         } = await supabase.auth.getUser();
-        if (!authUser) return;
+        if (!user) return;
 
-        const { data: initialData, error: initialError } = await supabase
+        // 1. Try to fetch the full student identity
+        let { data, error: initialError } = await supabase
           .from("users")
-          .select(
-            `
+          .select(`
             *,
-            programs_lookup (
-              name,
-              abbr,
-              departments (
-                name,
-                code,
-                schools (
-                  name
-                )
-              )
-            )
-          `,
-          )
-          .eq("id", authUser.id)
-          .eq("role", "student")
-          .maybeSingle();
-
-        let data = initialData;
-        const error = initialError;
-
-        if (!data && authUser.email) {
-          const { data: emailData, error: emailError } = await supabase
-            .from("users")
-            .select(
-              `
+            student_profiles!user_id (
               *,
               programs_lookup (
                 name,
@@ -125,19 +101,55 @@ const StudentOnboarding: React.FC = () => {
                   )
                 )
               )
-            `,
             )
-            .eq("email", authUser.email)
+          `)
+          .eq("id", user.id)
+          .eq("role", "student")
+          .maybeSingle();
+
+        // 2. Fallback to email lookup if ID search fails (helpful after signup)
+        if (!data || initialError) {
+          const { data: emailData, error: emailError } = await supabase
+            .from("users")
+            .select(`
+              *,
+              student_profiles!user_id (
+                *,
+                programs_lookup (
+                  name,
+                  abbr,
+                  departments (
+                    name,
+                    code,
+                    schools (
+                      name
+                    )
+                  )
+                )
+              )
+            `)
+            .eq("email", user.email?.toLowerCase())
             .eq("role", "student")
             .maybeSingle();
 
           if (!emailError && emailData) {
             data = emailData;
-            // No need to update auth_user_id since id is already the auth.users.id
           }
         }
 
-        if (error) throw error;
+        // Flatten the student_profiles data into the main object for easier UI access
+        // Handling both array and single object formats from Supabase
+        const sp = data?.student_profiles?.[0] || data?.student_profiles;
+        
+        if (data && sp) {
+          data = {
+            ...data,
+            ...sp,
+            // Ensure programs_lookup and departments are accessible
+            programs_lookup: sp.programs_lookup
+          };
+        }
+
         setStudentData(data);
       } catch (err: any) {
         console.error("Error fetching student data:", err);
@@ -187,23 +199,35 @@ const StudentOnboarding: React.FC = () => {
       if (!studentData?.id) {
         throw new Error("Missing student info.");
       }
+      
+      if (!authUser) throw new Error("Not authenticated");
 
-      const { error: updateError } = await supabase
-        .from("users")
+      console.log("ONBOARDING: Updating profile for Auth ID:", authUser.id);
+
+      // 2. Update the profile
+      const { data: updateData, error: updateError } = await supabase
+        .from("student_profiles")
         .update({ 
           onboarding_completed: true
         })
-        .eq("id", studentData.id);
+        .eq("user_id", authUser.id)
+        .select();
+
+      console.log("ONBOARDING: DB Update result:", { data: updateData, error: updateError });
 
       if (updateError) throw updateError;
+      if (!updateData || updateData.length === 0) {
+        throw new Error("Update failed: Profile not found or access denied.");
+      }
 
+      // 3. Refresh the local auth state WITHOUT reloading the page
+      console.log("ONBOARDING: Refreshing session state...");
       await checkAuth();
       
       showNotification('success', "All set! Welcome to EduCompose.");
       
-      setTimeout(() => {
-        navigate("/Student/Dashboard");
-      }, 100);
+      // 4. Navigate smoothly to Dashboard
+      navigate("/Student/Dashboard", { replace: true });
     } catch (err: any) {
       console.error("Error completing onboarding:", err);
       showNotification('error', "Something went wrong. Please try again.");
@@ -520,9 +544,15 @@ const StudentOnboarding: React.FC = () => {
                           <div>
                             <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">My Course</p>
                             <p className="text-xl font-medium text-neutral-900 tracking-tight leading-none">
-                              {studentData?.programs_lookup?.name || "Program Name"}
+                              {(studentData?.programs_lookup as any)?.name || 
+                               (studentData?.programs_lookup as any)?.[0]?.name || 
+                               "Program Name"}
                             </p>
-                            <p className="text-[10px] font-medium text-neutral-400 uppercase mt-1">{studentData?.programs_lookup?.abbr || "---"}</p>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase mt-1">
+                              {(studentData?.programs_lookup as any)?.abbr || 
+                               (studentData?.programs_lookup as any)?.[0]?.abbr || 
+                               "---"}
+                            </p>
                           </div>
                         </div>
 
@@ -533,7 +563,11 @@ const StudentOnboarding: React.FC = () => {
                           <div>
                             <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">My Department</p>
                             <p className="text-lg font-medium text-neutral-900 tracking-tight leading-none">
-                              {studentData?.programs_lookup?.departments?.name || "Department Name"}
+                              {(studentData?.programs_lookup as any)?.departments?.name || 
+                               (studentData?.programs_lookup as any)?.[0]?.departments?.name || 
+                               (studentData?.programs_lookup as any)?.[0]?.departments?.[0]?.name || 
+                               (studentData as any)?.departments?.name ||
+                               "Department Name"}
                             </p>
                           </div>
                         </div>

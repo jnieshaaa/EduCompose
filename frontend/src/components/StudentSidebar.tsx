@@ -120,8 +120,10 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
                   users:teacher_id (
                     first_name,
                     last_name,
-                    title,
-                    nickname
+                    teacher_profiles!user_id (
+                      title,
+                      nickname
+                    )
                   )
                 )
               )
@@ -143,16 +145,21 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
             const tclData = tpl.teacher_course_loads;
             const tcls = Array.isArray(tclData) ? tclData : (tclData ? [tclData] : []);
 
-            tcls.forEach((tcl: TeacherCourseLoadJoin) => {
+            tcls.forEach((tcl: any) => {
               if (tcl && tcl.courses) {
+                const instructorProfile = tcl.users?.teacher_profiles?.[0] || tcl.users?.teacher_profiles;
+                const instructorTitle = instructorProfile?.title || "";
+                const instructorNickname = instructorProfile?.nickname || tcl.users?.first_name || "";
+                const instructorLastName = tcl.users?.last_name || "";
+
                 flattenedClasses.push({
                   id: tcl.id || "",
                   code: tcl.courses.course_code || "N/A",
                   name: tcl.courses.course_title || "Untitled Course",
                   instructor: tcl.users 
-                    ? (tcl.users.title && tcl.users.nickname 
-                      ? `${tcl.users.title} ${tcl.users.nickname}` 
-                      : (tcl.users.title ? `${tcl.users.title} ${tcl.users.last_name || ""}` : (tcl.users.last_name || "TBA")))
+                    ? (instructorTitle && instructorNickname 
+                      ? `${instructorTitle} ${instructorNickname} ${instructorLastName}` 
+                      : (instructorTitle ? `${instructorTitle} ${instructorLastName}` : (instructorLastName || "TBA")))
                     : "TBA"
                 });
               }

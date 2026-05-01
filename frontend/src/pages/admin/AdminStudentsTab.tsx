@@ -177,30 +177,32 @@ export const AdminStudentsTab: React.FC = () => {
         .from("users")
         .select(`
           *,
-          programs_lookup!fk_user_program (
-            id,
-            name,
-            abbr,
-            departments(
+          student_profiles (
+            *,
+            programs_lookup (
               id,
               name,
-              code
+              abbr,
+              departments(
+                id,
+                name,
+                code
+              )
             )
           )
         `, { count: "exact" })
-        .eq("role", "student")
-        .eq("enrollment_status", "active");
+        .eq("role", "student");
 
       if (searchTerm) {
-        query = query.or(`student_code.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
 
       if (progFilter) {
-        query = query.eq("program_id", progFilter);
+        query = query.eq("student_profiles.program_id", progFilter);
       }
 
       if (blockFilter) {
-        query = query.eq("block_name", blockFilter);
+        query = query.eq("student_profiles.block_name", blockFilter);
       }
 
       // Handle Department Filter
@@ -209,10 +211,10 @@ export const AdminStudentsTab: React.FC = () => {
         const { data: deptProgs } = await supabase
           .from("programs_lookup")
           .select("id")
-          .or(`department_id.eq.${deptFilter},department_id.in.(select id from departments where code='${deptFilter}')`);
+          .eq("department_id", deptFilter);
         
         if (deptProgs && deptProgs.length > 0) {
-          query = query.in("program_id", deptProgs.map(p => p.id));
+          query = query.in("student_profiles.program_id", deptProgs.map(p => p.id));
         }
       }
 
@@ -221,7 +223,27 @@ export const AdminStudentsTab: React.FC = () => {
         .range(from, to);
 
       if (fetchError) throw fetchError;
-      setStudents(data || []);
+      
+      console.log('DEBUG: Raw Students Data from Supabase:', data);
+
+      const flattenedData = (data || []).map((user: any) => {
+        const profiles = user.student_profiles;
+        const sp = Array.isArray(profiles) ? profiles[0] : profiles;
+
+        if (!sp) {
+          console.warn(`DEBUG: No student_profile found for user ${user.email} (ID: ${user.id})`);
+        } else {
+          console.log(`DEBUG: Spreading Profile for ${user.email}:`, sp);
+        }
+
+        return {
+          ...user,
+          ...(sp || {}),
+          programs_lookup: sp?.programs_lookup
+        };
+      });
+
+      setStudents(flattenedData);
       setTotalStudentsCount(count || 0);
     } catch (err: any) {
       showNotification('error', err instanceof Error ? err.message : "Failed to connect to database.");
@@ -235,7 +257,7 @@ export const AdminStudentsTab: React.FC = () => {
       const [deptsRes, progsRes, blocksRes] = await Promise.all([
         supabase.from("departments").select("*").order("name"),
         supabase.from("programs_lookup").select("*").order("name"),
-        supabase.from("users").select("block_name").eq("role", "student")
+        supabase.from("student_profiles").select("block_name")
       ]);
       setDepartments(deptsRes.data || []);
       setAllPrograms(progsRes.data || []);

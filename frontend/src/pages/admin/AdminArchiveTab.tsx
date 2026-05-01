@@ -27,6 +27,7 @@ import { useNotification } from "../../contexts/NotificationContext";
 import { fetchAllTeacherLoads, fetchAcademicSettings, deleteTeacherCourseLoad } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
 import { supabase } from "../../lib/supabaseClient";
+import { adminApi } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 
 type ArchiveType = "academic" | "users";
@@ -90,16 +91,31 @@ export function AdminArchiveTab() {
   };
 
   const loadArchivedUsers = async () => {
+    // We fetch users and join their student profiles to check enrollment status
     const { data, error } = await supabase
       .from("users")
-      .select("*")
-      .or("enrollment_status.eq.dropped,enrollment_status.eq.graduated,is_active.eq.false")
+      .select(`
+        *,
+        student_profiles!user_id ( student_code, enrollment_status )
+      `)
       .order("last_name", { ascending: true });
     
     if (error) {
       showNotification('error', "Failed to load archived users.");
     } else {
-      setArchivedUsers(data || []);
+      // Filter in JS to find archived users:
+      // 1. Inactive users (any role)
+      // 2. Students who are dropped or graduated
+      const filtered = (data || []).filter(u => 
+        !u.is_active || 
+        (u.role === 'student' && (u.student_profiles?.[0]?.enrollment_status === 'dropped' || u.student_profiles?.[0]?.enrollment_status === 'graduated'))
+      ).map(u => ({
+        ...u,
+        student_code: u.student_profiles?.[0]?.student_code,
+        enrollment_status: u.student_profiles?.[0]?.enrollment_status
+      }));
+      
+      setArchivedUsers(filtered);
     }
   };
 
@@ -108,20 +124,11 @@ export function AdminArchiveTab() {
     
     try {
       setIsLoading(true);
-      const updates: any = { is_active: true };
-      
-      // If student, move back to active enrollment
-      if (user.role === 'student') {
-        updates.enrollment_status = 'active';
-      }
-      
-      const { error } = await supabase
-        .from("users")
-        .update(updates)
-        .eq("id", user.id);
+      await adminApi.updateUser(user.id, {
+        is_active: true,
+        enrollment_status: user.role === 'student' ? 'active' : undefined
+      });
         
-      if (error) throw error;
-      
       showNotification('success', `${user.first_name}'s account has been restored.`);
       await loadArchivedUsers();
     } catch (err: any) {

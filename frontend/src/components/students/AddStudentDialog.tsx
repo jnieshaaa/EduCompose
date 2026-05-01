@@ -95,17 +95,34 @@ export function AddStudentDialog({
           });
 
           let query = supabase
-            .from("users")
-            .select("id, first_name, last_name, student_code")
-            .eq("role", "student")
+            .from("student_profiles")
+            .select(`
+              student_code,
+              users!inner (
+                id,
+                first_name,
+                last_name,
+                is_active
+              )
+            `)
             .eq("teacher_id", userData.user.id)
-            .eq("is_active", true);
+            .eq("users.is_active", true);
 
           if (blockName) query = query.eq("block_name", blockName);
           if (year) query = query.eq("year", year);
           if (programId) query = query.eq("program_id", programId);
 
-          const { data: matchedStudents } = await query;
+          const { data: profileMatches } = await query;
+
+          if (!profileMatches) return;
+
+          // Flatten the results
+          const matchedStudents = profileMatches.map(p => ({
+            id: p.users.id,
+            first_name: p.users.first_name,
+            last_name: p.users.last_name,
+            student_code: p.student_code
+          }));
 
           if (!matchedStudents) return;
 

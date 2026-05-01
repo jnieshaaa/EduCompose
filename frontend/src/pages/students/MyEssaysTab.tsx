@@ -40,12 +40,15 @@ export function MyEssaysTab() {
 
         const { data: student } = await supabase
           .from('users')
-          .select('id, student_code')
+          .select(`
+            id,
+            student_profiles!user_id ( student_code )
+          `)
           .eq('id', authUser.user.id)
-          .eq('role', 'student')
           .maybeSingle();
 
         if (!student) return;
+        const studentCode = (student.student_profiles as any)?.[0]?.student_code;
 
         const { data, error } = await supabase
           .from('essays')
@@ -65,7 +68,7 @@ export function MyEssaysTab() {
           hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
           hasTeacherFeedback: e.status === 'reviewed',
           activityId: (e.essay_activities as any)?.id,
-          studentCode: student.student_code,
+          studentCode: studentCode,
           filePath: e.file_path,
           content: e.content,
         }));

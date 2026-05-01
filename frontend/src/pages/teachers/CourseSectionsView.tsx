@@ -192,9 +192,8 @@ export function CourseSectionsView({
 
         const results = await Promise.all(uniqueBlocks.map(async (b) => {
           const { count } = await supabase
-            .from("users")
+            .from("student_profiles")
             .select("*", { count: 'exact', head: true })
-            .eq("role", "student")
             .eq("program_id", selectedProgramLoad.program_id)
             .eq("year", b.year)
             .eq("block_name", b.name);
@@ -386,9 +385,8 @@ export function CourseSectionsView({
         // 2. Auto-enroll students
         if (block) {
           const { data: matchingStudents } = await supabase
-            .from("users")
-            .select("id")
-            .eq("role", "student")
+            .from("student_profiles")
+            .select("user_id")
             .eq("program_id", selectedProgramLoad.program_id)
             .eq("year", b.year)
             .eq("block_name", b.name.toUpperCase());
@@ -397,7 +395,7 @@ export function CourseSectionsView({
             totalEnrolled += matchingStudents.length;
             const enrollments = matchingStudents.map(s => ({
               block_id: block.id,
-              student_id: s.id
+              student_id: s.user_id
             }));
             
             const { error: enrollError } = await supabase
@@ -424,6 +422,44 @@ export function CourseSectionsView({
       showError(msg || "Failed to create section(s).");
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleSyncBlock = async (block: Section) => {
+    setIsLoading(true);
+    try {
+      // 1. Get matching students from profiles
+      const { data: matchingStudents } = await supabase
+        .from("student_profiles")
+        .select("user_id")
+        .eq("program_id", selectedProgramLoad?.program_id)
+        .eq("year", block.year)
+        .eq("block_name", block.name.toUpperCase());
+
+      if (!matchingStudents || matchingStudents.length === 0) {
+        showWarning(`No students found in student_profiles for Section ${block.year}${block.name}.`);
+        return;
+      }
+
+      // 2. Insert into block_students (using ON CONFLICT DO NOTHING)
+      const enrollments = matchingStudents.map(s => ({
+        block_id: block.id,
+        student_id: s.user_id
+      }));
+
+      const { error: enrollError } = await supabase
+        .from("block_students")
+        .insert(enrollments);
+
+      if (enrollError && enrollError.code !== "23505") throw enrollError;
+
+      showSuccess(`Synchronized ${matchingStudents.length} students to Section ${block.year}${block.name}.`);
+      fetchBlocks();
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      showError("Failed to sync students.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -595,55 +631,88 @@ export function CourseSectionsView({
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-neutral-50/50">
-                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/2">Section Block</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/3">Section Block</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
-                {blocks.map((block) => (
-                  <tr
-                    key={block.id}
-                    className="hover:bg-neutral-50/30 transition-colors cursor-pointer group"
-                    onClick={() => {
-                      navigate(
-                        buildSecureUrl('/Teacher/Students', {
-                          courseId: course.id,
-                          courseCode: course.course_code,
-                          programLoad: selectedProgramLoad.id,
-                          programAbbr: selectedProgramLoad.programs_lookup?.abbr || '',
-                          block: block.id,
-                          blockName: `${block.year}${block.name}`,
-                        }),
-                      );
-                    }}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-primary/20">
-                          {block.year}{block.name}
+                {blocks.map((block) => {
+                  const pwb = programWideBlocks.find(p => p.year === block.year && p.name === block.name);
+                  const hasMismatch = pwb && pwb.student_count > block.students_estimated;
+                  
+                  return (
+                    <tr
+                      key={block.id}
+                      className="hover:bg-neutral-50/30 transition-colors cursor-pointer group"
+                      onClick={() => {
+                        navigate(
+                          buildSecureUrl('/Teacher/Students', {
+                            courseId: course.id,
+                            courseCode: course.course_code,
+                            programLoad: selectedProgramLoad.id,
+                            programAbbr: selectedProgramLoad.programs_lookup?.abbr || '',
+                            block: block.id,
+                            blockName: `${block.year}${block.name}`,
+                          }),
+                        );
+                      }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-primary/20">
+                            {block.year}{block.name}
+                          </div>
+                          <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Year {block.year} • Section {block.name}</span>
                         </div>
-                        <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Year {block.year} • Section {block.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
-                        {block.students_estimated} Students
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteBlock(block.id);
-                        }}
-                        className="p-2 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-xl transition-all"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
+                          {block.students_estimated} Students
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {hasMismatch ? (
+                          <div className="flex flex-col items-center gap-1">
+                             <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-full flex items-center gap-1">
+                              <Loader2 size={10} className="animate-spin" /> {pwb.student_count - block.students_estimated} NEW
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-0.5 bg-success-default/5 text-success-default border border-success-default/10 rounded-full">
+                            SYNCED
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {hasMismatch && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSyncBlock(block);
+                              }}
+                              title="Sync Students"
+                              className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                            >
+                              <Plus size={15} />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteBlock(block.id);
+                            }}
+                            className="p-2 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-xl transition-all"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

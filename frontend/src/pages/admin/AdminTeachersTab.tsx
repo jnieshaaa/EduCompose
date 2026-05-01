@@ -49,13 +49,26 @@ export const AdminTeachersTab: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("users")
-        .select("id, email, first_name, middle_name, last_name, suffix, title, nickname, school_id, department_id, role, code, birthday, is_active, onboarding_completed, created_at")
+        .select(`
+          id, email, first_name, middle_name, last_name, suffix, 
+          role, birthday, is_active, created_at,
+          teacher_profiles!user_id (
+            title, nickname, school_id, department_id, onboarding_completed
+          )
+        `)
         .eq("role", "teacher")
         .eq("is_active", true)
         .order("last_name", { ascending: true });
 
       if (error) throw error;
-      setTeachers(data || []);
+      
+      const flattened = (data || []).map((row: any) => ({
+        ...row,
+        ...(row.teacher_profiles?.[0] || {}),
+        onboarding_completed: row.teacher_profiles?.[0]?.onboarding_completed || false
+      }));
+      
+      setTeachers(flattened);
     } catch (err: any) {
       showNotification('error', err.message || "Failed to load teachers");
     } finally {

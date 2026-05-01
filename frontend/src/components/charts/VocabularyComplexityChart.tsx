@@ -32,17 +32,21 @@ export function VocabularyComplexityChart({
             textAnchor?: string;
             level?: string;
             value?: number;
-          }) => (
-            <text
-              x={props.x}
-              y={props.y}
-              fill="#000"
-              textAnchor={props.textAnchor as "inherit" | "end" | "start" | "middle" | undefined}
-              dominantBaseline="central"
-            >
-              {`${props.level}: ${props.value}%`}
-            </text>
-          )}
+          }) => {
+            if (!props.value || props.value === 0) return null;
+            return (
+              <text
+                x={props.x}
+                y={props.y}
+                fill="#404040"
+                className="text-[10px] font-bold uppercase tracking-tight"
+                textAnchor={props.textAnchor as "inherit" | "end" | "start" | "middle" | undefined}
+                dominantBaseline="central"
+              >
+                {`${props.level}: ${props.value}%`}
+              </text>
+            );
+          }}
           outerRadius={outerRadius}
           fill="#8884d8"
           dataKey="value"

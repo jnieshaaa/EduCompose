@@ -52,9 +52,17 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
 
     const { data, error } = await supabase
       .from("users")
-      .select(
-        "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
-      )
+      .select(`
+        email, first_name, last_name, middle_name, suffix,
+        teacher_profiles!user_id (
+          title, 
+          nickname, 
+          school_id, 
+          department_id, 
+          schools:school_id(name), 
+          departments:department_id(name)
+        )
+      `)
       .eq("id", teacherId)
       .maybeSingle();
 
@@ -63,23 +71,19 @@ export const fetchTeacherProfile = async (): Promise<TeacherProfile | null> => {
       return null;
     }
 
-    // Extract names from joined tables
-    // @ts-ignore - Supabase types might not perfectly match the joined structure
-    const schoolName = data.schools?.name || "";
-    // @ts-ignore
-    const departmentName = data.departments?.name || "";
+    const profileData = Array.isArray(data.teacher_profiles) ? data.teacher_profiles[0] : data.teacher_profiles;
 
     return {
       firstName: data.first_name || "",
       lastName: data.last_name || "",
       middleName: data.middle_name || "",
       suffix: data.suffix || "",
-      title: data.title || "",
-      nickname: data.nickname || "",
-      school: data.school_id || "", // TeacherProfile interface probably expects the ID here
-      schoolName: schoolName,
-      department: data.department_id || "", // TeacherProfile interface expects ID
-      departmentName: departmentName,
+      title: profileData?.title || "",
+      nickname: profileData?.nickname || "",
+      school: profileData?.school_id || "",
+      schoolName: (Array.isArray(profileData?.schools) ? profileData?.schools[0]?.name : (profileData?.schools as any)?.name) || "",
+      department: profileData?.department_id || "",
+      departmentName: (Array.isArray(profileData?.departments) ? profileData?.departments[0]?.name : (profileData?.departments as any)?.name) || "",
       email: data.email || "",
     };
   } catch (err) {
@@ -97,9 +101,17 @@ export const fetchTeacherSettings =
 
       const { data, error } = await supabase
         .from("users")
-        .select(
-          "email, first_name, last_name, middle_name, suffix, title, nickname, school_id, department_id, schools(name), departments(name)"
-        )
+        .select(`
+          email, first_name, last_name, middle_name, suffix,
+          teacher_profiles!user_id (
+            title, 
+            nickname, 
+            school_id, 
+            department_id, 
+            schools:school_id(name), 
+            departments:department_id(name)
+          )
+        `)
         .eq("id", teacherId)
         .maybeSingle();
 
@@ -108,11 +120,7 @@ export const fetchTeacherSettings =
         return null;
       }
 
-      // Extract names from joined tables
-      // @ts-ignore
-      const schoolName = data.schools?.name || "";
-      // @ts-ignore
-      const departmentName = data.departments?.name || "";
+      const profileData = Array.isArray(data.teacher_profiles) ? data.teacher_profiles[0] : data.teacher_profiles;
 
       return {
         profile: {
@@ -120,12 +128,12 @@ export const fetchTeacherSettings =
           lastName: data.last_name || "",
           middleName: data.middle_name || "",
           suffix: data.suffix || "",
-          title: data.title || "",
-          nickname: data.nickname || "",
-          school: data.school_id || "",
-          schoolName: schoolName,
-          department: data.department_id || "",
-          departmentName: departmentName,
+          title: profileData?.title || "",
+          nickname: profileData?.nickname || "",
+          school: profileData?.school_id || "",
+          schoolName: (Array.isArray(profileData?.schools) ? profileData?.schools[0]?.name : (profileData?.schools as any)?.name) || "",
+          department: profileData?.department_id || "",
+          departmentName: (Array.isArray(profileData?.departments) ? profileData?.departments[0]?.name : (profileData?.departments as any)?.name) || "",
           email: data.email || "",
         },
         aiAssessment: DEFAULT_AI_ASSESSMENT_SETTINGS,
@@ -151,42 +159,33 @@ export const updateTeacherProfile = async (
     // Email updates are not supported via this profile update method
     // to prevent accidental lockouts or unauthorized changes.
 
-    // Get current data to merge
-    const { data: currentData, error: fetchError } = await supabase
-      .from("users")
-      .select(
-        "first_name, last_name, middle_name, title, nickname, suffix, school_id, department_id",
-      )
-      .eq("id", teacherId)
-      .maybeSingle();
+    const userUpdate: Record<string, unknown> = {};
+    const profileUpdate: Record<string, unknown> = {};
 
-    if (fetchError || !currentData) {
-      console.error("Error fetching current data:", fetchError || "User not found");
-      return { success: false, error: fetchError?.message || "User profiling record not found" };
+    if (profile.firstName !== undefined) userUpdate.first_name = profile.firstName;
+    if (profile.lastName !== undefined) userUpdate.last_name = profile.lastName;
+    if (profile.middleName !== undefined) userUpdate.middle_name = profile.middleName;
+    if (profile.suffix !== undefined) userUpdate.suffix = profile.suffix;
+
+    if (profile.title !== undefined) profileUpdate.title = profile.title;
+    if (profile.nickname !== undefined) profileUpdate.nickname = profile.nickname;
+    if (profile.school !== undefined) profileUpdate.school_id = profile.school;
+    if (profile.department !== undefined) profileUpdate.department_id = profile.department;
+
+    if (Object.keys(userUpdate).length > 0) {
+      const { error: userError } = await supabase.from("users").update(userUpdate).eq("id", teacherId);
+      if (userError) {
+        console.error("Error updating user record:", userError);
+        return { success: false, error: userError.message };
+      }
     }
 
-    const updateData: Record<string, unknown> = {};
-
-    if (profile.firstName !== undefined)
-      updateData.first_name = profile.firstName;
-    if (profile.lastName !== undefined) updateData.last_name = profile.lastName;
-    if (profile.middleName !== undefined)
-      updateData.middle_name = profile.middleName;
-    if (profile.suffix !== undefined) updateData.suffix = profile.suffix;
-    if (profile.title !== undefined) updateData.title = profile.title;
-    if (profile.nickname !== undefined) updateData.nickname = profile.nickname;
-    if (profile.school !== undefined) updateData.school_id = profile.school;
-    if (profile.department !== undefined)
-      updateData.department_id = profile.department;
-
-    const { error } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("id", teacherId);
-
-    if (error) {
-      console.error("Error updating teacher profile:", error);
-      return { success: false, error: error.message };
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: profError } = await supabase.from("teacher_profiles").update(profileUpdate).eq("user_id", teacherId);
+      if (profError) {
+        console.error("Error updating teacher profile:", profError);
+        return { success: false, error: profError.message };
+      }
     }
 
     return { success: true };

@@ -201,7 +201,18 @@ export function EssayManagementTab() {
   // 2. Fetch Students when program/block changes
   const fetchStudents = useCallback(async (targetProgramId: string, targetBlockId: string) => {
       try {
-        let query = supabase.from('users').select('*').eq('teacher_id', user?.auth_id).eq('role', 'student');
+      // Fetch from student_profiles and join users
+      let query = supabase
+        .from('student_profiles')
+        .select(`
+          user_id,
+          student_code,
+          program_id,
+          users!user_id (
+            id, first_name, middle_name, last_name, suffix, birthday, email
+          )
+        `)
+        .eq('teacher_id', user?.auth_id);
       
       if (targetBlockId !== 'all') {
         const { data: enrollmentData } = await supabase
@@ -211,7 +222,7 @@ export function EssayManagementTab() {
         
         const studentIds = enrollmentData?.map(e => String(e.student_id)) || [];
         if (studentIds.length > 0) {
-          query = query.in('id', studentIds);
+          query = query.in('user_id', studentIds);
         } else {
           setStudents([]);
           return;
@@ -220,16 +231,16 @@ export function EssayManagementTab() {
          query = query.eq('program_id', targetProgramId);
       }
 
-      const { data: studentData, error: sErr } = await query.order('last_name').limit(200);
+      const { data: studentProfileData, error: sErr } = await query.order('users(last_name)').limit(200);
       if (sErr) throw sErr;
       
-      if (studentData) {
-        setStudents(studentData.map(s => ({
-          id: s.id,
-          name: buildFullNameFromObject(s),
-          programId: s.program_id || '',
+      if (studentProfileData) {
+        setStudents(studentProfileData.map((sp: any) => ({
+          id: sp.user_id,
+          name: buildFullNameFromObject(sp.users),
+          programId: sp.program_id || '',
           blockId: targetBlockId,
-          studentCode: s.student_code
+          studentCode: sp.student_code
         })));
       }
     } catch (err) {

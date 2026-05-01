@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, Loader2, User, Mail, Hash, BookOpen, Layers, CheckCircle, AlertTriangle, GraduationCap, Building2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import Button from "../ui/Button";
+import { adminApi } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface School {
@@ -139,23 +140,21 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
         }
       }
 
-      const { error } = await supabase
-        .from("users")
-        .update({
+      await adminApi.updateUser(student.id, {
           student_code: formData.student_code.trim(),
           first_name: formData.first_name.trim(),
           middle_name: formData.middle_name.trim(),
           last_name: formData.last_name.trim(),
           email: normalizedEmail,
           program_id: formData.program_id,
+          school_id: selectedSchool,
+          department_id: selectedDept,
           year: formData.year,
           block_name: formData.block_name,
           is_active: formData.is_active,
           enrollment_status: formData.enrollment_status
-        })
-        .eq("id", student.id);
+        });
 
-      if (error) throw error;
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -173,7 +172,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
+        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-neutral-100"
       >
         <div className="px-8 py-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
           <div className="flex items-center gap-3">
@@ -204,7 +203,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
             )}
           </AnimatePresence>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Student ID*</label>
               <div className="relative group/id">
@@ -218,20 +217,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                 />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
-              <div className="relative group/mail">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={14} />
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  disabled={!!student?.id}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
-                />
-              </div>
-            </div>
+            {/* Status Select placeholder/context if needed, but we have it below */}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -264,6 +250,11 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-5">
+            <div className="flex items-center gap-3">
+              <GraduationCap size={16} className="text-primary" />
+              <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Placement & Contact</h3>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* School Select */}
               <div className="space-y-1.5">
@@ -287,6 +278,24 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
                 </div>
               </div>
 
+              {/* Email in one row with School */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email</label>
+                <div className="relative group/mail">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/mail:text-primary transition-colors" size={14} />
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    disabled={!!student?.id}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
               {/* Department Select */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
@@ -312,33 +321,35 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
               </div>
             </div>
 
-            {/* Program Select */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
-              {isLoadingAcademic ? (
-                <div className="h-11 flex items-center gap-2 text-xs font-medium text-neutral-400 px-4">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  LOADING...
-                </div>
-              ) : (
-                <div className="relative group/select">
-                  <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/select:text-primary transition-colors shadow-none" size={14} />
-                  <select
-                    value={formData.program_id}
-                    disabled={!selectedDept}
-                    onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:opacity-50"
-                    required
-                  >
-                    <option value="">Select Program</option>
-                    {programs
-                      .filter(p => p.department_id === selectedDept)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                  </select>
-                </div>
-              )}
+            {/* Program Select solo row */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program</label>
+                {isLoadingAcademic ? (
+                  <div className="h-11 flex items-center gap-2 text-xs font-medium text-neutral-400 px-4">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    LOADING...
+                  </div>
+                ) : (
+                  <div className="relative group/select">
+                    <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/select:text-primary transition-colors shadow-none" size={14} />
+                    <select
+                      value={formData.program_id}
+                      disabled={!selectedDept}
+                      onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
+                      className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all appearance-none disabled:opacity-50"
+                      required
+                    >
+                      <option value="">Select Program</option>
+                      {programs
+                        .filter(p => p.department_id === selectedDept)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
