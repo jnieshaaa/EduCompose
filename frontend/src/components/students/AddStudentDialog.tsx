@@ -117,12 +117,17 @@ export function AddStudentDialog({
           if (!profileMatches) return;
 
           // Flatten the results
-          const matchedStudents = profileMatches.map(p => ({
-            id: p.users.id,
-            first_name: p.users.first_name,
-            last_name: p.users.last_name,
-            student_code: p.student_code
-          }));
+          const matchedStudents = profileMatches.map(p => {
+            const userData = Array.isArray(p.users) ? p.users[0] : p.users;
+            if (!userData) return null;
+            
+            return {
+              id: userData.id,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              student_code: p.student_code
+            };
+          }).filter((s): s is { id: string; first_name: string; last_name: string; student_code: string } => s !== null);
 
           if (!matchedStudents) return;
 
