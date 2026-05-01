@@ -275,6 +275,7 @@ export const saveRubric = async (
       criteria: rubricFormData.criteria,
       grading_intensity: rubricFormData.gradingIntensity,
       user_id: teacherId,
+      created_by: teacherId,
     })
     .select()
     .maybeSingle();
@@ -330,6 +331,7 @@ export const saveTemplateRubric = async (
       criteria: rubric.criteria,
       grading_intensity: rubric.type, // Use type as intensity
       user_id: teacherId,
+      created_by: teacherId,
     })
     .select()
     .maybeSingle();
@@ -406,6 +408,7 @@ export const updateRubric = async (
       criteria: rubricFormData.criteria,
       grading_intensity: rubricFormData.gradingIntensity,
       user_id: teacherId,
+      created_by: teacherId,
     })
     .eq("id", rubricId)
     .eq("user_id", teacherId) // Ensure only the owner can update

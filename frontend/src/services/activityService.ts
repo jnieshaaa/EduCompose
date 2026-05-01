@@ -504,6 +504,7 @@ export const createActivity = async (
           criteria: activity.suggestedRubric.criteria,
           grading_intensity: activity.suggestedRubric.grading_intensity,
           user_id: teacherId, // AI generated rubrics go to teacher's private list
+          created_by: teacherId,
         })
         .select("id")
         .single();
@@ -2599,6 +2600,8 @@ export const fetchEssayAnalysis = async (
       text: analysisData.original_text || analysisData.content || "",
       title: essayData.title || "Essay Analysis",
       filePath: essayData.file_path || analysisData.file_path,
+      plagiarismResults: analysisData.plagiarism_results,
+      aiDetectionResults: analysisData.ai_detection_results,
     };
   } catch (err) {
     console.error("[fetchEssayAnalysis] Error:", err);

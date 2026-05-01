@@ -196,7 +196,7 @@ export function CreateActivityModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Gumawa ng Activity"
+      title="Create Activity"
       size="lg"
     >
       <div className="space-y-6">
@@ -220,7 +220,7 @@ export function CreateActivityModal({
           <div className="flex items-center gap-2 mb-1">
             <LayoutGrid className="w-3.5 h-3.5 text-neutral-400" />
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em]">
-              I-assign sa <span className="text-tertiary">*</span>
+              Assign to <span className="text-tertiary">*</span>
             </span>
           </div>
 
@@ -319,7 +319,7 @@ export function CreateActivityModal({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] block">
-              Pamantayan (Rubric)
+              Grading Rubric
             </label>
             <button
               type="button"
@@ -332,7 +332,7 @@ export function CreateActivityModal({
               ) : (
                 <Wand2 className="w-3 h-3 group-hover:rotate-12 transition-transform" />
               )}
-              {aiSuggestions.length > 0 ? "Pa-generate ulit sa AI" : "AI ang gumawa"}
+              {aiSuggestions.length > 0 ? "Regenerate with AI" : "Generate with AI"}
             </button>
           </div>
 
@@ -341,7 +341,7 @@ export function CreateActivityModal({
             <div className="space-y-2">
               <div className="flex items-center gap-2 px-1">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-neutral-100 to-transparent"></div>
-                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Suhestyon ng AI</span>
+                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">AI Suggestions</span>
                 <div className="h-px flex-1 bg-gradient-to-r from-neutral-100 via-neutral-100 to-transparent"></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -398,7 +398,7 @@ export function CreateActivityModal({
             {rubrics.platform.length > 0 && (
               <div className="space-y-2">
                 <div className="px-1">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Mga Rubric sa System</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">System Rubrics</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {rubrics.platform.map((rubric) => (
@@ -452,7 +452,7 @@ export function CreateActivityModal({
             {rubrics.teacher.length > 0 && (
               <div className="space-y-2">
                 <div className="px-1 pt-2 border-t border-neutral-50">
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Iyong mga Rubric</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Your Rubrics</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {rubrics.teacher.map((rubric) => (
@@ -551,14 +551,14 @@ export function CreateActivityModal({
               />
             </div>
             <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
-              Pumili ng petsa sa hinaharap. Defaults to 11:59 PM.
+              Select a future date. Defaults to 11:59 PM.
             </p>
           </div>
 
           {/* Min Word Count */}
           <div>
             <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-              Haba ng Essay (Salita)
+              Essay Length (Words)
             </label>
             <input
               type="number"
@@ -572,7 +572,7 @@ export function CreateActivityModal({
               className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/10 focus:bg-white transition-all"
             />
             <p className="text-[10px] text-neutral-300 mt-1.5 ml-0.5">
-              Hindi ito gagraduhan kung kulang ang salita.
+              Essays below this count will not be graded.
             </p>
           </div>
         </div>
@@ -580,7 +580,7 @@ export function CreateActivityModal({
         {/* ─── Section 5: Instructions ─── */}
         <div>
           <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.12em] mb-1.5 block">
-            Mga Panuto
+            Instructions
             <span className="text-neutral-300 ml-1 font-normal normal-case tracking-normal">(optional)</span>
           </label>
           <textarea
@@ -620,12 +620,12 @@ export function CreateActivityModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ginagawa na…
+                  Creating…
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-1.5" />
-                  Gumawa ng Activity
+                  Create Activity
                 </>
               )}
             </Button>

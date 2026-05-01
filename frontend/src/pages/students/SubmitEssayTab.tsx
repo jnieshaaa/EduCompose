@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList, Calendar } from 'lucide-react';
+import { Upload, FileText, X, Clock, AlertCircle, Loader2, Info, CheckCircle, Send, ClipboardList, Calendar, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { readSecureParams, buildSecureUrl } from '../../utils/secureUrl';
@@ -58,6 +58,7 @@ export function SubmitEssayTab() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionDate, setSubmissionDate] = useState<string | null>(null);
   const [isResubmitRequested, setIsResubmitRequested] = useState(false);
+  const [currentEssayId, setCurrentEssayId] = useState<string | null>(null);
   const [requestingResubmission, setRequestingResubmission] = useState(false);
   const [essayScore, setEssayScore] = useState<number | null>(null);
   const [showRubricPreview, setShowRubricPreview] = useState(false);
@@ -166,6 +167,7 @@ export function SubmitEssayTab() {
             overall_score: essayData.overall_score
           });
           setIsSubmitted(true);
+          setCurrentEssayId(essayData.id);
           setEssayContent(essayData.content || '');
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleDateString(undefined, {
              month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -725,6 +727,21 @@ export function SubmitEssayTab() {
                          <p className="text-sm font-medium text-neutral-500 max-w-sm mx-auto leading-relaxed mb-8">
                             Great work! Our AI has checked your essay for grammar, flow, and strong ideas.
                          </p>
+                         <button
+                            onClick={() => navigate('/AnalysisResults', { 
+                              state: { 
+                                essayId: currentEssayId,
+                                studentId: studentId,
+                                activityId: activityIdParam,
+                                title: selectedFileName || activity?.title || "Essay Analysis",
+                                studentName: user?.nickname || `${user?.first_name} ${user?.last_name}`
+                              } 
+                            })}
+                            className="flex items-center justify-center gap-3 px-10 py-4 bg-neutral-900 text-white font-bold text-[11px] uppercase tracking-widest rounded-2xl shadow-xl shadow-neutral-900/10 hover:bg-primary transition-all active:scale-95 mx-auto"
+                          >
+                            <TrendingUp size={16} />
+                            View Detailed Analysis
+                          </button>
                       </motion.div>
                     )}
 

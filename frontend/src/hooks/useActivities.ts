@@ -87,6 +87,15 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     loadData();
   }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
+  const reloadRubrics = async () => {
+    try {
+      const rubricsData = await fetchRubrics();
+      setRubrics(rubricsData);
+    } catch (err) {
+      console.error("[useActivities] Error reloading rubrics:", err);
+    }
+  };
+
   // Fetch students for selected course-section
   useEffect(() => {
     if (!sectionId || !courseId) {
@@ -244,6 +253,8 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
         term: currentSemester
       });
       setActivities((prev) => [...created, ...prev]);
+      // Reload rubrics to ensure any new AI-generated rubrics are available immediately
+      await reloadRubrics();
     } catch (err) {
       console.error("Error creating activity:", err);
       throw err;
@@ -365,6 +376,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     handleBackToActivities,
     setSearchParams,
     reloadStudents,
+    reloadRubrics,
   };
 }
 
