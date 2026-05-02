@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { User, Lock, Eye, EyeOff, Mail, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotification } from "../../contexts/NotificationContext";
 import { supabase } from "../../lib/supabaseClient";
-import { sendSignupCodeEmail, sendCodeEmail } from "../../services/emailService";
+import { sendCodeEmail } from "../../services/emailService";
 import { authApi } from "../../api";
 
 
@@ -25,10 +25,8 @@ interface StudentLoginLookup {
 
 const Login: React.FC = () => {
   // View states for swapping Login <-> Verification <-> Forgot Password
-  const [view, setView] = useState<"login" | "verification" | "forgot-password">("login");
+  const [view, setView] = useState<"login" | "forgot-password">("login");
   const [forgotEmail, setForgotEmail] = useState("");
-  const [pendingStudent, setPendingStudent] = useState<StudentLoginLookup | null>(null);
-  const [pendingPassword, setPendingPassword] = useState("");
 
   const [studentCode, setStudentCode] = useState("");
   const [password, setPassword] = useState("");
@@ -40,13 +38,6 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showNotification } = useNotification();
-
-  // Verification state
-  const [otp, setOtp] = useState("");
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [otpSent, setOtpSent] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   
   // Forgot Password detailed state
   const [forgotPasswordStep, setForgotPasswordStep] = useState<"email" | "code" | "password">("email");
@@ -216,170 +207,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleStartVerification = async (studentToVerify?: StudentLoginLookup) => {
-    const student = studentToVerify || pendingStudent;
-    if (!student?.email) return;
-    
-    setIsSendingCode(true);
-    // Clear old OTP if any
-    setOtp("");
-    
-    try {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      const { error: insertError } = await supabase
-        .from("signup_verification_codes")
-        .insert({
-          email: student.email.toLowerCase(),
-          code: code,
-          expires_at: expiresAt,
-        });
-
-      if (insertError) throw insertError;
-
-      await sendSignupCodeEmail({
-        toEmail: student.email,
-        code: code,
-        toName: student.first_name,
-      });
-      
-      showNotification('success', "Verification code sent to your email!");
-      setOtpSent(true);
-      setTimer(60);
-    } catch (err: any) {
-      showNotification('error', err.message || "Failed to send code");
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => setTimer(prev => prev - 1), 1000);
-      return () => clearInterval(interval);
-    }
-  }, [timer]);
-
-  // Auto-focus first box when code is sent or reset
-  useEffect(() => {
-    if (otpSent && otp === "") {
-      setTimeout(() => {
-        document.getElementById('otp-0')?.focus();
-      }, 100);
-    }
-  }, [otpSent, otp]);
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6 || !pendingStudent) {
-      showNotification('error', "Please enter the complete 6-digit code.");
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      // Step 1: Verify the OTP code
-      const { data: isValid, error: rpcError } = await supabase.rpc(
-        "verify_signup_code",
-        {
-          p_email: pendingStudent.email,
-          p_code: otp,
-        },
-      );
-
-      if (rpcError) throw rpcError;
-      if (!isValid) {
-        showNotification('error', "Invalid or expired code.");
-        return;
-      }
-
-      const finalPassword = pendingPassword || pendingStudent.birthday || "EduCompose2025!";
-      const normalizedEmail = pendingStudent.email.trim().toLowerCase();
-
-      // Step 2: Use the existing admin_provision_student RPC (SECURITY DEFINER,
-      // now granted to anon) to create a CONFIRMED auth user with proper identities.
-      // This avoids supabase.auth.signUp() which creates unconfirmed users.
-      const { data: authUserId, error: provisionError } = await supabase.rpc(
-        "create_new_portal_user_v1",
-        {
-          p_email: normalizedEmail,
-          p_password: finalPassword,
-          p_first_name: pendingStudent.first_name,
-          p_last_name: pendingStudent.last_name,
-          p_role: 'student',
-          p_code: pendingStudent.student_code,
-          p_middle_name: pendingStudent.middle_name || null,
-        }
-      );
-
-      if (provisionError) throw provisionError;
-      if (!authUserId) throw new Error("Failed to provision auth account.");
-
-      // Step 3: Sign in with the now-confirmed credentials
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password: finalPassword,
-      });
-
-      if (signInError) {
-        if (signInError.message.toLowerCase().includes("invalid login credentials")) {
-          throw new Error(
-            "Account setup succeeded but login failed. Please go back to Login and try with your password, or use 'Forgot password'."
-          );
-        }
-        throw signInError;
-      }
-
-      if (!signInData.user) throw new Error("Could not sign in after verification.");
-
-      showNotification('success', "Email verified successfully!");
-
-      // Step 5: Log the user into the app context
-      if (signInData.session) {
-        login(signInData.session.access_token, {
-          id: authUserId as string, // After linking/provisioning, we use the new ID
-          auth_id: authUserId as string,
-          email: normalizedEmail,
-          username: pendingStudent.student_code,
-          first_name: pendingStudent.first_name,
-          last_name: pendingStudent.last_name,
-          role: "student",
-          is_active: pendingStudent.is_active,
-          email_verified: true,
-        });
-      }
-
-      // Handle Remember Me
-      if (rememberMe) {
-        localStorage.setItem("rememberedStudentCode", pendingStudent.student_code);
-      } else {
-        localStorage.removeItem("rememberedStudentCode");
-      }
-
-      // Navigate to Onboarding with FULL data for instant display
-      navigate("/Student/Onboarding", {
-        state: {
-          student: {
-            ...pendingStudent,
-            id: authUserId as string,
-            // Ensure nested objects are reconstructed for the Onboarding UI
-            programs_lookup: {
-              name: (pendingStudent as any).program_name,
-              departments: {
-                name: (pendingStudent as any).department_name
-              }
-            }
-          },
-        },
-      });
-
-    } catch (err: any) {
-      console.error(err);
-      showNotification('error', err.message || "Verification failed. Please try again.");
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
   const handleAuthSubmit = async (e?: React.FormEvent) => {
     if (e) {
@@ -428,68 +256,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      // STATE 1: Not Provisioned Yet -> Show Verification View
-      // We check is_provisioned which tells us if the user exists in auth.users
-      if (!studentIdentity.is_provisioned) {
-        setPendingStudent(studentIdentity);
-        setPendingPassword(password.trim());
-        setError("");
-        setView("verification");
-        return;
-      }
-
-      // STATE 2: Verified, but Not Onboarded (effectiveAuthId exists, onboarding_completed is false)
-      if (!studentIdentity.onboarding_completed) {
-        // Authenticate first, then go to Onboarding
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: studentIdentity.email.trim().toLowerCase(),
-          password: password.trim(),
-        });
-
-        if (error) {
-          setError("Invalid student code or password.");
-          return;
-        }
-
-        if (data.session && data.user) {
-          login(data.session.access_token, {
-            id: effectiveAuthId,
-            auth_id: effectiveAuthId,
-            email: studentIdentity.email.trim().toLowerCase() || data.user.email || "",
-            username: studentIdentity.student_code,
-            first_name: studentIdentity.first_name,
-            last_name: studentIdentity.last_name,
-            role: "student",
-            is_active: studentIdentity.is_active,
-            email_verified: !!data.user.email_confirmed_at,
-          });
-          
-          // Handle Remember Me
-          if (rememberMe) {
-            localStorage.setItem("rememberedStudentCode", studentIdentity.student_code);
-          } else {
-            localStorage.removeItem("rememberedStudentCode");
-          }
-          
-          navigate("/Student/Onboarding", { 
-            state: { 
-              student: { 
-                ...studentIdentity, 
-                id: effectiveAuthId,
-                programs_lookup: {
-                  name: (studentIdentity as any).program_name,
-                  departments: {
-                    name: (studentIdentity as any).department_name
-                  }
-                }
-              } 
-            } 
-          });
-          return;
-        }
-      }
-
-      // STATE 3: Verified AND Onboarded
+      // SIMPLIFIED FLOW: Validate -> Sign In -> Onboarding or Dashboard
       const { data, error } = await supabase.auth.signInWithPassword({
         email: studentIdentity.email.trim().toLowerCase(),
         password: password.trim(),
@@ -506,15 +273,9 @@ const Login: React.FC = () => {
           setError("Invalid student code or password. Please double-check your credentials.");
           return;
         }
-        
-        // Handle specialized 400 errors from Supabase
-        if (error.status === 400) {
-          setError("Login failed (Bad Request). This often happens if the account is in a transition state. Try refreshing the page.");
-          return;
-        }
-
         throw error;
       }
+
       if (data.session && data.user) {
         // Handle Remember Me
         if (rememberMe) {
@@ -534,8 +295,28 @@ const Login: React.FC = () => {
           is_active: studentIdentity.is_active,
           email_verified: !!data.user.email_confirmed_at,
         });
-        navigate("/Student/Dashboard");
+
+        // First time login -> Onboarding, otherwise -> Dashboard
+        if (!studentIdentity.onboarding_completed) {
+          navigate("/Student/Onboarding", { 
+            state: { 
+              student: { 
+                ...studentIdentity, 
+                id: effectiveAuthId,
+                programs_lookup: {
+                  name: (studentIdentity as any).program_name,
+                  departments: {
+                    name: (studentIdentity as any).department_name
+                  }
+                }
+              } 
+            } 
+          });
+        } else {
+          navigate("/Student/Dashboard");
+        }
       }
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(
@@ -682,112 +463,7 @@ const Login: React.FC = () => {
     </>
   );
 
-  const renderVerificationForm = () => (
-    <div className="duration-300">
-      <button 
-        onClick={() => {
-           setView("login");
-           setOtpSent(false);
-           setOtp("");
-        }}
-        className="flex items-center text-xs text-neutral-500 hover:text-neutral-900 font-bold tracking-wide uppercase group mb-6 transition-colors"
-      >
-        <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
-        Back to Login
-      </button>
 
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-neutral-900 mb-2">Verify Email</h2>
-        <p className="text-neutral-600 text-sm">
-          Secure your academic records by verifying your registered email address first.
-        </p>
-      </div>
-
-      {!otpSent ? (
-        <div className="space-y-6">
-          <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" /> Registered Email
-            </label>
-            <p className="font-bold text-neutral-900 break-all text-sm">
-              {pendingStudent?.email || "No email assigned"}
-            </p>
-          </div>
-          
-          <button
-            onClick={() => handleStartVerification()}
-            disabled={isSendingCode}
-            className="w-full bg-primary hover:bg-primary-600 disabled:bg-neutral-200 text-white font-bold py-2.5 text-sm rounded-lg shadow-lg transition-all active:translate-y-[0px] hover:-translate-y-[1px] flex items-center justify-center gap-2"
-          >
-            {isSendingCode ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Sending Code...</span>
-              </>
-            ) : "Send Verification Code"}
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-6 text-center">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-neutral-600">Enter the 6-digit code sent to your email</p>
-          </div>
-
-          <div className="flex justify-center gap-2 py-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <input
-                key={i}
-                id={`otp-${i}`}
-                type="text"
-                maxLength={1}
-                value={otp[i] || ""}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, "");
-                  if (!val) return;
-                  const newOtp = otp.split("");
-                  newOtp[i] = val;
-                  setOtp(newOtp.join(""));
-                  if (i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Backspace" && !otp[i] && i > 0) {
-                    document.getElementById(`otp-${i - 1}`)?.focus();
-                    const currentOtp = otp.split("");
-                    currentOtp[i-1] = "";
-                    setOtp(currentOtp.join(""));
-                  }
-                }}
-                className="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-white border-2 border-neutral-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
-              />
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <button
-              onClick={handleVerifyOtp}
-              disabled={isVerifying || otp.length < 6}
-              className="w-full bg-primary hover:bg-primary-600 disabled:bg-neutral-200 disabled:opacity-70 text-white font-bold py-2.5 text-sm rounded-lg shadow-lg transition-all active:translate-y-[0px] hover:-translate-y-[1px] flex items-center justify-center gap-2"
-            >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verifying...</span>
-                </>
-              ) : "Verify & Continue"}
-            </button>
-            
-            <button
-              disabled={timer > 0 || isSendingCode}
-              onClick={() => handleStartVerification()}
-              className="text-primary font-bold hover:underline disabled:text-neutral-400 disabled:no-underline text-xs"
-            >
-              {timer > 0 ? `Resend code in ${timer}s` : "Didn't get the code? Resend"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   const renderForgotPasswordForm = () => (
     <div className="animate-fade-in text-left">
@@ -987,7 +663,6 @@ const Login: React.FC = () => {
 
   const getActiveView = () => {
     switch (view) {
-      case "verification": return renderVerificationForm();
       case "forgot-password": return renderForgotPasswordForm();
       case "login":
       default: return renderLoginForm();
