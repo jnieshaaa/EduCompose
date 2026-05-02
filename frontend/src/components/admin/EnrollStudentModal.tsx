@@ -251,6 +251,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                 <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Core Identity</h3>
              </div>
              
+             {/* Row 1: Student ID and Birthday */}
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Student ID*</label>
@@ -277,7 +278,8 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                 </div>
              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+             {/* Row 2: First Name and Middle Name */}
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
                   <input
@@ -297,6 +299,10 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
                   />
                 </div>
+             </div>
+
+             {/* Row 3: Last Name and Suffix */}
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
                   <input
@@ -307,9 +313,6 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   />
                 </div>
-             </div>
-             
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                   <select
@@ -323,6 +326,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     <option value="II">II</option>
                     <option value="III">III</option>
                     <option value="IV">IV</option>
+                    <option value="V">V</option>
                   </select>
                 </div>
              </div>
@@ -334,73 +338,70 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                 <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Placement & Contact</h3>
              </div>
 
-              {/* School and Email in one row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School*</label>
-                  <select
+              {/* Row 4: Email */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email*</label>
+                <div className="relative group">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
+                  <input
                     required
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer"
-                    value={formData.school_id}
-                    onChange={(e) => setFormData({ ...formData, school_id: e.target.value, department_id: "", program_id: "" })}
-                  >
-                    <option value="">Select School</option>
-                    {schools.map((s) => (
-                      <option key={s.id} value={s.id}>[{s.code}] {s.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email*</label>
-                  <div className="relative group">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={16} />
-                    <input
-                      required
-                      type="email"
-                      placeholder="student@university.edu"
-                      className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
+                    type="email"
+                    placeholder="student@university.edu"
+                    className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
-                  <select
-                    required
-                    disabled={!formData.school_id}
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
-                    value={formData.department_id}
-                    onChange={(e) => setFormData({ ...formData, department_id: e.target.value, program_id: "" })}
-                  >
-                    <option value="">Select Department</option>
-                    {filteredDepartments.map((d) => (
-                      <option key={d.id} value={d.id}>[{d.code}] {d.name}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Row 5: School */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School*</label>
+                <select
+                  required
+                  className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all cursor-pointer"
+                  value={formData.school_id}
+                  onChange={(e) => setFormData({ ...formData, school_id: e.target.value, department_id: "", program_id: "" })}
+                >
+                  <option value="">Select School</option>
+                  {schools.map((s) => (
+                    <option key={s.id} value={s.id}>[{s.code}] {s.name}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Program solo in one row */}
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
-                  <select
-                    required
-                    disabled={!formData.department_id}
-                    className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
-                    value={formData.program_id}
-                    onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
-                  >
-                    <option value="">Select Program</option>
-                    {filteredPrograms.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Row 6: Department */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department*</label>
+                <select
+                  required
+                  disabled={!formData.school_id}
+                  className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
+                  value={formData.department_id}
+                  onChange={(e) => setFormData({ ...formData, department_id: e.target.value, program_id: "" })}
+                >
+                  <option value="">Select Department</option>
+                  {filteredDepartments.map((d) => (
+                    <option key={d.id} value={d.id}>[{d.code}] {d.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 7: Program */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program*</label>
+                <select
+                  required
+                  disabled={!formData.department_id}
+                  className="w-full h-11 px-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-sm font-medium transition-all cursor-pointer disabled:opacity-30"
+                  value={formData.program_id}
+                  onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
+                >
+                  <option value="">Select Program</option>
+                  {filteredPrograms.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Year level and block in one row */}

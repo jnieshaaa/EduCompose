@@ -62,11 +62,18 @@ export const AdminTeachersTab: React.FC = () => {
 
       if (error) throw error;
       
-      const flattened = (data || []).map((row: any) => ({
-        ...row,
-        ...(row.teacher_profiles?.[0] || {}),
-        onboarding_completed: row.teacher_profiles?.[0]?.onboarding_completed || false
-      }));
+      const flattened = (data || []).map((row: any) => {
+        // Handle cases where teacher_profiles might be an array or a single object
+        const profile = Array.isArray(row.teacher_profiles) 
+          ? (row.teacher_profiles[0] || {}) 
+          : (row.teacher_profiles || {});
+          
+        return {
+          ...row,
+          ...profile,
+          onboarding_completed: profile.onboarding_completed || false
+        };
+      });
       
       setTeachers(flattened);
     } catch (err: any) {
