@@ -12,6 +12,15 @@ export type AuthView = "login" | "signup" | "forgot-password";
 
 export type SignupStep = "form" | "accountCreated" | "verifyCode";
 
+interface StaffValidation {
+  account_exists: boolean;
+  id: string;
+  role: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+}
+
 export function useAuthModal(onClose: () => void) {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -90,6 +99,25 @@ export function useAuthModal(onClose: () => void) {
     setIsLoggingIn(true);
 
     try {
+      // Modular Pre-login Validation
+      const { data: validation, error: vError } = await supabase.rpc(
+        "api_validate_staff_credentials",
+        { p_email: loginEmail.trim() }
+      ).maybeSingle<StaffValidation>();
+
+      if (vError) throw vError;
+      
+      if (!validation || !validation.account_exists) {
+        setLoginError("Account not found. Please double-check your email.");
+        setIsLoggingIn(false);
+        return;
+      }
+
+      if (!validation.is_active) {
+        setLoginError("Your account is currently inactive. Please contact the administrator.");
+        setIsLoggingIn(false);
+        return;
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),

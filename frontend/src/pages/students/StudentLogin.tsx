@@ -9,7 +9,7 @@ import { authApi } from "../../api";
 
 
 interface StudentLoginLookup {
-  id: string;  // uuid
+  id: string;  
   student_code: string;
   email: string;
   first_name: string;
@@ -19,6 +19,8 @@ interface StudentLoginLookup {
   onboarding_completed: boolean;
   birthday: string | null;
   is_provisioned: boolean;
+  success?: boolean;
+  message?: string;
 }
 
 const Login: React.FC = () => {
@@ -400,45 +402,29 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const normalizedStudentCode = studentCode.trim();
-      const compactStudentCode = normalizedStudentCode.replace(/\s+/g, "");
-      const uppercaseStudentCode = compactStudentCode.toUpperCase();
+      // Single source of truth for student validation
+      const { data: validationResult, error: validationError } = await supabase.rpc(
+        "api_validate_student_credentials",
+        {
+          p_student_code: studentCode.trim(),
+          p_birthday_pass: password.trim(),
+        }
+      ).maybeSingle<StudentLoginLookup>();
 
-      // Try multiple safe student-code formats to avoid case/spacing mismatches.
-      const tryLookup = async (code: string) =>
-        supabase
-          .rpc("get_student_login_email_v1", {
-            p_student_code: code,
-          })
-          .maybeSingle<StudentLoginLookup>();
+      if (validationError) throw validationError;
 
-      let lookup = await tryLookup(normalizedStudentCode);
-      if ((!lookup.data || !lookup.data.email) && compactStudentCode !== normalizedStudentCode) {
-        lookup = await tryLookup(compactStudentCode);
-      }
-      if ((!lookup.data || !lookup.data.email) && uppercaseStudentCode !== compactStudentCode) {
-        lookup = await tryLookup(uppercaseStudentCode);
-      }
-
-      const { data: studentIdentity, error: lookupError } = lookup;
-      if (lookupError) {
-        throw lookupError;
-      }
-
-      if (!studentIdentity?.email) {
-        setError("Invalid student code or password.");
+      if (!validationResult || !validationResult.success) {
+        setError(validationResult?.message || "Invalid student code or password.");
+        setIsLoading(false);
         return;
       }
 
-      // In the unified schema, studentIdentity.id IS the identity.
-      // If it's not a valid UUID yet (placeholder from enrollment), 
-      // we'll handle it during provisioning.
-      let effectiveAuthId = studentIdentity.id;
+      const studentIdentity = validationResult;
+      const effectiveAuthId = studentIdentity.id;
 
       if (!studentIdentity.is_active) {
-        setError(
-          "Your student account is inactive. Please contact your teacher.",
-        );
+        setError("Your student account is inactive. Please contact your teacher.");
+        setIsLoading(false);
         return;
       }
 
@@ -532,7 +518,7 @@ const Login: React.FC = () => {
       if (data.session && data.user) {
         // Handle Remember Me
         if (rememberMe) {
-          localStorage.setItem("rememberedStudentCode", normalizedStudentCode);
+          localStorage.setItem("rememberedStudentCode", studentIdentity.student_code);
         } else {
           localStorage.removeItem("rememberedStudentCode");
         }

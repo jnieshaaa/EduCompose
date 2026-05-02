@@ -194,7 +194,7 @@ export const AdminStudentsTab: React.FC = () => {
         .eq("role", "student");
 
       if (searchTerm) {
-        query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,student_profiles.student_code.ilike.%${searchTerm}%`);
       }
 
       if (progFilter) {

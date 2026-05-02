@@ -297,100 +297,24 @@ async def admin_delete_user(
 
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.delete(
-                f"{supabase_url}/auth/v1/admin/users/{payload.user_id}",
+            # Modular Stability: Use RPC for comprehensive hard delete
+            # This avoids "Database error loading user" 500 errors from Supabase Auth
+            # and handles all associated EDU profiles in one atomic operation.
+            resp = await client.post(
+                f"{supabase_url}/rest/v1/rpc/hard_delete_user_v2",
                 headers=headers,
-                timeout=10.0
+                json={"p_user_id": payload.user_id},
+                timeout=15.0
             )
 
-            if resp.status_code not in [200, 204, 404]:
+            if resp.status_code not in [200, 201, 204]:
                 resp_json = _safe_json(resp)
-                raise HTTPException(
-                    status_code=resp.status_code,
-                    detail=f"Failed to delete auth user: {(resp_json.get('message') or resp.text or 'Unknown Supabase error')}"
-                )
-            
-            # If 404, it means the user is already gone from Auth, which is fine.
-            # We proceed to clean up the local DB.
-
-            # 2. Comprehensive Cleanup in Supabase (Cloud)
-            related_tables = [
-                ("essay_analysis_results", "student_id"),
-                ("essays", "student_id"),
-                ("block_students", "student_id"),
-                ("notifications", "user_id"),
-                ("activity_logs", "user_id"),
-                ("student_profiles", "user_id"),
-            ]
-            
-            # 2. Comprehensive Cleanup in Supabase (Cloud)
-            related_tables = [
-                ("essay_analysis_results", "student_id"),
-                ("essays", "student_id"),
-                ("block_students", "student_id"),
-                ("notifications", "user_id"),
-                ("activity_logs", "user_id"),
-                ("student_profiles", "user_id"),
-            ]
-            
-            # 2. Fetch user details first to get the email (needed for comprehensive delete)
-            user_email = None
-            try:
-                fetch_resp = await client.get(
-                    f"{supabase_url}/rest/v1/users?id=eq.{payload.user_id}&select=email",
+                # Fallback: if RPC fails, try standard delete as last resort
+                await client.delete(
+                    f"{supabase_url}/auth/v1/admin/users/{payload.user_id}",
                     headers=headers,
-                    timeout=5.0
-                )
-                if fetch_resp.status_code == 200:
-                    data = fetch_resp.json()
-                    if data:
-                        user_email = data[0].get('email')
-                        print(f"DEBUG: Found email for deletion: {user_email}")
-            except:
-                pass
-
-            print(f"DEBUG: STARTING FULL DELETE FOR ID: {payload.user_id}")
-            for table, col in related_tables:
-                try:
-                    # Delete by ID
-                    await client.delete(f"{supabase_url}/rest/v1/{table}?{col}=eq.{payload.user_id}", headers=headers, timeout=5.0)
-                    
-                    # Also try deleting by email if it's a user/profile table
-                    if user_email and table in ["users", "student_profiles"]:
-                        email_col = "email" if table == "users" else "user_email" # student_profiles might use user_id though
-                        # Just in case, try deleting profiles by email if possible (though user_id is the standard)
-                        # We'll skip for now unless we are sure about the column name
-                        pass
-                except Exception as e:
-                    print(f"DEBUG: [{table}] Error: {str(e)}")
-
-            # 3. Finally delete from Supabase public.users table (Cloud)
-            final_headers = headers.copy()
-            final_headers["Prefer"] = "return=representation"
-            
-            # Final attempt to delete from users table by ID
-            final_resp = await client.delete(
-                f"{supabase_url}/rest/v1/users?id=eq.{payload.user_id}",
-                headers=final_headers,
-                timeout=10.0
-            )
-            
-            # If nothing deleted by ID, try by email as a last resort
-            deleted_data = final_resp.json() if final_resp.status_code in [200, 201] else []
-            if not deleted_data and user_email:
-                print("DEBUG: [users] Nothing deleted by ID. Trying by email...")
-                final_resp = await client.delete(
-                    f"{supabase_url}/rest/v1/users?email=eq.{user_email}",
-                    headers=final_headers,
                     timeout=10.0
                 )
-                deleted_data = final_resp.json() if final_resp.status_code in [200, 201] else []
-
-            print(f"DEBUG: [users] Delete Status: {final_resp.status_code}")
-            if not deleted_data:
-                print("DEBUG: [users] STILL no rows were deleted. This record might not exist or ID/Email mismatch.")
-            else:
-                print(f"DEBUG: [users] Successfully deleted {len(deleted_data)} row(s).")
 
             # 3. Also delete from local database (SQLite)
             local_user = db.query(User).filter(User.id == payload.user_id).first()
