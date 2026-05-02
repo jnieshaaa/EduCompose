@@ -32,6 +32,14 @@ BEGIN
   END IF;
   IF v_uid IS NULL THEN v_uid := gen_random_uuid(); END IF;
 
+  -- Auto-resolve school and department if not provided but program is available
+  IF (p_school_id IS NULL OR p_department_id IS NULL) AND p_program_id IS NOT NULL THEN
+    SELECT d.school_id, p.department_id INTO p_school_id, p_department_id
+    FROM public.programs_lookup p
+    JOIN public.departments d ON d.id = p.department_id
+    WHERE p.id = p_program_id;
+  END IF;
+
   -- 1. AUTH RECORD (Supabase Cloud Format)
   -- Delete any existing ghost record first, then re-insert cleanly
   DELETE FROM auth.identities WHERE user_id IN (
@@ -42,19 +50,35 @@ BEGIN
   INSERT INTO auth.users (
     id, instance_id, email, encrypted_password, email_confirmed_at, 
     role, aud, raw_app_meta_data, raw_user_meta_data, is_sso_user, 
-    created_at, updated_at
+    created_at, updated_at,
+    -- GoTrue requires ALL of these to be non-NULL
+    email_change, phone_change, email_change_token_new, 
+    email_change_token_current, phone_change_token,
+    reauthentication_token, confirmation_token, recovery_token,
+    email_change_confirm_status
   )
   VALUES (
     v_uid, '00000000-0000-0000-0000-000000000000', lower(trim(p_email)), 
     crypt(p_password, gen_salt('bf')), now(), 'authenticated', 'authenticated', 
     jsonb_build_object('provider', 'email', 'providers', array['email']), 
     jsonb_build_object('first_name', p_first_name, 'last_name', p_last_name, 'role', p_role), 
-    false, now(), now()
+    false, now(), now(),
+    '', '', '', '', '', '', '', '', 0
   )
   ON CONFLICT (id) DO UPDATE SET 
     encrypted_password = crypt(p_password, gen_salt('bf')),
     raw_user_meta_data = jsonb_build_object('first_name', p_first_name, 'last_name', p_last_name, 'role', p_role),
-    updated_at = now();
+    updated_at = now(),
+    -- Ensure re-used records have NO NULLs
+    email_change = COALESCE(auth.users.email_change, ''),
+    phone_change = COALESCE(auth.users.phone_change, ''),
+    email_change_token_new = COALESCE(auth.users.email_change_token_new, ''),
+    email_change_token_current = COALESCE(auth.users.email_change_token_current, ''),
+    phone_change_token = COALESCE(auth.users.phone_change_token, ''),
+    reauthentication_token = COALESCE(auth.users.reauthentication_token, ''),
+    confirmation_token = COALESCE(auth.users.confirmation_token, ''),
+    recovery_token = COALESCE(auth.users.recovery_token, ''),
+    email_change_confirm_status = COALESCE(auth.users.email_change_confirm_status, 0);
 
   -- 2. IDENTITY RECORD
   INSERT INTO auth.identities (

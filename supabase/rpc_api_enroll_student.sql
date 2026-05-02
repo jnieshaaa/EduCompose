@@ -1,29 +1,41 @@
 -- 3. [ENROLLMENT] Admin-to-Student Enrollment
 -- High-level function used by the Admin Panel.
 -- DEPENDENCY: public.create_new_portal_user_v1
+
+-- Drop the old signature if it exists
+DROP FUNCTION IF EXISTS public.api_enroll_student_v1(text, text, text, text, text, uuid, integer, text, uuid);
+DROP FUNCTION IF EXISTS public.api_enroll_student_v1(text, text, text, text, text, uuid, uuid, uuid, integer, text, uuid);
+
 CREATE OR REPLACE FUNCTION public.api_enroll_student_v1(
   p_email text, p_code text, p_first text, p_last text, p_bday text, 
-  p_prog uuid, p_yr integer, p_block text, p_teach uuid
+  p_prog uuid, p_yr integer, p_block text, p_teach uuid,
+  p_school uuid DEFAULT NULL, p_dept uuid DEFAULT NULL,
+  p_password text DEFAULT NULL
 )
 RETURNS uuid AS $$
 DECLARE 
   v_uid uuid;
   v_bid uuid;
+  v_final_pass text;
 BEGIN
+  -- Use the literal birthday/password provided (no normalization)
+  v_final_pass := COALESCE(p_password, p_bday);
+
   -- 1. Create Identity & Profile
-  -- Updated call to match new create_new_portal_user_v1 signature
   v_uid := public.create_new_portal_user_v1(
     p_email, 
-    REPLACE(p_bday, '-', ''), -- password = birthday WITHOUT dashes (e.g. 20000101)
-    p_first, -- p_first_name
-    p_last,  -- p_last_name
+    v_final_pass, 
+    p_first, 
+    p_last,  
     'student', 
-    NULL, NULL, NULL, NULL, NULL, NULL, 
-    p_prog, -- p_program_id
-    p_bday, -- p_birthday
-    p_code, -- p_code
-    p_yr,   -- p_year
-    p_block -- p_block_name
+    NULL, NULL, NULL, NULL, 
+    p_school, -- p_school_id
+    p_dept,   -- p_department_id
+    p_prog,   -- p_program_id
+    p_bday, 
+    p_code, 
+    p_yr,   
+    p_block 
   );
   
   -- 2. Link to Teacher

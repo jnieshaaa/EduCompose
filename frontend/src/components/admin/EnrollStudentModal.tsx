@@ -157,31 +157,6 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
 
       showNotification('success', "Student successfully enrolled! Welcome email dispatched.");
       
-      // 5. Auto-link to matching blocks
-      try {
-        const { data: blocks } = await supabase
-          .from("blocks")
-          .select(`
-            id,
-            teacher_program_loads!fk_block_program_load!inner (
-              program_id
-            )
-          `)
-          .eq("year", formData.year)
-          .eq("name", formData.block_name.toUpperCase())
-          .eq("teacher_program_loads.program_id", formData.program_id);
-
-        if (blocks && blocks.length > 0) {
-          const links = blocks.map(b => ({
-            block_id: b.id,
-            student_id: enrollResult.auth_id
-          }));
-          await supabase.from("block_students").insert(links);
-        }
-      } catch (linkErr) {
-        console.error("Auto-link error:", linkErr);
-      }
-
       onSuccess();
       onClose();
       // Reset form

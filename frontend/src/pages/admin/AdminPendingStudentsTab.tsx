@@ -225,31 +225,6 @@ export const AdminPendingStudentsTab: React.FC = () => {
               temp_password: initialPassword,
             });
             successCount++;
-
-            // Auto-link to matching blocks
-            try {
-              const { data: blocks } = await supabase
-                .from("blocks")
-                .select(`
-                  id,
-                  teacher_program_loads!fk_block_program_load!inner (
-                    program_id
-                  )
-                `)
-                .eq("year", student.year)
-                .eq("name", student.block_name.toUpperCase())
-                .eq("teacher_program_loads.program_id", student.program_id);
-
-              if (blocks && blocks.length > 0) {
-                const links = blocks.map(b => ({
-                  block_id: b.id,
-                  student_id: result.student_id
-                }));
-                await supabase.from("block_students").insert(links);
-              }
-            } catch (linkErr) {
-              console.error("Auto-link error:", linkErr);
-            }
           } else {
             failCount++;
           }

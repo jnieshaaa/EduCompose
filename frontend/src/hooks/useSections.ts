@@ -361,7 +361,7 @@ export function useSections(showArchived: boolean = false, ay?: string, term?: s
                 block_id: blockRecord.id,
                 student_id: s.user_id
               }));
-              await supabase.from("block_students").insert(enrollments);
+              await supabase.from("block_students").upsert(enrollments, { onConflict: 'block_id,student_id' });
               totalEnrollment += matchingStudents.length;
             }
 

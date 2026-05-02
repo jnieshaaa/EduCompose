@@ -257,6 +257,7 @@ const Login: React.FC = () => {
       }
 
       // SIMPLIFIED FLOW: Validate -> Sign In -> Onboarding or Dashboard
+      // Sign in with the literal password provided (no normalization)
       const { data, error } = await supabase.auth.signInWithPassword({
         email: studentIdentity.email.trim().toLowerCase(),
         password: password.trim(),

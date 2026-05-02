@@ -270,6 +270,7 @@ export const authApi = {
           p_teacher_id: payload.teacher_id || null,
           p_school_id: payload.school_id || null,
           p_department_id: payload.department_id || null,
+          p_password: tempPassword,
         }
       );
 
