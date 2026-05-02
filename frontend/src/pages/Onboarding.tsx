@@ -207,7 +207,6 @@ const TeacherOnboarding: React.FC = () => {
           last_name: data.lastName,
           suffix: data.suffix,
           email: data.email,
-          onboarding_completed: true,
         })
         .eq("id", authUser.id);
 
@@ -222,6 +221,7 @@ const TeacherOnboarding: React.FC = () => {
           nickname: data.nickname,
           school_id: data.school,
           department_id: data.department,
+          onboarding_completed: true,
         }, { onConflict: 'user_id' });
 
       if (profileError) throw profileError;

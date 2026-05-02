@@ -43,3 +43,6 @@ class TeacherProvisionStudentResponse(BaseModel):
     temp_password: Optional[str] = None
     email: str
     student_code: str
+
+class AdminDeleteUserRequest(BaseModel):
+    user_id: str

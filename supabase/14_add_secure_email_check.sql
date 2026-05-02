@@ -7,7 +7,7 @@ BEGIN;
 -- Create a secure function to check if an email exists
 -- SECURITY DEFINER allows this function to run with the privileges of the creator (bypass RLS)
 CREATE OR REPLACE FUNCTION public.check_user_email_exists(p_email text)
-RETURNS TABLE (user_exists boolean, user_role text) 
+RETURNS TABLE (user_exists boolean, user_role text, first_name text, last_name text, nickname text) 
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, auth
@@ -16,7 +16,10 @@ BEGIN
     RETURN QUERY
     SELECT 
         true as user_exists,
-        u.role::text as user_role
+        u.role::text as user_role,
+        u.first_name::text,
+        u.last_name::text,
+        u.nickname::text
     FROM public.users u
     WHERE u.email = lower(trim(p_email))
     LIMIT 1;

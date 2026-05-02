@@ -460,6 +460,7 @@ export function useAuthModal(onClose: () => void) {
       await sendCodeEmail({
         toEmail: forgotEmail.trim(),
         code,
+        toName: "User",
       });
 
       setForgotPasswordSuccess("Verification code sent to your email!");

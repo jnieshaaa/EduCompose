@@ -17,22 +17,28 @@ const STUDENT_WELCOME_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_STUDENT_TEMPLAT
 export const sendCodeEmail = async (params: {
   toEmail: string;
   code: string;
+  toName?: string;
 }) => {
   if (!SERVICE_ID || !FORGOT_PASSWORD_TEMPLATE_ID || !PUBLIC_KEY) {
     console.warn("EmailJS (Code) not configured. Skipping email.");
     return;
   }
 
+  const loginUrl = `${window.location.origin}/Login`;
+
   try {
     return await emailjs.send(
       SERVICE_ID,
       FORGOT_PASSWORD_TEMPLATE_ID,
       {
+        to_name: params.toName || "User",
         to_email: params.toEmail,
         verification_code: params.code,
+        temp_password: params.code, // Fallback for some templates
         password_label: "Verification Code",
         instruction: "To reset your password, please use the following verification code:",
         message: `Your verification code is: ${params.code}`,
+        login_url: loginUrl,
       },
       PUBLIC_KEY
     );

@@ -9,6 +9,7 @@ from .auth_schemas import (
     DeleteAccountRequest,
     TeacherProvisionStudentRequest,
     TeacherProvisionStudentResponse,
+    AdminDeleteUserRequest,
 )
 from .user_schemas import (
     UserBase,

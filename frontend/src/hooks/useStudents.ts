@@ -543,11 +543,9 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
               .eq("block_id", blockId);
             if (error) throw error;
           } else {
-            const { error } = await supabase
-              .from("users")
-              .delete()
-              .eq("id", studentId);
-            if (error) throw error;
+            // Use the secure backend proxy to delete from Auth AND Local DB
+            const { adminApi } = await import("../api");
+            await adminApi.deleteUser(studentId);
           }
           
           setStudents(prev => prev.filter(s => s.id !== studentId));

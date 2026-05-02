@@ -27,7 +27,7 @@ import EditStudentModal from "../../components/admin/EditStudentModal";
 import EnrollStudentModal from "../../components/admin/EnrollStudentModal.tsx";
 import AdminUserLogs from "../../components/admin/AdminUserLogs";
 import { sendStudentWelcomeEmail } from "../../services/emailService";
-import { authApi } from "../../api";
+import { authApi, adminApi } from "../../api";
 import AlertModal from "../../components/ui/AlertModal";
 import { AdminPendingStudentsTab } from "./AdminPendingStudentsTab";
 import { useNotification } from "../../contexts/NotificationContext";
@@ -239,6 +239,8 @@ export const AdminStudentsTab: React.FC = () => {
         return {
           ...user,
           ...(sp || {}),
+          id: user.id, // Explicitly keep the user ID as the primary ID
+          profile_id: sp?.id, // Keep profile ID separately if needed
           programs_lookup: sp?.programs_lookup
         };
       });
@@ -372,12 +374,7 @@ export const AdminStudentsTab: React.FC = () => {
     try {
       setLoading(true);
       setConfirmingAction(null);
-      const { error: deleteError } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", student.id);
-
-      if (deleteError) throw deleteError;
+      await adminApi.deleteUser(student.id);
       await loadStudents();
       setOpenDropdown(null);
       showNotification('success', "Student record deleted.");
@@ -414,12 +411,9 @@ export const AdminStudentsTab: React.FC = () => {
     
     try {
       const ids = Array.from(selectedIds);
-      const { error } = await supabase
-        .from("users")
-        .delete()
-        .in("id", ids);
-        
-      if (error) throw error;
+      for (const id of ids) {
+        await adminApi.deleteUser(id);
+      }
       
       showNotification('success', `${ids.length} records deleted from system.`);
       setSelectedIds(new Set());

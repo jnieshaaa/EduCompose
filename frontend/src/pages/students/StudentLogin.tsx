@@ -94,7 +94,8 @@ const Login: React.FC = () => {
 
       if (checkError) throw checkError;
       
-      const exists = Array.isArray(checkData) ? checkData[0]?.user_exists : checkData?.user_exists;
+      const res = Array.isArray(checkData) ? checkData[0] : checkData;
+      const exists = res?.user_exists;
 
       if (!exists) {
         setError("No account found with this email address.");
@@ -119,6 +120,7 @@ const Login: React.FC = () => {
       await sendCodeEmail({
         toEmail: emailToReset,
         code: code,
+        toName: "Student", // Simplified for now
       });
 
       showNotification('success', "Verification code sent to your email!");
@@ -237,6 +239,7 @@ const Login: React.FC = () => {
       await sendSignupCodeEmail({
         toEmail: student.email,
         code: code,
+        toName: student.first_name,
       });
       
       showNotification('success', "Verification code sent to your email!");

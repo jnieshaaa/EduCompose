@@ -21,7 +21,6 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
   const [formError, setFormError] = useState<string>("");
   
   const [formData, setFormData] = useState({
-    teacher_code: "",
     first_name: "",
     middle_name: "",
     last_name: "",
@@ -33,7 +32,8 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
     year: 1,
     block_name: "",
     birthday: "",
-    title: ""
+    title: "",
+    nickname: ""
   });
 
   useEffect(() => {
@@ -71,16 +71,12 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
       // 1. Check for duplicate email in users table
       const { data: existingUser } = await supabase
         .from("users")
-        .select("id, email, code")
-        .or(`email.eq.${normalizedEmail},code.eq.${formData.teacher_code.trim()}`)
+        .select("id, email")
+        .eq("email", normalizedEmail)
         .maybeSingle();
 
       if (existingUser) {
-        if (existingUser.email === normalizedEmail) {
-            setFormError(`Email ${normalizedEmail} is already registered.`);
-        } else {
-            setFormError(`Teacher Code ${formData.teacher_code} is already assigned.`);
-        }
+        setFormError(`Email ${normalizedEmail} is already registered.`);
         return;
       }
 
@@ -92,11 +88,11 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
         last_name: formData.last_name.trim(),
         middle_name: formData.middle_name.trim() || undefined,
         suffix: formData.suffix.trim() || undefined,
-        code: formData.teacher_code.trim(),
         birthday: formData.birthday || undefined,
         school_id: formData.school_id || undefined,
         department_id: formData.department_id || undefined,
-        program_id: formData.program_id || undefined,
+        title: formData.title || undefined,
+        nickname: formData.nickname.trim() || undefined,
       });
 
       if (provisionResult.success) {
@@ -113,14 +109,10 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
         }
       }
 
-      // 3. Optional: Assign to department/program if needed
-      // (In this schema, teachers ownership of blocks is separate, but we record their primary department in metadata)
-
       onSuccess();
       onClose();
       // Reset form
       setFormData({
-        teacher_code: "",
         first_name: "",
         middle_name: "",
         last_name: "",
@@ -132,7 +124,8 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
         year: 1,
         block_name: "",
         birthday: "",
-        title: ""
+        title: "",
+        nickname: ""
       });
     } catch (err: any) {
       setFormError(err.message || "Failed to enroll teacher");
@@ -183,20 +176,11 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
           <div className="space-y-6">
              <div className="flex items-center gap-3">
                 <Hash size={16} className="text-secondary" />
-                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Details</h3>
+                <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.3em]">Identity Details</h3>
              </div>
              
+             {/* Row 1: Email and Birthday */}
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Teacher ID*</label>
-                  <input
-                    required
-                    placeholder="T-2024-001"
-                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
-                    value={formData.teacher_code}
-                    onChange={(e) => setFormData({ ...formData, teacher_code: e.target.value })}
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Email Address*</label>
                   <div className="relative group">
@@ -211,10 +195,53 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     />
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-secondary transition-colors" size={16} />
+                    <input
+                      required
+                      type="date"
+                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
+                      value={formData.birthday}
+                      onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                    />
+                  </div>
+                </div>
              </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-1 space-y-1.5">
+             {/* Row 2: Title and Nickname */}
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+                  <select
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  >
+                    <option value="">Select Title</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="Sir">Sir</option>
+                    <option value="Prof.">Prof.</option>
+                    <option value="Dr.">Dr.</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Preferred Nickname</label>
+                  <input
+                    placeholder="E.g. Jay"
+                    className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
+                    value={formData.nickname}
+                    onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                  />
+                </div>
+             </div>
+
+             {/* Row 3: First and Middle Name */}
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">First Name*</label>
                   <input
                     required
@@ -224,7 +251,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   />
                 </div>
-                <div className="sm:col-span-1 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                   <input
                     placeholder="Dela"
@@ -233,7 +260,11 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
                   />
                 </div>
-                <div className="sm:col-span-1 space-y-1.5">
+             </div>
+
+             {/* Row 4: Last Name and Suffix */}
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Last Name*</label>
                   <input
                     required
@@ -243,10 +274,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   />
                 </div>
-             </div>
-
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-1 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Suffix</label>
                   <select
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
@@ -260,19 +288,6 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     <option value="III">III</option>
                     <option value="IV">IV</option>
                   </select>
-                </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
-                  <div className="relative group">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-secondary transition-colors" size={16} />
-                    <input
-                      required
-                      type="date"
-                      className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
-                      value={formData.birthday}
-                      onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-                    />
-                  </div>
                 </div>
              </div>
              <p className="text-[9px] text-neutral-400 italic px-1.5 -mt-2">

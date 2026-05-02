@@ -8,7 +8,7 @@ import type {
   DashboardStats,
   SystemStatsResponse,
 } from "./types/Essay";
-import { supabase, supabaseAdmin } from "./lib/supabaseClient";
+import { supabase } from "./lib/supabaseClient";
 
 // Get API base URL from environment variable, fallback to localhost for development
 let API_BASE_URL =
@@ -100,7 +100,10 @@ export const authApi = {
 
       if (userData && userData.user_exists) {
         const roleLabel = userData.user_role === 'student' ? 'student account' : 'teacher/admin account';
-        return { exists: true, message: `Email already registered as a ${roleLabel}.` };
+        return { 
+          exists: true, 
+          message: `Email already registered as a ${roleLabel}.`
+        };
       }
       
       return {
@@ -307,29 +310,33 @@ export const authApi = {
       const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
-      // 1. Create the Auth Account using Admin client
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { 
+      // 1. Create the Auth Account using Backend API Proxy (Secure)
+      const token = localStorage.getItem('auth_token') || '';
+      const response = await fetch(`${API_BASE_URL}/auth/admin/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: tempPassword,
           role: payload.role,
           first_name: payload.first_name,
-          last_name: payload.last_name
-        }
+          middle_name: payload.middle_name,
+          last_name: payload.last_name,
+          title: payload.title,
+          nickname: payload.nickname
+        })
       });
 
-      if (authError && authError.message !== 'User already registered') {
-        console.error("Auth creation failed:", authError);
-        throw new Error(`Auth Error: ${authError.message}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Backend Error: ${response.statusText}`);
       }
 
-      // If user exists, we might need to look up their ID
-      let authId = authData.user?.id;
-      if (!authId && authError?.message === 'User already registered') {
-        const { data: existingUser } = await supabaseAdmin.from('users').select('id').eq('email', normalizedEmail).maybeSingle();
-        authId = existingUser?.id;
-      }
+      const result = await response.json();
+      const authId = result.user?.supabase_user_id || result.user?.id;
 
       if (!authId) {
         throw new Error("Could not determine User ID for provisioning.");
@@ -1029,15 +1036,23 @@ export const adminApi = {
     return { message: "User updated successfully", user: data };
   },
 
-  deleteUser: async (userId: string) => {
-    // Delete from auth.users (this will cascade to users table)
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  deleteUser: async (userId: string): Promise<void> => {
+    const token = localStorage.getItem('auth_token') || '';
+    const response = await fetch(`${API_BASE_URL}/auth/admin/delete-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        user_id: userId
+      })
+    });
 
-    if (error) {
-      throw new Error(error.message);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to delete user via backend proxy");
     }
-
-    return { message: "User deleted successfully" };
   },
 
   resetUserPassword: async (userId: string, newPassword: string) => {

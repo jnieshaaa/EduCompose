@@ -20,9 +20,11 @@ from ..schemas import (
     DeleteAccountRequest,
     TeacherProvisionStudentRequest,
     TeacherProvisionStudentResponse,
+    AdminDeleteUserRequest,
 )
 from ..database import get_db
 from ..services import auth_service
+from ..models import User
 
 auth_router = APIRouter()
 
@@ -130,10 +132,16 @@ async def admin_create_user(
     Admin-only endpoint to create user accounts.
     Creates user in Supabase Auth and syncs to local database.
     """
-    if current_user.role != "admin":
+    # Allow admins to create any user, but allow teachers to ONLY create students
+    if current_user.role == "teacher" and user_data.role != "student":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can create user accounts."
+            detail="Teachers can only create student accounts."
+        )
+    elif current_user.role not in ["admin", "teacher"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators and teachers can create user accounts."
         )
     
     if user_data.role not in ["admin", "teacher", "student"]:
@@ -147,8 +155,8 @@ async def admin_create_user(
     if not full_name:
         full_name = user_data.email.split("@")[0]
 
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_SERVICE_ROLE_KEY")
 
     if not supabase_url or not supabase_service_role_key:
         raise HTTPException(status_code=500, detail="Missing Supabase configuration.")
@@ -183,15 +191,28 @@ async def admin_create_user(
 
             if resp.status_code not in [200, 201]:
                 resp_json = _safe_json(resp)
-                already_registered = "already registered" in (resp_json.get("message") or "").lower()
-                if not already_registered:
+                msg = (resp_json.get("message") or resp_json.get("msg") or "").lower()
+                err_code = (resp_json.get("error_code") or "").lower()
+                already_registered = ("already" in msg and "registered" in msg) or (err_code == "email_exists")
+                if already_registered:
+                    print(f"DEBUG: User {user_data.email} already exists in Supabase Auth. Resolving ID...")
+                    auth_id = await _resolve_auth_user_id_by_email(
+                        client=client,
+                        supabase_url=supabase_url,
+                        headers=headers,
+                        normalized_email=user_data.email.strip().lower()
+                    )
+                else:
                     raise HTTPException(
                         status_code=resp.status_code,
-                        detail=f"Failed to create auth user: {(resp_json.get('message') or resp.text or 'Unknown Supabase error')}"
+                        detail=f"Failed to create auth user: {(resp_json.get('message') or resp_json.get('msg') or resp.text or 'Unknown Supabase error')}"
                     )
+            else:
+                auth_user_data = resp.json()
+                auth_id = auth_user_data.get("id")
 
-            auth_user_data = _safe_json(resp) if resp.status_code in [200, 201] else {}
-            auth_id = auth_user_data.get("id") or user_data.supabase_user_id
+            # Final check for auth_id
+            auth_id = auth_id or user_data.supabase_user_id
 
             username = user_data.username or user_data.email.split("@")[0]
             local_user = await auth_service.create_user(
@@ -222,8 +243,6 @@ async def admin_create_user(
                         "first_name": user_data.first_name,
                         "middle_name": user_data.middle_name,
                         "last_name": user_data.last_name,
-                        "title": user_data.title,
-                        "nickname": user_data.nickname,
                         "role": user_data.role,
                         "is_active": True
                     }
@@ -242,12 +261,152 @@ async def admin_create_user(
                 }
             }
 
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create local user record: {str(e)}"
+        )
+
+
+@auth_router.post("/admin/delete-user")
+async def admin_delete_user(
+    payload: AdminDeleteUserRequest,
+    current_user = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin-only endpoint to delete user accounts from Supabase Auth.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can delete user accounts."
+        )
+
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+    supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not supabase_service_role_key:
+        raise HTTPException(status_code=500, detail="Missing Supabase configuration.")
+
+    headers = {
+        "apikey": supabase_service_role_key,
+        "Authorization": f"Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.delete(
+                f"{supabase_url}/auth/v1/admin/users/{payload.user_id}",
+                headers=headers,
+                timeout=10.0
+            )
+
+            if resp.status_code not in [200, 204, 404]:
+                resp_json = _safe_json(resp)
+                raise HTTPException(
+                    status_code=resp.status_code,
+                    detail=f"Failed to delete auth user: {(resp_json.get('message') or resp.text or 'Unknown Supabase error')}"
+                )
+            
+            # If 404, it means the user is already gone from Auth, which is fine.
+            # We proceed to clean up the local DB.
+
+            # 2. Comprehensive Cleanup in Supabase (Cloud)
+            related_tables = [
+                ("essay_analysis_results", "student_id"),
+                ("essays", "student_id"),
+                ("block_students", "student_id"),
+                ("notifications", "user_id"),
+                ("activity_logs", "user_id"),
+                ("student_profiles", "user_id"),
+            ]
+            
+            # 2. Comprehensive Cleanup in Supabase (Cloud)
+            related_tables = [
+                ("essay_analysis_results", "student_id"),
+                ("essays", "student_id"),
+                ("block_students", "student_id"),
+                ("notifications", "user_id"),
+                ("activity_logs", "user_id"),
+                ("student_profiles", "user_id"),
+            ]
+            
+            # 2. Fetch user details first to get the email (needed for comprehensive delete)
+            user_email = None
+            try:
+                fetch_resp = await client.get(
+                    f"{supabase_url}/rest/v1/users?id=eq.{payload.user_id}&select=email",
+                    headers=headers,
+                    timeout=5.0
+                )
+                if fetch_resp.status_code == 200:
+                    data = fetch_resp.json()
+                    if data:
+                        user_email = data[0].get('email')
+                        print(f"DEBUG: Found email for deletion: {user_email}")
+            except:
+                pass
+
+            print(f"DEBUG: STARTING FULL DELETE FOR ID: {payload.user_id}")
+            for table, col in related_tables:
+                try:
+                    # Delete by ID
+                    await client.delete(f"{supabase_url}/rest/v1/{table}?{col}=eq.{payload.user_id}", headers=headers, timeout=5.0)
+                    
+                    # Also try deleting by email if it's a user/profile table
+                    if user_email and table in ["users", "student_profiles"]:
+                        email_col = "email" if table == "users" else "user_email" # student_profiles might use user_id though
+                        # Just in case, try deleting profiles by email if possible (though user_id is the standard)
+                        # We'll skip for now unless we are sure about the column name
+                        pass
+                except Exception as e:
+                    print(f"DEBUG: [{table}] Error: {str(e)}")
+
+            # 3. Finally delete from Supabase public.users table (Cloud)
+            final_headers = headers.copy()
+            final_headers["Prefer"] = "return=representation"
+            
+            # Final attempt to delete from users table by ID
+            final_resp = await client.delete(
+                f"{supabase_url}/rest/v1/users?id=eq.{payload.user_id}",
+                headers=final_headers,
+                timeout=10.0
+            )
+            
+            # If nothing deleted by ID, try by email as a last resort
+            deleted_data = final_resp.json() if final_resp.status_code in [200, 201] else []
+            if not deleted_data and user_email:
+                print("DEBUG: [users] Nothing deleted by ID. Trying by email...")
+                final_resp = await client.delete(
+                    f"{supabase_url}/rest/v1/users?email=eq.{user_email}",
+                    headers=final_headers,
+                    timeout=10.0
+                )
+                deleted_data = final_resp.json() if final_resp.status_code in [200, 201] else []
+
+            print(f"DEBUG: [users] Delete Status: {final_resp.status_code}")
+            if not deleted_data:
+                print("DEBUG: [users] STILL no rows were deleted. This record might not exist or ID/Email mismatch.")
+            else:
+                print(f"DEBUG: [users] Successfully deleted {len(deleted_data)} row(s).")
+
+            # 3. Also delete from local database (SQLite)
+            local_user = db.query(User).filter(User.id == payload.user_id).first()
+            
+            if local_user:
+                db.delete(local_user)
+                db.commit()
+
+            return {"message": "User account deleted successfully from Auth, Supabase DB, and Local DB."}
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create local user record: {str(e)}"
+            detail=f"Failed to delete user account: {str(e)}"
         )
 
 
