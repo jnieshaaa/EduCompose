@@ -32,10 +32,9 @@ BEGIN
 
   IF v_rec.id IS NULL THEN
     RETURN QUERY SELECT false, 'Student ID not found.', NULL::uuid, NULL::text, NULL::text, NULL::text, NULL::text, false, false, false, NULL::text;
-  ELSIF REPLACE(v_rec.birthday, '-', '') != REPLACE(p_birthday_pass, '-', '') THEN
-    RETURN QUERY SELECT false, 'Invalid password/birthday.', v_rec.id, v_rec.email, v_rec.first_name, v_rec.last_name, v_rec.student_code, v_rec.is_prov, v_rec.onboarding_completed, v_rec.is_active, v_rec.birthday;
   ELSE
-    RETURN QUERY SELECT true, 'Credentials valid.', v_rec.id, v_rec.email, v_rec.first_name, v_rec.last_name, v_rec.student_code, v_rec.is_prov, v_rec.onboarding_completed, v_rec.is_active, v_rec.birthday;
+    -- We no longer check the password here. Supabase Auth will handle it.
+    RETURN QUERY SELECT true, 'Student found.', v_rec.id, v_rec.email, v_rec.first_name, v_rec.last_name, v_rec.student_code, v_rec.is_prov, v_rec.onboarding_completed, v_rec.is_active, v_rec.birthday;
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

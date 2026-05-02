@@ -308,7 +308,7 @@ export const authApi = {
     block_name?: string;
   }): Promise<{ success: boolean; auth_id: string; role: string; temp_password: string; email: string }> => {
     try {
-      const tempPassword = payload.password || payload.birthday?.replace(/-/g, "") || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
+      const tempPassword = payload.password || payload.birthday || `Edu${Math.floor(100000 + Math.random() * 900000)}`;
       const normalizedEmail = payload.email.trim().toLowerCase();
 
       // 1. Create the Auth Account using Backend API Proxy (Secure)
