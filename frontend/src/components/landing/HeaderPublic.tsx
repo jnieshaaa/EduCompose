@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import eduComposeLogo from "../../assets/EduCompose.png";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -24,16 +23,12 @@ const NAV_ITEMS: { id: LandingScrollId; label: string }[] = [
 
 
 const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
-  const [activeSection, setActiveSection] = useState<LandingScrollId>("hero");
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [spacerHeight, setSpacerHeight] = useState(72);
   const [logoShine, setLogoShine] = useState(false);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const headerShellRef = useRef<HTMLDivElement>(null);
-
-
-
+  
   // Trigger shine animation on page load
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,44 +37,6 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Scroll spy: highlight the section whose top we've passed (all nav links always visible).
-  useEffect(() => {
-    const HEADER_OFFSET = 96;
-
-    const updateActiveFromScroll = () => {
-      const y = window.scrollY + HEADER_OFFSET;
-      let current: LandingScrollId = "hero";
-      for (const id of LANDING_SCROLL_IDS) {
-        const el = document.getElementById(id);
-        if (el && y >= el.offsetTop - 24) {
-          current = id;
-        }
-      }
-      setActiveSection(current);
-    };
-
-    updateActiveFromScroll();
-    window.addEventListener("scroll", updateActiveFromScroll, { passive: true });
-    window.addEventListener("resize", updateActiveFromScroll);
-    return () => {
-      window.removeEventListener("scroll", updateActiveFromScroll);
-      window.removeEventListener("resize", updateActiveFromScroll);
-    };
-  }, []);
 
   // Spacer matches fixed header height (toolbar + open mobile menu) so content doesn’t jump
   useEffect(() => {
@@ -165,17 +122,12 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
         {/* Desktop Navigation - Centered links */}
         <nav className='hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-2'>
           {NAV_ITEMS.map(({ id, label }) => {
-            const isActive = activeSection === id;
             return (
               <button
                 key={id}
                 type='button'
                 onClick={() => scrollToSection(id)}
-                className={`px-3 py-2 rounded-lg text-[10px] lg:text-[11px] font-medium uppercase tracking-wider transition-colors ${
-                  isActive
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-500 hover:text-primary hover:bg-slate-50"
-                }`}
+                className="px-3 py-2 rounded-lg text-[10px] lg:text-[11px] font-medium uppercase tracking-wider transition-colors text-slate-500 hover:text-primary hover:bg-slate-50"
               >
                 {label}
               </button>
@@ -193,15 +145,6 @@ const HeaderPublic: React.FC<HeaderPublicProps> = ({ onLoginClick }) => {
             {isAuthenticated ? "Open workspace" : "Sign in"}
           </button>
         </div>
-      </div>
-
-      {/* Scroll progress bar */}
-      <div className='absolute top-0 left-0 w-full h-[2px] bg-slate-100 pointer-events-none'>
-        <motion.div
-          className='h-full bg-gradient-to-r from-primary to-cyan-400'
-          style={{ width: `${scrollProgress}%` }}
-          transition={{ ease: "linear", duration: 0.1 }}
-        />
       </div>
         </header>
 
