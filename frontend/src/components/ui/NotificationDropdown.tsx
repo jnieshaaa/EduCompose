@@ -8,7 +8,8 @@ import { Bell, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { Notification } from "../../types/notification";
-import { buildSecureUrl } from "../../utils/secureUrl";
+import { handleNotificationNavigation } from "../../utils/notificationNavigation";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface NotificationDropdownProps {
   notifications: Notification[];
@@ -26,6 +27,7 @@ export function NotificationDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -61,83 +63,16 @@ export function NotificationDropdown({
     }
     setIsOpen(false);
     
-    console.log("[NotificationClick] Raw relatedId:", notification.relatedId);
-    
-    let rawRelatedId = notification.relatedId;
-    let activityId = "";
-    let essayId = "";
-    let studentId = "";
+    if (role === 'Admin') return; // Admin navigation not yet defined here
 
-    // 1. Robust Metadata Extraction
-    if (rawRelatedId) {
-      if (typeof rawRelatedId === 'object') {
-        const parsed = rawRelatedId as any;
-        activityId = parsed.activityId || parsed.id || "";
-        essayId = parsed.essayId || "";
-        studentId = parsed.studentId || "";
-      } else if (typeof rawRelatedId === 'string') {
-        const trimmed = rawRelatedId.trim();
-        if (trimmed.startsWith("{")) {
-          try {
-            const parsed = JSON.parse(trimmed);
-            activityId = parsed.activityId || parsed.id || "";
-            essayId = parsed.essayId || "";
-            studentId = parsed.studentId || "";
-          } catch (e) {
-            console.error("[NotificationClick] JSON parse error:", e);
-            activityId = trimmed;
-          }
-        } else {
-          if (notification.type === 'essay_graded' || notification.type === 'essay_feedback') {
-            essayId = trimmed;
-          } else {
-            activityId = trimmed;
-          }
-        }
-      }
-    }
-
-    console.log("[NotificationClick] Extracted IDs:", { activityId, essayId, studentId, type: notification.type });
-
-    // 2. Perform Navigation
-    const targetId = activityId || essayId;
-    if (!targetId) {
-      console.warn("[NotificationClick] No target ID found, cannot navigate.");
-      return;
-    }
-
-    if (role === 'Teacher') {
-      const params: Record<string, string> = { activityId: targetId };
-      if (studentId) params.studentId = studentId;
-      if (essayId) params.essayId = essayId;
-
-      const url = buildSecureUrl('/Teacher/Activities', params);
-      console.log("[NotificationClick] Navigating Teacher to:", url);
-      navigate(url);
-    } else if (role === 'Student') {
-      const params: Record<string, string> = { activityId: targetId };
-      if (studentId) params.studentId = studentId;
-      
-      let targetPath = '/Student/Submit';
-      switch (notification.type) {
-        case "essay_graded":
-          if (essayId) params.essayId = essayId;
-          targetPath = '/Student/Essays/Result';
-          break;
-        case "essay_feedback":
-          if (essayId) params.essayId = essayId;
-          targetPath = '/Student/Feedback';
-          break;
-        default:
-          targetPath = '/Student/Submit';
-          break;
-      }
-      
-      const url = buildSecureUrl(targetPath, params);
-      console.log("[NotificationClick] Navigating Student to:", url, "params:", params);
-      navigate(url);
-    }
+    handleNotificationNavigation(
+      notification,
+      role,
+      user?.auth_id,
+      navigate
+    );
   };
+
 
   const formatTime = (timestamp: string) => {
     return timestamp; 

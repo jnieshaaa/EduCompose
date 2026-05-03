@@ -10,8 +10,8 @@ import {
   subscribeToNotifications 
 } from "../../services/notificationService";
 import type { Notification } from "../../types/notification";
-import { buildSecureUrl } from "../../utils/secureUrl";
 import { motion, AnimatePresence } from 'framer-motion';
+import { handleNotificationNavigation } from "../../utils/notificationNavigation";
 
 export function NotificationsTab() {
   const { user } = useAuth();
@@ -84,72 +84,12 @@ export function NotificationsTab() {
       await handleMarkAsRead(notification.id);
     }
 
-    let rawRelatedId = notification.relatedId;
-    console.log("[NotificationsTab] Clicked notification:", notification.id, "Type:", notification.type, "rawRelatedId:", rawRelatedId);
-    
-    let activityId = "";
-    let essayId = "";
-    let studentId = "";
-
-    // 1. Robust Metadata Extraction
-    if (rawRelatedId) {
-      if (typeof rawRelatedId === 'object') {
-        const parsed = rawRelatedId as any;
-        activityId = parsed.activityId || parsed.id || "";
-        essayId = parsed.essayId || "";
-        studentId = parsed.studentId || "";
-      } else if (typeof rawRelatedId === 'string') {
-        const trimmed = rawRelatedId.trim();
-        if (trimmed.startsWith("{")) {
-          try {
-            const parsed = JSON.parse(trimmed);
-            activityId = parsed.activityId || parsed.id || "";
-            essayId = parsed.essayId || "";
-            studentId = parsed.studentId || "";
-          } catch (e) {
-            console.error("[NotificationsTab] JSON parse error:", e);
-            activityId = trimmed;
-          }
-        } else {
-          if (notification.type === 'essay_graded' || notification.type === 'essay_feedback') {
-            essayId = trimmed;
-          } else {
-            activityId = trimmed;
-          }
-        }
-      }
-    }
-
-    console.log("[NotificationsTab] Extracted IDs:", { activityId, essayId, studentId });
-
-    // 2. Perform Navigation
-    const targetId = activityId || essayId;
-    if (!targetId) {
-      console.warn("[NotificationsTab] No target ID found, cannot navigate.");
-      return;
-    }
-
-    const params: Record<string, string> = { activityId: targetId };
-    if (studentId || user?.auth_id) params.studentId = studentId || user?.auth_id || "";
-    
-    let targetPath = '/Student/Submit';
-    switch (notification.type) {
-      case "essay_graded":
-        if (essayId) params.essayId = essayId;
-        targetPath = '/Student/Essays/Result';
-        break;
-      case "essay_feedback":
-        if (essayId) params.essayId = essayId;
-        targetPath = '/Student/Feedback';
-        break;
-      default:
-        targetPath = '/Student/Submit';
-        break;
-    }
-    
-    const url = buildSecureUrl(targetPath, params);
-    console.log("[NotificationsTab] Navigating to:", url, "Params:", params);
-    navigate(url);
+    handleNotificationNavigation(
+      notification,
+      'Student',
+      user?.auth_id,
+      navigate
+    );
   };
 
   if (isLoading) {

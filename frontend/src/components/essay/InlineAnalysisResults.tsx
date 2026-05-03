@@ -416,8 +416,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     <p className='text-sm text-neutral-600'>Claims</p>
                     <p className='text-2xl font-bold text-primary'>
                       {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_claims
+                        analysis.detailed_analysis?.argumentation
+                          ?.argument_structure?.total_claims || 0
                       }
                     </p>
                   </div>
@@ -425,8 +425,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     <p className='text-sm text-neutral-600'>Evidence</p>
                     <p className='text-2xl font-bold text-success-default'>
                       {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_grounds
+                        analysis.detailed_analysis?.argumentation
+                          ?.argument_structure?.total_grounds || 0
                       }
                     </p>
                   </div>
@@ -434,8 +434,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     <p className='text-sm text-neutral-600'>Warrants</p>
                     <p className='text-2xl font-bold text-info-default'>
                       {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_warrants
+                        analysis.detailed_analysis?.argumentation
+                          ?.argument_structure?.total_warrants || 0
                       }
                     </p>
                   </div>
@@ -443,8 +443,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     <p className='text-sm text-neutral-600'>Rebuttals</p>
                     <p className='text-2xl font-bold text-warning-default'>
                       {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_rebuttals
+                        analysis.detailed_analysis?.argumentation
+                          ?.argument_structure?.total_rebuttals || 0
                       }
                     </p>
                   </div>
@@ -452,8 +452,8 @@ const InlineAnalysisResults: React.FC<InlineAnalysisResultsProps> = ({
                     <p className='text-sm text-neutral-600'>Qualifiers</p>
                     <p className='text-2xl font-bold text-purple-600'>
                       {
-                        analysis.detailed_analysis.argumentation
-                          .argument_structure.total_qualifiers || 0
+                        analysis.detailed_analysis?.argumentation
+                          ?.argument_structure?.total_qualifiers || 0
                       }
                     </p>
                   </div>

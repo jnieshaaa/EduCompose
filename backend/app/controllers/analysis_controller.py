@@ -289,17 +289,34 @@ CRITICAL INSTRUCTIONS:
                 from google import genai
                 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
                 
-                # Use model from env or try standard ones
+                # Use model from env or try stable ones
                 model_name = os.getenv("GEMINI_MODEL_NAME")
+                if model_name:
+                    model_name = model_name.replace("models/", "")
+                
+                # Verify if the configured model is available
+                if model_name:
+                    try:
+                        client.models.get(model=model_name)
+                    except Exception as verify_err:
+                        logger.warning(f"Configured Gemini model {model_name} failed verification: {verify_err}. Trying fallbacks.")
+                        model_name = None
+
                 if not model_name:
-                    # Try to find a standard model
-                    for m in ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]:
+                    # Try modern stable fallbacks in order (May 2026 landscape)
+                    for m in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"]:
                         try:
                             client.models.get(model=m)
                             model_name = m
+                            logger.info(f"Using modern fallback Gemini model: {m}")
                             break
                         except:
                             continue
+                
+                if not model_name:
+                    # Final fallback to a safe name without verification if all else fails
+                    model_name = "gemini-2.0-flash"
+                    logger.warning(f"Could not verify any Gemini model. Using default '{model_name}'.")
                 
                 if model_name:
                     response = client.models.generate_content(
@@ -308,9 +325,9 @@ CRITICAL INSTRUCTIONS:
                     )
                     llm_response = response.text
                     llm_provider = "gemini"
-                    logger.info(f"Using Gemini ({model_name}) for comparison analysis")
+                    logger.info(f"Successfully used Gemini ({model_name}) for comparison analysis")
             except Exception as e:
-                logger.warning(f"Gemini analysis failed: {e}")
+                logger.error(f"Gemini comparison analysis failed: {e}")
         
         # Try OpenAI if Gemini failed
         if not llm_response and os.getenv("OPENAI_API_KEY"):

@@ -179,18 +179,22 @@ class OCRService:
                 "Return ONLY the extracted text."
             )
             
-            # Reorder fallback candidates for better availability
-            model_candidates = [
-                os.getenv("GEMINI_MODEL_NAME"),
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash",
-                "gemini-1.5-pro",
-                "gemini-2.0-flash-exp"
-            ]
+            # Build prioritized list of stable models
+            env_model = os.getenv("GEMINI_MODEL_NAME")
+            if env_model:
+                env_model = env_model.replace("models/", "")
+            
+            model_candidates = []
+            if env_model:
+                model_candidates.append(env_model)
+            
+            stable_fallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"]
+            for m in stable_fallbacks:
+                if m not in model_candidates:
+                    model_candidates.append(m)
             
             model_id = None
             for candidate in model_candidates:
-                if not candidate: continue
                 try:
                     client.models.get(model=candidate)
                     model_id = candidate
@@ -199,7 +203,9 @@ class OCRService:
                     continue
             
             if not model_id:
-                model_id = "gemini-1.5-flash" # Absolute fallback
+                # Use first candidate as default if verification failed but we have an API key
+                model_id = model_candidates[0] if model_candidates else "gemini-2.0-flash"
+                logger.warning(f"Could not verify any Gemini model for OCR. Using default '{model_id}'.")
             
             response = client.models.generate_content(
                 model=model_id,

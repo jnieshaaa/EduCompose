@@ -91,19 +91,25 @@ async def generate_rubrics(
             
             client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
             
-            # Priority list of models to try
-            target_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"]
+            # Build prioritized list of stable models
             env_model = os.getenv("GEMINI_MODEL_NAME")
             if env_model:
-                # Remove suffix if it causes issues
-                clean_env_model = env_model.replace("-latest", "")
-                if clean_env_model in target_models:
-                    target_models.remove(clean_env_model)
-                target_models.insert(0, clean_env_model)
+                env_model = env_model.replace("models/", "")
+            
+            target_models = []
+            if env_model:
+                target_models.append(env_model)
+            
+            stable_fallbacks = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"]
+            for m in stable_fallbacks:
+                if m not in target_models:
+                    target_models.append(m)
             
             for model_id in target_models:
                 try:
-                    logger.info(f"Attempting rubric generation with model: {model_id}")
+                    # Verify model availability
+                    client.models.get(model=model_id)
+                    logger.info(f"Attempting rubric generation with verified model: {model_id}")
                     response = client.models.generate_content(
                         model=model_id,
                         contents=prompt,

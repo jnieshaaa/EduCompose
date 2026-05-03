@@ -143,11 +143,11 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
           
           <div className="px-4 md:px-6 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-6">
             {[
-              { label: 'Claims', val: analysis.detailed_analysis.argumentation.argument_structure.total_claims, bg: 'bg-primary-50/50', txt: 'text-primary' },
-              { label: 'Evidence', val: analysis.detailed_analysis.argumentation.argument_structure.total_grounds, bg: 'bg-success-50/50', txt: 'text-success-default' },
-              { label: 'Warrants', val: analysis.detailed_analysis.argumentation.argument_structure.total_warrants, bg: 'bg-info-50/50', txt: 'text-info-default' },
-              { label: 'Rebuttals', val: analysis.detailed_analysis.argumentation.argument_structure.total_rebuttals, bg: 'bg-error-50/50', txt: 'text-error-default' },
-              { label: 'Qualifiers', val: analysis.detailed_analysis.argumentation.argument_structure.total_qualifiers || 0, bg: 'bg-purple-50/50', txt: 'text-purple-600' },
+              { label: 'Claims', val: analysis.detailed_analysis?.argumentation?.argument_structure?.total_claims || 0, bg: 'bg-primary-50/50', txt: 'text-primary' },
+              { label: 'Evidence', val: analysis.detailed_analysis?.argumentation?.argument_structure?.total_grounds || 0, bg: 'bg-success-50/50', txt: 'text-success-default' },
+              { label: 'Warrants', val: analysis.detailed_analysis?.argumentation?.argument_structure?.total_warrants || 0, bg: 'bg-info-50/50', txt: 'text-info-default' },
+              { label: 'Rebuttals', val: analysis.detailed_analysis?.argumentation?.argument_structure?.total_rebuttals || 0, bg: 'bg-error-50/50', txt: 'text-error-default' },
+              { label: 'Qualifiers', val: analysis.detailed_analysis?.argumentation?.argument_structure?.total_qualifiers || 0, bg: 'bg-purple-50/50', txt: 'text-purple-600' },
             ].map((stat) => (
               <div key={stat.label} className={`text-center p-2 md:p-3 ${stat.bg} border border-white backdrop-blur-sm rounded-2xl shadow-sm`}>
                 <p className="text-[7px] md:text-[8px] font-bold text-neutral-400 uppercase tracking-tight mb-1">{stat.label}</p>

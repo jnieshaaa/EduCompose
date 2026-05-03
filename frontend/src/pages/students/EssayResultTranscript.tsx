@@ -398,6 +398,7 @@ export function EssayResultTranscript() {
                    label="Plagiarism Index" 
                    value={analysis?.plagiarism?.plagiarism_percentage || 0} 
                    isFlagged={analysis?.plagiarism?.is_plagiarized} 
+                   link={typeof analysis?.plagiarism === 'string' ? analysis.plagiarism : (analysis?.plagiarism?.report_url || analysis?.plagiarism?.url || analysis?.plagiarism?.link || (analysis?.plagiarism?.matches?.[0]?.url))}
                  />
                  <IntegrityCard label="Class Similarity" value={duplicates.length > 0 ? 100 : 0} isFlagged={duplicates.length > 0} desc={duplicates.length > 0 ? `Matches with ${duplicates.length} records` : "No identical submissions found."} />
             </div>
@@ -411,9 +412,9 @@ export function EssayResultTranscript() {
   );
 }
 
-function IntegrityCard({ label, value, isFlagged, desc }: any) {
+function IntegrityCard({ label, value, isFlagged, desc, link }: any) {
   return (
-    <div className="bg-neutral-50/50 border border-neutral-100 p-6 rounded-[2rem] shadow-sm">
+    <div className="bg-neutral-50/50 border border-neutral-100 p-6 rounded-[2rem] shadow-sm flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{label}</p>
             {isFlagged ? <AlertCircle className="w-5 h-5 text-amber-500" /> : <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
@@ -422,7 +423,20 @@ function IntegrityCard({ label, value, isFlagged, desc }: any) {
             <span className="text-3xl font-black text-neutral-900">{value}%</span>
             <span className="text-[10px] font-bold text-neutral-400">Index</span>
         </div>
-        <p className="text-[11px] font-medium text-neutral-500 leading-relaxed">{desc || (isFlagged ? "Elevated markers detected. Manual review suggested." : "No significant risk markers detected.")}</p>
+        <p className="text-[11px] font-medium text-neutral-500 leading-relaxed mb-4">{desc || (isFlagged ? "Elevated markers detected. Manual review suggested." : "No significant risk markers detected.")}</p>
+        
+        {link && (
+          <div className="mt-auto pt-2">
+            <a 
+              href={link} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-600 transition-colors"
+            >
+              View Full Report <ArrowLeft className="w-3 h-3 ml-1 rotate-180" />
+            </a>
+          </div>
+        )}
     </div>
   );
 }

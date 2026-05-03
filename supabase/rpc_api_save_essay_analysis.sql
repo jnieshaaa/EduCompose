@@ -1,125 +1,6 @@
--- 1. Ensure essay_analysis_results has all required columns
+-- Ensure notifications table has navigation columns
 DO $$ 
 BEGIN
-    -- Add columns if they don't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='analysis_type') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN analysis_type text DEFAULT 'comprehensive';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='content_text') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN content_text text;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='grammar_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN grammar_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='readability_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN readability_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='argument_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN argument_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='coherence_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN coherence_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='plagiarism_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN plagiarism_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='ai_detection_results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN ai_detection_results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='ai_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN ai_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='overall_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN overall_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='grammar_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN grammar_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='readability_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN readability_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='coherence_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN coherence_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='argument_strength_score') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN argument_strength_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='word_count') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN word_count integer;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='generated_at') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN generated_at timestamptz DEFAULT now();
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='results') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN results jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='activity_id') THEN
-        ALTER TABLE public.essay_analysis_results ADD COLUMN activity_id uuid;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'essay_analysis_results_essay_id_key') THEN
-        ALTER TABLE public.essay_analysis_results ADD CONSTRAINT essay_analysis_results_essay_id_key UNIQUE (essay_id);
-    END IF;
-    
-    -- Ensure essays table has scoring columns
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='overall_score') THEN
-        ALTER TABLE public.essays ADD COLUMN overall_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='grammar_score') THEN
-        ALTER TABLE public.essays ADD COLUMN grammar_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='readability_score') THEN
-        ALTER TABLE public.essays ADD COLUMN readability_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='coherence_score') THEN
-        ALTER TABLE public.essays ADD COLUMN coherence_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='argument_strength_score') THEN
-        ALTER TABLE public.essays ADD COLUMN argument_strength_score float8;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='grammar_errors') THEN
-        ALTER TABLE public.essays ADD COLUMN grammar_errors jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='style_issues') THEN
-        ALTER TABLE public.essays ADD COLUMN style_issues jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='argument_analysis') THEN
-        ALTER TABLE public.essays ADD COLUMN argument_analysis jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='recommendations') THEN
-        ALTER TABLE public.essays ADD COLUMN recommendations jsonb;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='word_count') THEN
-        ALTER TABLE public.essays ADD COLUMN word_count integer;
-    END IF;
-
-    -- Ensure notifications table has navigation columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='notifications' AND column_name='related_id') THEN
         ALTER TABLE public.notifications ADD COLUMN related_id text;
     END IF;
@@ -129,7 +10,9 @@ BEGIN
     END IF;
 END $$;
 
--- 2. Create the RPC function
+-- Refactor Storage RPC to use JSONB merging for all results columns
+-- This prevents data loss when partial analysis results (e.g. just plagiarism) are saved.
+
 CREATE OR REPLACE FUNCTION public.api_save_essay_analysis_v1(
   p_essay_id uuid,
   p_analysis_data jsonb,
@@ -182,7 +65,7 @@ BEGIN
     updated_at = now()
   WHERE id = p_essay_id;
 
-  -- Upsert into essay_analysis_results
+  -- Upsert into essay_analysis_results with deep merging
   INSERT INTO public.essay_analysis_results (
     essay_id,
     activity_id,
@@ -231,12 +114,13 @@ BEGIN
   )
   ON CONFLICT (essay_id) DO UPDATE SET
     analysis_type = EXCLUDED.analysis_type,
-    grammar_results = COALESCE(EXCLUDED.grammar_results, essay_analysis_results.grammar_results),
-    readability_results = COALESCE(EXCLUDED.readability_results, essay_analysis_results.readability_results),
-    argument_results = COALESCE(EXCLUDED.argument_results, essay_analysis_results.argument_results),
-    coherence_results = COALESCE(EXCLUDED.coherence_results, essay_analysis_results.coherence_results),
-    plagiarism_results = COALESCE(EXCLUDED.plagiarism_results, essay_analysis_results.plagiarism_results),
-    ai_detection_results = COALESCE(EXCLUDED.ai_detection_results, essay_analysis_results.ai_detection_results),
+    -- Use || operator for JSONB columns to merge instead of replace
+    grammar_results = COALESCE(essay_analysis_results.grammar_results, '{}'::jsonb) || COALESCE(EXCLUDED.grammar_results, '{}'::jsonb),
+    readability_results = COALESCE(essay_analysis_results.readability_results, '{}'::jsonb) || COALESCE(EXCLUDED.readability_results, '{}'::jsonb),
+    argument_results = COALESCE(essay_analysis_results.argument_results, '{}'::jsonb) || COALESCE(EXCLUDED.argument_results, '{}'::jsonb),
+    coherence_results = COALESCE(essay_analysis_results.coherence_results, '{}'::jsonb) || COALESCE(EXCLUDED.coherence_results, '{}'::jsonb),
+    plagiarism_results = COALESCE(essay_analysis_results.plagiarism_results, '{}'::jsonb) || COALESCE(EXCLUDED.plagiarism_results, '{}'::jsonb),
+    ai_detection_results = COALESCE(essay_analysis_results.ai_detection_results, '{}'::jsonb) || COALESCE(EXCLUDED.ai_detection_results, '{}'::jsonb),
     ai_score = COALESCE(EXCLUDED.ai_score, essay_analysis_results.ai_score),
     overall_score = COALESCE(EXCLUDED.overall_score, essay_analysis_results.overall_score),
     grammar_score = COALESCE(EXCLUDED.grammar_score, essay_analysis_results.grammar_score),
@@ -246,6 +130,9 @@ BEGIN
     word_count = COALESCE(EXCLUDED.word_count, essay_analysis_results.word_count),
     updated_at = now(),
     results = COALESCE(essay_analysis_results.results, '{}'::jsonb) || EXCLUDED.results;
+
+  -- Cleanup Legacy Notifications (Part of the stabilization)
+  DELETE FROM public.notifications WHERE type = 'essay_feedback';
 
   -- Notify student with navigation metadata
   SELECT title INTO v_activity_title FROM public.essay_activities WHERE id = v_activity_id;

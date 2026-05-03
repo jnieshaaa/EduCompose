@@ -108,41 +108,38 @@ class GrammarAnalyzer:
             self.llm_client = client
             
             # Get model name from environment variable, or use fallback list
-            # Reorder fallback candidates for better availability
-            model_candidates = [
-                os.getenv("GEMINI_MODEL_NAME"),
-                'gemini-1.5-flash',          # High quota, stable
-                'gemini-1.5-flash-latest',   # Fallback slug
-                'gemini-1.5-pro',            # Pro version
-                'gemini-1.0-pro',            # Legacy stable
-                'gemini-2.0-flash-exp',      # Experimental 2.0
-            ]
+            env_model = os.getenv("GEMINI_MODEL_NAME")
+            if env_model:
+                env_model = env_model.replace("models/", "")
+            
+            # Build prioritized list of stable models
+            model_candidates = []
+            if env_model:
+                model_candidates.append(env_model)
+            
+            # Add modern stable fallbacks (May 2026 landscape)
+            stable_fallbacks = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest']
+            for m in stable_fallbacks:
+                if m not in model_candidates:
+                    model_candidates.append(m)
             
             self.gemini_model = None
             last_error = None
             for model_name in model_candidates:
-                if not model_name:
-                    continue
                 try:
-                    # Sanitize model name - remove 'models/' prefix if present
-                    current_model = model_name.replace("models/", "") if model_name else None
-                    if not current_model:
-                        continue
-                        
-                    client.models.get(model=current_model)
-                    self.gemini_model = current_model
-                    logger.info(f"Gemini client initialized with model: {current_model}")
+                    # Verify model availability
+                    client.models.get(model=model_name)
+                    self.gemini_model = model_name
+                    logger.info(f"Gemini client verified with model: {model_name}")
                     break
                 except Exception as model_error:
                     last_error = model_error
-                    # If it's a 404, we'll try the next candidate
-                    logger.debug(f"Model {model_name} failed: {model_error}")
+                    logger.debug(f"Model {model_name} verification failed: {model_error}")
             
             if not self.gemini_model:
-                # If all else fails, use a hardcoded safe default but don't verify it
-                self.gemini_model = "gemini-1.5-flash"
+                # Use first candidate as default if verification failed but we have an API key
+                self.gemini_model = model_candidates[0] if model_candidates else "gemini-2.0-flash"
                 logger.warning(f"Failed to verify any Gemini model. Using default '{self.gemini_model}'. Last error: {last_error}")
-                # Don't set self.llm_client = None here, we'll try the default anyway
                 
         except ImportError:
             logger.debug("google-genai package not installed")

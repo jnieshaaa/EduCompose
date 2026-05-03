@@ -832,6 +832,9 @@ export interface PlagiarismCheckResponse {
   checked: boolean;
   error?: string;
   message?: string;
+  report_url?: string;
+  url?: string;
+  link?: string;
 }
 
 export const plagiarismApi = {

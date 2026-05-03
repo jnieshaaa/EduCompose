@@ -144,38 +144,28 @@ class TransformerClaimClassifier:
             from google import genai
             client = genai.Client(api_key=gemini_key)
             
-            # Sanitize model name - remove 'models/' prefix if present
-            raw_model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
-            model_name = raw_model_name.replace("models/", "") if raw_model_name else "gemini-1.5-flash"
-            
-            prompt = f"""Classify each of the following sentences into one of these argument components:
-            claim, premise, evidence, counterclaim, background.
-            
-            Sentences:
-            {json.dumps(sentences)}
-            
-            Return ONLY a JSON array of objects with 'label' and 'score' (0-1).
-            Example: [{{"label": "claim", "score": 0.95}}, ...]
-            """
-            
             # Prepare model candidates
-            model_candidates = [
-                os.getenv("GEMINI_MODEL_NAME"),
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-latest',
-                'gemini-1.5-pro',
-                'gemini-1.0-pro'
-            ]
+            env_model = os.getenv("GEMINI_MODEL_NAME")
+            if env_model:
+                env_model = env_model.replace("models/", "")
+            
+            model_candidates = []
+            if env_model:
+                model_candidates.append(env_model)
+            
+            stable_fallbacks = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest']
+            for m in stable_fallbacks:
+                if m not in model_candidates:
+                    model_candidates.append(m)
             
             response = None
             last_error = None
             
             for m_name in model_candidates:
-                if not m_name: continue
-                current_m = m_name.replace("models/", "")
                 try:
+                    # Verify and use
                     response = client.models.generate_content(
-                        model=current_m,
+                        model=m_name,
                         contents=prompt,
                         config={
                             'response_mime_type': 'application/json',
@@ -183,11 +173,11 @@ class TransformerClaimClassifier:
                         }
                     )
                     if response and response.text:
-                        logger.info(f"✓ Classification successful using Gemini model: {current_m}")
+                        logger.info(f"✓ Classification successful using Gemini model: {m_name}")
                         break
                 except Exception as model_err:
                     last_error = model_err
-                    logger.debug(f"Gemini model {current_m} failed for classification: {model_err}")
+                    logger.debug(f"Gemini model {m_name} failed for classification: {model_err}")
                     continue
             
             if not response or not response.text:
