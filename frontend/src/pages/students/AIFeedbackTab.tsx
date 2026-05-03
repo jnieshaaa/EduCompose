@@ -12,6 +12,7 @@ import {
 import { readSecureParams } from '../../utils/secureUrl';
 import { fetchEssayAnalysis } from '../../services/activityService';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 
 interface FeedbackData {
@@ -40,22 +41,28 @@ export function AIFeedbackTab() {
   const [error, setError] = useState<string | null>(null);
   const [essayFeedback, setEssayFeedback] = useState<FeedbackData | null>(null);
 
+  const { user } = useAuth();
+
   useEffect(() => {
     async function loadData() {
       const params = readSecureParams(window.location.search);
-      if (!params || !params.studentId || !params.activityId) {
+      
+      // Fallback: If studentId is missing from params, try to use current user's ID
+      const studentId = params?.studentId || user?.auth_id || user?.id;
+      const activityId = params?.activityId;
+
+      if (!studentId || !activityId) {
         if (!window.location.search.includes('ref=')) {
           setError("No essay identifiers provided. Please select an essay from your folder.");
-          setLoading(false);
-          return;
+        } else {
+          setError("Invalid request parameters. Missing essay or activity identification.");
         }
-        setError("Invalid request parameters.");
         setLoading(false);
         return;
       }
 
       try {
-        const result = await fetchEssayAnalysis(params.studentId, params.activityId);
+        const result = await fetchEssayAnalysis(studentId, activityId);
         if (!result) {
           setError("Could not find score results for this essay.");
           return;

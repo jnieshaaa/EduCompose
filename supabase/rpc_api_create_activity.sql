@@ -20,7 +20,6 @@ DECLARE
   v_activity_id uuid;
   v_rubric_id uuid := p_rubric_id;
   v_program_ids uuid[];
-  v_student_id uuid;
 BEGIN
   -- 1. Get current teacher ID
   v_teacher_id := auth.uid();
@@ -84,13 +83,14 @@ BEGIN
   )
   RETURNING id INTO v_activity_id;
 
-  -- 5. Notify all students in the selected blocks
-  -- This is much faster on the server than looping in the frontend
+  -- 5. Notify all students in the selected blocks with navigation metadata
   INSERT INTO public.notifications (
     user_id,
     type,
     title,
     message,
+    related_id,
+    related_type,
     created_at
   )
   SELECT 
@@ -98,6 +98,8 @@ BEGIN
     'new_activity',
     'New Activity Assigned',
     'A new activity "' || p_title || '" has been posted.',
+    v_activity_id::text, -- Just the ID for activities is usually enough, or match expected JSON format
+    'essay_activities',
     now()
   FROM public.block_students bs
   WHERE bs.block_id = ANY(p_block_ids);

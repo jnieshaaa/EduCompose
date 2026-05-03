@@ -61,78 +61,78 @@ export function NotificationDropdown({
     }
     setIsOpen(false);
     
+    console.log("[NotificationClick] Raw relatedId:", notification.relatedId);
+    
     let rawRelatedId = notification.relatedId;
     let activityId = "";
     let essayId = "";
     let studentId = "";
 
-    if (rawRelatedId && rawRelatedId.startsWith("{")) {
-       try {
-         const parsed = JSON.parse(rawRelatedId);
-         activityId = parsed.activityId || "";
-         essayId = parsed.essayId || "";
-         studentId = parsed.studentId || "";
-         if (!activityId && !essayId) {
-            activityId = parsed.id || rawRelatedId;
-         }
-       } catch (e) {
-         activityId = rawRelatedId;
-       }
-    } else {
-      // Legacy or simple ID: Assume it's an activity ID unless the type suggests otherwise
-      if (notification.type === 'essay_graded' || notification.type === 'essay_feedback') {
-        essayId = rawRelatedId || "";
-      } else {
-        activityId = rawRelatedId || "";
+    // 1. Robust Metadata Extraction
+    if (rawRelatedId) {
+      if (typeof rawRelatedId === 'object') {
+        const parsed = rawRelatedId as any;
+        activityId = parsed.activityId || parsed.id || "";
+        essayId = parsed.essayId || "";
+        studentId = parsed.studentId || "";
+      } else if (typeof rawRelatedId === 'string') {
+        const trimmed = rawRelatedId.trim();
+        if (trimmed.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            activityId = parsed.activityId || parsed.id || "";
+            essayId = parsed.essayId || "";
+            studentId = parsed.studentId || "";
+          } catch (e) {
+            console.error("[NotificationClick] JSON parse error:", e);
+            activityId = trimmed;
+          }
+        } else {
+          if (notification.type === 'essay_graded' || notification.type === 'essay_feedback') {
+            essayId = trimmed;
+          } else {
+            activityId = trimmed;
+          }
+        }
       }
     }
 
+    console.log("[NotificationClick] Extracted IDs:", { activityId, essayId, studentId, type: notification.type });
+
+    // 2. Perform Navigation
+    const targetId = activityId || essayId;
+    if (!targetId) {
+      console.warn("[NotificationClick] No target ID found, cannot navigate.");
+      return;
+    }
+
     if (role === 'Teacher') {
-      const idToUse = activityId || essayId;
-      if (idToUse) {
-        const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
-        const info = await fetchActivityBreadcrumbInfo(
-          activityId || "", 
-          studentId || "",
-          essayId || ""
-        );
+      const params: Record<string, string> = { activityId: targetId };
+      if (studentId) params.studentId = studentId;
+      if (essayId) params.essayId = essayId;
 
-        const params: Record<string, string> = {};
-        if (idToUse) params.activityId = idToUse;
-        if (info) {
-          if (info.activityTitle) params.activityTitle = info.activityTitle;
-          if (info.courseName) params.courseName = info.courseName;
-          if (info.courseId) params.courseId = info.courseId;
-          if (info.sectionId) params.sectionId = info.sectionId;
-          if (info.courseSection) params.courseSection = info.courseSection;
-        }
-
-        navigate(buildSecureUrl('/Teacher/Activities', params));
-      }
+      const url = buildSecureUrl('/Teacher/Activities', params);
+      console.log("[NotificationClick] Navigating Teacher to:", url);
+      navigate(url);
     } else if (role === 'Student') {
-      if (activityId || essayId) {
-        const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
-        const info = await fetchActivityBreadcrumbInfo(activityId || essayId);
-
-        const params: Record<string, string> = {
-          activityId: activityId || essayId,
-        };
-        if (info) {
-          if (info.programAbbr) params.programAbbr = info.programAbbr;
-          if (info.courseName) params.courseName = info.courseName;
-          if (info.activityTitle) params.activityTitle = info.activityTitle;
-        }
-
-        switch (notification.type) {
-          case "essay_graded":
-            if (essayId) params.essayId = essayId;
-            navigate(buildSecureUrl('/Student/Feedback', params));
-            break;
-          default:
-            navigate(buildSecureUrl('/Student/Submit', params));
-            break;
-        }
+      const params: Record<string, string> = { activityId: targetId };
+      if (studentId) params.studentId = studentId;
+      
+      let targetPath = '/Student/Submit';
+      switch (notification.type) {
+        case "essay_graded":
+        case "essay_feedback":
+          if (essayId) params.essayId = essayId;
+          targetPath = '/Student/Feedback';
+          break;
+        default:
+          targetPath = '/Student/Submit';
+          break;
       }
+      
+      const url = buildSecureUrl(targetPath, params);
+      console.log("[NotificationClick] Navigating Student to:", url, "params:", params);
+      navigate(url);
     }
   };
 

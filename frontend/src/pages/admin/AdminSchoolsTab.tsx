@@ -96,39 +96,35 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingSchool.id);
         if (error) throw error;
       } else {
-        const { data: school, error: schoolError } = await supabase
-          .from("schools")
-          .insert({ name: schoolForm.name, code: schoolForm.code })
-          .select()
-          .single();
+        console.log("[AdminSchoolsTab] Creating school via RPC:", schoolForm.code);
+        const { data: schoolId, error: schoolError } = await supabase.rpc('api_create_school_v1', {
+          p_name: schoolForm.name,
+          p_code: schoolForm.code
+        });
 
         if (schoolError) throw schoolError;
 
+        // Add initial departments if any
         for (const dept of schoolForm.departments) {
-          const { data: department, error: deptError } = await supabase
-            .from("departments")
-            .insert({
-              school_id: school.id,
-              name: dept.name,
-              code: dept.code,
-            })
-            .select()
-            .single();
+          const { data: deptId, error: deptError } = await supabase.rpc('api_create_department_v1', {
+            p_school_id: schoolId,
+            p_name: dept.name,
+            p_code: dept.code
+          });
 
-          if (deptError) throw deptError;
+          if (deptError) {
+            console.error("[AdminSchoolsTab] Error adding initial department:", deptError);
+            continue;
+          }
 
           if (dept.programs && dept.programs.length > 0) {
-            const programsToInsert = dept.programs.map((p) => ({
-              department_id: department.id,
-              name: p.name,
-              abbr: p.abbr,
-            }));
-
-            const { error: progError } = await supabase
-              .from("programs_lookup")
-              .insert(programsToInsert);
-
-            if (progError) throw progError;
+            for (const prog of dept.programs) {
+              await supabase.rpc('api_create_program_v1', {
+                p_department_id: deptId,
+                p_name: prog.name,
+                p_abbr: prog.abbr
+              });
+            }
           }
         }
       }
@@ -138,9 +134,9 @@ export const AdminSchoolsTab: React.FC = () => {
       setEditingSchool(null);
       setShowSchoolModal(false);
       showNotification('success', editingSchool ? "Record updated." : "School saved.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving school:", error);
-      showNotification('error', "Error saving school. Check if the code already exists.");
+      showNotification('error', error.message || "Error saving school. Check if the code already exists.");
     }
   };
 
@@ -171,10 +167,11 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingDept.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("departments").insert({
-          school_id: selectedSchool,
-          name: deptForm.name,
-          code: deptForm.code,
+        console.log("[AdminSchoolsTab] Creating department via RPC:", deptForm.code);
+        const { error } = await supabase.rpc('api_create_department_v1', {
+          p_school_id: selectedSchool,
+          p_name: deptForm.name,
+          p_code: deptForm.code
         });
         if (error) throw error;
       }
@@ -183,8 +180,10 @@ export const AdminSchoolsTab: React.FC = () => {
       setDeptForm({ name: "", code: "", programs: [] });
       setEditingDept(null);
       setShowDeptModal(false);
-    } catch (error) {
+      showNotification('success', editingDept ? "Department updated." : "Department saved.");
+    } catch (error: any) {
       console.error("Error saving department:", error);
+      showNotification('error', error.message || "Error saving department.");
     }
   };
 
@@ -199,10 +198,11 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingProgram.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("programs_lookup").insert({
-          department_id: selectedDept,
-          name: programForm.name,
-          abbr: programForm.abbr,
+        console.log("[AdminSchoolsTab] Creating program via RPC:", programForm.abbr);
+        const { error } = await supabase.rpc('api_create_program_v1', {
+          p_department_id: selectedDept,
+          p_name: programForm.name,
+          p_abbr: programForm.abbr
         });
         if (error) throw error;
       }
@@ -211,8 +211,10 @@ export const AdminSchoolsTab: React.FC = () => {
       setProgramForm({ name: "", abbr: "" });
       setEditingProgram(null);
       setShowProgramModal(false);
-    } catch (error) {
+      showNotification('success', editingProgram ? "Program updated." : "Program saved.");
+    } catch (error: any) {
       console.error("Error saving program:", error);
+      showNotification('error', error.message || "Error saving program.");
     }
   };
 

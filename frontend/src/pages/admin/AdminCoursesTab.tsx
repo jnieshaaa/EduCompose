@@ -128,28 +128,36 @@ export const AdminCoursesTab: React.FC = () => {
     if (!courseForm.course_code || !courseForm.course_title || !selectedSchool) return;
 
     try {
-      const courseData = {
-        school_id: selectedSchool,
-        department_id: selectedDept || null,
-        program_id: selectedProg || null,
-        teacher_id: courseForm.teacher_id || null,
-        course_code: courseForm.course_code.toUpperCase(),
-        course_title: courseForm.course_title,
-        units: courseForm.units,
-        year_level: courseForm.year_level || null,
-        semester: courseForm.semester || null,
-      };
-
       if (editingCourse) {
+        const courseData = {
+          school_id: selectedSchool,
+          department_id: selectedDept || null,
+          program_id: selectedProg || null,
+          teacher_id: courseForm.teacher_id || null,
+          course_code: courseForm.course_code.toUpperCase(),
+          course_title: courseForm.course_title,
+          units: courseForm.units,
+          year_level: courseForm.year_level || null,
+          semester: courseForm.semester || null,
+        };
+
         const { error } = await supabase
           .from("courses")
           .update(courseData)
           .eq("id", editingCourse.id);
         if (error) throw error;
       } else {
-        const { data: userData } = await supabase.auth.getUser();
-        const finalData = { ...courseData, teacher_id: userData.user?.id || null };
-        const { error } = await supabase.from("courses").insert(finalData);
+        console.log("[AdminCoursesTab] Creating course via RPC:", courseForm.course_code);
+        const { error } = await supabase.rpc('api_create_course_v1', {
+          p_school_id: selectedSchool,
+          p_course_code: courseForm.course_code.toUpperCase(),
+          p_course_title: courseForm.course_title,
+          p_units: courseForm.units,
+          p_department_id: selectedDept || null,
+          p_program_id: selectedProg || null,
+          p_year_level: courseForm.year_level || null,
+          p_semester: courseForm.semester || null
+        });
         if (error) throw error;
       }
 

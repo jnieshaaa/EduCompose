@@ -175,7 +175,7 @@ export const fetchPlatformRubrics = async (): Promise<PlatformRubric[]> => {
   }
 };
 
-// Save platform rubric (admin only - teacher_id is null)
+// Save platform rubric (admin only)
 export const savePlatformRubric = async (
   rubricFormData: {
     name: string;
@@ -185,54 +185,31 @@ export const savePlatformRubric = async (
     criteria: CriteriaRow[];
   }
 ) => {
-  const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
-
-  // Check if a platform rubric with the same name already exists
-  // A rubric is a platform rubric if user_id is null OR owner is an admin
-  const { data: allSameName, error: checkError } = await supabase
-    .from("rubrics")
-    .select("id, name, user_id, owner:users!user_id(role)")
-    .ilike("name", rubricName);
-
-  const existingRubrics = (allSameName || []).filter(
-    (r: any) => r.user_id === null || r.owner?.role === "admin"
-  );
-
-  if (checkError) {
-    console.error("Error checking for duplicate platform rubric:", checkError);
-    throw checkError;
-  }
-
-  if (existingRubrics && existingRubrics.length > 0) {
-    const error = new Error(
-      `A platform rubric with the name "${rubricName}" already exists. Please choose a different name.`
-    ) as Error & { code?: string };
-    error.code = "DUPLICATE_RUBRIC";
-    throw error;
-  }
-
-  const { data, error } = await supabase
-    .from("rubrics")
-    .insert({
-      name: rubricName,
-      description: rubricFormData.description || `Grading intensity: ${rubricFormData.gradingIntensity}`,
-      criteria: rubricFormData.criteria,
-      grading_intensity: rubricFormData.gradingIntensity,
-      user_id: null, // Platform rubric
-    })
-    .select()
-    .maybeSingle();
-
+  console.log("[savePlatformRubric] Attempting to create platform rubric:", rubricFormData.name);
+  
+  const { data, error } = await supabase.rpc('api_create_rubric_v1', {
+    p_name: rubricFormData.name,
+    p_description: rubricFormData.description,
+    p_criteria: { criteria: rubricFormData.criteria }, // Keep same structure as old logic
+    p_grading_intensity: rubricFormData.gradingIntensity,
+    p_is_platform: true
+  });
 
   if (error) {
-    console.error("Error saving platform rubric:", error);
+    console.error("[savePlatformRubric] Error:", error);
+    if (error.message.includes("already exists")) {
+       const err = new Error(error.message) as any;
+       err.code = "DUPLICATE_RUBRIC";
+       throw err;
+    }
     throw error;
   }
 
-  return data;
+  console.log("[savePlatformRubric] Success! Created rubric ID:", data);
+  return { id: data };
 };
 
-// Save rubric to Supabase
+// Save rubric to Supabase (Teacher)
 export const saveRubric = async (
   rubricFormData: {
     name: string;
@@ -241,51 +218,27 @@ export const saveRubric = async (
     criteria: CriteriaRow[];
   }
 ) => {
-  const rubricName = rubricFormData.name?.trim() || "Untitled Rubric";
-
-  const teacherId = await fetchTeacherId();
-  if (!teacherId) throw new Error("Could not resolve teacher UUID");
-
-  // Check if a rubric with the same name already exists for this teacher
-  const { data: existingRubrics, error: checkError } = await supabase
-    .from("rubrics")
-    .select("id, name")
-    .eq("user_id", teacherId)
-    .ilike("name", rubricName); // Case-insensitive comparison
-
-  if (checkError) {
-    console.error("Error checking for duplicate rubric:", checkError);
-    throw checkError;
-  }
-
-  // If a rubric with the same name exists, throw an error
-  if (existingRubrics && existingRubrics.length > 0) {
-    const error = new Error(
-      `A rubric with the name "${rubricName}" already exists. Please choose a different name.`
-    ) as Error & { code?: string };
-    error.code = "DUPLICATE_RUBRIC";
-    throw error;
-  }
-
-  const { data, error } = await supabase
-    .from("rubrics")
-    .insert({
-      name: rubricName,
-      description: `Grading intensity: ${rubricFormData.gradingIntensity}`,
-      criteria: rubricFormData.criteria,
-      grading_intensity: rubricFormData.gradingIntensity,
-      user_id: teacherId,
-      created_by: teacherId,
-    })
-    .select()
-    .maybeSingle();
+  console.log("[saveRubric] Attempting to create teacher rubric:", rubricFormData.name);
+  
+  const { data, error } = await supabase.rpc('api_create_rubric_v1', {
+    p_name: rubricFormData.name,
+    p_criteria: { criteria: rubricFormData.criteria }, // Match old structure
+    p_grading_intensity: rubricFormData.gradingIntensity,
+    p_is_platform: false
+  });
 
   if (error) {
-    console.error("Error saving rubric:", error);
+    console.error("[saveRubric] Error:", error);
+    if (error.message.includes("already exists")) {
+       const err = new Error(error.message) as any;
+       err.code = "DUPLICATE_RUBRIC";
+       throw err;
+    }
     throw error;
   }
 
-  return data;
+  console.log("[saveRubric] Success! Created rubric ID:", data);
+  return { id: data };
 };
 
 // Save template rubric to Supabase
@@ -297,51 +250,27 @@ export const saveTemplateRubric = async (
     type: string;
   }
 ) => {
-  const rubricName = rubric.name?.trim() || "Untitled Rubric";
-
-  const teacherId = await fetchTeacherId();
-  if (!teacherId) throw new Error("Could not resolve teacher UUID");
-
-  // Check if a rubric with the same name already exists for this teacher
-  const { data: existingRubrics, error: checkError } = await supabase
-    .from("rubrics")
-    .select("id, name")
-    .eq("user_id", teacherId)
-    .ilike("name", rubricName); // Case-insensitive comparison
-
-  if (checkError) {
-    console.error("Error checking for duplicate rubric:", checkError);
-    throw checkError;
-  }
-
-  // If a rubric with the same name exists, throw an error
-  if (existingRubrics && existingRubrics.length > 0) {
-    const error = new Error(
-      `A rubric with the name "${rubricName}" already exists. Please choose a different name.`
-    ) as Error & { code?: string };
-    error.code = "DUPLICATE_RUBRIC";
-    throw error;
-  }
-
-  const { data, error } = await supabase
-    .from("rubrics")
-    .insert({
-      name: rubricName,
-      description: rubric.description,
-      criteria: rubric.criteria,
-      grading_intensity: rubric.type, // Use type as intensity
-      user_id: teacherId,
-      created_by: teacherId,
-    })
-    .select()
-    .maybeSingle();
+  console.log("[saveTemplateRubric] Creating from template:", rubric.name);
+  
+  const { data, error } = await supabase.rpc('api_create_rubric_v1', {
+    p_name: rubric.name,
+    p_description: rubric.description,
+    p_criteria: { criteria: rubric.criteria },
+    p_grading_intensity: rubric.type,
+    p_is_platform: false
+  });
 
   if (error) {
-    console.error("Error saving template rubric:", error);
+    console.error("[saveTemplateRubric] Error:", error);
+    if (error.message.includes("already exists")) {
+       const err = new Error(error.message) as any;
+       err.code = "DUPLICATE_RUBRIC";
+       throw err;
+    }
     throw error;
   }
 
-  return data;
+  return { id: data };
 };
 
 // Delete rubric from Supabase

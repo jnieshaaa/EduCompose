@@ -63,64 +63,58 @@ export function NotificationsTab() {
   };
   
   const handleNotificationClick = async (notification: Notification) => {
-    // 1. Mark as read if not already handled by child button
     if (!notification.read) {
       handleMarkAsRead(notification.id);
     }
 
-    // 2. Extract ID (handle both plain and JSON strings)
-    let relatedId = notification.relatedId;
+    let rawRelatedId = notification.relatedId;
+    console.log("[TeacherNotifications] Clicked:", notification.id, "Type:", notification.type, "rawRelatedId:", rawRelatedId);
+
+    let activityId = "";
     let essayId = "";
     let studentId = "";
-    if (relatedId && relatedId.startsWith("{")) {
-       try {
-         const parsed = JSON.parse(relatedId);
-         essayId = parsed.essayId || "";
-         studentId = parsed.studentId || "";
-         // Prioritize activityId as Teachers need to go to the activity view
-         relatedId = parsed.activityId || parsed.essayId || parsed.id || relatedId;
-       } catch (e) {
-         console.error("Failed to parse JSON relatedId:", e);
-       }
-    }
 
-    // 3. Navigate based on type
-    if (relatedId || essayId) {
-      // Fetch Metadata for Breadcrumbs and Deep Linking
-      const { fetchActivityBreadcrumbInfo } = await import("../../services/activityService");
-      const info = await fetchActivityBreadcrumbInfo(
-        relatedId || "", 
-        studentId || "", 
-        essayId || ""
-      );
-
-      const params: Record<string, string> = {};
-      if (relatedId || essayId) params.activityId = relatedId || essayId;
-      if (info) {
-        if (info.activityTitle) params.activityTitle = info.activityTitle;
-        if (info.courseName) params.courseName = info.courseName;
-        if (info.courseId) params.courseId = info.courseId;
-        if (info.sectionId) params.sectionId = info.sectionId;
-        if (info.courseSection) params.courseSection = info.courseSection;
-      }
-
-      switch (notification.type) {
-        case "student_submitted":
-        case "resubmission_requested":
-        case "resubmission_request":
-        case "submission_received":
-        case "essay_graded":
-        case "activity_missed":
-          navigate(buildSecureUrl('/Teacher/Activities', params));
-          break;
-        default:
-          // Try to navigate to Activities if it looks like an ID
-          if (relatedId || essayId) {
-             navigate(buildSecureUrl('/Teacher/Activities', params));
+    // 1. Robust Metadata Extraction
+    if (rawRelatedId) {
+      if (typeof rawRelatedId === 'object') {
+        const parsed = rawRelatedId as any;
+        activityId = parsed.activityId || parsed.id || "";
+        essayId = parsed.essayId || "";
+        studentId = parsed.studentId || "";
+      } else if (typeof rawRelatedId === 'string') {
+        const trimmed = rawRelatedId.trim();
+        if (trimmed.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            activityId = parsed.activityId || parsed.id || "";
+            essayId = parsed.essayId || "";
+            studentId = parsed.studentId || "";
+          } catch (e) {
+            console.error("[TeacherNotifications] JSON parse error:", e);
+            activityId = trimmed;
           }
-          break;
+        } else {
+          activityId = trimmed;
+        }
       }
     }
+
+    console.log("[TeacherNotifications] Extracted IDs:", { activityId, essayId, studentId });
+
+    // 2. Perform Navigation
+    const targetId = activityId || essayId;
+    if (!targetId) {
+      console.warn("[TeacherNotifications] No target ID found, cannot navigate.");
+      return;
+    }
+
+    const params: Record<string, string> = { activityId: targetId };
+    if (studentId) params.studentId = studentId;
+    if (essayId) params.essayId = essayId;
+
+    const url = buildSecureUrl('/Teacher/Activities', params);
+    console.log("[TeacherNotifications] Navigating to:", url, "Params:", params);
+    navigate(url);
   };
 
   return (

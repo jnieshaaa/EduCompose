@@ -50,14 +50,21 @@ BEGIN
         ALTER TABLE public.essay_analysis_results ADD COLUMN generated_at timestamptz DEFAULT now();
     END IF;
 
-    -- Add activity_id if missing
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='activity_id') THEN
         ALTER TABLE public.essay_analysis_results ADD COLUMN activity_id uuid;
     END IF;
 
-    -- Ensure unique constraint on essay_id for upserting
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'essay_analysis_results_essay_id_key') THEN
         ALTER TABLE public.essay_analysis_results ADD CONSTRAINT essay_analysis_results_essay_id_key UNIQUE (essay_id);
+    END IF;
+    
+    -- Ensure notifications table has navigation columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='notifications' AND column_name='related_id') THEN
+        ALTER TABLE public.notifications ADD COLUMN related_id text;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='notifications' AND column_name='related_type') THEN
+        ALTER TABLE public.notifications ADD COLUMN related_type text;
     END IF;
 END $$;
 
@@ -128,7 +135,7 @@ BEGIN
     word_count,
     generated_at,
     updated_at,
-    results -- fallback/legacy
+    results
   )
   VALUES (
     p_essay_id,
@@ -147,7 +154,7 @@ BEGIN
     (p_analysis_data->>'word_count')::integer,
     now(),
     now(),
-    p_analysis_data -- legacy results column
+    p_analysis_data
   )
   ON CONFLICT (essay_id) DO UPDATE SET
     analysis_type = EXCLUDED.analysis_type,
@@ -163,7 +170,7 @@ BEGIN
     updated_at = now(),
     results = EXCLUDED.results;
 
-  -- Notify student
+  -- Notify student with navigation metadata
   SELECT title INTO v_activity_title FROM public.essay_activities WHERE id = v_activity_id;
 
   INSERT INTO public.notifications (
@@ -171,13 +178,21 @@ BEGIN
     type,
     title,
     message,
+    related_id,
+    related_type,
     created_at
   )
   VALUES (
     v_student_id,
     'essay_graded',
-    'Essay Graded',
-    'Your work for "' || COALESCE(v_activity_title, 'Assignment') || '" has been analyzed and graded.',
+    'Grade Available',
+    'Your essay for "' || COALESCE(v_activity_title, 'Assignment') || '" has been analyzed and graded.',
+    jsonb_build_object(
+      'essayId', p_essay_id::text,
+      'activityId', v_activity_id::text,
+      'studentId', v_student_id::text
+    )::text,
+    'essay',
     now()
   );
 
@@ -185,5 +200,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Grant access to teachers
 GRANT EXECUTE ON FUNCTION public.api_save_essay_analysis_v1(uuid, jsonb, text, jsonb, jsonb) TO authenticated;
