@@ -296,7 +296,7 @@ const StudentOnboarding: React.FC = () => {
           </p>
           <button 
             onClick={async () => {
-              await supabase.auth.signOut();
+              await supabase.auth.signOut({ scope: 'local' });
               window.location.href = "/";
             }}
             className="w-full py-5 bg-neutral-900 text-white rounded-2xl font-medium hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/20 active:scale-95"

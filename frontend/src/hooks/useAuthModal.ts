@@ -162,7 +162,7 @@ export function useAuthModal(onClose: () => void) {
 
         // Block students from logging in via the Teacher/Admin portal
         if (role === "student") {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'local' });
           setLoginError(
             "Student accounts must use the Student Login page."
           );

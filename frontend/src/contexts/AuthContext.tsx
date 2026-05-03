@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async (reason?: string) => {
     try { 
-      await supabase.auth.signOut(); 
+      await supabase.auth.signOut({ scope: 'local' }); 
     } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");

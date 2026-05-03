@@ -60,7 +60,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       logout();
       navigate("/");
     } catch (error) {
