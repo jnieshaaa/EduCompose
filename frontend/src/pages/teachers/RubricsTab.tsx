@@ -206,18 +206,18 @@ export function RubricsTab() {
     }
 
     try {
-      let data;
       if (editingRubricId) {
         // Update existing rubric
-        data = await updateRubric(editingRubricId, rubricFormData);
+        const result = await updateRubric(editingRubricId, rubricFormData);
+        const savedId = result.id;
 
-        // Extract programs from dedicated column
-        const programs = (data.programs as string[]) || [];
+        // Use current form data for local state update
+        const programs = rubricFormData.programs || [];
 
         // Map to RubricTemplate format and update in local state
         const updatedRubric: RubricTemplate & { programsList?: string[] } = {
-          id: data.id,
-          name: data.name,
+          id: savedId,
+          name: rubricFormData.name,
           criteria: rubricFormData.criteria.length,
           programs: programs.length,
           lastUsed: new Date().toISOString().split("T")[0],
@@ -234,15 +234,16 @@ export function RubricsTab() {
         showSuccess("Rubric updated successfully!");
       } else {
         // Create new rubric
-        data = await saveRubric(rubricFormData);
+        const result = await saveRubric(rubricFormData);
+        const savedId = result.id;
 
-        // Extract programs from dedicated column
-        const programs = (data.programs as string[]) || [];
+        // Use current form data for local state update
+        const programs = rubricFormData.programs || [];
 
         // Map to RubricTemplate format and add to local state
         const newRubric: RubricTemplate & { programsList?: string[] } = {
-          id: data.id,
-          name: data.name,
+          id: savedId,
+          name: rubricFormData.name,
           criteria: rubricFormData.criteria.length,
           programs: programs.length,
           lastUsed: new Date().toISOString().split("T")[0],
