@@ -483,189 +483,33 @@ export const createActivity = async (
   activity: NewActivityForm,
 ): Promise<EssayActivity[]> => {
   try {
-    const teacherUUID = await fetchTeacherUUID();
-    const teacherId = await fetchTeacherId(); // Get UUID for standardized schema
-    if (!teacherUUID || !teacherId) {
-      throw new Error("Teacher identification not available");
-    }
+    const { data: activityId, error } = await supabase.rpc('api_create_activity_v1', {
+      p_title: activity.title.trim(),
+      p_instructions: activity.description || null,
+      p_due_date: activity.dueDate || null,
+      p_rubric_id: (activity.rubricId && !activity.rubricId.startsWith('ai-suggestion') && !activity.rubricId.startsWith('platform-')) ? activity.rubricId : null,
+      p_course_id: activity.courseIds?.[0] || null,
+      p_block_ids: activity.sectionIds || [],
+      p_min_word_count: activity.minWordCount || 150,
+      p_academic_year: activity.academicYear || null,
+      p_term: activity.term || null,
+      p_suggested_rubric: activity.rubricId === 'ai-suggestion' ? activity.suggestedRubric : null
+    });
 
-    // For now, store first selected course/section or null if empty (meaning "all")
+    if (error) throw error;
 
-    // Handle rubric ID
-    let rubricId: string | null = activity.rubricId || null;
+    // Fetch the created activity to return it in the expected format
+    const { data: createdData, error: fetchError } = await supabase
+      .from('essay_activities')
+      .select('*, rubrics(id, name)')
+      .eq('id', activityId)
+      .single();
 
-    // 1. If there's an AI suggested rubric, save it first (only if rubricId is 'ai-suggestion')
-    if (activity.suggestedRubric && activity.rubricId === "ai-suggestion") {
-      const { data: newRubric, error: rubricError } = await supabase
-        .from("rubrics")
-        .insert({
-          name: activity.suggestedRubric.name,
-          description: activity.suggestedRubric.description,
-          criteria: activity.suggestedRubric.criteria,
-          grading_intensity: activity.suggestedRubric.grading_intensity,
-          user_id: teacherId, // AI generated rubrics go to teacher's private list
-          created_by: teacherId,
-        })
-        .select("id")
-        .single();
-      
-      if (rubricError) {
-        console.error("Error saving suggested rubric:", rubricError);
-      } else if (newRubric) {
-        rubricId = newRubric.id;
-      }
-    } else if (rubricId && rubricId.startsWith("platform-")) {
-      // 2. If it's a template ID, ensure it exists as a platform rubric (user_id: null)
-      const templateId = rubricId.replace("platform-", "");
-      if (templateId) {
-        const resultId = await ensurePlatformRubricExists(templateId);
-        rubricId = resultId;
-      }
-    }
-    // 3. Otherwise, use the rubricId as is (it's already a DB ID, either platform or private)
+    if (fetchError) throw fetchError;
 
-    const blockToProgram = new Map<string, string | null>();
-    const studentIdsByBlock = new Map<string, string[]>();
-
-    // 1. Fetch program ID for each block (needed for insertion and grouping)
-    if (activity.sectionIds.length > 0) {
-      const { data: blocksData } = await supabase
-        .from("blocks")
-        .select(
-          `
-          id,
-          teacher_program_loads (
-            program_id
-          )
-        `,
-        )
-        .in("id", activity.sectionIds);
-
-      if (blocksData) {
-        blocksData.forEach((b: {
-          id: string;
-          teacher_program_loads:
-            | { program_id?: string | null }
-            | Array<{ program_id?: string | null }>
-            | null;
-        }) => {
-          const tpl = Array.isArray(b.teacher_program_loads)
-            ? b.teacher_program_loads[0]
-            : b.teacher_program_loads;
-
-          blockToProgram.set(b.id, tpl?.program_id || null);
-        });
-      }
-
-      // 2. Fetch all student user IDs for notifications, grouped by block
-      const { data: studentsData, error: studentError } = await supabase
-        .from("block_students")
-        .select(
-          `
-          block_id,
-          users!student_id (
-            id
-          )
-        `,
-        )
-        .in("block_id", activity.sectionIds);
-
-      if (studentError) {
-        console.error(
-          "Error fetching students for notification:",
-          studentError,
-        );
-      }
-
-      if (studentsData && studentsData.length > 0) {
-        studentsData.forEach((row: {
-          block_id: string | null;
-          users?:
-            | { id?: string | null }
-            | Array<{ id?: string | null }>
-            | null;
-        }) => {
-          const authId = Array.isArray(row.users)
-            ? row.users[0]?.id
-            : row.users?.id;
-          if (authId && row.block_id) {
-            if (!studentIdsByBlock.has(row.block_id)) {
-              studentIdsByBlock.set(row.block_id, []);
-            }
-            studentIdsByBlock.get(row.block_id)?.push(authId);
-          }
-        });
-      }
-    }
-
-    // 3. Create a single activity record with array columns
-    const activityToInsert = {
-      teacher_id: teacherId,
-      title: activity.title.trim(),
-      course_id: activity.courseIds?.[0] || null,
-      block_id: activity.sectionIds?.[0] || null,
-      program_id: Array.from(
-        new Set(Array.from(blockToProgram.values()).filter(Boolean)),
-      ),
-      rubric_id: rubricId,
-      due_date: activity.dueDate || null,
-      instructions: activity.description || null,
-      min_word_count: activity.minWordCount || 150,
-      academic_year: activity.academicYear || null,
-      term: activity.term || null,
-    };
-
-    const { data, error } = await supabase
-      .from("essay_activities")
-      .insert(activityToInsert)
-      .select();
-
-    if (error) {
-      console.error("Error creating activity:", error);
-      throw error;
-    }
-
-    // 4. Send notifications to students for each block assigned
-    if (data && data.length > 0) {
-      const newActivity = data[0];
-      const notificationsToInsert: Array<{
-        user_id: string;
-        type: "new_activity";
-        title: string;
-        message: string;
-        related_id: string;
-        related_type: "essay_activities";
-      }> = [];
-
-      activity.sectionIds.forEach((blockId) => {
-        const targetStudentIds = studentIdsByBlock.get(blockId) || [];
-
-        targetStudentIds.forEach((studentUserId) => {
-          notificationsToInsert.push({
-            user_id: studentUserId,
-            type: "new_activity",
-            title: "New Activity Assigned",
-            message: `A new activity "${activity.title.trim()}" has been posted.`,
-            related_id: newActivity.id,
-            related_type: "essay_activities",
-          });
-        });
-      });
-
-      if (notificationsToInsert.length > 0) {
-        supabase
-          .from("notifications")
-          .insert(notificationsToInsert)
-          .then(({ error: notifyError }) => {
-            if (notifyError) {
-              console.error("Failed to notify students:", notifyError);
-            }
-          });
-      }
-    }
-
-    // Map back created activity to EssayActivity formats
-    return (data as SupabaseActivityRow[]).map((row) => ({
+    // Map back created activity to EssayActivity format
+    const row = createdData as unknown as SupabaseActivityRow;
+    return [{
       id: String(row.id),
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
@@ -689,9 +533,9 @@ export const createActivity = async (
       programIds: Array.isArray(row.program_id)
         ? row.program_id.map(String)
         : [],
-    }));
+    }];
   } catch (err) {
-    console.error("Unexpected error creating activity:", err);
+    console.error("Unexpected error creating activity via RPC:", err);
     throw err;
   }
 };
@@ -1976,7 +1820,7 @@ export const allowResubmission = async (
 // Grade essay: OCR -> Analysis -> Save to Supabase -> Create notification
 export const gradeEssay = async (
   studentId: string,
-  studentName: string,
+  _studentName: string,
   activityId: string,
   onProgress?: (progress: number, step: string) => void,
 ): Promise<{ success: boolean; error?: string }> => {
@@ -1985,7 +1829,6 @@ export const gradeEssay = async (
 
     // Parse student ID
     let studentDbId = studentId;
-    let authUserId: string | null = null;
 
     if (!isUuidString(studentId)) {
       const { data: studentData, error: studentError } = await supabase
@@ -1998,18 +1841,6 @@ export const gradeEssay = async (
         return { success: false, error: "Student not found" };
       }
       studentDbId = studentData.user_id;
-      authUserId = studentData.user_id;
-    } else {
-      const { data: stdData } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", studentDbId)
-        .eq("role", "student")
-        .maybeSingle();
-
-      if (stdData) {
-        authUserId = stdData.id;
-      }
     }
 
     // Activity ID is now a UUID string
@@ -2236,198 +2067,22 @@ export const gradeEssay = async (
 
     onProgress?.(85, "Saving results to database...");
 
-    // Step 3: Save analysis results to Supabase
-    // First, update the essay record with basic scores
-    console.log("[gradeEssay] Saving final scores for essay ID:", essayData.id, analysisResult.scores);
-    const { error: updateError } = await supabase
-      .from("essays")
-        .update({
-          content: extractedText,
-          word_count: wordCount, // Ensure word_count is persisted in final update
-          grammar_score: analysisResult.scores?.grammar ?? null,
-          readability_score: analysisResult.scores?.readability ?? null,
-          coherence_score: analysisResult.scores?.coherence ?? null,
-          argument_strength_score:
-            analysisResult.scores?.argument_strength ?? null,
-          overall_score: analysisResult.scores?.overall ?? null,
-          grammar_errors:
-            analysisResult.detailed_analysis?.grammar?.errors ?? null,
-          style_issues:
-            analysisResult.detailed_analysis?.readability?.issues ?? null,
-          argument_analysis: {
-            argumentation: analysisResult.detailed_analysis?.argumentation,
-            knowledge_graph: analysisResult.detailed_analysis?.knowledge_graph,
-            coherence: analysisResult.detailed_analysis?.coherence,
-          },
-          status: "analyzed",
-        })
-        .eq("id", essayData.id);
+    const { error: saveError } = await supabase.rpc('api_save_essay_analysis_v1', {
+      p_essay_id: essayData.id,
+      p_analysis_data: {
+        ...analysisResult,
+        content: extractedText,
+        word_count: wordCount
+      },
+      p_analysis_type: analysisResult.analysis_type || "comprehensive"
+    });
 
-    if (updateError) {
-      console.error("Error updating essay:", updateError);
+    if (saveError) {
+      console.error("Error saving essay analysis via RPC:", saveError);
       return {
         success: false,
-        error: `Failed to update essay: ${updateError.message}`,
+        error: `Failed to save results: ${saveError.message}`,
       };
-    }
-
-    // Get teacher ID
-    const teacherId = await fetchTeacherId();
-    if (!teacherId) {
-      return { success: false, error: "Teacher ID not available" };
-    }
-
-    // Save complete analysis results to essay_analysis_results table
-    // This includes ALL data needed for the interactive AnalysisResults view:
-    // - Grammar errors with offset, errorLength, context for hover/highlighting
-    // - Readability metrics (Flesch Ease, Grade Level, etc.)
-    // - Argument structure (claims, evidence, warrants, rebuttals)
-    // - Knowledge graph visualization data
-    // - Coherence analysis with topic sentences, transitions, etc.
-    // - Original essay text for display with highlights
-
-    // Try to save to essay_analysis_results table (if it exists)
-    // If table doesn't exist, we'll still save to essays table as fallback
-    let analysisResultData;
-    try {
-      analysisResultData = {
-        essay_id: essayData.id,
-        student_id: studentDbId,
-        activity_id: activityDbId,
-        analysis_type: analysisResult.analysis_type || "comprehensive",
-        word_count: analysisResult.word_count || null,
-        generated_at: analysisResult.generated_at || new Date().toISOString(),
-        processing_time_seconds: analysisResult.processing_time_seconds || null,
-        grammar_score: analysisResult.scores?.grammar || null,
-        readability_score: analysisResult.scores?.readability || null,
-        coherence_score: analysisResult.scores?.coherence || null,
-        argument_strength_score:
-          analysisResult.scores?.argument_strength || null,
-        knowledge_graph_score: analysisResult.scores?.knowledge_graph || null,
-        overall_score: analysisResult.scores?.overall || null,
-        // Save complete detailed_analysis with ALL interactive data:
-        // - detailed_analysis.grammar.errors[] with offset, errorLength, context, message, suggestion
-        // - detailed_analysis.readability with flesch_reading_ease, flesch_kincaid_grade, issues[]
-        // - detailed_analysis.argumentation with claims, evidence, warrants, rebuttals, graph
-        // - detailed_analysis.knowledge_graph with concepts, relationships, graph_structure
-        // - detailed_analysis.coherence with topic_sentences, transitional_elements, coherence_issues
-        detailed_analysis: analysisResult.detailed_analysis || {},
-        // Save recommendations with priority, dimension, message, suggestion, action_items
-        recommendations: analysisResult.recommendations || [],
-        // Save diagnostic summary with strengths, weaknesses, critical_issues
-        diagnostic_summary: analysisResult.diagnostic_summary || null,
-        // Save rubric scores if rubric was applied
-        rubric_scores: analysisResult.rubric_scores || null,
-        // Save original essay text - CRITICAL for displaying with grammar error highlights
-        original_text: extractedText,
-      };
-
-      // Verify critical data is present before saving
-      if (
-        !analysisResultData.detailed_analysis ||
-        Object.keys(analysisResultData.detailed_analysis).length === 0
-      ) {
-        console.warn("Warning: detailed_analysis is empty or missing");
-      }
-      if (
-        !analysisResultData.original_text ||
-        analysisResultData.original_text.trim().length === 0
-      ) {
-        console.warn("Warning: original_text is empty or missing");
-      }
-      // Verify grammar errors have offset/errorLength for highlighting
-      const grammarErrors =
-        analysisResultData.detailed_analysis?.grammar?.errors || [];
-      const errorsWithOffsets = grammarErrors.filter(
-        (e: import("../types/Essay").GrammarError) =>
-          typeof e.offset === "number" && typeof e.errorLength === "number",
-      );
-      if (
-        grammarErrors.length > 0 &&
-        errorsWithOffsets.length < grammarErrors.length
-      ) {
-        console.warn(
-          `Warning: ${
-            grammarErrors.length - errorsWithOffsets.length
-          } grammar errors missing offset/errorLength for highlighting`,
-        );
-      }
-
-      // Use upsert to handle both insert and update cases
-      const { error: analysisResultError } = await supabase
-        .from("essay_analysis_results")
-        .upsert(analysisResultData, {
-          onConflict: "essay_id",
-        });
-
-      if (analysisResultError) {
-        // If table doesn't exist (406) or other error, log but continue
-        // We'll still have saved to essays table above
-        if (
-          analysisResultError.code === "PGRST116" ||
-          analysisResultError.message?.includes("406")
-        ) {
-          console.warn(
-            "essay_analysis_results table not found. Please run the migration: supabase/create_essay_analysis_results_table.sql",
-          );
-          console.warn("Analysis results saved to essays table as fallback.");
-        } else {
-          console.error("Error saving analysis results:", analysisResultError);
-          // Don't fail the whole operation - results are still in essays table
-        }
-      }
-    } catch (tableError) {
-      // Table might not exist - that's okay, we saved to essays table
-      console.warn(
-        "Could not save to essay_analysis_results table:",
-        tableError,
-      );
-      console.warn(
-        "Analysis results saved to essays table. Please run migration to enable full features.",
-      );
-    }
-
-    onProgress?.(95, "Finalizing...");
-
-    // Step 4: Create notifications
-    const teacherUUID = await fetchTeacherUUID();
-    if (teacherUUID) {
-      const activityTitle = Array.isArray(essayActivities)
-        ? essayActivities[0]?.title || "Essay"
-        : essayActivities?.title || "Essay";
-
-      // 4a. Create notification for teacher (using teacher's UUID)
-      await supabase.from("notifications").insert({
-        user_id: teacherUUID,
-        type: "essay_graded",
-        title: "Essay Graded",
-        message: `${studentName}'s essay for "${activityTitle}" has been graded successfully.`,
-        is_read: false,
-        related_id: JSON.stringify({
-          essayId: String(essayData.id),
-          studentId: String(studentDbId),
-          activityId: String(activityDbId),
-          studentName: studentName,
-        }),
-        related_type: "essay",
-      });
-
-      // 4b. Create notification for student (using student's UUID)
-      const studentUUID = authUserId;
-      if (studentUUID) {
-        await supabase.from("notifications").insert({
-          user_id: studentUUID,
-          type: "essay_graded",
-          title: "Grade Available",
-          message: `Your essay for "${activityTitle}" has been graded. You can now view your results and feedback.`,
-          is_read: false,
-          related_id: JSON.stringify({
-            essayId: String(essayData.id),
-            activityId: String(activityDbId),
-          }),
-          related_type: "essay",
-        });
-      }
     }
 
     onProgress?.(100, "Complete!");
@@ -4096,56 +3751,19 @@ export const savePlagiarismResult = async (
       // Fetch essay info first to get activity_id and student_id for RLS and data integrity
       const { data: essayInfo } = await supabase
         .from("essays")
-        .select("activity_id, student_id")
+        .select("activity_id, student_id, content")
         .eq("id", essayId)
         .single();
 
-      const { error: upsertError } = await supabase
-        .from("essay_analysis_results")
-        .upsert({
-          essay_id: essayId,
-          activity_id: essayInfo?.activity_id,
-          student_id: essayInfo?.student_id,
-          analysis_type: 'plagiarism',
-          plagiarism_results: result,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'essay_id' });
+      const { error: saveError } = await supabase.rpc('api_save_essay_analysis_v1', {
+        p_essay_id: essayId,
+        p_analysis_data: { content: essayInfo?.content || "" }, // Minimal data since we're just saving plagiarism
+        p_plagiarism_data: result
+      });
 
-      if (upsertError) {
-        console.error("Error upserting plagiarism results to essay_analysis_results:", upsertError);
-        // If primary fails, we'll try fallback, but we won't return yet
-      } else {
-        console.log("Successfully saved plagiarism results to essay_analysis_results for essay_id:", essayId);
-        // If primary worked, we still try fallback as backup, but it's not critical
-      }
-
-      // 2. Secondary path: Save to essays table (as the 'analysis' JSONB column fallback)
-      // We wrap this in a try-catch and don't fail if it fails, because the schema cache might be stale
-      try {
-        const { data: essayStatus } = await supabase.from("essays").select("argument_analysis").eq("id", essayId).maybeSingle();
-        const currentAnalysis = essayStatus?.argument_analysis || {};
-        
-        const { error: essayUpdateError } = await supabase
-          .from("essays")
-          .update({
-            argument_analysis: {
-              ...currentAnalysis,
-              plagiarism_results: result
-            }
-          })
-          .eq("id", essayId);
-
-        if (essayUpdateError) {
-          console.warn("Fallback save to essays table failed (likely schema cache issue):", essayUpdateError.message);
-        }
-      } catch (fallbackErr) {
-        console.warn("Silent failure in fallback save:", fallbackErr);
-      }
-
-      // If upsert failed AND it's not a schema cache issue, we should report it
-      // But if upsert worked, we return success regardless of fallback
-      if (upsertError && !upsertError.message?.includes("PGRST204")) {
-          return { success: false, error: `Failed to save results: ${upsertError.message}` };
+      if (saveError) {
+        console.error("Error saving plagiarism results via RPC:", saveError);
+        return { success: false, error: `Failed to save results: ${saveError.message}` };
       }
 
       return { success: true };
@@ -4285,48 +3903,19 @@ export const saveAIDetectionResult = async (
     // Fetch essay info first to get activity_id and student_id for RLS and data integrity
     const { data: essayInfo } = await supabase
       .from("essays")
-      .select("activity_id, student_id")
+      .select("activity_id, student_id, content")
       .eq("id", essayId)
       .single();
 
-    const { error: upsertError } = await supabase
-      .from("essay_analysis_results")
-      .upsert({
-        essay_id: essayId,
-        activity_id: essayInfo?.activity_id,
-        student_id: essayInfo?.student_id,
-        analysis_type: 'ai_detection',
-        ai_detection_results: result,
-        ai_score: result.ai_score || 0,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'essay_id' });
+    const { error: saveError } = await supabase.rpc('api_save_essay_analysis_v1', {
+      p_essay_id: essayId,
+      p_analysis_data: { content: essayInfo?.content || "" },
+      p_ai_detection_data: result
+    });
 
-    if (upsertError) {
-      console.error("Error upserting AI detection results to essay_analysis_results:", upsertError);
-    } else {
-      console.log("Successfully saved AI detection results to essay_analysis_results for essay_id:", essayId);
-    }
-
-    // 2. Secondary path: Save to essays table (as fallback)
-    try {
-      const { data: essayStatus } = await supabase.from("essays").select("argument_analysis").eq("id", essayId).maybeSingle();
-      const currentAnalysis = essayStatus?.argument_analysis || {};
-      
-      const { error: essayUpdateError } = await supabase
-        .from("essays")
-        .update({
-          argument_analysis: {
-            ...currentAnalysis,
-            ai_detection_results: result
-          }
-        })
-        .eq("id", essayId);
-
-      if (essayUpdateError) {
-        console.warn("Fallback save to essays table failed (likely schema cache issue):", essayUpdateError.message);
-      }
-    } catch (fallbackErr) {
-       console.warn("Silent failure in fallback save:", fallbackErr);
+    if (saveError) {
+      console.error("Error saving AI detection results via RPC:", saveError);
+      return { success: false, error: `Failed to save results: ${saveError.message}` };
     }
 
     return { success: true };
