@@ -1141,7 +1141,18 @@ export const fetchStudentsByCourseAndSection = async (
       if (activityDbId) {
         const studentIds = studentsData.map((s) => s.id);
         
-        // Fetch from essay_analysis_results
+        // 1. Fetch all raw submissions from the essays table first (The source of truth for submission status)
+        const { data: essaysData, error: essaysError } = await supabase
+          .from("essays")
+          .select("id, student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error, file_path, status")
+          .eq("activity_id", activityDbId)
+          .in("student_id", studentIds);
+
+        if (essaysError) {
+          console.error("[fetchStudentsByCourseAndSection] Error loading raw essays:", essaysError);
+        }
+
+        // 2. Fetch analysis results for these students to overlay detailed metrics
         const { data: analysisResults, error: analysisError } = await supabase
           .from("essay_analysis_results")
           .select(`
@@ -1161,56 +1172,33 @@ export const fetchStudentsByCourseAndSection = async (
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
 
-        // Fetch basic essay info separately to avoid ambiguous join issues
-        const { data: essaysBaseData } = await supabase
-          .from("essays")
-          .select("id, file_path, status, grading_error")
-          .in("id", analysisResults?.map(r => r.essay_id) || []);
-
-        const essayBaseMap = new Map();
-        essaysBaseData?.forEach(e => essayBaseMap.set(String(e.id), e));
-
         if (analysisError) {
-          console.error("Error loading analysis results:", analysisError);
-          
-          // Fallback to essays table if analysis results are not found
-          const { data: essaysData } = await supabase
-            .from("essays")
-            .select("student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error, file_path")
-            .eq("activity_id", activityDbId)
-            .in("student_id", studentIds);
+          console.error("[fetchStudentsByCourseAndSection] Error loading analysis results:", analysisError);
+        }
 
-          if (essaysData) {
-            essaysData.forEach((essay) => {
-              essaySubmissions.set(essay.student_id, {
-                coherence: Number(essay.coherence_score) || 0,
-                readability: Number(essay.readability_score) || 0,
-                argumentative: Number(essay.argument_strength_score) || 0,
-                grammar: Number(essay.grammar_score) || 0,
-                score: Number(essay.overall_score) || 0,
-                wordCount: essay.word_count || 0,
-                gradingError: essay.grading_error || undefined,
-                filePath: essay.file_path || undefined,
-              });
-            });
-          }
-        } else if (analysisResults) {
-          analysisResults.forEach((res: any) => {
-            // Parse JSONB scores if needed
-            const g = res.grammar_results || {};
-            const r = res.readability_results || {};
-            const a = res.argument_results || {};
-            const c = res.coherence_results || {};
+        // 3. Merge data: Start with raw essays, then update with analysis results if available
+        const analysisMap = new Map();
+        analysisResults?.forEach(r => analysisMap.set(String(r.essay_id), r));
 
-            essaySubmissions.set(res.student_id, {
-              coherence: c.score || res.coherence_score || 0,
-              readability: r.score || res.readability_score || 0,
-              argumentative: a.score || res.argument_strength_score || 0,
-              grammar: g.score || res.grammar_score || 0,
-              score: res.overall_score || 0,
-              wordCount: res.word_count || 0,
-              gradingError: essayBaseMap.get(String(res.essay_id))?.grading_error || undefined,
-              filePath: essayBaseMap.get(String(res.essay_id))?.file_path || undefined,
+        if (essaysData) {
+          essaysData.forEach((essay) => {
+            const analysis = analysisMap.get(String(essay.id));
+            
+            // If we have analysis results, use the detailed JSONB scores, otherwise fallback to table scores
+            const g = analysis?.grammar_results || {};
+            const r = analysis?.readability_results || {};
+            const a = analysis?.argument_results || {};
+            const c = analysis?.coherence_results || {};
+
+            essaySubmissions.set(essay.student_id, {
+              coherence: c.score || analysis?.coherence_score || Number(essay.coherence_score) || 0,
+              readability: r.score || analysis?.readability_score || Number(essay.readability_score) || 0,
+              argumentative: a.score || analysis?.argument_strength_score || Number(essay.argument_strength_score) || 0,
+              grammar: g.score || analysis?.grammar_score || Number(essay.grammar_score) || 0,
+              score: analysis?.overall_score || Number(essay.overall_score) || 0,
+              wordCount: analysis?.word_count || essay.word_count || 0,
+              gradingError: essay.grading_error || undefined,
+              filePath: essay.file_path || undefined,
             });
           });
         }
