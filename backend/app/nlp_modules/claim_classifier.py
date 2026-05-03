@@ -158,29 +158,41 @@ class TransformerClaimClassifier:
             Example: [{{"label": "claim", "score": 0.95}}, ...]
             """
             
-            # Try with primary model name, fallback to -latest if 404
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config={
-                        'response_mime_type': 'application/json',
-                        'max_output_tokens': 4096
-                    }
-                )
-            except Exception as model_err:
-                if "404" in str(model_err) and model_name == "gemini-1.5-flash":
-                    logger.info("Retrying with gemini-1.5-flash-latest...")
+            # Prepare model candidates
+            model_candidates = [
+                os.getenv("GEMINI_MODEL_NAME"),
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-latest',
+                'gemini-1.5-pro',
+                'gemini-1.0-pro'
+            ]
+            
+            response = None
+            last_error = None
+            
+            for m_name in model_candidates:
+                if not m_name: continue
+                current_m = m_name.replace("models/", "")
+                try:
                     response = client.models.generate_content(
-                        model="gemini-1.5-flash-latest",
+                        model=current_m,
                         contents=prompt,
                         config={
                             'response_mime_type': 'application/json',
                             'max_output_tokens': 4096
                         }
                     )
-                else:
-                    raise model_err
+                    if response and response.text:
+                        logger.info(f"✓ Classification successful using Gemini model: {current_m}")
+                        break
+                except Exception as model_err:
+                    last_error = model_err
+                    logger.debug(f"Gemini model {current_m} failed for classification: {model_err}")
+                    continue
+            
+            if not response or not response.text:
+                logger.error(f"All Gemini models failed for classification. Last error: {last_error}")
+                return self._heuristic_classify(sentences)
             
             if not response or not response.text:
                 return self._heuristic_classify(sentences)

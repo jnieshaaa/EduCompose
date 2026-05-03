@@ -111,10 +111,10 @@ class GrammarAnalyzer:
             # Reorder fallback candidates for better availability
             model_candidates = [
                 os.getenv("GEMINI_MODEL_NAME"),
-                'gemini-1.5-flash-latest',   # Most stable slug
                 'gemini-1.5-flash',          # High quota, stable
+                'gemini-1.5-flash-latest',   # Fallback slug
                 'gemini-1.5-pro',            # Pro version
-                'gemini-pro-latest',         # Legacy latest
+                'gemini-1.0-pro',            # Legacy stable
                 'gemini-2.0-flash-exp',      # Experimental 2.0
             ]
             
@@ -139,8 +139,10 @@ class GrammarAnalyzer:
                     logger.debug(f"Model {model_name} failed: {model_error}")
             
             if not self.gemini_model:
-                logger.warning(f"Failed to initialize any Gemini model. Last error: {last_error}")
-                self.llm_client = None
+                # If all else fails, use a hardcoded safe default but don't verify it
+                self.gemini_model = "gemini-1.5-flash"
+                logger.warning(f"Failed to verify any Gemini model. Using default '{self.gemini_model}'. Last error: {last_error}")
+                # Don't set self.llm_client = None here, we'll try the default anyway
                 
         except ImportError:
             logger.debug("google-genai package not installed")
