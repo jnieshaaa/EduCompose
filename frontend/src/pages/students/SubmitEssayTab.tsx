@@ -366,20 +366,21 @@ export function SubmitEssayTab() {
         if (uploadError) throw uploadError;
       }
 
-      const { error: submitError } = await supabase
-        .from('essays')
-        .insert({
-          student_id: studentId,
-          activity_id: activityIdParam,
-          block_id: blockId || null,
-          teacher_id: activity?.teacherId || null,
-          content: uploadMode === 'text' ? essayContent : null,
-          file_path: filePath,
-          title: selectedFileName || activity?.title || "Essay Work",
-          status: 'submitted'
-        });
+      const { data: submissionId, error: submitError } = await supabase.rpc('api_submit_essay_v1', {
+        p_activity_id: activityIdParam,
+        p_content: uploadMode === 'text' ? essayContent : null,
+        p_file_path: filePath,
+        p_title: selectedFileName || activity?.title || "Essay Work",
+        p_status: 'submitted',
+        p_block_id: blockId || null,
+        p_teacher_id: activity?.teacherId || null
+      });
 
       if (submitError) throw submitError;
+      
+      if (submissionId) {
+        setCurrentEssayId(submissionId);
+      }
 
       setIsSubmitted(true);
       setSubmissionDate(new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
@@ -388,21 +389,6 @@ export function SubmitEssayTab() {
         setSelectedFileName(selectedFile.name);
       }
 
-      if (activity?.teacherId) {
-        const studentName = user?.nickname || (user ? `${user.first_name} ${user.last_name}` : "") || "A student";
-        
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: activity.teacherUUID,
-            type: 'submission_received',
-            title: 'New Essay Work',
-            message: `${studentName} sent their work: "${activity.title}".`,
-            related_id: activity.id,
-            related_type: 'essay_activities'
-          });
-      }
-      
       showNotification('success', "Work sent successfully!");
     } catch (err) {
       console.error("Submission error:", err);
@@ -417,18 +403,11 @@ export function SubmitEssayTab() {
 
     try {
       setRequestingResubmission(true);
-      const studentName = user?.nickname || (user ? `${user.first_name} ${user.last_name}` : "") || "A student";
       
-      const { error: requestError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: activity.teacherUUID,
-          type: 'resubmission_request',
-          title: 'Resubmit Request',
-          message: `${studentName} wants to fix their work for: "${activity.title}".`,
-          related_id: activity.id,
-          related_type: 'essay_activities'
-        });
+      const { error: requestError } = await supabase.rpc('api_request_resubmission_v1', {
+        p_activity_id: activityIdParam,
+        p_teacher_id: activity.teacherUUID
+      });
 
       if (requestError) throw requestError;
 
