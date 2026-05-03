@@ -1141,25 +1141,34 @@ export const fetchStudentsByCourseAndSection = async (
       if (activityDbId) {
         const studentIds = studentsData.map((s) => s.id);
         
-        // Fetch from essay_analysis_results which has the most up-to-date JSONB results
+        // Fetch from essay_analysis_results
         const { data: analysisResults, error: analysisError } = await supabase
           .from("essay_analysis_results")
           .select(`
+            essay_id,
             student_id, 
             overall_score, 
             word_count, 
             grammar_results, 
             readability_results, 
-            argumentation_results, 
+            argument_results, 
             coherence_results,
             grammar_score,
             readability_score,
             argument_strength_score,
-            coherence_score,
-            essays!inner(file_path, grading_error)
+            coherence_score
           `)
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
+
+        // Fetch basic essay info separately to avoid ambiguous join issues
+        const { data: essaysBaseData } = await supabase
+          .from("essays")
+          .select("id, file_path, status, grading_error")
+          .in("id", analysisResults?.map(r => r.essay_id) || []);
+
+        const essayBaseMap = new Map();
+        essaysBaseData?.forEach(e => essayBaseMap.set(String(e.id), e));
 
         if (analysisError) {
           console.error("Error loading analysis results:", analysisError);
@@ -1190,7 +1199,7 @@ export const fetchStudentsByCourseAndSection = async (
             // Parse JSONB scores if needed
             const g = res.grammar_results || {};
             const r = res.readability_results || {};
-            const a = res.argumentation_results || {};
+            const a = res.argument_results || {};
             const c = res.coherence_results || {};
 
             essaySubmissions.set(res.student_id, {
@@ -1200,8 +1209,8 @@ export const fetchStudentsByCourseAndSection = async (
               grammar: g.score || res.grammar_score || 0,
               score: res.overall_score || 0,
               wordCount: res.word_count || 0,
-              gradingError: res.essays?.grading_error || undefined,
-              filePath: res.essays?.file_path || undefined,
+              gradingError: essayBaseMap.get(String(res.essay_id))?.grading_error || undefined,
+              filePath: essayBaseMap.get(String(res.essay_id))?.file_path || undefined,
             });
           });
         }
@@ -2753,42 +2762,46 @@ export const fetchDuplicateEssays = async (
 
     console.log(`[fetchDuplicateEssays] Final activity IDs for check:`, activityIds);
 
-    // 2. Fetch analysis results for all targeted activities (Simple pass)
-    const { data: results, error } = await supabase
-      .from("essay_analysis_results")
-      .select("essay_id, student_id, original_text, generated_at, activity_id")
+    // 2. Fetch all essays for targeted activities
+    const { data: rawEssays, error: essaysError } = await supabase
+      .from("essays")
+      .select("id, student_id, content, title, submitted_at, block_id, activity_id")
       .in("activity_id", activityIds);
 
-    if (error) {
-      console.error("[fetchDuplicateEssays] Error fetching analysis results:", error);
+    if (essaysError) {
+      console.error("[fetchDuplicateEssays] Essays query error:", essaysError);
     }
 
-    let analysisResults = results || [];
-    console.log(`[fetchDuplicateEssays] Initial analysis results found:`, analysisResults.length);
+    // 3. Fetch analysis results for all targeted activities
+    const { data: analysisRows, error: analysisError } = await supabase
+      .from("essay_analysis_results")
+      .select("essay_id, student_id, content_text, original_text, results, generated_at, activity_id")
+      .in("activity_id", activityIds);
 
-    // Fallback: fetch from essays table if no analysis results yet
-    if (analysisResults.length === 0) {
-      const { data: fallbackEssays, error: essaysError } = await supabase
-        .from("essays")
-        .select("id, student_id, content, title, submitted_at, block_id, activity_id")
-        .in("activity_id", activityIds);
+    if (analysisError) {
+      console.error("[fetchDuplicateEssays] Error fetching analysis results:", analysisError);
+    }
 
-      if (essaysError) {
-        console.error("[fetchDuplicateEssays] Fallback query error:", essaysError);
-      }
+    // Merge: Map raw essays and overlay analysis data if available
+    const analysisMap = new Map();
+    analysisRows?.forEach(r => analysisMap.set(String(r.essay_id), r));
 
-      if (!fallbackEssays || fallbackEssays.length === 0) {
-        return [];
-      }
-      
-      analysisResults = fallbackEssays.map(e => ({
+    let analysisResults = (rawEssays || []).map(e => {
+      const analysis = analysisMap.get(String(e.id));
+      return {
         essay_id: e.id,
         student_id: e.student_id,
-        activity_id: e.activity_id, // Keep track of activity ID
-        original_text: (e as any).content || "",
+        activity_id: e.activity_id,
+        content_text: analysis?.content_text || analysis?.original_text || analysis?.results?.content || e.content || "",
+        generated_at: analysis?.generated_at || e.submitted_at,
         _fallback_essay: e
-      })) as any;
-      console.log(`[fetchDuplicateEssays] Using fallback essays:`, analysisResults.length);
+      };
+    });
+
+    console.log(`[fetchDuplicateEssays] Total essays found for check:`, analysisResults.length);
+
+    if (analysisResults.length === 0) {
+      return [];
     }
 
     // 3. Fetch missing metadata (Metadata pass) completely without complex joins
@@ -2890,7 +2903,13 @@ export const fetchDuplicateEssays = async (
     const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
 
     for (const result of analysisResults) {
-      const originalText = result.original_text;
+      // Robust text extraction
+      const originalText = 
+        (result as any).content_text || 
+        (result as any).original_text || 
+        (result as any).content || 
+        (result as any).results?.content ||
+        "";
       
       console.log(`[fetchDuplicateEssays] Processing essay ${result.essay_id}. Text length: ${originalText?.length}`);
 
@@ -2951,7 +2970,7 @@ export const fetchDuplicateEssays = async (
       contentGroups,
       analysisResults.map((r) => ({
         id: String(r.essay_id),
-        content: r.original_text || null,
+        content: (r as any).content_text || null,
       })),
       "content",
     );

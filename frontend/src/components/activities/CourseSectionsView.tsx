@@ -179,13 +179,13 @@ export function CourseSectionsView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge className="bg-primary/10 text-primary border-primary/15 text-[11px] font-semibold">
+          <Badge className="bg-primary/50 text-primary border-primary/15 text-[11px] font-semibold">
             {getCoursesLabel(
               activity.courseIds,
               courses.map((p) => ({ id: p.id, name: p.name })),
             )}
           </Badge>
-          <Badge className="bg-secondary/10 text-secondary-500 border-secondary/15 text-[11px] font-semibold">
+          <Badge className="bg-secondary text-secondary-500 border-secondary/15 text-[11px] font-semibold">
             {getBlocksLabel(
               activity.blockIds,
               sections.map((s) => ({
@@ -196,7 +196,7 @@ export function CourseSectionsView({
             )}
           </Badge>
           {activity.dueDate && (
-            <Badge className="bg-warning-light/20 text-warning-dark border-warning-light/30 text-[11px] font-semibold">
+            <Badge className="bg-warning-light/50 text-warning-dark border-warning-light/30 text-[11px] font-semibold">
               <Calendar className="w-3 h-3 mr-1" />
               Due {new Date(activity.dueDate).toLocaleDateString()}
             </Badge>
