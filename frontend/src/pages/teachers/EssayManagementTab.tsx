@@ -252,10 +252,10 @@ export function EssayManagementTab() {
   const fetchSubmissions = useCallback(async () => {
     if (!activeActivityId) return;
 
-    const { data, error } = await supabase
+    const { data: essaysData, error } = await supabase
       .from('essays')
       .select(`
-        *,
+        id, activity_id, student_id, title, file_path, status, submitted_at,
         student:users!student_id (
           first_name,
           last_name,
@@ -270,22 +270,38 @@ export function EssayManagementTab() {
       return;
     }
 
-    if (data) {
-      setSubmissions(data.map(s => ({
-        id: s.id,
-        activityId: s.activity_id,
-        studentId: s.student_id,
-        studentName: buildFullNameFromObject(s.student),
-        fileName: s.title || s.file_path?.split('/').pop() || 'Submission',
-        status: s.status,
-        submittedAt: s.submitted_at,
-        score: s.overall_score
-      })));
+    if (essaysData) {
+      // Fetch analysis results for analyzed essays
+      const analyzedEssayIds = (essaysData || []).filter(e => e.status === 'analyzed' || e.status === 'reviewed').map(e => e.id);
+      const analysisMap = new Map();
+      if (analyzedEssayIds.length > 0) {
+        const { data: analysisRows } = await supabase
+          .from('essay_analysis_results')
+          .select('essay_id, overall_score')
+          .in('essay_id', analyzedEssayIds);
+        
+        (analysisRows || []).forEach(r => analysisMap.set(String(r.essay_id), r));
+      }
+
+      setSubmissions((essaysData as any[]).map(s => {
+        const analysis = analysisMap.get(String(s.id));
+        return {
+          id: s.id,
+          activityId: s.activity_id,
+          studentId: s.student_id,
+          studentName: buildFullNameFromObject(s.student),
+          fileName: s.title || s.file_path?.split('/').pop() || 'Submission',
+          status: s.status,
+          submittedAt: s.submitted_at,
+          score: (s.status === 'analyzed' || s.status === 'reviewed') ? (analysis?.overall_score ?? null) : null
+        };
+      }));
 
       // Update graded status
       const gradedSet = new Set<string>();
-      data.forEach(s => {
-        if (s.status === 'analyzed' || s.overall_score !== null) {
+      (essaysData as any[]).forEach(s => {
+        const analysis = analysisMap.get(String(s.id));
+        if (s.status === 'analyzed' || (analysis && analysis.overall_score !== null)) {
           gradedSet.add(s.id);
         }
       });

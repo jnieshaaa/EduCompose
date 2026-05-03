@@ -51,16 +51,39 @@ export function ProgressTab() {
 
         if (!student) return;
 
-        const { data, error } = await supabase
+        const { data: essaysData, error } = await supabase
           .from('essays')
           .select(
-            'id, title, submitted_at, status, overall_score, grammar_score, coherence_score, readability_score, argument_strength_score, essay_activities(title)'
+            'id, title, submitted_at, status, essay_activities(title)'
           )
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: true });
 
         if (error) throw error;
-        setEssays(data || []);
+
+        // Fetch analysis results for analyzed essays
+        const analyzedEssayIds = (essaysData || []).filter(e => e.status === 'analyzed' || e.status === 'reviewed').map(e => e.id);
+        const analysisMap = new Map();
+        if (analyzedEssayIds.length > 0) {
+          const { data: analysisRows } = await supabase
+            .from('essay_analysis_results')
+            .select('essay_id, overall_score, grammar_score, coherence_score, readability_score, argument_strength_score')
+            .in('essay_id', analyzedEssayIds);
+          
+          (analysisRows || []).forEach(r => analysisMap.set(String(r.essay_id), r));
+        }
+
+        setEssays((essaysData || []).map(e => {
+          const analysis = analysisMap.get(String(e.id));
+          return {
+            ...e,
+            overall_score: analysis?.overall_score ?? null,
+            grammar_score: analysis?.grammar_score ?? null,
+            coherence_score: analysis?.coherence_score ?? null,
+            readability_score: analysis?.readability_score ?? null,
+            argument_strength_score: analysis?.argument_strength_score ?? null,
+          };
+        }));
       } catch (error) {
         console.error('Error fetching essays for progress:', error);
       } finally {

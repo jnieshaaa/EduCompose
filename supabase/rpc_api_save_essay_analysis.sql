@@ -37,30 +37,10 @@ BEGIN
     RAISE EXCEPTION 'Essay not found';
   END IF;
 
-  -- Update Essays table primary scores
   v_overall_score := (p_analysis_data->'scores'->>'overall')::float8;
-  
+
   UPDATE public.essays
   SET
-    grammar_score = COALESCE((p_analysis_data->'scores'->>'grammar')::float8, grammar_score),
-    readability_score = COALESCE((p_analysis_data->'scores'->>'readability')::float8, readability_score),
-    coherence_score = COALESCE((p_analysis_data->'scores'->>'coherence')::float8, coherence_score),
-    argument_strength_score = COALESCE((p_analysis_data->'scores'->>'argument_strength')::float8, argument_strength_score),
-    overall_score = COALESCE(v_overall_score, overall_score),
-    word_count = COALESCE((p_analysis_data->>'word_count')::integer, word_count),
-    grammar_errors = COALESCE(p_analysis_data->'detailed_analysis'->'grammar'->'errors', grammar_errors),
-    style_issues = COALESCE(p_analysis_data->'detailed_analysis'->'readability'->'issues', style_issues),
-    argument_analysis = CASE 
-      WHEN (p_analysis_data->'detailed_analysis') IS NOT NULL OR p_plagiarism_data IS NOT NULL OR p_ai_detection_data IS NOT NULL THEN
-        jsonb_build_object(
-          'argumentation', COALESCE(p_analysis_data->'detailed_analysis'->'argumentation', argument_analysis->'argumentation'),
-          'knowledge_graph', COALESCE(p_analysis_data->'detailed_analysis'->'knowledge_graph', argument_analysis->'knowledge_graph'),
-          'coherence', COALESCE(p_analysis_data->'detailed_analysis'->'coherence', argument_analysis->'coherence'),
-          'plagiarism_results', COALESCE(p_plagiarism_data, argument_analysis->'plagiarism_results'),
-          'ai_detection_results', COALESCE(p_ai_detection_data, argument_analysis->'ai_detection_results')
-        )
-      ELSE argument_analysis
-    END,
     status = 'analyzed',
     updated_at = now()
   WHERE id = p_essay_id;

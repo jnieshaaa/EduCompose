@@ -282,7 +282,7 @@ export function DashboardTab() {
         const { data: essaysDataRows, error: essaysError } = await (activityIdsArray.length > 0 
           ? supabase
               .from("essays")
-              .select("id, title, created_at, status, student_id, activity_id, overall_score")
+              .select("id, title, created_at, status, student_id, activity_id")
               .in("activity_id", activityIdsArray)
           : Promise.resolve({ data: [] as any[], error: null }));
         
@@ -292,6 +292,18 @@ export function DashboardTab() {
           ...e,
           submitted_at: e.created_at // Map back for UI consistency
         })) as EssayRow[];
+
+        // Fetch analysis results for analyzed essays to get the scores
+        const analyzedEssayIds = essaysData.filter(e => e.status === "analyzed" || e.status === "reviewed").map(e => e.id);
+        const analysisMap = new Map();
+        if (analyzedEssayIds.length > 0) {
+          const { data: analysisRows } = await supabase
+            .from("essay_analysis_results")
+            .select("essay_id, overall_score, grammar_score, coherence_score")
+            .in("essay_id", analyzedEssayIds);
+          
+          (analysisRows || []).forEach(r => analysisMap.set(String(r.essay_id), r));
+        }
 
         const activeSectionIds = [...new Set(activities.flatMap(a => a.blockIds || []))];
 
@@ -320,19 +332,24 @@ export function DashboardTab() {
 
         const recentActivity = essaysData.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).slice(0, 30).map(e => {
           const meta = activityMetaById.get(e.activity_id);
+          const analysis = analysisMap.get(String(e.id));
           return {
             essayId: e.id, student: studentMap.get(e.student_id) || "Unknown", action: e.status === 'submitted' ? "Submitted" : "Analyzed",
             essay: e.title, time: formatTimeAgo(e.submitted_at), status: e.status === 'submitted' ? "new" : "evaluated",
-            score: e.overall_score || undefined, courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [],
+            score: analysis?.overall_score || undefined, courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [],
           } as DashboardData["recentActivity"][0];
         });
 
-        const performanceEssays = essaysData.filter(e => e.overall_score != null).map(e => {
+        const performanceEssays = essaysData.filter(e => analysisMap.has(String(e.id))).map(e => {
           const meta = activityMetaById.get(e.activity_id);
+          const analysis = analysisMap.get(String(e.id));
           const bid = meta?.blockIds?.[0];
           const sec = bid ? allSections.find(x => x.id === bid) : undefined;
           return {
-            submitted_at: e.submitted_at, overall_score: e.overall_score, grammar_score: e.grammar_score, coherence_score: e.coherence_score,
+            submitted_at: e.submitted_at, 
+            overall_score: analysis?.overall_score ?? null, 
+            grammar_score: analysis?.grammar_score ?? null, 
+            coherence_score: analysis?.coherence_score ?? null,
             student_id: e.student_id, studentName: studentMap.get(e.student_id) || "Unknown",
             courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [], activity_id: e.activity_id || "",
             activity_title: meta?.title || "Activity", program_id: sec ? loadIdToProgramId.get(sec.programLoadId) || "" : "",

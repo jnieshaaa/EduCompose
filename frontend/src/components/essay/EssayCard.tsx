@@ -7,7 +7,12 @@ import ProgressBar from "../ui/ProgressBar";
 import type { Essay } from "../../types/Essay";
 
 interface EssayCardProps {
-  essay: Essay;
+  essay: Essay & {
+    overall_score?: number;
+    grammar_score?: number;
+    readability_score?: number;
+    coherence_score?: number;
+  };
   onClick?: () => void;
   onAnalyze?: () => void;
   showStudent?: boolean;

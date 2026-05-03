@@ -148,7 +148,7 @@ export function SubmitEssayTab() {
 
         const { data: essayData, error: essayError } = await supabase
           .from('essays')
-          .select('*')
+          .select('id, title, file_path, content, submitted_at, status')
           .eq('activity_id', activityIdParam)
           .eq('student_id', studentData.id)
           .order('submitted_at', { ascending: false })
@@ -161,10 +161,17 @@ export function SubmitEssayTab() {
         }
 
         if (essayData) {
+          // Fetch analysis results for this essay
+          const { data: analysisData } = await supabase
+            .from('essay_analysis_results')
+            .select('overall_score')
+            .eq('essay_id', essayData.id)
+            .maybeSingle();
+
           console.log("[SubmitEssayTab] Fetched essay for student:", {
             id: essayData.id,
             status: essayData.status,
-            overall_score: essayData.overall_score
+            overall_score: analysisData?.overall_score
           });
           setIsSubmitted(true);
           setCurrentEssayId(essayData.id);
@@ -172,7 +179,7 @@ export function SubmitEssayTab() {
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleDateString(undefined, {
              month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
           }));
-          setEssayScore(essayData.overall_score !== undefined && essayData.overall_score !== null ? Number(essayData.overall_score) : null);
+          setEssayScore(analysisData?.overall_score !== undefined && analysisData?.overall_score !== null ? Number(analysisData.overall_score) : null);
           if (essayData.title) {
             setSelectedFileName(essayData.title);
           } else if (essayData.file_path) {

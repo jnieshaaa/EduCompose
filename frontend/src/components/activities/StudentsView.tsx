@@ -279,7 +279,7 @@ export function StudentsView({
                   const isLowWordCount = student.wordCount && student.wordCount < (activity.minWordCount || 150);
                   const isGrading = gradingStudents.has(student.id);
                   const isSubmitted = student.status === "submitted";
-                  const isGraded = isSubmitted && (gradedStudents.has(student.id) || student.score !== undefined);
+                  const isGraded = isSubmitted && (gradedStudents.has(student.id) || !!student.isGraded);
 
                   return (
                     <TableRow

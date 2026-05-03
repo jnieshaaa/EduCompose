@@ -18,7 +18,13 @@ import type { Essay } from "../../types/Essay";
 interface EssayAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  essay: Essay;
+  essay: Essay & {
+    overall_score?: number;
+    grammar_score?: number;
+    readability_score?: number;
+    coherence_score?: number;
+    argument_strength_score?: number;
+  };
 }
 
 const EssayAnalysisModal: React.FC<EssayAnalysisModalProps> = ({

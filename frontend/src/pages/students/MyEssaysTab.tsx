@@ -50,28 +50,43 @@ export function MyEssaysTab() {
         if (!student) return;
         const studentCode = (student.student_profiles as any)?.[0]?.student_code;
 
-        const { data, error } = await supabase
+        const { data: essaysData, error } = await supabase
           .from('essays')
-          .select('id, title, file_path, content, submitted_at, status, overall_score, essay_activities(id, title)')
+          .select('id, title, file_path, content, submitted_at, status, essay_activities(id, title)')
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: false });
 
         if (error) throw error;
 
-        const formattedData = (data || []).map(e => ({
-          id: e.id,
-          title: (e.essay_activities as any)?.title || 'Untitled Assignment',
-          filename: e.title || 'No name',
-          submitted: new Date(e.submitted_at).toLocaleDateString(),
-          status: e.status === 'reviewed' ? 'Teacher Checked' : (e.status === 'analyzed' ? 'Done' : 'Sent'),
-          aiScore: e.status === 'analyzed' || e.status === 'reviewed' ? e.overall_score : null,
-          hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
-          hasTeacherFeedback: e.status === 'reviewed',
-          activityId: (e.essay_activities as any)?.id,
-          studentCode: studentCode,
-          filePath: e.file_path,
-          content: e.content,
-        }));
+        // Fetch analysis results for analyzed essays
+        const analyzedEssayIds = (essaysData || []).filter(e => e.status === 'analyzed' || e.status === 'reviewed').map(e => e.id);
+        const analysisMap = new Map();
+        if (analyzedEssayIds.length > 0) {
+          const { data: analysisRows } = await supabase
+            .from('essay_analysis_results')
+            .select('essay_id, overall_score')
+            .in('essay_id', analyzedEssayIds);
+          
+          (analysisRows || []).forEach(r => analysisMap.set(String(r.essay_id), r));
+        }
+
+        const formattedData = (essaysData || []).map(e => {
+          const analysis = analysisMap.get(String(e.id));
+          return {
+            id: e.id,
+            title: (e.essay_activities as any)?.title || 'Untitled Assignment',
+            filename: e.title || 'No name',
+            submitted: new Date(e.submitted_at).toLocaleDateString(),
+            status: e.status === 'reviewed' ? 'Teacher Checked' : (e.status === 'analyzed' ? 'Done' : 'Sent'),
+            aiScore: (e.status === 'analyzed' || e.status === 'reviewed') ? (analysis?.overall_score ?? null) : null,
+            hasAiFeedback: e.status === 'analyzed' || e.status === 'reviewed',
+            hasTeacherFeedback: e.status === 'reviewed',
+            activityId: (e.essay_activities as any)?.id,
+            studentCode: studentCode,
+            filePath: e.file_path,
+            content: e.content,
+          };
+        });
         setEssaysData(formattedData);
       } catch (error) {
         console.error('Error fetching essays:', error);

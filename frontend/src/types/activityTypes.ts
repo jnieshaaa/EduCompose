@@ -44,6 +44,7 @@ export type Student = {
   wordCount?: number;
   gradingError?: string;
   filePath?: string;
+  isGraded?: boolean;
 };
 
 export type NewActivityForm = {

@@ -32,7 +32,13 @@ import { analysisApi } from "../../api";
 interface EnhancedEssayAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  essay: Essay;
+  essay: Essay & {
+    overall_score?: number;
+    grammar_score?: number;
+    readability_score?: number;
+    coherence_score?: number;
+    argument_strength_score?: number;
+  };
   onAnalysisComplete?: (analysis: AnalysisResponse) => void;
 }
 

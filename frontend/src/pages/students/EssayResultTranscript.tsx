@@ -103,7 +103,7 @@ export function EssayResultTranscript() {
         // 1. Fetch essay and activity metadata
         const { data: essayData, error: essayError } = await supabase
           .from("essays")
-          .select("*, essay_activities(id, title, rubrics(id, name, criteria)), student:users!essays_student_id_fkey(first_name, last_name)")
+          .select("id, title, content, submitted_at, activity_id, essay_activities(id, title, rubrics(id, name, criteria)), student:users!essays_student_id_fkey(first_name, last_name)")
           .eq("id", essayId)
           .single();
 
@@ -111,7 +111,6 @@ export function EssayResultTranscript() {
         setEssay(essayData);
 
         // 2. Use centralized fetchEssayAnalysis for scores and detailed data
-        // This handles the new JSONB schema (grammar_results, etc.) automatically
         const { fetchEssayAnalysis, fetchDuplicateEssays } = await import("../../services/activityService");
         
         try {
@@ -129,14 +128,13 @@ export function EssayResultTranscript() {
           }
         } catch (err) {
           console.error("[EssayResultTranscript] Error fetching analysis:", err);
-          // Simple fallback for scores if fetchEssayAnalysis fails
           setAnalysis({
             scores: {
-              overall: Number(essayData.overall_score) || 0,
-              grammar: Number(essayData.grammar_score) || 0,
-              readability: Number(essayData.readability_score) || 0,
-              coherence: Number(essayData.coherence_score) || 0,
-              argument_strength: Number(essayData.argument_strength_score) || 0,
+              overall: 0,
+              grammar: 0,
+              readability: 0,
+              coherence: 0,
+              argument_strength: 0,
             },
             original_text: essayData.content || ""
           } as any);

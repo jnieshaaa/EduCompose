@@ -7,11 +7,6 @@ export interface Essay {
   content: string;
   submitted_at: string;
   status: "submitted" | "analyzed" | "reviewed";
-  grammar_score?: number;
-  readability_score?: number;
-  coherence_score?: number;
-  argument_strength_score?: number;
-  overall_score?: number;
   grammar_errors?: GrammarError[];
   style_issues?: StyleIssue[];
   argument_analysis?: {

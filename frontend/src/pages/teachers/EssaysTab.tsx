@@ -107,7 +107,6 @@ export function EssaysTab() {
           title, 
           submitted_at, 
           status, 
-          overall_score, 
           activity_id,
           student_id,
           essay_activities (title),
@@ -131,11 +130,24 @@ export function EssaysTab() {
         return;
       }
 
-      const { data, error } = await query.order('submitted_at', { ascending: false });
+      const { data: essaysData, error } = await query.order('submitted_at', { ascending: false });
       if (error) throw error;
 
-      const formatted: EssaySubmission[] = (data || []).map(e => {
+      // Fetch analysis results for analyzed essays
+      const analyzedEssayIds = (essaysData || []).filter(e => e.status === 'analyzed' || e.status === 'reviewed').map(e => e.id);
+      const analysisMap = new Map();
+      if (analyzedEssayIds.length > 0) {
+        const { data: analysisRows } = await supabase
+          .from('essay_analysis_results')
+          .select('essay_id, overall_score')
+          .in('essay_id', analyzedEssayIds);
+        
+        (analysisRows || []).forEach(r => analysisMap.set(String(r.essay_id), r));
+      }
+
+      const formatted: EssaySubmission[] = (essaysData || []).map(e => {
         const student = (e.users as any);
+        const analysis = analysisMap.get(String(e.id));
         const program = student?.programs_lookup?.name || "No Program";
         const section = (e.blocks as any)?.section_name || "No Section";
         
@@ -152,7 +164,7 @@ export function EssaysTab() {
           section: section,
           submitted: new Date(e.submitted_at).toLocaleDateString(),
           status: statusDisplay,
-          score: e.overall_score,
+          score: (e.status === 'analyzed' || e.status === 'reviewed') ? (analysis?.overall_score ?? null) : null,
           teacherReview: e.status === 'reviewed' ? 'Reviewed' : 'Pending',
           activityTitle: (e.essay_activities as any)?.title || "Unknown Activity"
         };
