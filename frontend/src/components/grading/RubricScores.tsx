@@ -81,7 +81,7 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
           </div>
           <div className={`flex flex-col items-end`}>
             <div className={`p-4 rounded-3xl backdrop-blur-md border border-white shadow-xl ${getScoreBadgeColor(rubric_score)}`}>
-              <span className="text-3xl font-black tracking-tighter">{rubric_score.toFixed(0)}</span>
+              <span className="text-3xl font-black tracking-tighter">{(Number(rubric_score) || 0).toFixed(0)}</span>
               <span className="text-sm font-black opacity-60 ml-0.5">%</span>
             </div>
           </div>
@@ -143,7 +143,7 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
                       {criterion.points_earned} <span className="text-xs opacity-40">/ {criterion.max_points}</span>
                     </div>
                     <div className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">
-                       Index: {percentage.toFixed(0)}%
+                       Index: {(Number(percentage) || 0).toFixed(0)}%
                     </div>
                   </div>
                 </div>
@@ -178,7 +178,7 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
                 <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between">
                   <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Sub-Matrix Core Score</span>
                   <Badge variant="neutral" size="sm" className="rounded-lg font-black text-[9px] bg-neutral-100/50 text-neutral-500 border-none">
-                    AI RAW: {criterion.analysis_score.toFixed(1)}/100
+                    AI RAW: {(Number(criterion.analysis_score) || 0).toFixed(1)}/100
                   </Badge>
                 </div>
               </Card>

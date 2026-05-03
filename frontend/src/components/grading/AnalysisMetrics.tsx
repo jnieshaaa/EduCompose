@@ -219,13 +219,13 @@ export function AnalysisMetrics({ analysis, onErrorClick, prominentGraph = false
             <div className="p-4 bg-success-50/50 backdrop-blur-sm border border-white rounded-2xl text-center shadow-sm">
               <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight mb-2">Flesch Index</p>
               <p className="text-2xl font-bold text-success-default tracking-tighter">
-                {analysis.detailed_analysis.readability.flesch_reading_ease.toFixed(0)}
+                {(Number(analysis.detailed_analysis.readability.flesch_reading_ease) || 0).toFixed(0)}
               </p>
             </div>
             <div className="p-4 bg-primary-50/50 backdrop-blur-sm border border-white rounded-2xl text-center shadow-sm">
               <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight mb-2">Academic Rank</p>
               <p className="text-2xl font-bold text-primary tracking-tighter">
-                Lvl {analysis.detailed_analysis.readability.flesch_kincaid_grade.toFixed(0)}
+                Lvl {(Number(analysis.detailed_analysis.readability.flesch_kincaid_grade) || 0).toFixed(0)}
               </p>
             </div>
           </div>
