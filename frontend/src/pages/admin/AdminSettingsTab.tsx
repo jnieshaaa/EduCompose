@@ -14,7 +14,7 @@ import {
   Clock,
   CheckCircle2,
   Settings,
-  Bell,
+  // Bell,
   Terminal,
   User,
   BookOpen
@@ -24,19 +24,23 @@ import Button from "../../components/ui/Button";
 import { useNotification } from "../../contexts/NotificationContext";
 import { fetchAcademicSettings, updateAcademicSettings, createAcademicSettings } from "../../services/academicService";
 import type { AcademicSettings } from "../../services/academicService";
+import { supabase } from "../../lib/supabaseClient";
+
 
 export function AdminSettingsTab() {
   const [settings, setSettings] = useState({
     platformName: "EduCompose",
     emailNotifications: true,
     autoBackup: true,
-    maintenanceMode: false,
+    maintenanceMode: localStorage.getItem('maintenanceMode') === 'true',
   });
   
   const [academicSettings, setAcademicSettings] = useState<AcademicSettings | null>(null);
   const [loadingAcademic, setLoadingAcademic] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingAcademic, setSavingAcademic] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -58,10 +62,21 @@ export function AdminSettingsTab() {
 
   const handleSaveGeneral = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      localStorage.setItem('maintenanceMode', String(settings.maintenanceMode));
+      
+      // Also try to update the database for global effect
+      await supabase
+        .from('system_settings')
+        .upsert({ key: 'maintenance_mode', value: { global: settings.maintenanceMode } }, { onConflict: 'key' });
+
       setSaving(false);
       showNotification('success', "Settings updated successfully.");
-    }, 800);
+    } catch (err) {
+      console.error("Settings save error:", err);
+      setSaving(false);
+      showNotification('success', "Settings updated (local only).");
+    }
   };
 
   const handleSaveAcademic = async () => {
@@ -98,6 +113,67 @@ export function AdminSettingsTab() {
       showNotification('error', "Initialization failed: " + result.error);
     }
     setSavingAcademic(false);
+  };
+
+  const handleDownloadBackup = async () => {
+    setIsBackingUp(true);
+    try {
+      const tables = ["users", "essays", "rubrics", "essay_activities", "activity_logs", "schools", "departments", "programs_lookup"];
+      const backup: Record<string, any[]> = {};
+
+      for (const table of tables) {
+        const { data, error } = await supabase.from(table).select("*");
+        if (error) throw new Error(`Failed to fetch ${table}: ${error.message}`);
+        backup[table] = data || [];
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const blob = new Blob(
+        [JSON.stringify({ exported_at: new Date().toISOString(), version: "1.0", data: backup }, null, 2)],
+        { type: "application/json" }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `educompose-backup-${timestamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showNotification('success', "Backup downloaded successfully.");
+    } catch (err: any) {
+      console.error("Backup error:", err);
+      showNotification('error', err.message || "Failed to create backup.");
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsRestoring(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed.data) throw new Error("Invalid backup file format.");
+
+      const restorableTables = ["schools", "departments", "programs_lookup", "users", "rubrics", "essay_activities", "essays", "activity_logs"];
+
+      for (const table of restorableTables) {
+        const rows = parsed.data[table];
+        if (!rows || rows.length === 0) continue;
+        const { error } = await supabase.from(table).upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Failed to restore ${table}: ${error.message}`);
+      }
+
+      showNotification('success', "Backup restored successfully.");
+    } catch (err: any) {
+      console.error("Restore error:", err);
+      showNotification('error', err.message || "Failed to restore backup.");
+    } finally {
+      setIsRestoring(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -306,8 +382,8 @@ export function AdminSettingsTab() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    {[
-                     { id: 'emailNotifications', label: 'Email Notifications', desc: 'Send system alerts and reports via email', icon: Bell, checked: settings.emailNotifications },
-                     { id: 'autoBackup', label: 'Automatic Backups', desc: 'Keep a backup of all system data', icon: Database, checked: settings.autoBackup },
+                     // { id: 'emailNotifications', label: 'Email Notifications', desc: 'Send system alerts and reports via email', icon: Bell, checked: settings.emailNotifications },
+                     // { id: 'autoBackup', label: 'Automatic Backups', desc: 'Keep a backup of all system data', icon: Database, checked: settings.autoBackup },
                      { id: 'maintenanceMode', label: 'Maintenance Mode', desc: 'Prevent users from logging in during updates', icon: Lock, checked: settings.maintenanceMode }
                    ].map((item, i) => (
                      <div key={i} className="flex items-start gap-5 p-6 bg-neutral-50/50 border border-neutral-100 rounded-[2rem] group hover:border-primary/20 transition-all flex-1">
@@ -361,20 +437,43 @@ export function AdminSettingsTab() {
                     Backup your data or upload record files to the system.
                  </p>
                  <div className="grid grid-cols-1 gap-4">
-                    <button className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all">
+                    <button
+                      onClick={handleDownloadBackup}
+                      disabled={isBackingUp}
+                      className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                        <div className="flex items-center gap-4">
-                          <Download size={18} className="text-white/20 group-hover/btn:text-primary transition-colors" />
-                          <span className="text-[10px] font-medium text-white uppercase tracking-widest">Download Backup</span>
+                          {isBackingUp
+                            ? <Loader2 size={18} className="text-white/60 animate-spin" />
+                            : <Download size={18} className="text-white/40 group-hover/btn:text-white transition-colors" />
+                          }
+                          <span className="text-[10px] font-medium text-white uppercase tracking-widest">
+                            {isBackingUp ? "Creating Backup..." : "Download Backup"}
+                          </span>
                        </div>
                        <ChevronRight size={14} className="text-white/20 group-hover/btn:translate-x-1 transition-transform" />
                     </button>
-                    <button className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all">
+                    <label
+                      className={`flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl group/btn hover:bg-white/10 hover:border-white/10 transition-all cursor-pointer ${isRestoring ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                    >
                        <div className="flex items-center gap-4">
-                          <Upload size={18} className="text-white/20 group-hover/btn:text-primary transition-colors" />
-                          <span className="text-[10px] font-medium text-white uppercase tracking-widest">Upload Records</span>
+                          {isRestoring
+                            ? <Loader2 size={18} className="text-white/60 animate-spin" />
+                            : <Upload size={18} className="text-white/40 group-hover/btn:text-white transition-colors" />
+                          }
+                          <span className="text-[10px] font-medium text-white uppercase tracking-widest">
+                            {isRestoring ? "Restoring..." : "Upload & Restore"}
+                          </span>
                        </div>
                        <ChevronRight size={14} className="text-white/20 group-hover/btn:translate-x-1 transition-transform" />
-                    </button>
+                       <input
+                         type="file"
+                         accept=".json"
+                         className="hidden"
+                         onChange={handleRestoreFile}
+                         disabled={isRestoring}
+                       />
+                    </label>
                  </div>
                  <div className="pt-6 border-t border-white/5">
                    <div className="flex items-center justify-between px-1">

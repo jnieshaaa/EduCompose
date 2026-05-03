@@ -218,7 +218,7 @@ export const AdminStudentsTab: React.FC = () => {
         }
       }
 
-      const { data, error: fetchError, count } = await query
+      const { data, error: fetchError } = await query
         .order("last_name", { ascending: true })
         .range(from, to);
 
@@ -245,8 +245,13 @@ export const AdminStudentsTab: React.FC = () => {
         };
       });
 
-      setStudents(flattenedData);
-      setTotalStudentsCount(count || 0);
+      // Only show active students — exclude dropped and graduated
+      const activeStudents = flattenedData.filter(
+        (s: any) => s.enrollment_status !== 'dropped' && s.enrollment_status !== 'graduated'
+      );
+
+      setStudents(activeStudents);
+      setTotalStudentsCount(activeStudents.length);
     } catch (err: any) {
       showNotification('error', err instanceof Error ? err.message : "Failed to connect to database.");
     } finally {

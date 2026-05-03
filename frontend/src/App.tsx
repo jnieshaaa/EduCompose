@@ -98,17 +98,25 @@ const AppContent: React.FC = () => {
 
   React.useEffect(() => {
     const checkMaintenance = async () => {
-      // Optimistically use cached value first
+      // 1. Check localStorage first (fastest for current user)
+      const localMode = localStorage.getItem('maintenanceMode') === 'true';
+      if (localMode) {
+        setMaintenanceSettings({ global: true });
+        return;
+      }
+
+      // 2. Check sessionStorage cache
       const cached = sessionStorage.getItem("maintenance_mode");
       if (cached) {
         setMaintenanceSettings(JSON.parse(cached));
       }
 
+      // 3. Check database (global truth)
       const { data } = await supabase
         .from("system_settings")
         .select("value")
         .eq("key", "maintenance_mode")
-        .single();
+        .maybeSingle();
       
       if (data) {
         setMaintenanceSettings(data.value);

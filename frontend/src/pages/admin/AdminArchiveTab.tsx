@@ -29,6 +29,10 @@ import type { AcademicSettings } from "../../services/academicService";
 import { supabase } from "../../lib/supabaseClient";
 import { adminApi } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
+import { generateAcademicReportHTML } from "../../templates/academicReportTemplate";
+import { generateUserArchiveReportHTML } from "../../templates/userArchiveReportTemplate";
+
+
 
 type ArchiveType = "academic" | "users";
 
@@ -49,6 +53,8 @@ export function AdminArchiveTab() {
   const [loadToDelete, setLoadToDelete] = useState<any>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { showNotification } = useNotification();
 
   useEffect(() => {
@@ -96,7 +102,7 @@ export function AdminArchiveTab() {
       .from("users")
       .select(`
         *,
-        student_profiles!user_id ( student_code, enrollment_status )
+        student_profiles ( student_code, enrollment_status )
       `)
       .order("last_name", { ascending: true });
     
@@ -106,14 +112,17 @@ export function AdminArchiveTab() {
       // Filter in JS to find archived users:
       // 1. Inactive users (any role)
       // 2. Students who are dropped or graduated
-      const filtered = (data || []).filter(u => 
-        !u.is_active || 
-        (u.role === 'student' && (u.student_profiles?.[0]?.enrollment_status === 'dropped' || u.student_profiles?.[0]?.enrollment_status === 'graduated'))
-      ).map(u => ({
-        ...u,
-        student_code: u.student_profiles?.[0]?.student_code,
-        enrollment_status: u.student_profiles?.[0]?.enrollment_status
-      }));
+      const filtered = (data || []).filter(u => {
+        const sp = Array.isArray(u.student_profiles) ? u.student_profiles[0] : u.student_profiles;
+        return !u.is_active || (u.role === 'student' && (sp?.enrollment_status === 'dropped' || sp?.enrollment_status === 'graduated'));
+      }).map(u => {
+        const sp = Array.isArray(u.student_profiles) ? u.student_profiles[0] : u.student_profiles;
+        return {
+          ...u,
+          student_code: sp?.student_code,
+          enrollment_status: sp?.enrollment_status
+        };
+      });
       
       setArchivedUsers(filtered);
     }
@@ -124,10 +133,21 @@ export function AdminArchiveTab() {
     
     try {
       setIsLoading(true);
+
+      // 1. Restore access in users table
       await adminApi.updateUser(user.id, {
         is_active: true,
-        enrollment_status: user.role === 'student' ? 'active' : undefined
       });
+
+      // 2. If student, explicitly update enrollment_status in student_profiles
+      if (user.role === 'student') {
+        const { error: profileError } = await supabase
+          .from('student_profiles')
+          .update({ enrollment_status: 'active' })
+          .eq('user_id', user.id);
+
+        if (profileError) throw profileError;
+      }
         
       showNotification('success', `${user.first_name}'s account has been restored.`);
       await loadArchivedUsers();
@@ -218,6 +238,145 @@ export function AdminArchiveTab() {
     setIsDeleting(false);
   };
 
+  const handlePrintReport = async () => {
+    setIsPrinting(true);
+    try {
+      if (type === "academic") {
+        const ay = ayFilter !== 'all'
+          ? ayFilter
+          : (academicSettings ? `${academicSettings.ay_start}-${academicSettings.ay_end}` : 'All Years');
+        const term = termFilter !== 'all'
+          ? termFilter
+          : (academicSettings?.current_semester || 'All Terms');
+
+        const totalCourses = filteredLoads.length;
+        const totalUnits = filteredLoads.reduce((sum: number, l: any) => sum + (l.courses?.units || 0), 0);
+
+        // Fetch students grouped by block
+        const { data: blockStudents } = await supabase
+          .from('blocks')
+          .select(`
+            id, name, year,
+            block_students!block_id (
+              student_id,
+              users!student_id ( first_name, last_name, is_active )
+            )
+          `);
+
+        // Fetch teachers for active/inactive count
+        const { data: allTeacherUsers } = await supabase
+          .from('users')
+          .select('id, is_active')
+          .eq('role', 'teacher');
+
+        const teacherIdsInLoad = [...new Set(filteredLoads.map((l: any) => l.teacher_id))];
+        const activeTeacherCount = (allTeacherUsers || []).filter(
+          (u: any) => u.is_active && teacherIdsInLoad.includes(u.id)
+        ).length;
+        const inactiveTeacherCount = teacherIdsInLoad.length - activeTeacherCount;
+
+        const html = generateAcademicReportHTML({
+          ay,
+          term,
+          totalCourses,
+          totalUnits,
+          activeTeacherCount,
+          inactiveTeacherCount,
+          groupedTeachers: groupedLoads,
+          blockStudents: (blockStudents || []) as any,
+        });
+
+        const win = window.open('', '_blank', 'width=960,height=750');
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+          win.onload = () => { win.focus(); win.print(); };
+        }
+      } else {
+        // Users Archive Print
+        const studentRecords = filteredUsers.filter(u => u.role === "student").length;
+        const teacherRecords = filteredUsers.length - studentRecords;
+
+        const html = generateUserArchiveReportHTML({
+          totalRecords: filteredUsers.length,
+          studentRecords,
+          teacherRecords,
+          archivedUsers: filteredUsers
+        });
+
+        const win = window.open('', '_blank', 'width=960,height=750');
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+          win.onload = () => { win.focus(); win.print(); };
+        }
+      }
+    } catch (err: any) {
+      console.error('Print error:', err);
+      showNotification('error', 'Failed to generate report.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+
+  const handleExportCSV = () => {
+    setIsExporting(true);
+    try {
+      let headers: string[] = [];
+      let rows: any[] = [];
+      let filename = "archive-export.csv";
+
+      if (type === "academic") {
+        const ay = ayFilter !== 'all' ? ayFilter : 'All';
+        const term = termFilter !== 'all' ? termFilter : 'All';
+        headers = ['Teacher Name', 'Email', 'Course Code', 'Course Title', 'Units', 'Academic Year', 'Term'];
+        rows = filteredLoads.map((load: any) => [
+          `${load.users?.first_name || ''} ${load.users?.last_name || ''}`.trim(),
+          load.users?.email || '',
+          load.courses?.course_code || '',
+          load.courses?.course_title || '',
+          load.courses?.units ?? '',
+          load.academic_year || ay,
+          load.term || term,
+        ]);
+        filename = `academic-records-${ay}-${term.replace(/\\s/g, '-')}.csv`;
+      } else {
+        headers = ['ID / Code', 'First Name', 'Last Name', 'Email', 'Role', 'Status'];
+        rows = filteredUsers.map((user: any) => {
+          let statusText = "Deactivated";
+          if (user.role === "student" && user.enrollment_status) {
+            statusText = user.enrollment_status;
+          }
+          return [
+            user.student_code || '',
+            user.first_name || '',
+            user.last_name || '',
+            user.email || '',
+            user.role || '',
+            statusText,
+          ];
+        });
+        const dateStr = new Date().toISOString().split('T')[0];
+        filename = `user-archive-${dateStr}.csv`;
+      }
+
+      const csv = [headers, ...rows].map(r => r.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showNotification('success', 'CSV exported successfully.');
+    } catch (err: any) {
+      showNotification('error', 'Failed to export CSV.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-32">
       {/* Premium Integrated Header */}
@@ -237,25 +396,28 @@ export function AdminArchiveTab() {
             <Archive size={14} className="text-primary/50" />
             {type === "academic" 
               ? "Archive of teacher course assignments" 
-              : "Historical records of graduated, dropped, or resigned members"}
+              : "Archived records"}
           </p>
         </div>
       </div>
       <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => window.print()}
-            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
-          >
-            <Printer size={16} className="text-neutral-400" />
-            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">Print Report</span>
-          </Button>
-          <Button 
+          <Button
             variant="outline"
-            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group"
+            onClick={handlePrintReport}
+            disabled={isPrinting}
+            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group disabled:opacity-50"
           >
-            <Download size={16} className="text-neutral-400" />
-            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">Export CSV</span>
+            {isPrinting ? <Loader2 size={16} className="text-neutral-400 animate-spin" /> : <Printer size={16} className="text-neutral-400" />}
+            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">{isPrinting ? 'Generating...' : 'Print Report'}</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            disabled={isExporting}
+            className="rounded-xl bg-white shadow-sm border border-neutral-200 hover:bg-neutral-50 px-4 h-10 flex items-center gap-2 group disabled:opacity-50"
+          >
+            {isExporting ? <Loader2 size={16} className="text-neutral-400 animate-spin" /> : <Download size={16} className="text-neutral-400" />}
+            <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-600">{isExporting ? 'Exporting...' : 'Export CSV'}</span>
           </Button>
         </div>
       </div>

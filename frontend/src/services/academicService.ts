@@ -89,6 +89,9 @@ export const createAcademicSettings = async (settings: Partial<AcademicSettings>
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 };
+
+// FIX: title and nickname are in teacher_profiles, NOT in users table.
+// Joining teacher_profiles!user_id and flattening the result.
 export const fetchAllTeacherLoads = async (academicYear?: string, term?: string) => {
   try {
     let query = supabase
@@ -105,8 +108,11 @@ export const fetchAllTeacherLoads = async (academicYear?: string, term?: string)
           last_name,
           email,
           role,
-          title,
-          nickname
+          is_active,
+          teacher_profiles!user_id (
+            title,
+            nickname
+          )
         ),
         courses!course_id (
           course_code,
@@ -124,7 +130,18 @@ export const fetchAllTeacherLoads = async (academicYear?: string, term?: string)
       console.error("Error fetching all teacher loads:", error);
       return [];
     }
-    return data;
+
+    // Flatten teacher_profiles into the users object for easy access in components
+    return (data || []).map((load: any) => ({
+      ...load,
+      users: load.users
+        ? {
+            ...load.users,
+            title: load.users.teacher_profiles?.[0]?.title || null,
+            nickname: load.users.teacher_profiles?.[0]?.nickname || null,
+          }
+        : null,
+    }));
   } catch (err) {
     console.error("Unexpected error fetching loads:", err);
     return [];
