@@ -472,7 +472,7 @@ const AnalyzeEssay: React.FC = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-neutral-600">Confidence:</span>
                     <span className="font-semibold text-neutral-900">
-                      {ocrResult.confidence.toFixed(1)}%
+                      {(ocrResult.confidence || 0).toFixed(1)}%
                     </span>
                   </div>
                 )}

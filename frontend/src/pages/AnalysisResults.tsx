@@ -1110,7 +1110,7 @@ const AnalysisResults: React.FC = () => {
     const scoreColor =
       overallScore >= 80 ? [34, 197, 94] : overallScore >= 60 ? [234, 179, 8] : [239, 68, 68];
     doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-    doc.text(`${overallScore.toFixed(1)}/100`, margin, yPosition);
+    doc.text(`${(overallScore || 0).toFixed(1)}/100`, margin, yPosition);
     doc.setTextColor(0, 0, 0);
     yPosition += 15;
 
@@ -1134,7 +1134,7 @@ const AnalysisResults: React.FC = () => {
     scoreLabels.forEach(({ key, label }) => {
       checkPageBreak(8);
       const score = scores[key as keyof typeof scores] || 0;
-      doc.text(`${label}: ${score.toFixed(1)}/100`, margin + 5, yPosition);
+      doc.text(`${label}: ${(score || 0).toFixed(1)}/100`, margin + 5, yPosition);
       yPosition += 6;
     });
     yPosition += 5;
@@ -1560,7 +1560,7 @@ const AnalysisResults: React.FC = () => {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center space-x-2 mb-2">
                                       <span className="text-sm font-semibold text-red-600">
-                                        {match.percent.toFixed(1)}% match
+                                        {(match.percent || 0).toFixed(1)}% match
                                       </span>
                                       {(match.words ?? 0) > 0 && (
                                         <span className="text-xs text-neutral-500">

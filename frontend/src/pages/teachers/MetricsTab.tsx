@@ -93,7 +93,7 @@ export function MetricsTab() {
               <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Grammar Average</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
-                  {metrics.avgGrammarScore.toFixed(1)}%
+                  {(metrics.avgGrammarScore || 0).toFixed(1)}%
                 </p>
                 <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -113,7 +113,7 @@ export function MetricsTab() {
               <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Coherence Average</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
-                  {metrics.avgCoherenceScore.toFixed(1)}%
+                  {(metrics.avgCoherenceScore || 0).toFixed(1)}%
                 </p>
                 <div className="flex items-center gap-1 mb-1.5 text-error-default text-xs font-bold">
                   <TrendingDown className="w-3.5 h-3.5" />
@@ -133,7 +133,7 @@ export function MetricsTab() {
               <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Word Choice</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
-                  {metrics.avgVocabularyLevel.toFixed(1)}<span className="text-sm text-neutral-300">/10</span>
+                  {(metrics.avgVocabularyLevel || 0).toFixed(1)}<span className="text-sm text-neutral-300">/10</span>
                 </p>
                 <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -153,7 +153,7 @@ export function MetricsTab() {
               <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Originality Risk</p>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold text-neutral-900 tracking-tight">
-                  {metrics.plagiarismRisk.toFixed(1)}%
+                  {(metrics.plagiarismRisk || 0).toFixed(1)}%
                 </p>
                 <div className="flex items-center gap-1 mb-1.5 text-success-default text-xs font-bold">
                   <TrendingDown className="w-3.5 h-3.5 rotate-180" />

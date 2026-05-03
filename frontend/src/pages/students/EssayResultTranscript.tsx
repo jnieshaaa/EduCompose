@@ -25,36 +25,48 @@ interface AnalysisData {
     readability: number;
     coherence: number;
     argument_strength: number;
+    knowledge_graph?: number;
   };
   detailed_analysis?: {
     grammar?: {
+      score?: number;
       errors: any[];
-      suggestions: string[];
+      error_count?: number;
+      suggestions?: string[];
+      syntax_patterns?: any;
     };
     argumentation?: {
-        argument_structure: {
+        argument_structure?: {
             total_claims: number;
             total_grounds: number;
             total_warrants: number;
             total_rebuttals: number;
             total_qualifiers?: number;
         };
-        graph: any;
-        metrics: any;
+        graph?: any;
+        metrics?: any;
+        score?: number;
     };
     readability?: {
-        flesch_reading_ease: number;
-        flesch_kincaid_grade: number;
-        issues: any[];
+        score?: number;
+        flesch_reading_ease?: number;
+        flesch_kincaid_grade?: number;
+        issues?: any[];
+    };
+    coherence?: {
+        score?: number;
+        coherence_issues?: any[];
+        paragraph_unity?: number;
+        entity_grid_score?: number;
     };
     knowledge_graph?: any;
-    coherence?: any;
   };
-  plagiarism?: import("../../api").PlagiarismCheckResponse | null;
-  ai_detection?: import("../../api").AIDetectionResponse | null;
+  plagiarism?: any;
+  ai_detection?: any;
   original_text?: string;
   recommendations?: any[];
   diagnostic_summary?: any;
+  rubric_scores?: any;
 }
 
 // --- Configuration ---
@@ -73,6 +85,7 @@ export function EssayResultTranscript() {
   const { user } = useAuth();
   
   const essayId = useMemo(() => readSecureParams(location.search)?.essayId, [location.search]);
+  const activityId = useMemo(() => readSecureParams(location.search)?.activityId, [location.search]);
   
   const [essay, setEssay] = useState<any>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
@@ -86,6 +99,8 @@ export function EssayResultTranscript() {
       if (!essayId || !user?.auth_id) return;
       try {
         setLoading(true);
+        
+        // 1. Fetch essay and activity metadata
         const { data: essayData, error: essayError } = await supabase
           .from("essays")
           .select("*, essay_activities(id, title, rubrics(id, name, criteria)), student:users!essays_student_id_fkey(first_name, last_name)")
@@ -95,93 +110,39 @@ export function EssayResultTranscript() {
         if (essayError) throw essayError;
         setEssay(essayData);
 
-        const { data: student } = await supabase
-          .from("users")
-          .select("id")
-          .eq("id", user.auth_id)
-          .eq("role", "student")
-          .maybeSingle();
-
-        if (!student) {
-          console.warn("[EssayResultTranscript] Student profile not found for auth_id:", user.auth_id);
-          setLoading(false);
-          return;
-        }
-
-        const { data: analysisData } = await supabase
-          .from("essay_analysis_results")
-          .select("*, essays(content)")
-          .eq("essay_id", essayId)
-          .eq("student_id", student.id)
-          .maybeSingle();
- 
-        if (analysisData) {
-          const baseData = analysisData.results as any || {};
-          const fallbackText = analysisData.content_text || analysisData.results?.text || baseData?.text || essayData?.content || "";
+        // 2. Use centralized fetchEssayAnalysis for scores and detailed data
+        // This handles the new JSONB schema (grammar_results, etc.) automatically
+        const { fetchEssayAnalysis, fetchDuplicateEssays } = await import("../../services/activityService");
+        
+        try {
+          const analysisResult = await fetchEssayAnalysis(user.id, activityId, essayId);
           
-          // Normalize scores from analysis results table
-          const scores = {
-            overall: analysisData.overall_score ?? baseData?.scores?.overall ?? 0,
-            grammar: analysisData.grammar_score ?? baseData?.scores?.grammar ?? 0,
-            readability: analysisData.readability_score ?? baseData?.scores?.readability ?? 0,
-            coherence: analysisData.coherence_score ?? baseData?.scores?.coherence ?? 0,
-            argument_strength: analysisData.argument_strength_score ?? baseData?.scores?.argument_strength ?? 0
-          };
-
-          const detailedAnalysis = analysisData.detailed_analysis || baseData?.detailed_analysis || {};
-          
+          if (analysisResult && analysisResult.analysis) {
+            const analysisData = analysisResult.analysis;
+            
+            setAnalysis({
+              ...analysisData,
+              original_text: analysisResult.text || essayData?.content || "",
+              plagiarism: analysisResult.plagiarismResults,
+              ai_detection: analysisResult.aiDetectionResults
+            });
+          }
+        } catch (err) {
+          console.error("[EssayResultTranscript] Error fetching analysis:", err);
+          // Simple fallback for scores if fetchEssayAnalysis fails
           setAnalysis({
-            ...baseData,
-            scores,
-            detailed_analysis: {
-              ...detailedAnalysis,
-              // Ensure argumentation is properly structured even if it's flat in the source
-              argumentation: detailedAnalysis.argumentation || detailedAnalysis.argument_structure || {
-                argument_structure: {
-                  total_claims: detailedAnalysis.total_claims || 0,
-                  total_grounds: detailedAnalysis.total_grounds || 0,
-                  total_rebuttals: detailedAnalysis.total_rebuttals || 0
-                }
-              }
+            scores: {
+              overall: Number(essayData.overall_score) || 0,
+              grammar: Number(essayData.grammar_score) || 0,
+              readability: Number(essayData.readability_score) || 0,
+              coherence: Number(essayData.coherence_score) || 0,
+              argument_strength: Number(essayData.argument_strength_score) || 0,
             },
-            recommendations: analysisData.recommendations || baseData?.recommendations || [],
-            diagnostic_summary: analysisData.diagnostic_summary || baseData?.diagnostic_summary || {},
-            original_text: fallbackText,
-            plagiarism: analysisData.plagiarism_results,
-            ai_detection: analysisData.ai_detection_results
-          });
-        } else {
-          // Fallback to essay table columns
-          const fallbackPayload = essayData?.analysis_payload as any || {};
-          const scores = {
-            overall: (essayData.overall_score !== null ? Number(essayData.overall_score) : null) ?? fallbackPayload?.scores?.overall ?? 0,
-            grammar: (essayData.grammar_score !== null ? Number(essayData.grammar_score) : null) ?? fallbackPayload?.scores?.grammar ?? 0,
-            readability: (essayData.readability_score !== null ? Number(essayData.readability_score) : null) ?? fallbackPayload?.scores?.readability ?? 0,
-            coherence: (essayData.coherence_score !== null ? Number(essayData.coherence_score) : null) ?? fallbackPayload?.scores?.coherence ?? 0,
-            argument_strength: (essayData.argument_strength_score !== null ? Number(essayData.argument_strength_score) : null) ?? fallbackPayload?.scores?.argument_strength ?? 0
-          };
-
-          setAnalysis({
-            ...fallbackPayload,
-            scores,
-            detailed_analysis: {
-                grammar: {
-                    errors: essayData.grammar_errors || fallbackPayload?.detailed_analysis?.grammar?.errors || []
-                },
-                readability: {
-                    flesch_reading_ease: Number(essayData.readability_score) || fallbackPayload?.detailed_analysis?.readability?.flesch_reading_ease || 0,
-                    flesch_kincaid_grade: Number(essayData.readability_score / 10) || fallbackPayload?.detailed_analysis?.readability?.flesch_kincaid_grade || 0,
-                    issues: essayData.style_issues || []
-                },
-                argumentation: essayData.argument_analysis?.argumentation || fallbackPayload?.detailed_analysis?.argumentation || null,
-                knowledge_graph: essayData.argument_analysis?.knowledge_graph || fallbackPayload?.detailed_analysis?.knowledge_graph || null,
-                coherence: essayData.argument_analysis?.coherence || fallbackPayload?.detailed_analysis?.coherence || null
-            },
-            original_text: essayData.content || fallbackPayload?.original_text || ""
+            original_text: essayData.content || ""
           } as any);
         }
 
-        const { fetchDuplicateEssays } = await import("../../services/activityService");
+        // 3. Fetch duplicates
         const dupeGroups = await fetchDuplicateEssays(String(essayData.activity_id));
         const myDupeGroup = dupeGroups.find(g => g.essays.some(e => e.essayId === essayId));
         if (myDupeGroup && myDupeGroup.essays.length > 1) {

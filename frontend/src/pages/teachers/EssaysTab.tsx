@@ -301,7 +301,7 @@ export function EssaysTab() {
         </Card>
         <Card className="p-4 border-l-4 border-l-primary">
           <p className="text-sm text-neutral-500 font-medium">Average Grade</p>
-          <p className="text-2xl text-primary font-bold mt-1">{stats.avg.toFixed(1)}%</p>
+          <p className="text-2xl text-primary font-bold mt-1">{(stats.avg || 0).toFixed(1)}%</p>
         </Card>
       </div>
 
@@ -407,7 +407,7 @@ export function EssaysTab() {
                         essay.score >= 60 ? 'bg-amber-600 text-white' :
                         'bg-red-600 text-white'
                       }>
-                        {essay.score.toFixed(1)}%
+                        {(essay.score || 0).toFixed(1)}%
                       </Badge>
                     ) : (
                       <span className="text-sm text-neutral-400">--</span>

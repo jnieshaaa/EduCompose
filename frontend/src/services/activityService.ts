@@ -1140,37 +1140,68 @@ export const fetchStudentsByCourseAndSection = async (
       const activityDbId = resolveActivityIdForEssayFilter(activityId);
       if (activityDbId) {
         const studentIds = studentsData.map((s) => s.id);
-        const { data: essaysData, error: essaysError } = await supabase
-          .from("essays")
-          .select(
-            "student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error, file_path",
-          )
+        
+        // Fetch from essay_analysis_results which has the most up-to-date JSONB results
+        const { data: analysisResults, error: analysisError } = await supabase
+          .from("essay_analysis_results")
+          .select(`
+            student_id, 
+            overall_score, 
+            word_count, 
+            grammar_results, 
+            readability_results, 
+            argumentation_results, 
+            coherence_results,
+            grammar_score,
+            readability_score,
+            argument_strength_score,
+            coherence_score,
+            essays!inner(file_path, grading_error)
+          `)
           .eq("activity_id", activityDbId)
           .in("student_id", studentIds);
 
-        if (essaysError) {
-          console.error("Error loading essay submissions:", essaysError);
-        } else if (essaysData) {
-          essaysData.forEach((essay) => {
-            essaySubmissions.set(essay.student_id, {
-              coherence: essay.coherence_score
-                ? Number(essay.coherence_score)
-                : undefined,
-              readability: essay.readability_score
-                ? Number(essay.readability_score)
-                : undefined,
-              argumentative: essay.argument_strength_score
-                ? Number(essay.argument_strength_score)
-                : undefined,
-              grammar: essay.grammar_score
-                ? Number(essay.grammar_score)
-                : undefined,
-              score: essay.overall_score
-                ? Number(essay.overall_score)
-                : undefined,
-              wordCount: essay.word_count || undefined,
-              gradingError: essay.grading_error || undefined,
-              filePath: essay.file_path || undefined,
+        if (analysisError) {
+          console.error("Error loading analysis results:", analysisError);
+          
+          // Fallback to essays table if analysis results are not found
+          const { data: essaysData } = await supabase
+            .from("essays")
+            .select("student_id, coherence_score, readability_score, argument_strength_score, grammar_score, overall_score, word_count, grading_error, file_path")
+            .eq("activity_id", activityDbId)
+            .in("student_id", studentIds);
+
+          if (essaysData) {
+            essaysData.forEach((essay) => {
+              essaySubmissions.set(essay.student_id, {
+                coherence: Number(essay.coherence_score) || 0,
+                readability: Number(essay.readability_score) || 0,
+                argumentative: Number(essay.argument_strength_score) || 0,
+                grammar: Number(essay.grammar_score) || 0,
+                score: Number(essay.overall_score) || 0,
+                wordCount: essay.word_count || 0,
+                gradingError: essay.grading_error || undefined,
+                filePath: essay.file_path || undefined,
+              });
+            });
+          }
+        } else if (analysisResults) {
+          analysisResults.forEach((res: any) => {
+            // Parse JSONB scores if needed
+            const g = res.grammar_results || {};
+            const r = res.readability_results || {};
+            const a = res.argumentation_results || {};
+            const c = res.coherence_results || {};
+
+            essaySubmissions.set(res.student_id, {
+              coherence: c.score || res.coherence_score || 0,
+              readability: r.score || res.readability_score || 0,
+              argumentative: a.score || res.argument_strength_score || 0,
+              grammar: g.score || res.grammar_score || 0,
+              score: res.overall_score || 0,
+              wordCount: res.word_count || 0,
+              gradingError: res.essays?.grading_error || undefined,
+              filePath: res.essays?.file_path || undefined,
             });
           });
         }
@@ -2101,7 +2132,8 @@ export const gradeEssay = async (
 // Fetch analysis results for an essay
 export const fetchEssayAnalysis = async (
   studentId: string,
-  activityId: string,
+  activityId?: string,
+  essayId?: string,
 ): Promise<{
   analysis: Omit<import("../types/Essay").AnalysisResponse, "essay_id">;
   text: string;
@@ -2112,16 +2144,24 @@ export const fetchEssayAnalysis = async (
 } | null> => {
   try {
     const studentDbId = await resolveStudentIdForEssayFilter(studentId);
-    const activityDbId = resolveActivityIdForEssayFilter(activityId);
-    if (studentDbId == null || activityDbId == null) {
+    
+    let query = supabase
+      .from("essays")
+      .select("id, title, file_path")
+      .eq("student_id", studentDbId);
+
+    if (essayId) {
+      query = query.eq("id", essayId);
+    } else if (activityId) {
+      const activityDbId = resolveActivityIdForEssayFilter(activityId);
+      if (activityDbId) {
+        query = query.eq("activity_id", activityDbId);
+      }
+    } else {
       return null;
     }
 
-    const { data: essayData, error: essayError } = await supabase
-      .from("essays")
-      .select("id, title, file_path")
-      .eq("student_id", studentDbId)
-      .eq("activity_id", activityDbId)
+    const { data: essayData, error: essayError } = await query
       .order("submitted_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -2132,7 +2172,7 @@ export const fetchEssayAnalysis = async (
     }
 
     if (!essayData) {
-      throw new Error("No submission found for this activity. Please ensure you have submitted your essay.");
+      throw new Error("No submission found. Please ensure your essay has been submitted and analyzed.");
     }
 
     let analysisData = null;
