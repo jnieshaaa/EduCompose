@@ -581,14 +581,14 @@ export const AdminCoursesTab: React.FC = () => {
                animate={{ opacity: 1, scale: 1, y: 0 }}
                className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-neutral-100"
             >
-              <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+              <div className="px-8 py-4 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/10">
                     <BookOpen size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-medium text-neutral-900 tracking-tight leading-tight">{editingCourse ? "Update Course" : "Add Course"}</h2>
-                    <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Course Information</p>
+                    <h2 className="text-xl font-medium text-neutral-900 tracking-tight leading-tight">{editingCourse ? "Edit Course" : "Add Course"}</h2>
+                    <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Course Info</p>
                   </div>
                 </div>
                 <button onClick={() => setShowCourseModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -596,15 +596,15 @@ export const AdminCoursesTab: React.FC = () => {
                 </button>
               </div>
               
-              <form id="course-governance-form" onSubmit={addCourse} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <form id="course-governance-form" onSubmit={addCourse} className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                 <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
                    <div className="flex items-center gap-3 mb-2">
                      <SchoolIcon size={14} className="text-primary" />
-                      <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Details</h3>
+                      <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Basics</h3>
                    </div>
                    
                    <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Assigned Institution</label>
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
                     <select
                       required
                       value={selectedSchool}
@@ -670,18 +670,18 @@ export const AdminCoursesTab: React.FC = () => {
                           required
                           value={courseForm.course_code}
                           onChange={(e) => setCourseForm({ ...courseForm, course_code: e.target.value })}
-                          className="w-full h-12 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase font-mono"
+                          className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all uppercase font-mono"
                           placeholder="CS101"
                         />
                       </div>
                     </div>
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Course Title</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Course Name</label>
                       <input
                         required
                         value={courseForm.course_title}
                         onChange={(e) => setCourseForm({ ...courseForm, course_title: e.target.value })}
-                        className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                        className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                         placeholder="e.g. Introduction to Computational Logic"
                       />
                     </div>
@@ -711,7 +711,7 @@ export const AdminCoursesTab: React.FC = () => {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Credit Units</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Units</label>
                       <div className="relative group/units">
                         <Calculator className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/units:text-primary transition-colors" size={14} />
                         <input

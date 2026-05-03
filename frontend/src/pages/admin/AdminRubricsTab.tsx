@@ -58,16 +58,12 @@ export function AdminRubricsTab() {
         return;
       }
 
-      // 2. Query rubrics that belong to any admin OR are platform-wide (user_id is null)
-      let query = supabase.from("rubrics").select("*");
-      
-      if (adminIds.length > 0) {
-        query = query.or(`user_id.in.(${adminIds.join(',')}),user_id.is.null`);
-      } else {
-        query = query.is("user_id", null);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
+      // 2. Query rubrics that belong to any admin
+      const { data, error } = await supabase
+        .from("rubrics")
+        .select("*")
+        .in("user_id", adminIds)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setPlatformRubrics(data || []);
@@ -296,7 +292,7 @@ export function AdminRubricsTab() {
           </div>
           <h3 className="text-xl font-semibold text-neutral-900 tracking-tight">No rubrics found</h3>
           <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-2 max-w-sm mx-auto">
-            You haven't created any global rubrics yet.
+            No admin rubrics found. Click the button above to add one.
           </p>
           <Button
             onClick={handleCreateClick}

@@ -74,7 +74,7 @@ const Modal: React.FC<ModalProps> = ({
               transparent ? "bg-transparent" : "bg-white"
             } rounded-rl ${transparent ? "" : "shadow-xl"} w-full ${
               sizeClasses[size]
-            } ${className} flex flex-col max-h-[90vh]`}
+            } ${className} flex flex-col max-h-[92vh]`}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -82,7 +82,7 @@ const Modal: React.FC<ModalProps> = ({
           >
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between p-6 border-b border-neutral-200 flex-shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-neutral-900">
                   {title}
                 </h2>
@@ -96,7 +96,7 @@ const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Content */}
-            <div className={`p-6 ${contentClassName} overflow-y-auto flex-1 min-h-0`}>{children}</div>
+            <div className={`px-6 py-4 ${contentClassName} overflow-y-auto flex-1 min-h-0`}>{children}</div>
           </motion.div>
         </div>
       )}

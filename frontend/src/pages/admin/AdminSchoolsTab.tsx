@@ -497,8 +497,8 @@ export const AdminSchoolsTab: React.FC = () => {
                       <Building2 size={22} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Update School" : "Add School"}</h2>
-                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">School Details</p>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingSchool ? "Edit School" : "Add School"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">School Info</p>
                     </div>
                   </div>
                   <button onClick={() => { setShowSchoolModal(false); setEditingSchool(null); setSchoolForm({ name: "", code: "", departments: [] }); }} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -506,7 +506,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School Name</label>
@@ -519,7 +519,7 @@ export const AdminSchoolsTab: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Short Name / Code</label>
+                      <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Code</label>
                       <div className="relative group">
                         <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within:text-primary transition-colors" size={14} />
                         <input
@@ -536,7 +536,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   {!editingSchool && (
                     <div className="p-6 bg-neutral-50 rounded-[2rem] border border-neutral-100 space-y-6">
                       <div>
-                        <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Quick Setup</h3>
+                        <h3 className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-1">Starting Depts</h3>
                         <p className="text-xs text-neutral-500">Add starting departments for this school.</p>
                       </div>
                       
@@ -602,7 +602,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     onClick={addSchool} 
                     className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[140px]"
                   >
-                    {editingSchool ? "Save Changes" : "Save School"}
+                    {editingSchool ? "Update School" : "Save School"}
                   </Button>
                 </div>
               </motion.div>
@@ -617,14 +617,14 @@ export const AdminSchoolsTab: React.FC = () => {
                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
                  className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
               >
-                <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                <div className="px-8 py-4 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20">
                       <Layers size={22} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingDept ? "Edit Department" : "New Department"}</h2>
-                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Department Info</p>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingDept ? "Edit Dept" : "Add Dept"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Dept Info</p>
                     </div>
                   </div>
                   <button onClick={() => setShowDeptModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -632,7 +632,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="p-8 space-y-6">
+                <div className="p-6 space-y-6">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department Name</label>
                     <input
@@ -644,7 +644,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Short Name / ID</label>
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">ID / Code</label>
                     <input
                       type="text"
                       value={deptForm.code}
@@ -655,7 +655,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <div className="px-8 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -671,7 +671,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     onClick={addDepartment} 
                     className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20 px-8 h-10 min-w-[120px]"
                   >
-                    {editingDept ? "Save Changes" : "Save Department"}
+                    {editingDept ? "Update Dept" : "Save Dept"}
                   </Button>
                 </div>
               </motion.div>
@@ -686,14 +686,14 @@ export const AdminSchoolsTab: React.FC = () => {
                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
                  className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-neutral-100"
               >
-                <div className="px-8 py-6 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                <div className="px-8 py-4 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200">
                       <GraduationCap size={22} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Edit Program" : "New Program"}</h2>
-                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">Program Info</p>
+                      <h2 className="text-xl font-semibold text-neutral-900 tracking-tight leading-tight">{editingProgram ? "Edit Program" : "Add Program"}</h2>
+                      <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Prog Info</p>
                     </div>
                   </div>
                   <button onClick={() => setShowProgramModal(false)} className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-400 transition-colors">
@@ -701,7 +701,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="p-8 space-y-6">
+                <div className="p-6 space-y-6">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Program Name</label>
                     <input
@@ -724,7 +724,7 @@ export const AdminSchoolsTab: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="px-8 py-6 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <div className="px-8 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -740,7 +740,7 @@ export const AdminSchoolsTab: React.FC = () => {
                     onClick={addProgram} 
                     className="rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 px-8 h-10 min-w-[120px]"
                   >
-                    {editingProgram ? "Save Changes" : "Save Program"}
+                    {editingProgram ? "Update Program" : "Save Program"}
                   </Button>
                 </div>
               </motion.div>
