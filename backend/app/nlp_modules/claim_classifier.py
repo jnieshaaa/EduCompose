@@ -163,7 +163,10 @@ class TransformerClaimClassifier:
                 response = client.models.generate_content(
                     model=model_name,
                     contents=prompt,
-                    config={'response_mime_type': 'application/json'}
+                    config={
+                        'response_mime_type': 'application/json',
+                        'max_output_tokens': 4096
+                    }
                 )
             except Exception as model_err:
                 if "404" in str(model_err) and model_name == "gemini-1.5-flash":
@@ -171,11 +174,17 @@ class TransformerClaimClassifier:
                     response = client.models.generate_content(
                         model="gemini-1.5-flash-latest",
                         contents=prompt,
-                        config={'response_mime_type': 'application/json'}
+                        config={
+                            'response_mime_type': 'application/json',
+                            'max_output_tokens': 4096
+                        }
                     )
                 else:
                     raise model_err
             
+            if not response or not response.text:
+                return self._heuristic_classify(sentences)
+                
             data = json.loads(response.text)
             results = []
             for item in data:
@@ -267,12 +276,22 @@ class TransformerClaimClassifier:
                         else:
                             results.append({"component": "unknown", "confidence": 0.0})
                 else:
-                    # On any non-200 status, trigger heuristic fallback immediately
-                    logger.warning(f"HF API returned {response.status_code}. Using heuristics.")
-                    results.extend(self._heuristic_classify(batch))
+                    # On any non-200 status, trigger LLM fallback then heuristics
+                    logger.warning(f"HF API returned {response.status_code}. Attempting LLM fallback...")
+                    try:
+                        llm_results = await self._classify_llm(batch)
+                        results.extend(llm_results)
+                    except Exception as llm_err:
+                        logger.error(f"LLM fallback also failed: {llm_err}. Using heuristics.")
+                        results.extend(self._heuristic_classify(batch))
             except Exception as e:
-                logger.error(f"HF API request failed: {e}. Falling back to heuristics.")
-                results.extend(self._heuristic_classify(batch))
+                logger.error(f"HF API request failed: {e}. Attempting LLM fallback...")
+                try:
+                    llm_results = await self._classify_llm(batch)
+                    results.extend(llm_results)
+                except Exception as llm_err:
+                    logger.error(f"LLM fallback also failed: {llm_err}. Using heuristics.")
+                    results.extend(self._heuristic_classify(batch))
                 
         return results
 

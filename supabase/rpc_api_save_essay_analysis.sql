@@ -50,6 +50,10 @@ BEGIN
         ALTER TABLE public.essay_analysis_results ADD COLUMN generated_at timestamptz DEFAULT now();
     END IF;
 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='results') THEN
+        ALTER TABLE public.essay_analysis_results ADD COLUMN results jsonb;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='activity_id') THEN
         ALTER TABLE public.essay_analysis_results ADD COLUMN activity_id uuid;
     END IF;

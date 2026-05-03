@@ -430,6 +430,8 @@ Please return your response as a valid JSON object with this structure:
                 result_text = self._repair_incomplete_json(result_text)
             
             errors = self._parse_llm_response(result_text, text)
+            if json_incomplete:
+                logger.info(f"✓ Repaired JSON contains {len(errors)} errors")
             return errors
             
         except Exception as e:
@@ -444,10 +446,10 @@ Please return your response as a valid JSON object with this structure:
     
     def _build_grammar_prompt(self, text: str, sentences: List[str]) -> str:
         """Build prompt for LLM grammar checking with enhanced paragraph splitting and context-aware spelling"""
-        # Limit text length to avoid token limits (keep it reasonable)
-        max_chars = 12000
+        # Limit text length to avoid token limits (keep it reasonable for Flash models)
+        max_chars = 8000 
         if len(text) > max_chars:
-            text = text[:max_chars] + "... [text truncated]"
+            text = text[:max_chars] + "... [text truncated for analysis]"
         
         prompt = f"""Analyze the following essay for structural organization, style, logical flow, and complex grammatical issues.
 
@@ -458,149 +460,123 @@ Instructions:
 1. Identify structural, stylistic, and complex grammatical errors.
 2. For each issue, provide:
    - type: "grammar" | "spelling" | "punctuation" | "structure" | "style"
-   - message: A brief, professional explanation of why it is an error or how it can be improved.
-   - offset: Exact character position (0-based) from the start of the text.
+   - message: A brief, professional explanation.
+   - offset: Exact character position (0-based) from the start.
    - errorLength: Number of characters the issue spans.
-   - text: The actual text at that position for verification.
-   - suggestion: A corrected version or improvement recommendation.
-   - context: ~20 characters before and after the issue.
+   - text: The actual text at that position.
+   - suggestion: A corrected version.
+   - context: ~20 characters surrounding the issue.
 
 3. LOGICAL PARAGRAPHING (type: "structure"):
-   - If the text is a single "wall of text," identify logical transition points where a new paragraph should begin.
-   - Focus on shifts in topic, time, or perspective.
+   - If the text is a single "wall of text," suggest paragraph breaks at logical transition points.
    - For each break: Set offset to the end of the sentence, errorLength to 1, and suggestion to ".\\n\\n".
 
-4. STYLE AND TONE (type: "style"):
-   - Identify overly informal language, slang, or contractions if inappropriate for the essay's context.
-   - Flag repetitive sentence starters or redundant phrases.
-
-5. ACCURACY AND LENIENCY:
-   - Do NOT flag valid technical terms, proper nouns, or brand names.
-   - For spelling/grammar: Focus on errors that change the meaning or significantly impact readability. 
-   - Be lenient with minor stylistic choices in personal narratives.
-
-6. RETURN FORMAT:
-Return ONLY a valid JSON object with this exact structure:
+4. RETURN FORMAT:
+Return ONLY a valid JSON object with an "errors" array. Do not include markdown formatting or extra text.
 {{
   "errors": [
     {{
-      "type": "structure",
-      "message": "Start a new paragraph here to separate the introduction from the main body.",
-      "offset": 450,
-      "errorLength": 1,
-      "text": ".",
-      "suggestion": ".\\n\\n",
-      "context": "end of intro. Start of body"
+      "type": "grammar",
+      "message": "...",
+      "offset": 0,
+      "errorLength": 0,
+      "text": "...",
+      "suggestion": "...",
+      "context": "..."
     }}
   ]
 }}
 """
-        
         return prompt
     
     def _repair_incomplete_json(self, json_text: str) -> str:
         """Attempt to repair incomplete JSON by closing brackets and fixing syntax"""
         if not json_text:
-            return json_text
+            return "{ \"errors\": [] }"
         
         # Remove trailing incomplete content
         json_text = json_text.strip()
         
-        # Try to find the last complete error object
-        # Look for patterns like "}, {" or "}]" to identify where truncation happened
-        if json_text.startswith("{"):
-            # JSON object format: {"errors": [...]}
-            if '"errors"' in json_text:
-                # Try to find last complete error object by looking for complete patterns
-                # Find all positions where we have complete error objects: "},"
-                last_complete_pos = -1
-                i = 0
-                while i < len(json_text):
-                    # Look for "},\n" or "}," patterns that indicate complete objects
-                    if json_text[i:i+2] == '},':
-                        # Check if this looks like end of an error object
-                        # Look backwards to see if we have a complete structure
-                        test_pos = i + 1
-                        # Count backwards to see if this is balanced
-                        brace_count = 0
-                        bracket_count = 0
-                        for j in range(test_pos, -1, -1):
-                            if json_text[j] == '}':
-                                brace_count += 1
-                            elif json_text[j] == '{':
-                                brace_count -= 1
-                            elif json_text[j] == ']':
-                                bracket_count += 1
-                            elif json_text[j] == '[':
-                                bracket_count -= 1
-                            if brace_count == 0 and bracket_count >= 0:
-                                last_complete_pos = test_pos
-                                break
-                    i += 1
-                
-                # If we found a complete position, extract up to there
-                if last_complete_pos > 100:  # Make sure we got something substantial
-                    potential_json = json_text[:last_complete_pos]
-                    # Close brackets/braces
-                    open_braces = potential_json.count("{")
-                    close_braces = potential_json.count("}")
-                    open_brackets = potential_json.count("[")
-                    close_brackets = potential_json.count("]")
-                    
-                    # If we're in an errors array, close it first
-                    if open_brackets > close_brackets:
-                        potential_json += "]"
-                    # Then close the main object
-                    if open_braces > close_braces:
-                        potential_json += "}"
-                    
-                    return potential_json
-        elif json_text.startswith("["):
-            # Array format: [...]
-            # Find last complete error object
-            last_complete_pos = json_text.rfind('},')
-            if last_complete_pos > 0:
-                potential_json = json_text[:last_complete_pos + 1] + ']'
-                return potential_json
-        
-        # Fallback: try to close incomplete strings and then brackets
-        # Look for unterminated strings (odd number of quotes at the end)
+        # If it doesn't start with { or [, it's likely gibberish
+        if not (json_text.startswith("{") or json_text.startswith("[")):
+            # Try to find the first { or [
+            first_brace = json_text.find("{")
+            first_bracket = json_text.find("[")
+            start = -1
+            if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+                start = first_brace
+            elif first_bracket != -1:
+                start = first_bracket
+            
+            if start != -1:
+                json_text = json_text[start:]
+            else:
+                return "{ \"errors\": [] }"
+
+        # If it looks like it was cut off in the middle of a property name or value
+        # we need to find the last complete object
+        if "}," in json_text:
+            last_obj_end = json_text.rfind("}")
+            # If the last character isn't }, we might have truncated at , or in middle of next obj
+            potential = json_text[:last_obj_end+1]
+            # Verify if it's the end of an array or object
+            if "]" not in json_text[last_obj_end:]:
+                # We need to close the array and the main object
+                if potential.count("[") > potential.count("]"):
+                    potential += "]"
+                if potential.count("{") > potential.count("}"):
+                    potential += "}"
+                return potential
+
+        # Robust counter-based repair
         result = json_text
-        # Count unescaped quotes
-        quote_count = 0
+        open_braces = 0
+        open_brackets = 0
+        in_string = False
         escaped = False
-        for char in result:
-            if char == '\\' and not escaped:
-                escaped = True
-                continue
+        
+        clean_result = ""
+        for i, char in enumerate(result):
             if char == '"' and not escaped:
-                quote_count += 1
-            escaped = False
+                in_string = not in_string
+            
+            if not in_string:
+                if char == '{': open_braces += 1
+                elif char == '}': open_braces -= 1
+                elif char == '[': open_brackets += 1
+                elif char == ']': open_brackets -= 1
+            
+            escaped = (char == '\\' and not escaped)
+            clean_result += char
+            
+            # If we've balanced the main structure, we can stop
+            if not in_string and open_braces == 0 and open_brackets == 0 and i > 10:
+                break
         
-        # If odd number of quotes, we likely have an unterminated string
-        # Try to find the last complete property/value pair
-        if quote_count % 2 != 0:
-            # Find last complete property by looking for ": " followed by value then ","
-            last_comma = result.rfind(',')
-            if last_comma > 0:
-                # Check if before this comma we have a complete property
-                before_comma = result[:last_comma]
-                if ': ' in before_comma:
-                    # Try to extract up to last complete property
-                    result = before_comma
+        # If still in string, close it
+        if in_string:
+            clean_result += '"'
+            in_string = False
         
-        # Close brackets and braces
-        open_braces = result.count("{")
-        close_braces = result.count("}")
-        open_brackets = result.count("[")
-        close_brackets = result.count("]")
+        # Close all open structures in reverse order
+        # This is a bit naive but works for truncated JSON
+        # We try to find the last valid comma if we're between elements
+        if not in_string:
+            # Remove trailing commas
+            clean_result = clean_result.rstrip().rstrip(',')
+            
+            if open_brackets > 0:
+                # If we are in the middle of an object in the array, close it first
+                if open_braces > 1: # Assuming main object + one internal
+                    clean_result += "}" * (open_braces - 1)
+                clean_result += "]"
+                open_brackets = 0 # reset for final close
+                open_braces = 1 # reset to close the main wrapper
+            
+            if open_braces > 0:
+                clean_result += "}" * open_braces
         
-        if open_brackets > close_brackets:
-            result += "]" * (open_brackets - close_brackets)
-        if open_braces > close_braces:
-            result += "}" * (open_braces - close_braces)
-        
-        return result
+        return clean_result
     
     def _parse_llm_response(self, response_text: str, original_text: str) -> List[Dict[str, Any]]:
         """Parse LLM response into error format"""
@@ -891,7 +867,7 @@ Return ONLY a valid JSON object with this exact structure:
         if not self.hf_api_token:
             return []
             
-        api_url = "https://api-inference.huggingface.co/models/pszemraj/flan-t5-large-grammar-synthesis"
+        api_url = "https://api-inference.huggingface.co/models/vennify/t5-base-grammar-correction"
         headers = {"Authorization": f"Bearer {self.hf_api_token}"}
         
         errors = []
