@@ -121,6 +121,9 @@ export function NotificationDropdown({
       let targetPath = '/Student/Submit';
       switch (notification.type) {
         case "essay_graded":
+          if (essayId) params.essayId = essayId;
+          targetPath = '/Student/Essays/Result';
+          break;
         case "essay_feedback":
           if (essayId) params.essayId = essayId;
           targetPath = '/Student/Feedback';

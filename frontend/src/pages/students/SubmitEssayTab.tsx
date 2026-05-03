@@ -172,7 +172,7 @@ export function SubmitEssayTab() {
           setSubmissionDate(new Date(essayData.submitted_at).toLocaleDateString(undefined, {
              month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
           }));
-          setEssayScore(essayData.overall_score ?? null);
+          setEssayScore(essayData.overall_score !== undefined && essayData.overall_score !== null ? Number(essayData.overall_score) : null);
           if (essayData.title) {
             setSelectedFileName(essayData.title);
           } else if (essayData.file_path) {

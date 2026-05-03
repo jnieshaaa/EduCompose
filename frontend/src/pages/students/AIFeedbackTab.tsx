@@ -72,8 +72,8 @@ export function AIFeedbackTab() {
         const mapped: FeedbackData = {
           essayTitle: params.activityTitle || result.title || "Your Essay",
           submittedDate: analysis.generated_at ? new Date(analysis.generated_at).toLocaleDateString() : new Date().toLocaleDateString(),
-          overallScore: Math.round(analysis.scores?.overall || 0),
-          aiConfidence: Math.round(analysis.scores?.knowledge_graph || 95),
+          overallScore: Math.round(analysis.scores?.overall ?? 0),
+          aiConfidence: Math.round(analysis.scores?.knowledge_graph ?? 95),
           summary: analysis.diagnostic_summary?.overall_summary || "Score report is ready!",
           criteria: [
             { 

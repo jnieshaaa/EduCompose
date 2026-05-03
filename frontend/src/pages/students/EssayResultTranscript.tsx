@@ -116,16 +116,16 @@ export function EssayResultTranscript() {
           .maybeSingle();
  
         if (analysisData) {
-          const baseData = analysisData.analysis_data as any || {};
-          const fallbackText = analysisData.original_text || baseData?.original_text || baseData?.text || essayData?.content || "";
+          const baseData = analysisData.results as any || {};
+          const fallbackText = analysisData.content_text || analysisData.results?.text || baseData?.text || essayData?.content || "";
           
           // Normalize scores from analysis results table
           const scores = {
-            overall: analysisData.overall_score || baseData?.scores?.overall || 0,
-            grammar: analysisData.grammar_score || baseData?.scores?.grammar || 0,
-            readability: analysisData.readability_score || baseData?.scores?.readability || 0,
-            coherence: analysisData.coherence_score || baseData?.scores?.coherence || 0,
-            argument_strength: analysisData.argument_strength_score || baseData?.scores?.argument_strength || 0
+            overall: analysisData.overall_score ?? baseData?.scores?.overall ?? 0,
+            grammar: analysisData.grammar_score ?? baseData?.scores?.grammar ?? 0,
+            readability: analysisData.readability_score ?? baseData?.scores?.readability ?? 0,
+            coherence: analysisData.coherence_score ?? baseData?.scores?.coherence ?? 0,
+            argument_strength: analysisData.argument_strength_score ?? baseData?.scores?.argument_strength ?? 0
           };
 
           const detailedAnalysis = analysisData.detailed_analysis || baseData?.detailed_analysis || {};
@@ -154,11 +154,11 @@ export function EssayResultTranscript() {
           // Fallback to essay table columns
           const fallbackPayload = essayData?.analysis_payload as any || {};
           const scores = {
-            overall: Number(essayData.overall_score) || fallbackPayload?.scores?.overall || 0,
-            grammar: Number(essayData.grammar_score) || fallbackPayload?.scores?.grammar || 0,
-            readability: Number(essayData.readability_score) || fallbackPayload?.scores?.readability || 0,
-            coherence: Number(essayData.coherence_score) || fallbackPayload?.scores?.coherence || 0,
-            argument_strength: Number(essayData.argument_strength_score) || fallbackPayload?.scores?.argument_strength || 0
+            overall: (essayData.overall_score !== null ? Number(essayData.overall_score) : null) ?? fallbackPayload?.scores?.overall ?? 0,
+            grammar: (essayData.grammar_score !== null ? Number(essayData.grammar_score) : null) ?? fallbackPayload?.scores?.grammar ?? 0,
+            readability: (essayData.readability_score !== null ? Number(essayData.readability_score) : null) ?? fallbackPayload?.scores?.readability ?? 0,
+            coherence: (essayData.coherence_score !== null ? Number(essayData.coherence_score) : null) ?? fallbackPayload?.scores?.coherence ?? 0,
+            argument_strength: (essayData.argument_strength_score !== null ? Number(essayData.argument_strength_score) : null) ?? fallbackPayload?.scores?.argument_strength ?? 0
           };
 
           setAnalysis({

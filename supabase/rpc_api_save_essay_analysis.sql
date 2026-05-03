@@ -42,6 +42,22 @@ BEGIN
         ALTER TABLE public.essay_analysis_results ADD COLUMN overall_score float8;
     END IF;
 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='grammar_score') THEN
+        ALTER TABLE public.essay_analysis_results ADD COLUMN grammar_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='readability_score') THEN
+        ALTER TABLE public.essay_analysis_results ADD COLUMN readability_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='coherence_score') THEN
+        ALTER TABLE public.essay_analysis_results ADD COLUMN coherence_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='argument_strength_score') THEN
+        ALTER TABLE public.essay_analysis_results ADD COLUMN argument_strength_score float8;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essay_analysis_results' AND column_name='word_count') THEN
         ALTER TABLE public.essay_analysis_results ADD COLUMN word_count integer;
     END IF;
@@ -62,6 +78,47 @@ BEGIN
         ALTER TABLE public.essay_analysis_results ADD CONSTRAINT essay_analysis_results_essay_id_key UNIQUE (essay_id);
     END IF;
     
+    -- Ensure essays table has scoring columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='overall_score') THEN
+        ALTER TABLE public.essays ADD COLUMN overall_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='grammar_score') THEN
+        ALTER TABLE public.essays ADD COLUMN grammar_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='readability_score') THEN
+        ALTER TABLE public.essays ADD COLUMN readability_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='coherence_score') THEN
+        ALTER TABLE public.essays ADD COLUMN coherence_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='argument_strength_score') THEN
+        ALTER TABLE public.essays ADD COLUMN argument_strength_score float8;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='grammar_errors') THEN
+        ALTER TABLE public.essays ADD COLUMN grammar_errors jsonb;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='style_issues') THEN
+        ALTER TABLE public.essays ADD COLUMN style_issues jsonb;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='argument_analysis') THEN
+        ALTER TABLE public.essays ADD COLUMN argument_analysis jsonb;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='recommendations') THEN
+        ALTER TABLE public.essays ADD COLUMN recommendations jsonb;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='essays' AND column_name='word_count') THEN
+        ALTER TABLE public.essays ADD COLUMN word_count integer;
+    END IF;
+
     -- Ensure notifications table has navigation columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='notifications' AND column_name='related_id') THEN
         ALTER TABLE public.notifications ADD COLUMN related_id text;
@@ -102,21 +159,25 @@ BEGIN
   
   UPDATE public.essays
   SET
-    grammar_score = (p_analysis_data->'scores'->>'grammar')::float8,
-    readability_score = (p_analysis_data->'scores'->>'readability')::float8,
-    coherence_score = (p_analysis_data->'scores'->>'coherence')::float8,
-    argument_strength_score = (p_analysis_data->'scores'->>'argument_strength')::float8,
-    overall_score = v_overall_score,
-    word_count = (p_analysis_data->>'word_count')::integer,
-    grammar_errors = p_analysis_data->'detailed_analysis'->'grammar'->'errors',
-    style_issues = p_analysis_data->'detailed_analysis'->'readability'->'issues',
-    argument_analysis = jsonb_build_object(
-      'argumentation', p_analysis_data->'detailed_analysis'->'argumentation',
-      'knowledge_graph', p_analysis_data->'detailed_analysis'->'knowledge_graph',
-      'coherence', p_analysis_data->'detailed_analysis'->'coherence',
-      'plagiarism_results', p_plagiarism_data,
-      'ai_detection_results', p_ai_detection_data
-    ),
+    grammar_score = COALESCE((p_analysis_data->'scores'->>'grammar')::float8, grammar_score),
+    readability_score = COALESCE((p_analysis_data->'scores'->>'readability')::float8, readability_score),
+    coherence_score = COALESCE((p_analysis_data->'scores'->>'coherence')::float8, coherence_score),
+    argument_strength_score = COALESCE((p_analysis_data->'scores'->>'argument_strength')::float8, argument_strength_score),
+    overall_score = COALESCE(v_overall_score, overall_score),
+    word_count = COALESCE((p_analysis_data->>'word_count')::integer, word_count),
+    grammar_errors = COALESCE(p_analysis_data->'detailed_analysis'->'grammar'->'errors', grammar_errors),
+    style_issues = COALESCE(p_analysis_data->'detailed_analysis'->'readability'->'issues', style_issues),
+    argument_analysis = CASE 
+      WHEN (p_analysis_data->'detailed_analysis') IS NOT NULL OR p_plagiarism_data IS NOT NULL OR p_ai_detection_data IS NOT NULL THEN
+        jsonb_build_object(
+          'argumentation', COALESCE(p_analysis_data->'detailed_analysis'->'argumentation', argument_analysis->'argumentation'),
+          'knowledge_graph', COALESCE(p_analysis_data->'detailed_analysis'->'knowledge_graph', argument_analysis->'knowledge_graph'),
+          'coherence', COALESCE(p_analysis_data->'detailed_analysis'->'coherence', argument_analysis->'coherence'),
+          'plagiarism_results', COALESCE(p_plagiarism_data, argument_analysis->'plagiarism_results'),
+          'ai_detection_results', COALESCE(p_ai_detection_data, argument_analysis->'ai_detection_results')
+        )
+      ELSE argument_analysis
+    END,
     status = 'analyzed',
     updated_at = now()
   WHERE id = p_essay_id;
@@ -136,6 +197,10 @@ BEGIN
     ai_detection_results,
     ai_score,
     overall_score,
+    grammar_score,
+    readability_score,
+    coherence_score,
+    argument_strength_score,
     word_count,
     generated_at,
     updated_at,
@@ -155,6 +220,10 @@ BEGIN
     p_ai_detection_data,
     COALESCE((p_ai_detection_data->>'ai_score')::float8, 0),
     v_overall_score,
+    (p_analysis_data->'scores'->>'grammar')::float8,
+    (p_analysis_data->'scores'->>'readability')::float8,
+    (p_analysis_data->'scores'->>'coherence')::float8,
+    (p_analysis_data->'scores'->>'argument_strength')::float8,
     (p_analysis_data->>'word_count')::integer,
     now(),
     now(),
@@ -170,9 +239,13 @@ BEGIN
     ai_detection_results = COALESCE(EXCLUDED.ai_detection_results, essay_analysis_results.ai_detection_results),
     ai_score = COALESCE(EXCLUDED.ai_score, essay_analysis_results.ai_score),
     overall_score = COALESCE(EXCLUDED.overall_score, essay_analysis_results.overall_score),
+    grammar_score = COALESCE(EXCLUDED.grammar_score, essay_analysis_results.grammar_score),
+    readability_score = COALESCE(EXCLUDED.readability_score, essay_analysis_results.readability_score),
+    coherence_score = COALESCE(EXCLUDED.coherence_score, essay_analysis_results.coherence_score),
+    argument_strength_score = COALESCE(EXCLUDED.argument_strength_score, essay_analysis_results.argument_strength_score),
     word_count = COALESCE(EXCLUDED.word_count, essay_analysis_results.word_count),
     updated_at = now(),
-    results = EXCLUDED.results;
+    results = COALESCE(essay_analysis_results.results, '{}'::jsonb) || EXCLUDED.results;
 
   -- Notify student with navigation metadata
   SELECT title INTO v_activity_title FROM public.essay_activities WHERE id = v_activity_id;
