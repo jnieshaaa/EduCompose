@@ -223,7 +223,7 @@ export function AddStudentDialog({
 
   return (
     <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200 max-h-[90vh] flex flex-col">
         <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary/10 rounded-lg text-primary">
@@ -261,7 +261,8 @@ export function AddStudentDialog({
         )}
 
         {blockId && activeTab === "existing" ? (
-          <form onSubmit={handleAddExisting} className="p-6 space-y-4 relative">
+          <form onSubmit={handleAddExisting} className="flex-1 flex flex-col min-h-0 relative">
+            <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
              {error && (
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 animate-in fade-in duration-300">
                 <div className="bg-white border border-neutral-200 shadow-2xl rounded-2xl p-6 text-center space-y-4 max-w-[280px] scale-in-center">
@@ -308,7 +309,8 @@ export function AddStudentDialog({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t border-neutral-100 bg-neutral-50/30">
               <Button type="button" onClick={onClose} variant="ghost">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || existingStudents.length === 0} className="bg-primary text-white px-8">
                 {isSubmitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
@@ -317,7 +319,8 @@ export function AddStudentDialog({
             </div>
           </form>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 relative">
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 relative">
+            <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
             {/* Error Overlay (Centered within form) */}
             {error && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 animate-in fade-in duration-300">
@@ -500,16 +503,17 @@ export function AddStudentDialog({
                 </div>
               </>
             )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" onClick={onClose} variant="ghost">Cancel</Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-primary text-white px-8">
-              {isSubmitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-              Register Student
-            </Button>
-          </div>
-        </form>
+            </div>
+            </div>
+ 
+            <div className="flex justify-end gap-3 p-6 border-t border-neutral-100 bg-neutral-50/30">
+              <Button type="button" onClick={onClose} variant="ghost">Cancel</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-primary text-white px-8">
+                {isSubmitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Register Student
+              </Button>
+            </div>
+          </form>
         )}
       </div>
     </div>
