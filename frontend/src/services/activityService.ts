@@ -2207,16 +2207,45 @@ export const fetchEssayAnalysis = async (
     }
 
     // Normalize analysisData from essay_analysis_results if it doesn't have the expected structure
-    // This happens when data is stored in individual columns instead of a single 'results' or 'scores' JSON
+    // This handles both the legacy 'results' column and the newer individual JSONB columns
     if (analysisData && !analysisData.scores) {
-      // Priority 1: Check legacy 'results' column which might contain the full object
-      if (analysisData.results && analysisData.results.scores) {
+      // Priority 1: Check if 'results' column contains the full structured object
+      let resultsObj = analysisData.results;
+      if (typeof resultsObj === 'string') {
+        try { resultsObj = JSON.parse(resultsObj); } catch { resultsObj = null; }
+      }
+      if (resultsObj && typeof resultsObj === 'object' && resultsObj.scores) {
         analysisData = {
           ...analysisData,
-          ...analysisData.results
+          ...resultsObj
         };
       } 
-      // Priority 2: Map individual columns added in Migration 18
+      // Priority 2: Map individual JSONB columns (grammar_results, readability_results, etc.)
+      else if (analysisData.grammar_results || analysisData.readability_results || analysisData.argument_results || analysisData.coherence_results) {
+        const g = analysisData.grammar_results || {};
+        const r = analysisData.readability_results || {};
+        const a = analysisData.argument_results || {};
+        const c = analysisData.coherence_results || {};
+
+        analysisData = {
+          ...analysisData,
+          scores: {
+            overall: analysisData.overall_score || (analysisData.results?.scores?.overall) || 0,
+            grammar: g.score || analysisData.grammar_score || 0,
+            readability: r.score || analysisData.readability_score || 0,
+            coherence: c.score || analysisData.coherence_score || 0,
+            argument_strength: a.score || analysisData.argument_strength_score || 0,
+            knowledge_graph: analysisData.knowledge_graph_score || 0
+          },
+          detailed_analysis: {
+            grammar: g.errors ? g : { score: g.score || 0, errors: analysisData.grammar_errors || [] },
+            readability: r.issues ? r : { score: r.score || 0, issues: analysisData.style_issues || [] },
+            coherence: c.paragraph_unity ? c : { score: c.score || 0, analysis: analysisData.argument_analysis?.coherence },
+            argumentation: a.graph ? a : { score: a.score || 0, analysis: analysisData.argument_analysis?.argumentation }
+          }
+        };
+      }
+      // Priority 3: Map legacy individual score columns
       else if (analysisData.overall_score !== undefined && analysisData.overall_score !== null) {
         analysisData = {
           ...analysisData,
@@ -2252,7 +2281,7 @@ export const fetchEssayAnalysis = async (
 
     return {
       analysis: analysisData,
-      text: analysisData.original_text || analysisData.content || "",
+      text: analysisData.original_text || analysisData.content || analysisData.content_text || "",
       title: essayData.title || "Essay Analysis",
       filePath: essayData.file_path || analysisData.file_path,
       plagiarismResults: analysisData.plagiarism_results,
