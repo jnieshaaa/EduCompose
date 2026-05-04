@@ -47,7 +47,7 @@ export function ProgramsTab() {
   //   }
   // };
 
-  const handleEditProgram = (program: Program) => {
+  const handleEditProgram = (_program: Program) => {
   };
 
   const handleArchiveProgram = (program: Program) => {

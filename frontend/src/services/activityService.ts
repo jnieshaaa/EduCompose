@@ -371,7 +371,7 @@ export const initializePlatformRubrics = async (): Promise<number> => {
 
       if (!exists) {
         // Insert platform rubric (database will assign ID automatically)
-        const { data: newRubric, error } = await supabase
+        const { error } = await supabase
           .from("rubrics")
           .insert({
             name: template.name,

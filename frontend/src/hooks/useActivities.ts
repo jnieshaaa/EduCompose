@@ -148,7 +148,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
           // Filter by activity_id if possible, though multi-tenant isolation is usually enough
           filter: activityId ? `activity_id=eq.${activityId}` : undefined,
         },
-        async (payload: any) => {
+        async () => {
           // Re-fetch students to get updated status and scores
           const updatedStudents = await fetchStudentsByCourseAndSection(
             sectionId,

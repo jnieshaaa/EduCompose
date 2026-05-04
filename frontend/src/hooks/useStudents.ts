@@ -115,7 +115,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       
       // Filter by blockId in JS if we removed !inner from the query
       if (blockId) {
-        const preFilterCount = result.length;
         result = result.filter(s => 
           (s.block_students || []).some((bs: any) => bs.block_id === blockId)
         );

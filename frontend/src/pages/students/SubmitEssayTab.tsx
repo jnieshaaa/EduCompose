@@ -248,7 +248,7 @@ export function SubmitEssayTab() {
             table: 'essays',
             filter: `student_id=eq.${user.auth_id}`
           },
-          (payload) => {
+          () => {
             loadContent(); // Refresh everything when a change occurs
           }
         )
