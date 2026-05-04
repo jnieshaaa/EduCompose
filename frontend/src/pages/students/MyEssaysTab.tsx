@@ -52,7 +52,7 @@ export function MyEssaysTab() {
 
         const { data: essaysData, error } = await supabase
           .from('essays')
-          .select('id, title, file_path, content, submitted_at, status, essay_activities(id, title), classes(name)')
+          .select('id, title, file_path, content, submitted_at, status, essay_activities(id, title, courses(course_title, course_code)), blocks(name, year)')
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: false });
 
@@ -83,7 +83,14 @@ export function MyEssaysTab() {
             hasTeacherFeedback: e.status === 'reviewed',
             activityId: (e.essay_activities as any)?.id,
             studentCode: studentCode,
-            courseName: (e.classes as any)?.name || 'General',
+            courseName: (() => {
+              const courseCode = (e.essay_activities as any)?.courses?.course_code;
+              const blockObj = e.blocks as any;
+              const blockLabel = blockObj ? `${blockObj.year}${blockObj.name}` : null;
+              if (courseCode && blockLabel) return `${courseCode} - ${blockLabel}`;
+              if (courseCode) return courseCode;
+              return 'General';
+            })(),
             filePath: e.file_path,
             content: e.content,
           };

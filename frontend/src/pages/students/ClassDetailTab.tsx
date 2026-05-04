@@ -91,7 +91,6 @@ export function ClassDetailTab() {
           .eq("student_id", student.id);
 
         let currentBlockId: string | null = null;
-        let programId: string | null = null;
         let sectionName = "N/A";
 
         if (enrollments) {
@@ -105,7 +104,6 @@ export function ClassDetailTab() {
             const matchingTpl = tpls.find((tpl: any) => String(tpl.course_load_id) === String(classId));
             if (matchingTpl) {
               currentBlockId = ent.block_id ? String(ent.block_id) : null;
-              programId = matchingTpl.program_id ? String(matchingTpl.program_id) : null;
               sectionName = `${block.year}${block.name}`;
               break;
             }
@@ -135,13 +133,12 @@ export function ClassDetailTab() {
         let query = supabase
           .from("essay_activities")
           .select("*")
+          .eq("course_id", tcl.course_id)
           .order("created_at", { ascending: false });
 
-        const filterParts = [`course_id.eq.${tcl.course_id}`];
-        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.cs.{${currentBlockId}}`);
-        if (programId && programId !== "undefined") filterParts.push(`program_id.eq.${programId}`);
-
-        query = query.or(filterParts.join(','));
+        if (currentBlockId && currentBlockId !== "undefined") {
+          query = query.or(`block_id.is.null,block_id.cs.{${currentBlockId}}`);
+        }
 
         const { data: activityRows, error: activitiesError } = await query;
         if (activitiesError) throw activitiesError;
