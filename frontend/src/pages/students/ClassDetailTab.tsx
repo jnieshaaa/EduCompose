@@ -138,7 +138,7 @@ export function ClassDetailTab() {
           .order("created_at", { ascending: false });
 
         const filterParts = [`course_id.eq.${tcl.course_id}`];
-        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.eq.${currentBlockId}`);
+        if (currentBlockId && currentBlockId !== "undefined") filterParts.push(`block_id.cs.{${currentBlockId}}`);
         if (programId && programId !== "undefined") filterParts.push(`program_id.eq.${programId}`);
 
         query = query.or(filterParts.join(','));
