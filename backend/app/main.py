@@ -119,7 +119,7 @@ async def startup_event():
     # Create tables if they don't exist
     from .database import engine
     from . import models
-    models.Base.metadata.create_all(bind=engine)
+    # models.Base.metadata.create_all(bind=engine) # Disabled to prevent schema conflicts with Supabase
     
     # NLP warmup can take time (NLTK downloads), so we run it in background
     # to avoid Railway initial request timeouts.

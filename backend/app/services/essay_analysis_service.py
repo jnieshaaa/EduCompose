@@ -73,14 +73,20 @@ class EssayAnalysisService:
         
         # Apply rubric scoring if rubric_id is provided
         if rubric_id:
+            logger.info(f"Attempting to apply rubric scoring for ID: {rubric_id}")
             rubric_data = await self._fetch_rubric(rubric_id)
             if rubric_data:
-                rubric_scores = rubric_scoring_service.score_with_rubric(
-                    rubric_data,
-                    analysis_result
-                )
-                analysis_result["rubric_scores"] = rubric_scores
-            # Note: _fetch_rubric already logs warnings/errors when rubric cannot be fetched
+                try:
+                    rubric_scores = rubric_scoring_service.score_with_rubric(
+                        rubric_data,
+                        analysis_result
+                    )
+                    analysis_result["rubric_scores"] = rubric_scores
+                    logger.info(f"Successfully applied rubric scoring for: {rubric_data.get('name')}")
+                except Exception as e:
+                    logger.error(f"Error during rubric scoring calculation: {e}")
+            else:
+                logger.warning(f"Rubric {rubric_id} could not be fetched. Rubric scores will be missing.")
         
         return analysis_result
     
@@ -883,7 +889,7 @@ class EssayAnalysisService:
                         text("""
                             SELECT id, name, description, criteria, programs, grading_intensity
                             FROM rubrics
-                            WHERE id::text = :rubric_id
+                            WHERE CAST(id AS TEXT) = :rubric_id
                         """),
                         {"rubric_id": str(rubric_id)}
                     )
@@ -892,7 +898,7 @@ class EssayAnalysisService:
                     if row:
                         return self._row_to_rubric_dict(row)
                     else:
-                        logger.warning(f"Rubric {rubric_id} not found in database")
+                        logger.warning(f"Rubric {rubric_id} not found in current database ({engine.name})")
                         return None
                     
         except (OperationalError, DatabaseError) as e:
