@@ -20,7 +20,6 @@ export const sendCodeEmail = async (params: {
   toName?: string;
 }) => {
   if (!SERVICE_ID || !FORGOT_PASSWORD_TEMPLATE_ID || !PUBLIC_KEY) {
-    console.warn("EmailJS (Code) not configured. Skipping email.");
     return;
   }
 
@@ -64,7 +63,6 @@ export const sendUserWelcomeEmail = async (params: {
     : FORGOT_PASSWORD_TEMPLATE_ID;
 
   if (!SERVICE_ID || !templateId || !PUBLIC_KEY) {
-    console.warn("EmailJS not configured. Skipping email.");
     return;
   }
 

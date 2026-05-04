@@ -29,7 +29,6 @@ export const exportTranscriptNative = async (data: any) => {
     try {
         pdf.addImage(logoUrl, 'PNG', margin, 15, 8, 8);
     } catch (e) {
-        console.warn("Logo not found at /EduCompose.png, skipping image header");
     }
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);

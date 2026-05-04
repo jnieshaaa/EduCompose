@@ -147,7 +147,6 @@ export const AdminCoursesTab: React.FC = () => {
           .eq("id", editingCourse.id);
         if (error) throw error;
       } else {
-        console.log("[AdminCoursesTab] Creating course via RPC:", courseForm.course_code);
         const { error } = await supabase.rpc('api_create_course_v1', {
           p_school_id: selectedSchool,
           p_course_code: courseForm.course_code.toUpperCase(),

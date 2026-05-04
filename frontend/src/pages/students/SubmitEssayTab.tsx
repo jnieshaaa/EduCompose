@@ -168,11 +168,6 @@ export function SubmitEssayTab() {
             .eq('essay_id', essayData.id)
             .maybeSingle();
 
-          console.log("[SubmitEssayTab] Fetched essay for student:", {
-            id: essayData.id,
-            status: essayData.status,
-            overall_score: analysisData?.overall_score
-          });
           setIsSubmitted(true);
           setCurrentEssayId(essayData.id);
           setEssayContent(essayData.content || '');
@@ -254,7 +249,6 @@ export function SubmitEssayTab() {
             filter: `student_id=eq.${user.auth_id}`
           },
           (payload) => {
-            console.log('[SubmitEssayTab] Real-time essay change detected:', payload.eventType);
             loadContent(); // Refresh everything when a change occurs
           }
         )

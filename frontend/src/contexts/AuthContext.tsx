@@ -222,7 +222,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[AuthContext] onAuthStateChange:", event, session?.user?.email);
 
       if (event === "SIGNED_OUT" || !session) {
         setUser(null);
@@ -230,9 +229,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem("user");
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session.user) {
-          console.log("[AuthContext] Looking up DB record for:", session.user.id, "role hint:", session.user.user_metadata?.role);
           const { user: mappedUser, error: mapError } = await mapSupabaseUser(session.user);
-          console.log("[AuthContext] DB lookup result — mappedUser:", mappedUser, "error:", mapError);
 
           if (mappedUser) {
             localStorage.setItem("auth_token", session.access_token);
@@ -245,7 +242,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Check if the signup flow is in progress (gives it time to create the record).
             // We do NOT auto-logout here to avoid killing the signup flow.
             // The login() call in the signup flow will call checkAuth() after inserting the record.
-            console.warn("[AuthContext] SIGNED_IN but no DB record found for:", session.user.email, "— allowing signup flow to proceed.");
           }
         }
       }

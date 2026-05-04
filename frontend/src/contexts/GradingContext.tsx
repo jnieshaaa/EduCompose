@@ -69,7 +69,6 @@ export const GradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }, 3000);
         }
       } catch (e) {
-        console.warn("Recovery failed for task:", task.id, e);
       }
     });
   }, []); // Only on mount

@@ -192,7 +192,6 @@ export const savePlatformRubric = async (
     criteria: CriteriaRow[];
   }
 ) => {
-  console.log("[savePlatformRubric] Attempting to create platform rubric:", rubricFormData.name);
   
   const { data, error } = await supabase.rpc('api_create_rubric_v1', {
     p_name: rubricFormData.name,
@@ -212,7 +211,6 @@ export const savePlatformRubric = async (
     throw error;
   }
 
-  console.log("[savePlatformRubric] Success! Created rubric ID:", data);
   return { id: data };
 };
 
@@ -225,7 +223,6 @@ export const saveRubric = async (
     criteria: CriteriaRow[];
   }
 ) => {
-  console.log("[saveRubric] Attempting to create teacher rubric:", rubricFormData.name);
   
   const { data, error } = await supabase.rpc('api_create_rubric_v1', {
     p_name: rubricFormData.name,
@@ -244,7 +241,6 @@ export const saveRubric = async (
     throw error;
   }
 
-  console.log("[saveRubric] Success! Created rubric ID:", data);
   return { id: data };
 };
 
@@ -257,7 +253,6 @@ export const saveTemplateRubric = async (
     type: string;
   }
 ) => {
-  console.log("[saveTemplateRubric] Creating from template:", rubric.name);
   
   const { data, error } = await supabase.rpc('api_create_rubric_v1', {
     p_name: rubric.name,

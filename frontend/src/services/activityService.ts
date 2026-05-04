@@ -11,7 +11,6 @@ export function isUuidString(value: string): boolean {
   const t = value.trim();
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t);
   if (!isUuid && t.length > 10) {
-    console.log("[isUuidString] Testing value:", `"${t}"`, "Result:", isUuid);
   }
   return isUuid;
 }
@@ -391,9 +390,6 @@ export const initializePlatformRubrics = async (): Promise<number> => {
             error,
           );
         } else {
-          console.log(
-            `Synced platform rubric "${template.name}" with database ID ${newRubric.id}`,
-          );
           syncedCount++;
         }
       } else {
@@ -425,7 +421,6 @@ const ensurePlatformRubricExists = async (
     const template = platformRubrics.find((r) => String(r.id) === templateId);
 
     if (!template) {
-      console.warn(`Template rubric with ID ${templateId} not found`);
       return null;
     }
 
@@ -464,9 +459,6 @@ const ensurePlatformRubricExists = async (
         return null;
       }
 
-      console.log(
-        `Created platform rubric "${template.name}" with database ID ${newRubric.id}`,
-      );
       return newRubric.id;
     }
 
@@ -1002,7 +994,6 @@ export const fetchRubrics = async (): Promise<{
     let platformRubricsList: { id: string; name: string; description?: string; grading_intensity?: string }[] = [];
     if (!platformData || platformData.length === 0) {
       // Initialize all platform rubrics to database
-      console.log("No platform rubrics found in database, initializing...");
       await initializePlatformRubrics();
 
       // Fetch again after initialization
@@ -1752,7 +1743,6 @@ export const allowResubmission = async (
     }
 
     if (existingEssays && existingEssays.length > 0) {
-      console.log(`[allowResubmission] Found ${existingEssays.length} essays to delete for resubmission.`);
       
       for (const essay of existingEssays) {
         // Delete file from storage
@@ -1765,7 +1755,6 @@ export const allowResubmission = async (
         if (delError) {
            console.error(`[allowResubmission] Error deleting essay ${essay.id}:`, delError);
         } else {
-           console.log(`[allowResubmission] Deleted essay ${essay.id}`);
         }
       }
     }
@@ -1921,7 +1910,6 @@ export const gradeEssay = async (
         : essayActivities?.min_word_count) || 150;
 
     // Update essay with word count immediately to ensure the dashboard reflects it even if analysis fails later
-    console.log("[gradeEssay] Updating essay ID:", essayData.id);
     await supabase
       .from("essays")
       .update({
@@ -1977,25 +1965,10 @@ export const gradeEssay = async (
           .single();
 
         if (rubricError || !rubricData) {
-          console.warn(
-            `[gradeEssay] Rubric ${activityData.rubric_id} not found in Supabase database. Backend may not find it either.`,
-            rubricError,
-          );
         } else {
-          console.log(
-            `[gradeEssay] Rubric found: ID=${rubricData.id}, Name="${
-              rubricData.name
-            }", Platform=${rubricData.created_by === null}`,
-          );
         }
       }
 
-      console.log(
-        "[gradeEssay] Activity rubric_id:",
-        activityData?.rubric_id,
-        "Passing to analysis:",
-        rubricId,
-      );
 
       analysisResult = await analysisApi.analyzeText(
         extractedText,
@@ -2004,10 +1977,6 @@ export const gradeEssay = async (
         rubricId,
       );
 
-      console.log(
-        "[gradeEssay] Analysis result includes rubric_scores:",
-        !!analysisResult.rubric_scores,
-      );
       if (rubricId && !analysisResult.rubric_scores) {
         console.error(
           "[gradeEssay] ERROR: Rubric ID was provided but rubric_scores not in response.",
@@ -2024,11 +1993,6 @@ export const gradeEssay = async (
           .single();
 
         if (verifyRubric) {
-          console.log(
-            "[gradeEssay] Rubric exists in Supabase:",
-            verifyRubric,
-            "Backend should be able to find it. Check backend database connection.",
-          );
         } else {
           console.error(
             "[gradeEssay] Rubric does not exist in Supabase! This is the problem.",
@@ -2068,7 +2032,6 @@ export const gradeEssay = async (
 
     onProgress?.(100, "Complete!");
 
-    console.log("[gradeEssay] Successfully completed grading for essay ID:", essayData.id);
     return { success: true };
   } catch (err) {
     console.error("Error grading essay:", err);
@@ -2490,7 +2453,6 @@ const processSimilarityGroups = (
   const similarityGroups: Array<DuplicateEssayGroup["essays"]> = [];
   const processedEssays = new Set<string>();
   
-  console.log(`[processSimilarityGroups] Total essays to check: ${allEssays.length}`);
 
   for (let i = 0; i < allEssays.length; i++) {
     if (processedEssays.has(allEssays[i].essayId)) {
@@ -2533,7 +2495,6 @@ const processSimilarityGroups = (
       }
 
       const similarity = calculateTextSimilarity(text1, text2);
-      // console.log(`[processSimilarityGroups] Comparing ${allEssays[i].essayId} & ${allEssays[j].essayId} -> similarity: ${similarity}`);
       if (similarity >= SIMILARITY_THRESHOLD) {
         // Find the essay info from groups
         let foundEssay: DuplicateEssayGroup["essays"][0] | null = null;
@@ -2569,7 +2530,6 @@ const processSimilarityGroups = (
     });
   }
 
-  console.log(`[processSimilarityGroups] Final duplicate groups: ${duplicateGroups.length}`);
   return duplicateGroups;
 };
 
@@ -2584,7 +2544,6 @@ export const fetchDuplicateEssays = async (
     }
 
     // 1. Find the course and all related activities
-    console.log(`[fetchDuplicateEssays] Start for activity ${activityDbId}`);
     const { data: activityData, error: activityError } = await supabase
       .from("essay_activities")
       .select(`
@@ -2601,7 +2560,6 @@ export const fetchDuplicateEssays = async (
     }
 
     let activityIds: string[] = [activityDbId];
-    console.log(`[fetchDuplicateEssays] Activity data:`, activityData);
     
     // 1b. Resolve related activities manually via course relationships
     if (activityData?.block_id) {
@@ -2621,7 +2579,6 @@ export const fetchDuplicateEssays = async (
             .maybeSingle();
            
            const courseId = (blockCourseData?.teacher_program_loads as any)?.teacher_course_loads?.course_id;
-           console.log(`[fetchDuplicateEssays] Found course ID via blocks: ${courseId}`);
            if (courseId) {
                const { data: relatedActivities } = await supabase
                 .from("essay_activities")
@@ -2635,7 +2592,6 @@ export const fetchDuplicateEssays = async (
            }
          }
        } catch (e) {
-         console.warn("[fetchDuplicateEssays] Manual course resolution failed:", e);
        }
     }
     
@@ -2653,7 +2609,6 @@ export const fetchDuplicateEssays = async (
       }
     }
 
-    console.log(`[fetchDuplicateEssays] Final activity IDs for check:`, activityIds);
 
     // 2. Fetch all essays for targeted activities
     const { data: rawEssays, error: essaysError } = await supabase
@@ -2691,7 +2646,6 @@ export const fetchDuplicateEssays = async (
       };
     });
 
-    console.log(`[fetchDuplicateEssays] Total essays found for check:`, analysisResults.length);
 
     if (analysisResults.length === 0) {
       return [];
@@ -2790,7 +2744,6 @@ export const fetchDuplicateEssays = async (
     const metaMap = new Map();
     basicEssays?.forEach(m => metaMap.set(String(m.id), m));
     
-    console.log(`[fetchDuplicateEssays] Metadata fetched. Found ${basicEssays?.length} essays, ${students?.length} students, ${blocksData?.length} blocks.`);
 
     // Group essays by content hash
     const contentGroups = new Map<string, DuplicateEssayGroup["essays"]>();
@@ -2804,10 +2757,8 @@ export const fetchDuplicateEssays = async (
         (result as any).results?.content ||
         "";
       
-      console.log(`[fetchDuplicateEssays] Processing essay ${result.essay_id}. Text length: ${originalText?.length}`);
 
       if (!originalText || originalText.trim().length < 50) {
-        console.log(`[fetchDuplicateEssays] Skipped essay ${result.essay_id}: Text too short.`);
         continue;
       }
 
@@ -2826,7 +2777,6 @@ export const fetchDuplicateEssays = async (
       const program = block?.program || (student?.program_id ? programsMap.get(String(student.program_id)) : null);
 
       if (!student) {
-        console.log(`[fetchDuplicateEssays] Skipped essay ${result.essay_id}: Missing student metadata.`);
         continue;
       }
 
@@ -2856,7 +2806,6 @@ export const fetchDuplicateEssays = async (
       contentGroups.get(contentHash)!.push(essayInfo);
     }
 
-    console.log(`[fetchDuplicateEssays] Content groups built:`, contentGroups.size);
 
     // Continue with similarity matching using the simple results list
     const finalGroups = processSimilarityGroups(

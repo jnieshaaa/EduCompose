@@ -149,7 +149,6 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
           filter: activityId ? `activity_id=eq.${activityId}` : undefined,
         },
         async (payload: any) => {
-          console.log("[useActivities] Essay change detected:", payload);
           // Re-fetch students to get updated status and scores
           const updatedStudents = await fetchStudentsByCourseAndSection(
             sectionId,

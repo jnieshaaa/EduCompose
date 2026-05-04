@@ -67,14 +67,6 @@ const TeacherOnboarding: React.FC = () => {
   // Pre-populate data if user already has some info
   useEffect(() => {
     if (user) {
-      console.log("[Onboarding] User data detected, patching state:", {
-        title: user.title,
-        nickname: user.nickname,
-        school_id: user.school_id,
-        department_id: user.department_id,
-        first_name: user.first_name,
-        last_name: user.last_name
-      });
       
       setData(prev => ({
         ...prev,

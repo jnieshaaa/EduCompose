@@ -202,7 +202,6 @@ const StudentOnboarding: React.FC = () => {
       
       if (!authUser) throw new Error("Not authenticated");
 
-      console.log("ONBOARDING: Updating profile for Auth ID:", authUser.id);
 
       // 2. Update the profile
       const { data: updateData, error: updateError } = await supabase
@@ -213,7 +212,6 @@ const StudentOnboarding: React.FC = () => {
         .eq("user_id", authUser.id)
         .select();
 
-      console.log("ONBOARDING: DB Update result:", { data: updateData, error: updateError });
 
       if (updateError) throw updateError;
       if (!updateData || updateData.length === 0) {
@@ -221,7 +219,6 @@ const StudentOnboarding: React.FC = () => {
       }
 
       // 3. Refresh the local auth state WITHOUT reloading the page
-      console.log("ONBOARDING: Refreshing session state...");
       await checkAuth();
       
       showNotification('success', "All set! Welcome to EduCompose.");

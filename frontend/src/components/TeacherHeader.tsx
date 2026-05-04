@@ -52,7 +52,6 @@ const TeacherHeader: React.FC<TeacherHeaderProps> = ({
 
         // Subscribe to real-time
         channel = subscribeToNotifications(teacherUUID, (newNotif) => {
-          console.log("Real-time notification received:", newNotif);
           setNotifications((prev) => [newNotif, ...prev]);
         });
       }

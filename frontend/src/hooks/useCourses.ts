@@ -84,7 +84,6 @@ export function useCourses(showArchived: boolean = false, ay?: string, term?: st
       
       // Strict guard against missing school/auth data
       if (!info || !info.school_id || String(info.school_id) === "undefined") {
-        console.warn("Teacher identity sync in progress or missing school_id...");
         setIsLoading(false);
         return;
       }

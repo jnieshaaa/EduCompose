@@ -40,7 +40,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
     setIsLoading(true);
     setLoadError(null);
     try {
-      console.log("DEBUG: fetchStudents triggered for blockId:", blockId);
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
@@ -93,7 +92,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const { data, error } = await query;
       if (error) throw error;
 
-      console.log("DEBUG: Students raw data from Supabase:", data?.length);
       
       let result = (data || []).map((s: any) => {
         // Flatten student_profiles academic data into the main object
@@ -101,7 +99,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         const sp = Array.isArray(spRaw) ? spRaw[0] : spRaw;
         
         if (!sp) {
-          console.warn(`DEBUG: Student ${s.id} has NO profile record! Check RLS or profile creation logic.`);
         }
 
         return {
@@ -115,7 +112,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         };
       });
 
-      console.log("DEBUG: Current AY/Semester:", currentAY, currentSemester);
       
       // Filter by blockId in JS if we removed !inner from the query
       if (blockId) {
@@ -123,7 +119,6 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
         result = result.filter(s => 
           (s.block_students || []).some((bs: any) => bs.block_id === blockId)
         );
-        console.log(`DEBUG: Filtered by blockId ${blockId}. Count: ${preFilterCount} -> ${result.length}`);
       }
 
       // Manual filtering for AY and Term since it's deep in the join
@@ -139,14 +134,12 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
 
               const match = tcl?.academic_year === currentAY && tcl?.term === currentSemester;
               if (!match && blockId) {
-                console.log(`DEBUG: Student ${s.id} block mismatch. Block AY/Term: ${tcl?.academic_year}/${tcl?.term} vs Expected: ${currentAY}/${currentSemester}`);
               }
               return match;
             })
           );
           
           if (filtered.length === 0 && result.length > 0) {
-            console.warn("DEBUG: ALL students filtered out by AY/Semester! This suggests the block is linked to a different academic period.");
           }
           result = filtered;
         }

@@ -60,7 +60,6 @@ const safeParseActivities = (raw: string | null): ActivityItem[] => {
         };
       });
   } catch (error) {
-    console.warn("Failed to parse activities from storage:", error);
     return [];
   }
 };
@@ -79,7 +78,6 @@ export const saveActivities = (activities: ActivityItem[]): void => {
       JSON.stringify(activities)
     );
   } catch (error) {
-    console.warn("Failed to save activities to storage:", error);
   }
 };
 

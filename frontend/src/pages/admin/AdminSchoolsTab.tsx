@@ -96,7 +96,6 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingSchool.id);
         if (error) throw error;
       } else {
-        console.log("[AdminSchoolsTab] Creating school via RPC:", schoolForm.code);
         const { data: schoolId, error: schoolError } = await supabase.rpc('api_create_school_v1', {
           p_name: schoolForm.name,
           p_code: schoolForm.code
@@ -167,7 +166,6 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingDept.id);
         if (error) throw error;
       } else {
-        console.log("[AdminSchoolsTab] Creating department via RPC:", deptForm.code);
         const { error } = await supabase.rpc('api_create_department_v1', {
           p_school_id: selectedSchool,
           p_name: deptForm.name,
@@ -198,7 +196,6 @@ export const AdminSchoolsTab: React.FC = () => {
           .eq("id", editingProgram.id);
         if (error) throw error;
       } else {
-        console.log("[AdminSchoolsTab] Creating program via RPC:", programForm.abbr);
         const { error } = await supabase.rpc('api_create_program_v1', {
           p_department_id: selectedDept,
           p_name: programForm.name,

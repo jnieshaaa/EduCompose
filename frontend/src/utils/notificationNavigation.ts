@@ -36,11 +36,9 @@ export const handleNotificationNavigation = (
     }
   }
 
-  console.log("[NotificationUtils] Extracted IDs:", { activityId, essayId, studentId, type: notification.type });
 
   const targetId = activityId || essayId;
   if (!targetId) {
-    console.warn("[NotificationUtils] No target ID found, cannot navigate.");
     return;
   }
 

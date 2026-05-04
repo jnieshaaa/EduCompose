@@ -68,7 +68,6 @@ export function NotificationsTab() {
     }
 
     let rawRelatedId = notification.relatedId;
-    console.log("[TeacherNotifications] Clicked:", notification.id, "Type:", notification.type, "rawRelatedId:", rawRelatedId);
 
     let activityId = "";
     let essayId = "";
@@ -99,12 +98,10 @@ export function NotificationsTab() {
       }
     }
 
-    console.log("[TeacherNotifications] Extracted IDs:", { activityId, essayId, studentId });
 
     // 2. Perform Navigation
     const targetId = activityId || essayId;
     if (!targetId) {
-      console.warn("[TeacherNotifications] No target ID found, cannot navigate.");
       return;
     }
 
@@ -113,7 +110,6 @@ export function NotificationsTab() {
     if (essayId) params.essayId = essayId;
 
     const url = buildSecureUrl('/Teacher/Activities', params);
-    console.log("[TeacherNotifications] Navigating to:", url, "Params:", params);
     navigate(url);
   };
 

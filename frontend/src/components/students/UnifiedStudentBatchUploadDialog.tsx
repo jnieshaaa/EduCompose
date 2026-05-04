@@ -132,7 +132,6 @@ export function UnifiedStudentBatchUploadDialog({
            }
          }
        } catch (err) {
-         console.warn("Failed to pre-parse metadata for UI:", file.name);
        }
 
        return initialConfig;

@@ -7,10 +7,6 @@ const supabaseAnonKey = import.meta.env
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // eslint-disable-next-line no-console
-  console.warn(
-    "[Supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. " +
-      "Teacher features that load data from Supabase will not work until these env vars are configured."
-  );
 }
 
 export const supabase = createClient(

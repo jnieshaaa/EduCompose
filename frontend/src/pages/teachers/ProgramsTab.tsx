@@ -48,7 +48,6 @@ export function ProgramsTab() {
   // };
 
   const handleEditProgram = (program: Program) => {
-    console.log("Edit program:", program);
   };
 
   const handleArchiveProgram = (program: Program) => {

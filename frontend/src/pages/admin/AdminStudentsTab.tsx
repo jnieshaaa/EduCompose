@@ -225,16 +225,13 @@ export const AdminStudentsTab: React.FC = () => {
 
       if (fetchError) throw fetchError;
       
-      console.log('DEBUG: Raw Students Data from Supabase:', data);
 
       const flattenedData = (data || []).map((user: any) => {
         const profiles = user.student_profiles;
         const sp = Array.isArray(profiles) ? profiles[0] : profiles;
 
         if (!sp) {
-          console.warn(`DEBUG: No student_profile found for user ${user.email} (ID: ${user.id})`);
         } else {
-          console.log(`DEBUG: Spreading Profile for ${user.email}:`, sp);
         }
 
         return {

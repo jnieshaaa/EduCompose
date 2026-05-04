@@ -178,7 +178,6 @@ export const deleteTeacherCourseLoad = async (
       });
 
     if (notifError) {
-      console.warn("Failed to send notification:", notifError);
     }
 
     return { success: true };

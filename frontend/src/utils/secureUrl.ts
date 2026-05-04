@@ -45,7 +45,6 @@ export function decodeUrlParams(token: string): Record<string, string> | null {
     const { _t, ...rest } = parsed;
     return rest as Record<string, string>;
   } catch {
-    console.warn('Failed to decode secure URL token');
     return null;
   }
 }
