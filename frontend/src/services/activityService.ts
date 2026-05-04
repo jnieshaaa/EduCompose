@@ -201,7 +201,7 @@ type SupabaseActivityRow = {
   teacher_id: string | null;
   title: string;
   program_id: string[] | null;
-  block_id: string | null;
+  block_id: string[] | null;
   course_id: string | null;
   rubric_id: string | null;
   due_date: string | null;
@@ -308,8 +308,8 @@ export const fetchTeacherActivities = async (
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
       courseIds: row.course_id ? [String(row.course_id)] : [],
-      blockId: row.block_id ? String(row.block_id) : "all",
-      blockIds: row.block_id ? [String(row.block_id)] : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       term: row.term || undefined,
       description: row.instructions || undefined,
@@ -514,8 +514,8 @@ export const createActivity = async (
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
       courseIds: row.course_id ? [String(row.course_id)] : [],
-      blockId: row.block_id ? String(row.block_id) : "all",
-      blockIds: row.block_id ? [String(row.block_id)] : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,
@@ -593,7 +593,7 @@ export const updateActivity = async (
     const updateData: Record<string, unknown> = {
       title: activityData.title,
       course_id: activityData.courseIds?.[0] || null,
-      block_id: activityData.sectionIds?.[0] || null,
+      block_id: activityData.sectionIds.length > 0 ? activityData.sectionIds : null,
       rubric_id: rubricId,
       due_date: activityData.dueDate || null,
       instructions: activityData.description || null,
@@ -647,8 +647,8 @@ export const updateActivity = async (
       title: row.title,
       courseId: row.course_id ? String(row.course_id) : "all",
       courseIds: row.course_id ? [String(row.course_id)] : [],
-      blockId: row.block_id ? String(row.block_id) : "all",
-      blockIds: row.block_id ? [String(row.block_id)] : [],
+      blockId: Array.isArray(row.block_id) && row.block_id.length > 0 ? String(row.block_id[0]) : "all",
+      blockIds: Array.isArray(row.block_id) ? row.block_id.map(String) : [],
       rubricId: row.rubric_id ? String(row.rubric_id) : null,
       dueDate: row.due_date || undefined,
       description: row.instructions || undefined,

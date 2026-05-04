@@ -44,6 +44,7 @@ export function ActivitiesTab() {
     handleCourseSectionClick,
     handleBackToSections,
     reloadStudents,
+    reloadActivities,
   } = useActivities();
 
   // Decode secure URL params (with fallback to raw searchParams)
@@ -132,6 +133,7 @@ export function ActivitiesTab() {
         courses={courses}
         programLoads={programLoads}
         sections={sections}
+        onRefresh={reloadActivities}
       />
     );
   }

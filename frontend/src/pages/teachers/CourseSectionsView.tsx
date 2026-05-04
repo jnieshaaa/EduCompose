@@ -9,7 +9,8 @@ import {
   Trash2,
   Loader2,
   Check,
-  X
+  X,
+  ArrowUpDown
 } from "lucide-react";
 import { UnifiedStudentBatchUploadDialog } from "../../components/students/UnifiedStudentBatchUploadDialog";
 import { supabase } from "../../lib/supabaseClient";
@@ -61,6 +62,7 @@ export function CourseSectionsView({
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
   const [newBlock, setNewBlock] = useState({ year: 1, name: "" });
   const [selectedBlocksFromList, setSelectedBlocksFromList] = useState<{year: number, name: string}[]>([]);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -631,14 +633,28 @@ export function CourseSectionsView({
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-neutral-50/50">
-                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/3">Section Block</th>
+                  <th 
+                    className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/3 cursor-pointer hover:text-primary transition-colors select-none"
+                    onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Section Block <ArrowUpDown size={10} className="inline ml-1" />
+                  </th>
                   <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
-                {blocks.map((block) => {
+                {[...blocks]
+                  .sort((a, b) => {
+                    const aYear = a.year || 0;
+                    const bYear = b.year || 0;
+                    const aName = a.name || "";
+                    const bName = b.name || "";
+                    const cmp = aYear - bYear || aName.localeCompare(bName);
+                    return sortDirection === 'asc' ? cmp : -cmp;
+                  })
+                  .map((block) => {
                   const pwb = programWideBlocks.find(p => p.year === block.year && p.name === block.name);
                   const hasMismatch = pwb && pwb.student_count > block.students_estimated;
                   

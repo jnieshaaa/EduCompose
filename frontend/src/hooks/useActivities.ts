@@ -87,6 +87,21 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     loadData();
   }, [isLoadingAcademic, currentAY, currentSemester, showArchived, ay, term]);
 
+  const reloadActivities = async () => {
+    try {
+      const activitiesData = await fetchTeacherActivities(
+        ay,
+        term,
+        showArchived,
+        currentAY,
+        currentSemester
+      );
+      setActivities(activitiesData);
+    } catch (err) {
+      console.error("[useActivities] Error reloading activities:", err);
+    }
+  };
+
   const reloadRubrics = async () => {
     try {
       const rubricsData = await fetchRubrics();
@@ -377,6 +392,7 @@ export function useActivities(showArchived: boolean = false, ay?: string, term?:
     setSearchParams,
     reloadStudents,
     reloadRubrics,
+    reloadActivities,
   };
 }
 

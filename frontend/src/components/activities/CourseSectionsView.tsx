@@ -29,6 +29,7 @@ interface CourseSectionsViewProps {
     course_id: string;
   }[];
   sections: { id: string; name: string; courseId: string; programLoadId: string }[];
+  onRefresh?: () => void;
 }
 
 export function CourseSectionsView({
@@ -38,6 +39,7 @@ export function CourseSectionsView({
   courses,
   programLoads,
   sections,
+  onRefresh,
 }: CourseSectionsViewProps) {
   const [sectionsWithCounts, setSectionsWithCounts] =
     useState<CourseSection[]>(courseSections);
@@ -144,7 +146,7 @@ export function CourseSectionsView({
         .from("essay_activities")
         .update({
           course_id: uniqueCourseIds?.[0] || null,
-          block_id: selectedSectionIds?.[0] || null,
+          block_id: selectedSectionIds.length > 0 ? selectedSectionIds : null,
           program_id: Array.from(uniqueProgramIds)
         })
         .eq("id", activity.id);
@@ -152,7 +154,7 @@ export function CourseSectionsView({
       if (error) throw error;
 
       setIsAddModalOpen(false);
-      window.location.reload();
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error updating activity sections:", error);
       showNotification('error', "Failed to update sections. Please try again.");
