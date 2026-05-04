@@ -177,7 +177,7 @@ export const AdminStudentsTab: React.FC = () => {
         .from("users")
         .select(`
           *,
-          student_profiles (
+          student_profiles!inner (
             *,
             programs_lookup (
               id,
@@ -191,7 +191,8 @@ export const AdminStudentsTab: React.FC = () => {
             )
           )
         `, { count: "exact" })
-        .eq("role", "student");
+        .eq("role", "student")
+        .not('student_profiles.enrollment_status', 'in', '("dropped", "graduated")');
 
       if (searchTerm) {
         query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,student_profiles.student_code.ilike.%${searchTerm}%`);
@@ -218,7 +219,7 @@ export const AdminStudentsTab: React.FC = () => {
         }
       }
 
-      const { data, error: fetchError } = await query
+      const { data, error: fetchError, count } = await query
         .order("last_name", { ascending: true })
         .range(from, to);
 
@@ -245,13 +246,8 @@ export const AdminStudentsTab: React.FC = () => {
         };
       });
 
-      // Only show active students — exclude dropped and graduated
-      const activeStudents = flattenedData.filter(
-        (s: any) => s.enrollment_status !== 'dropped' && s.enrollment_status !== 'graduated'
-      );
-
-      setStudents(activeStudents);
-      setTotalStudentsCount(activeStudents.length);
+      setStudents(flattenedData);
+      setTotalStudentsCount(count || 0);
     } catch (err: any) {
       showNotification('error', err instanceof Error ? err.message : "Failed to connect to database.");
     } finally {

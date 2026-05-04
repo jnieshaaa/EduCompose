@@ -142,6 +142,7 @@ export const fetchTeacherRubrics = async (): Promise<(RubricTemplate & {
 export const fetchPlatformRubrics = async (): Promise<PlatformRubric[]> => {
   try {
     // We fetch rubrics and join with users to check roles
+    // owner:users!user_id(role) tells Supabase to join 'users' table on 'user_id' column
     const { data, error } = await supabase
       .from("rubrics")
       .select("id, name, description, criteria, grading_intensity, created_at, user_id, owner:users!user_id(role)")
@@ -153,9 +154,15 @@ export const fetchPlatformRubrics = async (): Promise<PlatformRubric[]> => {
     }
 
     // Filter: user_id is null OR owner's role is 'admin'
-    const platformData = (data || []).filter((r: any) => 
-      r.user_id === null || r.owner?.role === "admin"
-    );
+    const platformData = (data || []).filter((r: any) => {
+      // Handle cases where Supabase might return join as an array
+      const owner = Array.isArray(r.owner) ? r.owner[0] : r.owner;
+      const role = owner?.role;
+      
+      // If user_id is null, it's a system rubric
+      // If role is admin, it's an admin-created rubric
+      return r.user_id === null || role === "admin";
+    });
 
     return platformData.map((r: any) => {
       const criteriaData = extractCriteriaFromSupabase(r.criteria) || [];

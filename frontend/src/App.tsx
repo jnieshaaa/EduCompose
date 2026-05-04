@@ -143,7 +143,9 @@ const AppContent: React.FC = () => {
   return (
     <>
       <ClickEffect />
-      {maintenanceSettings && !location.pathname.includes("/Maintenance") && (
+      {maintenanceSettings && 
+       !location.pathname.includes("/Maintenance") && 
+       !location.pathname.includes("/Login") && (
         <MaintenanceInterceptor settings={maintenanceSettings} />
       )}
 

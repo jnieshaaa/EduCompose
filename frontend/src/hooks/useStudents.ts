@@ -47,7 +47,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const selectQuery = blockId 
         ? `
             *,
-            student_profiles (*),
+            student_profiles!inner (*),
             block_students (
               block_id,
               blocks (
@@ -64,7 +64,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
           `
         : `
             *,
-            student_profiles (*),
+            student_profiles!inner (*),
             block_students (
               block_id,
               blocks (

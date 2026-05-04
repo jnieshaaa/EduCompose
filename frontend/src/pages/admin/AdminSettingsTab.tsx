@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Settings,
   // Bell,
-  Terminal,
+  // Terminal,
   User,
   BookOpen
 } from "lucide-react";
@@ -361,7 +361,7 @@ export function AdminSettingsTab() {
           <div className="bg-white rounded-[3rem] border border-neutral-100 shadow-sm overflow-hidden border-t-4 border-t-primary">
              <div className="px-10 py-8 border-b border-neutral-50 flex items-center gap-4">
                 <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg">
-                  <Terminal size={22} />
+                  {/* <Terminal size={22} /> */}
                 </div>
                 <div>
                   <h2 className="text-xl font-medium text-neutral-900 tracking-tight">System Settings</h2>
