@@ -158,8 +158,13 @@ class TransformerClaimClassifier:
                 if m not in model_candidates:
                     model_candidates.append(m)
             
-            response = None
-            last_error = None
+            prompt = f"""Classify each of the following sentences into ONE of these categories: claim, premise, evidence, counterclaim, background.
+Return ONLY a valid JSON array of objects, where each object has exactly two keys: 'label' (string) and 'score' (float between 0.0 and 1.0).
+Example: [{{"label": "claim", "score": 0.9}}]
+Do not include markdown code blocks or any other text.
+Sentences:
+{json.dumps(sentences, indent=2)}
+"""
             
             for m_name in model_candidates:
                 try:
@@ -184,10 +189,20 @@ class TransformerClaimClassifier:
                 logger.error(f"All Gemini models failed for classification. Last error: {last_error}")
                 return self._heuristic_classify(sentences)
             
-            if not response or not response.text:
-                return self._heuristic_classify(sentences)
+            cleaned_text = response.text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text[7:]
+            elif cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:]
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3]
+            cleaned_text = cleaned_text.strip()
                 
-            data = json.loads(response.text)
+            try:
+                data = json.loads(cleaned_text)
+            except json.JSONDecodeError as json_err:
+                logger.error(f"Failed to parse Gemini JSON: {json_err}. Raw text: {response.text[:200]}...")
+                return self._heuristic_classify(sentences)
             results = []
             for item in data:
                 results.append({
