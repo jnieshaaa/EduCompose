@@ -357,7 +357,12 @@ export function EssayResultTranscript() {
                    label="Plagiarism Index" 
                    value={analysis?.plagiarism?.plagiarism_percentage || 0} 
                    isFlagged={analysis?.plagiarism?.is_plagiarized} 
-                   link={typeof analysis?.plagiarism === 'string' ? analysis.plagiarism : (analysis?.plagiarism?.report_url || analysis?.plagiarism?.url || analysis?.plagiarism?.link || (analysis?.plagiarism?.matches?.[0]?.url))}
+                   links={
+                     analysis?.plagiarism?.matches && analysis.plagiarism.matches.length > 0
+                       ? analysis.plagiarism.matches.map((m: any) => m.url).filter(Boolean) 
+                       : (typeof analysis?.plagiarism === 'string' ? [analysis.plagiarism] : 
+                          (analysis?.plagiarism?.report_url || analysis?.plagiarism?.url || analysis?.plagiarism?.link ? [analysis.plagiarism.report_url || analysis.plagiarism.url || analysis.plagiarism.link] : []))
+                   }
                  />
                  <IntegrityCard label="Class Similarity" value={duplicates.length > 0 ? 100 : 0} isFlagged={duplicates.length > 0} desc={duplicates.length > 0 ? `Matches with ${duplicates.length} records` : "No identical submissions found."} />
             </div>
@@ -371,7 +376,9 @@ export function EssayResultTranscript() {
   );
 }
 
-function IntegrityCard({ label, value, isFlagged, desc, link }: any) {
+function IntegrityCard({ label, value, isFlagged, desc, link, links }: any) {
+  const allLinks = links || (link ? [link] : []);
+
   return (
     <div className="bg-neutral-50/50 border border-neutral-100 p-6 rounded-[2rem] shadow-sm flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
@@ -379,21 +386,42 @@ function IntegrityCard({ label, value, isFlagged, desc, link }: any) {
             {isFlagged ? <AlertCircle className="w-5 h-5 text-amber-500" /> : <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
         </div>
         <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-black text-neutral-900">{value}%</span>
+            <span className="text-3xl font-black text-neutral-900">{Number(value || 0).toFixed(2)}%</span>
             <span className="text-[10px] font-bold text-neutral-400">Index</span>
         </div>
         <p className="text-[11px] font-medium text-neutral-500 leading-relaxed mb-4">{desc || (isFlagged ? "Elevated markers detected. Manual review suggested." : "No significant risk markers detected.")}</p>
         
-        {link && (
-          <div className="mt-auto pt-2">
-            <a 
-              href={link} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-600 transition-colors"
-            >
-              View Full Report <ArrowLeft className="w-3 h-3 ml-1 rotate-180" />
-            </a>
+        {allLinks.length > 0 && (
+          <div className="mt-auto pt-2 space-y-1.5 border-t border-neutral-100/50">
+            {allLinks.length === 1 ? (
+              <a 
+                href={allLinks[0]} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-600 transition-colors mt-2"
+              >
+                View Source <ArrowLeft className="w-3 h-3 ml-1 rotate-180" />
+              </a>
+            ) : (
+              <div className="flex flex-col gap-1.5 mt-2">
+                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Matched Sources ({allLinks.length}):</span>
+                {allLinks.slice(0, 3).map((l: string, idx: number) => (
+                  <a 
+                    key={idx}
+                    href={l} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-600 transition-colors truncate max-w-[200px]"
+                    title={l}
+                  >
+                    {idx + 1}. Source Link <ArrowLeft className="w-3 h-3 ml-1 rotate-180 flex-shrink-0" />
+                  </a>
+                ))}
+                {allLinks.length > 3 && (
+                   <span className="text-[10px] font-medium text-neutral-400 italic">+{allLinks.length - 3} more sources hidden</span>
+                )}
+              </div>
+            )}
           </div>
         )}
     </div>

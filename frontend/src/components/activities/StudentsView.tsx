@@ -10,7 +10,8 @@ import {
   ArrowLeft,
   Search,
   AlertCircle,
-  Users
+  Users,
+  ArrowUpDown
 } from "lucide-react";
 import { ViewEssayModal } from "./ViewEssayModal";
 import { GradingProgressIndicator } from "./GradingProgressIndicator";
@@ -81,6 +82,7 @@ export function StudentsView({
   const [isViewingResult, setIsViewingResult] = useState<string | null>(null);
   const [isGradingAll, setIsGradingAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -192,6 +194,33 @@ export function StudentsView({
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (!sortConfig) return 0;
+    
+    let aValue: any = a[sortConfig.key as keyof typeof a];
+    let bValue: any = b[sortConfig.key as keyof typeof b];
+
+    if (sortConfig.key === 'grade') {
+       aValue = a.score || 0;
+       bValue = b.score || 0;
+    } else if (sortConfig.key === 'status') {
+       aValue = a.status === 'submitted' ? ((gradedStudents.has(a.id) || a.isGraded) ? 2 : 1) : 0;
+       bValue = b.status === 'submitted' ? ((gradedStudents.has(b.id) || b.isGraded) ? 2 : 1) : 0;
+    }
+
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="space-y-6">
       {/* Navigation Header */}
@@ -267,15 +296,30 @@ export function StudentsView({
             <Table>
               <TableHeader className="bg-neutral-50/50">
                 <TableRow>
-                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-6">Student Name</TableHead>
-                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Status</TableHead>
+                   <TableHead 
+                     className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest pl-6 cursor-pointer hover:text-primary transition-colors"
+                     onClick={() => handleSort('name')}
+                   >
+                     Student Name <ArrowUpDown size={10} className="inline ml-1" />
+                   </TableHead>
+                   <TableHead 
+                     className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center cursor-pointer hover:text-primary transition-colors"
+                     onClick={() => handleSort('status')}
+                   >
+                     Status <ArrowUpDown size={10} className="inline ml-1" />
+                   </TableHead>
                    <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Analysis</TableHead>
-                   <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center">Grade</TableHead>
+                   <TableHead 
+                     className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-center cursor-pointer hover:text-primary transition-colors"
+                     onClick={() => handleSort('grade')}
+                   >
+                     Grade <ArrowUpDown size={10} className="inline ml-1" />
+                   </TableHead>
                    <TableHead className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-neutral-50">
-                {filteredStudents.map((student) => {
+                {sortedStudents.map((student) => {
                   const isLowWordCount = student.wordCount && student.wordCount < (activity.minWordCount || 150);
                   const isGrading = gradingStudents.has(student.id);
                   const isSubmitted = student.status === "submitted";

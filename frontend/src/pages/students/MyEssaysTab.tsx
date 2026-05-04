@@ -52,7 +52,7 @@ export function MyEssaysTab() {
 
         const { data: essaysData, error } = await supabase
           .from('essays')
-          .select('id, title, file_path, content, submitted_at, status, essay_activities(id, title)')
+          .select('id, title, file_path, content, submitted_at, status, essay_activities(id, title), classes(name)')
           .eq('student_id', student.id)
           .order('submitted_at', { ascending: false });
 
@@ -83,6 +83,7 @@ export function MyEssaysTab() {
             hasTeacherFeedback: e.status === 'reviewed',
             activityId: (e.essay_activities as any)?.id,
             studentCode: studentCode,
+            courseName: (e.classes as any)?.name || 'General',
             filePath: e.file_path,
             content: e.content,
           };
@@ -254,6 +255,7 @@ export function MyEssaysTab() {
             <TableHeader>
               <TableRow className="bg-neutral-50/50 hover:bg-neutral-50/50 border-b border-neutral-50">
                 <TableHead className="py-5 px-6 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Assignment Name</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Course</TableHead>
                 <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Sent On</TableHead>
                 <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Progress</TableHead>
                 <TableHead className="text-center text-[11px] font-bold text-neutral-400 uppercase tracking-widest">AI Score</TableHead>
@@ -279,6 +281,9 @@ export function MyEssaysTab() {
                         <FileText size={10} />
                         {essay.filename}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="text-[11px] font-bold text-neutral-500 bg-neutral-50 px-2 py-1 rounded-md">{essay.courseName}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="text-[11px] font-bold text-neutral-500">{essay.submitted}</span>
