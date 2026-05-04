@@ -72,17 +72,17 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
         <div className="absolute top-0 right-0 w-48 h-48 bg-primary-100/20 blur-[80px] rounded-full -mr-24 -mt-24 pointer-events-none" />
         <div className="relative z-10 flex items-start justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-black text-neutral-900 tracking-tighter leading-none mb-3">
+            <h2 className="text-2xl font-bold text-neutral-900 tracking-tighter leading-none mb-3">
               {rubric_name}
             </h2>
             <div className="flex items-center gap-2">
-               <Badge variant="info" size="sm" className="rounded-lg font-black text-[10px] uppercase tracking-widest bg-primary/10 text-primary border-primary-200/50">Structural Protocol Applied</Badge>
+               <Badge variant="info" size="sm" className="rounded-lg font-bold text-[10px] uppercase tracking-widest bg-primary/50 text-primary border-primary-200/50">Structural Protocol Applied</Badge>
             </div>
           </div>
           <div className={`flex flex-col items-end`}>
             <div className={`p-4 rounded-3xl backdrop-blur-md border border-white shadow-xl ${getScoreBadgeColor(rubric_score)}`}>
-              <span className="text-3xl font-black tracking-tighter">{(Number(rubric_score) || 0).toFixed(0)}</span>
-              <span className="text-sm font-black opacity-60 ml-0.5">%</span>
+              <span className="text-3xl font-bold tracking-tighter">{(Number(rubric_score) || 0).toFixed(0)}</span>
+              <span className="text-sm font-bold opacity-60 ml-0.5">%</span>
             </div>
           </div>
         </div>
@@ -90,8 +90,8 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
         {/* Overall Score Progress */}
         <div className="relative z-10 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Institutional Consensus</span>
-            <span className={`text-lg font-black ${getScoreColor(rubric_score)} tracking-tight`}>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1">Institutional Consensus</span>
+            <span className={`text-lg font-bold ${getScoreColor(rubric_score)} tracking-tight`}>
               {total_points} <span className="text-xs opacity-50 font-medium">/ {max_points} PTS</span>
             </span>
           </div>
@@ -106,9 +106,8 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
         </div>
       </Card>
 
-      {/* Criterion Scores Stream */}
       <div className="space-y-6">
-        <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] px-1">Criterion Matrices</h3>
+        <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-1">Criterion Matrices</h3>
         {criterion_scores.map((criterion: any, index: number) => {
           const percentage = (criterion.points_earned / criterion.max_points) * 100;
           const isExcellent = criterion.points_earned === criterion.max_points;
@@ -125,24 +124,24 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
                 <div className="flex items-start justify-between mb-5">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h4 className="text-lg font-black text-neutral-900 tracking-tight leading-none group flex items-center gap-2">
+                      <h4 className="text-lg font-bold text-neutral-900 tracking-tight leading-none group flex items-center gap-2">
                         {criterion.criterion_title}
                         {isExcellent && <CheckCircle className="w-5 h-5 text-success-default" />}
                         {isNeedsImprovement && <AlertCircle className="w-5 h-5 text-error-default" />}
                       </h4>
                     </div>
                     <Badge
-                      className={`rounded-xl px-3 py-1.5 font-black text-[9px] uppercase tracking-widest border ${getScoreBadgeColor(percentage)}`}
+                      className={`rounded-xl px-3 py-1.5 font-bold text-[9px] uppercase tracking-widest border ${getScoreBadgeColor(percentage)}`}
                     >
                       <Award className="w-3 h-3 mr-1.5" />
                       {criterion.score_level.toUpperCase()} PROTOCOL
                     </Badge>
                   </div>
                   <div className="text-right">
-                    <div className={`text-2xl font-black tracking-tighter ${getPointsColor(criterion.points_earned, criterion.max_points)}`}>
+                    <div className={`text-xl font-bold tracking-tighter ${getPointsColor(criterion.points_earned, criterion.max_points)}`}>
                       {criterion.points_earned} <span className="text-xs opacity-40">/ {criterion.max_points}</span>
                     </div>
-                    <div className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">
+                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
                        Index: {(Number(percentage) || 0).toFixed(0)}%
                     </div>
                   </div>
@@ -167,7 +166,7 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
                   <div className="mt-4 p-5 bg-primary-50/30 backdrop-blur-sm rounded-2xl border border-white/60">
                     <div className="flex items-center gap-2 mb-2">
                        <Target className="w-3.5 h-3.5 text-primary" />
-                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">Diagnostic feedback</span>
+                       <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Diagnostic feedback</span>
                     </div>
                     <p className="text-sm font-medium text-neutral-700 leading-relaxed italic">
                       {criterion.feedback}
@@ -176,8 +175,8 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
                 )}
 
                 <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between">
-                  <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Sub-Matrix Core Score</span>
-                  <Badge variant="neutral" size="sm" className="rounded-lg font-black text-[9px] bg-neutral-100/50 text-neutral-500 border-none">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Sub-Matrix Core Score</span>
+                  <Badge variant="neutral" size="sm" className="rounded-lg font-bold text-[9px] bg-neutral-100/50 text-neutral-500 border-none">
                     AI RAW: {(Number(criterion.analysis_score) || 0).toFixed(1)}/100
                   </Badge>
                 </div>
@@ -188,20 +187,21 @@ const RubricScores: React.FC<RubricScoresProps> = ({ analysis }) => {
       </div>
 
       {/* Protocol Summary Card */}
-      <Card variant="glass" className="p-8 bg-neutral-900/90 text-white border-none shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/20 blur-[100px] rounded-full pointer-events-none" />
+      {/* Protocol Summary Card */}
+      <div className="p-8 bg-blue-50/50 border border-blue-100 rounded-[2rem] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/50 blur-[100px] rounded-full pointer-events-none" />
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-               <Info className="w-6 h-6 text-primary-200" />
+            <div className="p-3 bg-white shadow-sm rounded-2xl">
+               <Info className="w-6 h-6 text-blue-500" />
             </div>
-            <h4 className="text-xl font-black tracking-tight">Institutional Scoring Protocol</h4>
+            <h4 className="text-xl font-bold tracking-tight text-neutral-900">Institutional Scoring Protocol</h4>
           </div>
-          <p className="text-neutral-400 text-sm leading-relaxed font-medium">
+          <p className="text-neutral-600 text-sm leading-relaxed font-medium">
             Scores are synthesized via real-time mapping of manuscript analysis results—grammar, coherence, and argument strength—onto each structural criterion. Performance levels represent the definitive academic consensus on manuscript quality.
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

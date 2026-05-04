@@ -1347,31 +1347,31 @@ const AnalysisResults: React.FC = () => {
             {rubricData?.rubric_id && (
               <Button
                 variant="outline"
-                className="rounded-xl py-2 md:py-3 px-3 md:px-6 font-bold text-[10px] uppercase tracking-widest border-primary-200 text-primary hover:bg-primary-50"
+                className="rounded-lg py-1.5 md:py-2 px-3 md:px-4 font-bold text-[9px] uppercase tracking-widest border-primary-200 text-primary hover:bg-primary-50"
                 onClick={handlePreviewRubric}
                 title="View Rubric"
               >
-                <ClipboardList className="w-4 h-4 md:mr-2" />
+                <ClipboardList className="w-3.5 h-3.5 md:mr-1.5" />
                 <span className="hidden lg:inline">View Rubric</span>
               </Button>
             )}
             {filePath && (
               <Button
                 variant="outline"
-                className="rounded-xl py-2 md:py-3 px-3 md:px-6 font-bold text-[10px] uppercase tracking-widest border-neutral-200"
+                className="rounded-lg py-1.5 md:py-2 px-3 md:px-4 font-bold text-[9px] uppercase tracking-widest border-neutral-200"
                 onClick={() => setIsViewerOpen(true)}
                 title="View Original"
               >
-                <Eye className="w-4 h-4 md:mr-2" />
+                <Eye className="w-3.5 h-3.5 md:mr-1.5" />
                 <span className="hidden lg:inline">View Original</span>
               </Button>
             )}
             <Button
               variant="primary"
               onClick={handleExportPDF}
-              className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 py-2 md:py-3 px-4 md:px-6 font-bold text-[10px] uppercase tracking-widest"
+              className="rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 py-1.5 md:py-2 px-3 md:px-4 font-bold text-[9px] uppercase tracking-widest"
             >
-              <Download className="w-4 h-4 md:mr-2" />
+              <Download className="w-3.5 h-3.5 md:mr-1.5" />
               <span className="hidden sm:inline">Export Report</span>
             </Button>
           </div>
