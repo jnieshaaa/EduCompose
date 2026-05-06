@@ -265,22 +265,11 @@ class GrammarAnalyzer:
         self, 
         text: str, 
         sentences: List[str], 
-        max_retries: int = 3,
-        initial_delay: float = 1.0
+        max_retries: int = 5,
+        initial_delay: float = 1.5
     ) -> Tuple[List[Dict[str, Any]], bool]:
         """
         Check grammar using LLM with retry mechanism and exponential backoff
-        
-        Args:
-            text: Full text to check
-            sentences: List of sentences for context
-            max_retries: Maximum number of retry attempts (default: 3)
-            initial_delay: Initial delay in seconds before first retry (default: 1.0)
-            
-        Returns:
-            Tuple of (error_list, success_flag)
-            - error_list: List of grammar error dictionaries (empty list if no errors found)
-            - success_flag: True if LLM call succeeded (even with 0 errors), False if it failed
         """
         if not self.llm_client or not self.available_llm:
             return [], False
@@ -288,37 +277,47 @@ class GrammarAnalyzer:
         last_exception = None
         delay = initial_delay
         
+        # Prepare model rotation if using Gemini
+        model_rotation = []
+        if self.available_llm == "gemini":
+            env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash").replace("models/", "")
+            model_rotation = [env_model, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b']
+            # Deduplicate while preserving order
+            model_rotation = list(dict.fromkeys(model_rotation))
+        
         for attempt in range(max_retries):
             try:
                 if self.available_llm == "openai":
                     errors = self._check_with_openai(text, sentences)
-                    # Success - return errors (could be empty list if no errors found)
                     return errors, True
                 elif self.available_llm == "gemini":
+                    # Rotate model on each retry attempt
+                    current_model = model_rotation[attempt % len(model_rotation)]
+                    if current_model != self.gemini_model:
+                        logger.info(f"🔄 Rotating Gemini model to: {current_model} (Attempt {attempt + 1})")
+                        self.gemini_model = current_model
+                    
                     errors = self._check_with_gemini(text, sentences)
-                    # Success - return errors (could be empty list if no errors found)
                     return errors, True
             except Exception as e:
                 error_msg = str(e)
-                # Don't retry quota errors - they won't succeed immediately
+                # Don't retry quota errors
                 if "429" in error_msg or "quota" in error_msg.lower() or "exceeded" in error_msg.lower():
                     logger.error(f"❌ {self.available_llm.upper()} API quota exceeded. Error: {e}")
-                    logger.warning("💡 Consider using OpenAI API or wait for quota reset. Falling back to basic rules only.")
                     return [], False
                 
                 last_exception = e
                 if attempt < max_retries - 1:
                     # Exponential backoff: delay * 2^attempt
-                    wait_time = delay * (2 ** attempt)
+                    wait_time = delay * (1.5 ** attempt) # Slightly gentler growth
                     logger.warning(
-                        f"LLM grammar check attempt {attempt + 1}/{max_retries} failed: {e}. "
+                        f"LLM grammar check attempt {attempt + 1}/{max_retries} failed ({current_model if self.available_llm == 'gemini' else ''}): {e}. "
                         f"Retrying in {wait_time:.2f} seconds..."
                     )
                     time.sleep(wait_time)
                 else:
                     logger.error(f"LLM grammar check failed after {max_retries} attempts: {e}")
         
-        # All retries failed
         return [], False
     
     
@@ -393,52 +392,56 @@ Please return your response as a valid JSON object with this structure:
                 "max_output_tokens": 16384,  # Increased to prevent truncation for long essays
             }
             
+            # Gemini response
             response = self.llm_client.models.generate_content(
                 model=self.gemini_model,
                 contents=full_prompt,
                 config=generation_config
             )
             
+            # Check for completion
+            if not response or not response.text:
+                raise Exception("Empty response from Gemini")
+
             # Check if response was truncated by examining finish_reason
             finish_reason = None
             if response.candidates and len(response.candidates) > 0:
                 finish_reason = response.candidates[0].finish_reason
                 if finish_reason == "MAX_OUTPUT_TOKENS":
-                    logger.warning(f"⚠️ Gemini response was TRUNCATED (max_output_tokens limit reached). "
-                                 f"Some errors may be missing. Response length: {len(response.text)} chars.")
+                    logger.warning(f"⚠️ Gemini response was TRUNCATED (max_output_tokens limit reached).")
             
             result_text = response.text.strip()
             
             # Remove markdown code blocks if present
             if result_text.startswith("```json"):
                 result_text = result_text[7:]
-            if result_text.startswith("```"):
+            elif result_text.startswith("```"):
                 result_text = result_text[3:]
             if result_text.endswith("```"):
                 result_text = result_text[:-3]
             result_text = result_text.strip()
             
-            # Check if JSON looks incomplete (common signs: missing closing brackets, truncated last error)
-            # This check is still useful even if finish_reason doesn't indicate truncation
+            # JSON repair logic
             json_incomplete = result_text and not result_text.rstrip().endswith("]") and not result_text.rstrip().endswith("}")
             if json_incomplete or finish_reason == "MAX_OUTPUT_TOKENS":
-                if json_incomplete:
-                    logger.warning(f"⚠️ Gemini response may be incomplete (doesn't end with ] or }}). "
-                                 f"Response length: {len(result_text)} chars. Attempting to repair JSON...")
-                # Try to repair incomplete JSON
                 result_text = self._repair_incomplete_json(result_text)
             
             errors = self._parse_llm_response(result_text, text)
-            if json_incomplete:
-                logger.info(f"✓ Repaired JSON contains {len(errors)} errors")
             return errors
             
         except Exception as e:
             error_msg = str(e)
-            # Check for quota exceeded error - raise it so retry logic can handle it properly
-            if "429" in error_msg or "quota" in error_msg.lower() or "exceeded" in error_msg.lower():
-                # Don't log here - let the retry logic handle the logging to avoid duplicates
-                raise  # Re-raise so retry logic can detect and skip retries
+            # Re-raise specific errors so retry logic can handle them
+            # 429: Quota, 503: Unavailable, 500: Server Error, 504: Timeout
+            retryable_errors = ["503", "504", "500", "unavailable", "deadline exceeded", "timeout"]
+            quota_errors = ["429", "quota", "exceeded"]
+            
+            if any(q in error_msg.lower() for q in quota_errors):
+                # Raise to indicate quota (retry logic will stop)
+                raise
+            elif any(r in error_msg.lower() for r in retryable_errors):
+                # Raise to indicate retryable error
+                raise
             else:
                 logger.error(f"Gemini grammar check error: {e}")
                 return []
