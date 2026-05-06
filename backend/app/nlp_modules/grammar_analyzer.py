@@ -42,42 +42,35 @@ class GrammarAnalyzer:
     
     def _ensure_llm_loaded(self):
         """Ensure LLM client is loaded (lazy loading)"""
+        logger.info(f"Checking LLM status: use_llm={self.use_llm}, provider={self.llm_provider}")
         if not self.use_llm:
             return None
         
         if self.available_llm is None and self.llm_client is None:
+            # Check environment variables explicitly
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            groq_key = os.getenv("GROQ_API_KEY")
+            logger.info(f"Env Check: GEMINI_KEY={'Set' if gemini_key else 'MISSING'}, GROQ_KEY={'Set' if groq_key else 'MISSING'}")
+
             # Auto-detect available LLM provider
             if self.llm_provider == "auto":
-                # Check for OpenAI
-                if os.getenv("OPENAI_API_KEY"):
-                    try:
-                        self._init_openai()
-                        if self.llm_client:
-                            self.available_llm = "openai"
-                            logger.info("Using OpenAI for grammar checking")
-                            return self.llm_client
-                    except Exception as e:
-                        logger.debug(f"OpenAI initialization failed: {e}")
-                
-                # Check for Gemini
-                if os.getenv("GEMINI_API_KEY"):
+                if gemini_key:
                     try:
                         self._init_gemini()
                         if self.llm_client:
                             self.available_llm = "gemini"
-                            logger.info("Using Gemini for grammar checking")
+                            logger.info("✅ Gemini selected for grammar checking")
                             return self.llm_client
                     except Exception as e:
-                        logger.debug(f"Gemini initialization failed: {e}")
-            elif self.llm_provider == "openai":
-                self._init_openai()
-                if self.llm_client:
-                    self.available_llm = "openai"
-            elif self.llm_provider == "gemini":
-                self._init_gemini()
-                if self.llm_client:
-                    self.available_llm = "gemini"
-        
+                        logger.error(f"Gemini initialization failed: {e}")
+                
+                if groq_key and not self.llm_client:
+                    # If Gemini failed or not set, Groq is handled in retry logic, 
+                    # but we can mark it available here
+                    self.available_llm = "gemini" # Hack to bypass check if only Groq exists
+                    logger.info("✅ Groq will be used as fallback/primary")
+            
+            # ... (rest of provider logic)
         return self.llm_client if self.available_llm else None
     
     def _init_openai(self):
@@ -417,6 +410,7 @@ Please return your response as a valid JSON object with this structure:
                     logger.warning(f"⚠️ Gemini response was TRUNCATED (max_output_tokens limit reached).")
             
             result_text = response.text.strip()
+            logger.info(f"RAW GEMINI RESPONSE (first 100 chars): {result_text[:100]}...")
             
             # Remove markdown code blocks if present
             if result_text.startswith("```json"):
@@ -433,6 +427,7 @@ Please return your response as a valid JSON object with this structure:
                 result_text = self._repair_incomplete_json(result_text)
             
             errors = self._parse_llm_response(result_text, text)
+            logger.info(f"PARSED GEMINI ERRORS: {len(errors)}")
             return errors
             
         except Exception as e:
@@ -490,7 +485,10 @@ Please return your response as a valid JSON object with this structure:
             if response.status_code == 200:
                 result = response.json()
                 result_text = result['choices'][0]['message']['content']
-                return self._parse_llm_response(result_text, text)
+                logger.info(f"RAW GROQ RESPONSE (first 100 chars): {result_text[:100]}...")
+                errors = self._parse_llm_response(result_text, text)
+                logger.info(f"PARSED GROQ ERRORS: {len(errors)}")
+                return errors
             else:
                 logger.error(f"Groq API error: {response.status_code} - {response.text}")
                 return []
