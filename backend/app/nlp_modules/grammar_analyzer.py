@@ -117,8 +117,8 @@ class GrammarAnalyzer:
             if env_model:
                 model_candidates.append(env_model)
             
-            # Use verified stable models for May 2026
-            stable_fallbacks = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
+            # Use verified stable models for May 2026 (removed 2.0 as it 404'd)
+            stable_fallbacks = ['gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-pro-latest', 'gemini-3.1-flash-lite-preview']
             for m in stable_fallbacks:
                 if m not in model_candidates:
                     model_candidates.append(m)
@@ -285,7 +285,7 @@ class GrammarAnalyzer:
         model_rotation = []
         if self.available_llm == "gemini":
             env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-flash-latest").replace("models/", "")
-            model_rotation = [env_model, 'gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
+            model_rotation = [env_model, 'gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-pro-latest', 'gemini-3.1-flash-lite-preview']
             model_rotation = list(dict.fromkeys(model_rotation))
         
         for attempt in range(max_retries):
@@ -500,44 +500,46 @@ Please return your response as a valid JSON object with this structure:
             return []
     
     def _build_grammar_prompt(self, text: str, sentences: List[str]) -> str:
-        """Build prompt for LLM grammar checking with enhanced paragraph splitting and context-aware spelling"""
-        # Limit text length to avoid token limits (keep it reasonable for Flash models)
+        """Build prompt for LLM grammar checking with high strictness for academic standards"""
         max_chars = 8000 
         if len(text) > max_chars:
             text = text[:max_chars] + "... [text truncated for analysis]"
         
-        prompt = f"""Analyze the following essay for structural organization, style, logical flow, and complex grammatical issues.
+        prompt = f"""EXPERT ACADEMIC GRAMMAR CHECKER: Analyze the following essay with high strictness.
+Identify EVERY error including grammar, spelling, punctuation, style, and informal tone.
 
 Text to analyze:
+---
 {text}
+---
 
-Instructions:
-1. Identify structural, stylistic, and complex grammatical errors.
-2. For each issue, provide:
+CRITICAL INSTRUCTIONS:
+1. SUBJECT-VERB AGREEMENT: Flag errors like "she cook" (should be "she cooks") or "they was" (should be "they were").
+2. SPELLING & TYPOS: Flag "dont", "alot", "sooo", "waaah", "haha", "lol".
+3. PUNCTUATION: Flag missing commas, periods, and apostrophes.
+4. TONE: Flag overly informal or conversational language that is inappropriate for academic writing.
+5. PARAGRAPHING: If the text lacks logical breaks, suggest them.
+
+For each issue, return:
    - type: "grammar" | "spelling" | "punctuation" | "structure" | "style"
-   - message: A brief, professional explanation.
-   - offset: Exact character position (0-based) from the start.
-   - errorLength: Number of characters the issue spans.
-   - text: The actual text at that position.
-   - suggestion: A corrected version.
+   - message: Professional explanation.
+   - offset: Exact 0-based character position.
+   - errorLength: Number of characters.
+   - text: The exact word/phrase being flagged.
+   - suggestion: The corrected version.
    - context: ~20 characters surrounding the issue.
 
-3. LOGICAL PARAGRAPHING (type: "structure"):
-   - If the text is a single "wall of text," suggest paragraph breaks at logical transition points.
-   - For each break: Set offset to the end of the sentence, errorLength to 1, and suggestion to ".\\n\\n".
-
-4. RETURN FORMAT:
-Return ONLY a valid JSON object with an "errors" array. Do not include markdown formatting or extra text.
+RETURN FORMAT: ONLY a valid JSON object. No markdown. No extra text.
 {{
   "errors": [
     {{
       "type": "grammar",
-      "message": "...",
-      "offset": 0,
-      "errorLength": 0,
-      "text": "...",
-      "suggestion": "...",
-      "context": "..."
+      "message": "Subject-verb agreement error: 'she cook' should be 'she cooks'.",
+      "offset": 45,
+      "errorLength": 8,
+      "text": "she cook",
+      "suggestion": "she cooks",
+      "context": "...busy she cook she clean..."
     }}
   ]
 }}
