@@ -142,7 +142,7 @@ export function CoursesTab() {
       </div>
 
       {/* Search & Filters Hub */}
-      <div className="bg-white p-5 rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-6">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl sm:rounded-[2.5rem] border border-neutral-100 shadow-sm space-y-4 sm:space-y-6">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={16} />
           <input
@@ -150,42 +150,52 @@ export function CoursesTab() {
             placeholder="Search by code or title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all font-medium"
+            className="w-full h-10 sm:h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl sm:rounded-2xl text-xs sm:text-sm placeholder:text-neutral-300 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all font-medium"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Department Filter</label>
-            <select
-              value={selectedDeptId}
-              disabled={activeTab === "dept"}
-              onChange={(e) => {
-                setSelectedDeptId(e.target.value);
-                setSelectedProgId(""); 
-              }}
-              className={`w-full h-11 px-4 border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer ${
-                activeTab === "dept" ? "bg-neutral-50 text-neutral-500 cursor-not-allowed opacity-60" : "bg-white"
-              }`}
-            >
-              <option value="">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
-            </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div className="space-y-1.5">
+            <label className="text-[9px] sm:text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Department Filter</label>
+            <div className="relative">
+              <select
+                value={selectedDeptId}
+                disabled={activeTab === "dept"}
+                onChange={(e) => {
+                  setSelectedDeptId(e.target.value);
+                  setSelectedProgId(""); 
+                }}
+                className={`w-full h-10 px-3 border border-neutral-100 rounded-xl text-[11px] outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer ${
+                  activeTab === "dept" ? "bg-neutral-50 text-neutral-500 cursor-not-allowed opacity-60" : "bg-white"
+                }`}
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                <Search size={12} className="rotate-90" />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Program Filter</label>
-            <select
-              value={selectedProgId}
-              onChange={(e) => setSelectedProgId(e.target.value)}
-              className="w-full h-11 px-4 bg-white border border-neutral-100 rounded-xl text-xs outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer"
-            >
-              <option value="">All Programs</option>
-              {availablePrograms.map((prog) => (
-                <option key={prog.id} value={prog.id}>{prog.name}</option>
-              ))}
-            </select>
+          <div className="space-y-1.5">
+            <label className="text-[9px] sm:text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] ml-1">Program Filter</label>
+            <div className="relative">
+              <select
+                value={selectedProgId}
+                onChange={(e) => setSelectedProgId(e.target.value)}
+                className="w-full h-10 px-3 bg-white border border-neutral-100 rounded-xl text-[11px] outline-none focus:border-primary/30 transition-all font-medium appearance-none cursor-pointer"
+              >
+                <option value="">All Programs</option>
+                {availablePrograms.map((prog) => (
+                  <option key={prog.id} value={prog.id}>{prog.name}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                <Search size={12} className="rotate-90" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -196,10 +206,10 @@ export function CoursesTab() {
                 if (activeTab !== "dept") setSelectedDeptId("");
                 setSelectedProgId("");
               }}
-              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-error-default transition-all group"
+              className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-neutral-300 hover:text-error-default transition-all group"
             >
-              <X size={12} className="group-hover:rotate-90 transition-transform" />
-              Clear Selection
+              <X size={10} className="group-hover:rotate-90 transition-transform" />
+              Clear Filters
             </button>
           </div>
         )}
@@ -244,7 +254,7 @@ export function CoursesTab() {
               <div 
                 key={course.id} 
                 onClick={() => activeTab === 'my' && handleCourseClick(course)}
-                className={`group transition-all border rounded-2xl p-5 bg-white relative overflow-hidden ${
+                className={`group transition-all border rounded-2xl p-4 sm:p-5 bg-white relative overflow-hidden ${
                   activeTab === 'my' 
                   ? 'cursor-pointer border-neutral-100 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5' 
                   : 'border-neutral-100 shadow-sm'

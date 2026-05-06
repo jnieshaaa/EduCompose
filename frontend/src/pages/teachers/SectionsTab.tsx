@@ -124,56 +124,102 @@ export function SectionsTab() {
           </Button>
         </Card>
       ) : (
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-widest">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Class Name</th>
-                <th className="px-6 py-4 font-semibold">Year/Level</th>
-                <th className="px-6 py-4 font-semibold">Course</th>
-                <th className="px-6 py-4 font-semibold">Term</th>
-                <th className="px-6 py-4 font-semibold">Students</th>
-                <th className="px-6 py-4 font-semibold">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {sections.map((section) => (
-                <tr key={section.id} className="hover:bg-neutral-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-neutral-900">{section.name}</td>
-                  <td className="px-6 py-4 text-neutral-600">
-                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-semibold">
-                      Year {section.year}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-neutral-600">
-                    <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">
+        <div className="space-y-4">
+          {/* Mobile View: Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {sections.map((section) => (
+              <div key={section.id} className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-neutral-900">{section.name}</h3>
+                    <p className="text-[10px] font-mono text-neutral-400 mt-0.5">
                       {(section as any).courses?.course_code}
-                    </span>
-                    <span className="ml-2">{(section as any).courses?.course_title}</span>
-                  </td>
-                  <td className="px-6 py-4 text-neutral-600">
-                    {section.students_estimated}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => { setEditingSection(section); setIsEditDialogOpen(true); }}
-                        className="p-1 text-neutral-400 hover:text-primary transition-colors"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteSection(section)}
-                        className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </p>
+                  </div>
+                  <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                    Year {section.year}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-neutral-600">
+                  <div className="flex items-center gap-1">
+                    <Users size={14} className="text-neutral-400" />
+                    <span>{section.students_estimated} Students</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => { setEditingSection(section); setIsEditDialogOpen(true); }}
+                      className="p-2 bg-neutral-50 text-neutral-400 hover:text-primary rounded-lg transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteSection(section)}
+                      className="p-2 bg-neutral-50 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tablet/Desktop View: Table */}
+          <div className="hidden sm:block bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-widest">
+                  <tr>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap">Class Name</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap">Year/Level</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap">Course</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap text-center">Students</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {sections.map((section) => (
+                    <tr key={section.id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-neutral-900 whitespace-nowrap">{section.name}</td>
+                      <td className="px-6 py-4 text-neutral-600 whitespace-nowrap">
+                        <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs font-semibold">
+                          Year {section.year}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-neutral-600">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded w-fit mb-1">
+                            {(section as any).courses?.course_code}
+                          </span>
+                          <span className="text-xs truncate max-w-[200px]">{(section as any).courses?.course_title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-neutral-600 text-center font-bold">
+                        {section.students_estimated}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => { setEditingSection(section); setIsEditDialogOpen(true); }}
+                            className="p-1.5 text-neutral-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteSection(section)}
+                            className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -188,9 +234,10 @@ export function SectionsTab() {
                 <div className="flex gap-2">
                   <input
                       placeholder="e.g. A"
+                      maxLength={1}
                       value={newSection.name}
                       onChange={(e) => setNewSection({...newSection, name: e.target.value.toUpperCase()})}
-                      className="w-full px-4 py-2 border rounded-lg mt-1 block uppercase"
+                      className="w-full px-4 py-2 border rounded-lg mt-1 block uppercase text-center font-bold"
                   />
                   <select
                       value={newSection.year}

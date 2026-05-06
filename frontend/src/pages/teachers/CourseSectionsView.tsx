@@ -402,7 +402,7 @@ export function CourseSectionsView({
             
             const { error: enrollError } = await supabase
               .from("block_students")
-              .insert(enrollments);
+              .upsert(enrollments, { onConflict: 'block_id,student_id' });
               
             if (enrollError) console.error("Auto-enroll error:", enrollError);
           }
@@ -451,9 +451,9 @@ export function CourseSectionsView({
 
       const { error: enrollError } = await supabase
         .from("block_students")
-        .insert(enrollments);
+        .upsert(enrollments, { onConflict: 'block_id,student_id' });
 
-      if (enrollError && enrollError.code !== "23505") throw enrollError;
+      if (enrollError) throw enrollError;
 
       showSuccess(`Synchronized ${matchingStudents.length} students to Section ${block.year}${block.name}.`);
       fetchBlocks();
@@ -630,107 +630,109 @@ export function CourseSectionsView({
               </button>
             </div>
           ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-neutral-50/50">
-                  <th 
-                    className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/3 cursor-pointer hover:text-primary transition-colors select-none"
-                    onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  >
-                    Section Block <ArrowUpDown size={10} className="inline ml-1" />
-                  </th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Enrollment</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center">Status</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {[...blocks]
-                  .sort((a, b) => {
-                    const aYear = a.year || 0;
-                    const bYear = b.year || 0;
-                    const aName = a.name || "";
-                    const bName = b.name || "";
-                    const cmp = aYear - bYear || aName.localeCompare(bName);
-                    return sortDirection === 'asc' ? cmp : -cmp;
-                  })
-                  .map((block) => {
-                  const pwb = programWideBlocks.find(p => p.year === block.year && p.name === block.name);
-                  const hasMismatch = pwb && pwb.student_count > block.students_estimated;
-                  
-                  return (
-                    <tr
-                      key={block.id}
-                      className="hover:bg-neutral-50/30 transition-colors cursor-pointer group"
-                      onClick={() => {
-                        navigate(
-                          buildSecureUrl('/Teacher/Students', {
-                            courseId: course.id,
-                            courseCode: course.course_code,
-                            programLoad: selectedProgramLoad.id,
-                            programAbbr: selectedProgramLoad.programs_lookup?.abbr || '',
-                            block: block.id,
-                            blockName: `${block.year}${block.name}`,
-                          }),
-                        );
-                      }}
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-200">
+              <table className="w-full text-left min-w-[600px]">
+                <thead>
+                  <tr className="bg-neutral-50/50">
+                    <th 
+                      className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] w-1/3 cursor-pointer hover:text-primary transition-colors select-none whitespace-nowrap"
+                      onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-primary/20">
-                            {block.year}{block.name}
+                      Section Block <ArrowUpDown size={10} className="inline ml-1" />
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Enrollment</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Status</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] text-right whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {[...blocks]
+                    .sort((a, b) => {
+                      const aYear = a.year || 0;
+                      const bYear = b.year || 0;
+                      const aName = a.name || "";
+                      const bName = b.name || "";
+                      const cmp = aYear - bYear || aName.localeCompare(bName);
+                      return sortDirection === 'asc' ? cmp : -cmp;
+                    })
+                    .map((block) => {
+                    const pwb = programWideBlocks.find(p => p.year === block.year && p.name === block.name);
+                    const hasMismatch = pwb && pwb.student_count > block.students_estimated;
+                    
+                    return (
+                      <tr
+                        key={block.id}
+                        className="hover:bg-neutral-50/30 transition-colors cursor-pointer group"
+                        onClick={() => {
+                          navigate(
+                            buildSecureUrl('/Teacher/Students', {
+                              courseId: course.id,
+                              courseCode: course.course_code,
+                              programLoad: selectedProgramLoad.id,
+                              programAbbr: selectedProgramLoad.programs_lookup?.abbr || '',
+                              block: block.id,
+                              blockName: `${block.year}${block.name}`,
+                            }),
+                          );
+                        }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-primary/20">
+                              {block.year}{block.name}
+                            </div>
+                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Year {block.year} • Section {block.name}</span>
                           </div>
-                          <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Year {block.year} • Section {block.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
-                          {block.students_estimated} Students
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {hasMismatch ? (
-                          <div className="flex flex-col items-center gap-1">
-                             <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-full flex items-center gap-1">
-                              <Loader2 size={10} className="animate-spin" /> {pwb.student_count - block.students_estimated} NEW
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[9px] font-bold px-2 py-0.5 bg-success-default/5 text-success-default border border-success-default/10 rounded-full">
-                            SYNCED
+                        </td>
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          <span className="text-[11px] font-bold px-2.5 py-1 bg-white border border-neutral-100 rounded-lg text-neutral-500 shadow-sm">
+                            {block.students_estimated} Students
                           </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {hasMismatch && (
+                        </td>
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          {hasMismatch ? (
+                            <div className="flex flex-col items-center gap-1">
+                               <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-full flex items-center gap-1">
+                                <Loader2 size={10} className="animate-spin" /> {pwb.student_count - block.students_estimated} NEW
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] font-bold px-2 py-0.5 bg-success-default/5 text-success-default border border-success-default/10 rounded-full">
+                              SYNCED
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            {hasMismatch && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSyncBlock(block);
+                                }}
+                                title="Sync Students"
+                                className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                              >
+                                <Plus size={15} />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSyncBlock(block);
+                                handleDeleteBlock(block.id);
                               }}
-                              title="Sync Students"
-                              className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                              className="p-2 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-xl transition-all"
                             >
-                              <Plus size={15} />
+                              <Trash2 size={15} />
                             </button>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteBlock(block.id);
-                            }}
-                            className="p-2 text-neutral-300 hover:text-error-default hover:bg-error-default/5 rounded-xl transition-all"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
@@ -897,9 +899,10 @@ export function CourseSectionsView({
                     <input
                       type="text"
                       placeholder="e.g. A"
-                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all uppercase font-bold"
+                      maxLength={1}
+                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-primary/30 transition-all uppercase font-bold text-center"
                       value={newBlock.name}
-                      onChange={(e) => setNewBlock({ ...newBlock, name: e.target.value })}
+                      onChange={(e) => setNewBlock({ ...newBlock, name: e.target.value.toUpperCase() })}
                     />
                   </div>
                 </div>
