@@ -1990,6 +1990,13 @@ export const gradeEssay = async (
         rubricId,
       );
 
+      if (analysisResult.error) {
+        return {
+          success: false,
+          error: analysisResult.message || "Invalid essay content",
+        };
+      }
+
       if (rubricId && !analysisResult.rubric_scores) {
         console.error(
           "[gradeEssay] ERROR: Rubric ID was provided but rubric_scores not in response.",

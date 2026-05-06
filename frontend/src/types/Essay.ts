@@ -377,6 +377,8 @@ export interface AnalysisResponse {
   diagnostic_summary: DiagnosticSummary;
   word_count: number;
   generated_at: string;
+  error?: string;
+  message?: string;
   rubric_scores?: {
     rubric_id?: string;
     rubric_name: string;
@@ -413,6 +415,8 @@ export interface TextAnalysisResponse {
   word_count?: number;
   generated_at: string;
   processing_time_seconds?: number;
+  error?: string;
+  message?: string;
   rubric_scores?: {
     rubric_id?: string;
     rubric_name: string;

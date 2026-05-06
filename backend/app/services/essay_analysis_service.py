@@ -102,24 +102,39 @@ class EssayAnalysisService:
             Dictionary containing scores, detailed analysis, and recommendations
         """
         content = essay.content
-        analysis_result = await self._perform_analysis(content, analysis_type)
-
-        # Apply rubric scoring if activity has a rubric
+        
+        # 1. Fetch activity details for relevance check
+        activity_title = "General Essay"
         rubric_id = None
         if hasattr(essay, 'activity_id') and essay.activity_id:
             try:
-                # Fetch rubric_id from activity
                 with engine.connect() as connection:
                     result = connection.execute(
-                        text("SELECT rubric_id FROM essay_activities WHERE id = :activity_id"),
+                        text("SELECT title, rubric_id FROM essay_activities WHERE id = :activity_id"),
                         {"activity_id": essay.activity_id}
                     )
                     row = result.fetchone()
                     if row:
-                        rubric_id = row[0]
+                        activity_title = row[0]
+                        rubric_id = row[1]
             except Exception as e:
-                logger.warning(f"Failed to fetch rubric_id for activity {essay.activity_id}: {e}")
+                logger.warning(f"Failed to fetch activity details for {essay.activity_id}: {e}")
 
+        # 2. Perform Content Quality & Relevance Check
+        # This prevents non-essay content (like forms, tables, or off-topic text) from being graded.
+        relevance_result = await self._check_content_validity(content, activity_title)
+        if not relevance_result["is_valid"]:
+            return {
+                "error": "invalid_content",
+                "message": relevance_result["reason"],
+                "word_count": len(content.split()),
+                "is_essay": relevance_result.get("is_essay", False),
+                "is_relevant": relevance_result.get("is_relevant", False)
+            }
+
+        analysis_result = await self._perform_analysis(content, analysis_type)
+
+        # Apply rubric scoring if activity has a rubric
         if rubric_id:
             rubric_data = await self._fetch_rubric(str(rubric_id))
             if rubric_data:
@@ -348,6 +363,57 @@ class EssayAnalysisService:
             "sentence_count": len(sentences),
             "distinct_alpha_chars": distinct_alpha_chars,
         }
+
+    async def _check_content_validity(self, content: str, topic: str) -> Dict[str, Any]:
+        """
+        Check if the content is an essay using fast heuristics (No LLM to save time).
+        Detects tables, forms, and lists.
+        """
+        text = content.strip()
+        lines = text.split('\n')
+        total_lines = len(lines)
+        
+        # 1. Table Detection (Pipes)
+        pipe_count = text.count('|')
+        if pipe_count > 8:
+            return {
+                "is_valid": False, 
+                "is_essay": False,
+                "reason": "This content appears to be a table or matrix, not an essay. Please submit a written composition in paragraph form."
+            }
+
+        # 2. Form Detection (Colons in short lines)
+        # Often forms have "Name: ...", "Rating: ..." on many lines
+        colon_lines = [l for l in lines if ':' in l and len(l.strip()) < 80]
+        if total_lines > 5 and len(colon_lines) / total_lines > 0.4:
+            return {
+                "is_valid": False, 
+                "is_essay": False,
+                "reason": "This content looks like a form or evaluation sheet (too many label/value pairs). Please provide a narrative essay."
+            }
+
+        # 3. Form Keywords Detection
+        form_keywords = ["criterion", "criteria", "rating", "numerical grade", "points", "passed/failed", "numerical point system"]
+        found_keywords = [kw for kw in form_keywords if kw in text.lower()]
+        if len(found_keywords) >= 3:
+            return {
+                "is_valid": False, 
+                "is_essay": False,
+                "reason": f"Detected form-like keywords ({', '.join(found_keywords)}). This does not appear to be a student essay."
+            }
+
+        # 4. Symbol/Number density (Forms/Spreadsheets)
+        # If the text has a very high ratio of numbers vs letters
+        digits = sum(c.isdigit() for c in text)
+        letters = sum(c.isalpha() for c in text)
+        if digits > 0 and letters > 0 and (digits / letters) > 0.3:
+            return {
+                "is_valid": False, 
+                "is_essay": False,
+                "reason": "This content contains too many numerical figures. Essays should be primarily text-based discussions."
+            }
+
+        return {"is_valid": True, "reason": "OK", "is_essay": True, "is_relevant": True}
 
     def _validate_content_quality(self, metrics: Dict[str, Any]) -> Optional[str]:
         """Return error text when we detect gibberish content instead of an essay."""
