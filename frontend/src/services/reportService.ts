@@ -28,8 +28,6 @@ export const reportService = {
    */
   async generateClassReport(section: Section, course: Course, schoolYear: string) {
     try {
-      console.log("Starting report generation for section:", section.id);
-      
       // 1. Fetch students in this block via users table join
       const { data: users, error: studentError } = await supabase
         .from('users')
@@ -58,17 +56,11 @@ export const reportService = {
         .eq('role', 'student')
         .eq('block_students.block_id', section.block_id);
 
-      if (studentError) {
-        console.error("Student fetch error:", studentError);
-        throw studentError;
-      }
+      if (studentError) throw studentError;
       
       if (!users || users.length === 0) {
-        console.warn("No students found for block_id:", section.block_id);
         throw new Error("No students found in this section.");
       }
-
-      console.log(`Found ${users.length} students. Fetching essays...`);
 
       // 2. Fetch submissions for all these students
       const studentIds = users.map(u => u.id);
@@ -95,8 +87,6 @@ export const reportService = {
           analysisMap.set(row.essay_id, row);
         });
       }
-
-      console.log(`Found ${allEssays?.length || 0} total submissions, ${analyzedEssayIds.length} with analysis results.`);
 
       // 3. Process data
       const reportData: ReportData[] = users.map(u => {
