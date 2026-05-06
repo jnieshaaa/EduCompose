@@ -165,7 +165,7 @@ class TransformerClaimClassifier:
             if env_model:
                 model_candidates.append(env_model)
             
-            stable_fallbacks = ['gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
+            stable_fallbacks = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
             for m in stable_fallbacks:
                 if m not in model_candidates:
                     model_candidates.append(m)

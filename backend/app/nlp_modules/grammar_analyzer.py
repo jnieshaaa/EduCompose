@@ -117,8 +117,8 @@ class GrammarAnalyzer:
             if env_model:
                 model_candidates.append(env_model)
             
-            # Use Gemini 3.1 and 2.5 series (May 2026 standards)
-            stable_fallbacks = ['gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
+            # Use verified stable models for May 2026
+            stable_fallbacks = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
             for m in stable_fallbacks:
                 if m not in model_candidates:
                     model_candidates.append(m)
@@ -280,8 +280,8 @@ class GrammarAnalyzer:
         # Prepare model rotation if using Gemini (May 2026 landscape)
         model_rotation = []
         if self.available_llm == "gemini":
-            env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-3.1-flash").replace("models/", "")
-            model_rotation = [env_model, 'gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
+            env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-flash-latest").replace("models/", "")
+            model_rotation = [env_model, 'gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
             # Deduplicate while preserving order
             model_rotation = list(dict.fromkeys(model_rotation))
         
