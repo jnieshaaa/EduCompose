@@ -1846,7 +1846,7 @@ export const gradeEssay = async (
     let forceOCR = false;
     if (essayData.content && essayData.content.trim()) {
       const existingText = essayData.content;
-      const existingWords = existingText.trim().split(/\s+/).filter(w => w.length > 0);
+      const existingWords = existingText.trim().split(/\s+/).filter((w: string) => w.length > 0);
       const avgWordLen = existingWords.length > 0 ? existingText.length / existingWords.length : 100;
       
       // If average word length is suspiciously high (> 25), it's likely the no-space bug
@@ -1862,7 +1862,7 @@ export const gradeEssay = async (
       wordCount = extractedText
         .trim()
         .split(/\s+/)
-        .filter((w) => w.length > 0).length;
+        .filter((w: string) => w.length > 0).length;
     } else if (essayData.file_path) {
       // Get signed URL to download file
       const { data: urlData, error: urlError } = await supabase.storage
