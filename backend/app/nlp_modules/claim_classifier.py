@@ -156,7 +156,7 @@ class TransformerClaimClassifier:
             from google import genai
             client = genai.Client(api_key=gemini_key)
             
-            # Prepare model candidates
+            # Prepare model candidates for May 2026
             env_model = os.getenv("GEMINI_MODEL_NAME")
             if env_model:
                 env_model = env_model.replace("models/", "")
@@ -165,7 +165,7 @@ class TransformerClaimClassifier:
             if env_model:
                 model_candidates.append(env_model)
             
-            stable_fallbacks = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest']
+            stable_fallbacks = ['gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
             for m in stable_fallbacks:
                 if m not in model_candidates:
                     model_candidates.append(m)

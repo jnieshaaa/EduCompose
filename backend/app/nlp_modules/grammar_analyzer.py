@@ -112,13 +112,13 @@ class GrammarAnalyzer:
             if env_model:
                 env_model = env_model.replace("models/", "")
             
-            # Build prioritized list of stable models
+            # Build prioritized list of stable models for May 2026
             model_candidates = []
             if env_model:
                 model_candidates.append(env_model)
             
-            # Add modern stable fallbacks (May 2026 landscape)
-            stable_fallbacks = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-pro-latest']
+            # Use Gemini 3.1 and 2.5 series (May 2026 standards)
+            stable_fallbacks = ['gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
             for m in stable_fallbacks:
                 if m not in model_candidates:
                     model_candidates.append(m)
@@ -137,8 +137,8 @@ class GrammarAnalyzer:
                     logger.debug(f"Model {model_name} verification failed: {model_error}")
             
             if not self.gemini_model:
-                # Use first candidate as default if verification failed but we have an API key
-                self.gemini_model = model_candidates[0] if model_candidates else "gemini-2.0-flash"
+                # Use first candidate as default (likely gemini-3.1-flash)
+                self.gemini_model = model_candidates[0] if model_candidates else "gemini-3.1-flash"
                 logger.warning(f"Failed to verify any Gemini model. Using default '{self.gemini_model}'. Last error: {last_error}")
                 
         except ImportError:
@@ -277,11 +277,11 @@ class GrammarAnalyzer:
         last_exception = None
         delay = initial_delay
         
-        # Prepare model rotation if using Gemini
+        # Prepare model rotation if using Gemini (May 2026 landscape)
         model_rotation = []
         if self.available_llm == "gemini":
-            env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash").replace("models/", "")
-            model_rotation = [env_model, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b']
+            env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-3.1-flash").replace("models/", "")
+            model_rotation = [env_model, 'gemini-3.1-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro']
             # Deduplicate while preserving order
             model_rotation = list(dict.fromkeys(model_rotation))
         
