@@ -77,8 +77,9 @@ networkx
 # For transformer-based claim classification
 # Note: transformers requires torch (PyTorch) which is a large dependency
 # For Python 3.12+, pip will automatically select compatible versions
-# transformers
-# torch
+transformers
+torch
+huggingface_hub
 
 # For knowledge graph visualization
 pyvis

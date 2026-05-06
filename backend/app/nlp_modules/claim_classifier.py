@@ -72,24 +72,39 @@ class TransformerClaimClassifier:
              os.getenv("HUGGINGFACE_API_TOKEN") or "")
             .strip()
         )
-        # Primary model candidate
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "chkla/roberta-argument").strip()
+        
+        # Primary model candidate from ENV
+        env_model_id = os.getenv("HUGGING_FACE_MODEL_ID", "").strip()
+        self.hf_repo = env_model_id if env_model_id else "chkla/roberta-argument"
+        
         # Secondary candidates for defense stability
         self.hf_fallbacks = ["sarvesh/argument-classification-bert", "bert-base-uncased"]
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
-        self.use_remote = bool(self.hf_token and (not TORCH_AVAILABLE or os.getenv("FORCE_REMOTE_NLP") == "1"))
+        # If FORCE_REMOTE_NLP is 1, force remote even if torch is available
+        force_remote = os.getenv("FORCE_REMOTE_NLP") == "1"
+        self.use_remote = bool(self.hf_token and (not TORCH_AVAILABLE or force_remote))
         
         if self.use_remote:
-            logger.info(f"Claim Classifier: Using Hugging Face Inference API (Repo: {self.hf_repo})")
+            logger.info(f"Claim Classifier: Using HF Inference API")
+            logger.info(f"Target Repo: {self.hf_repo}")
+            if not env_model_id:
+                logger.warning("No HUGGING_FACE_MODEL_ID found in .env, using default: chkla/roberta-argument")
             self._initialized = True
             return
 
         # Local initialization logic
         if not TORCH_AVAILABLE:
-            logger.warning("PyTorch/Transformers not available and no HF token found. Classifier will be unavailable.")
+            logger.warning("PyTorch/Transformers not available. Classifier will be unavailable.")
             return
+
+        # If it's a HF repo ID (contains /), use it directly for local loading
+        if "/" in self.hf_repo:
+            logger.info(f"Loading HF model locally: {self.hf_repo}")
+            self._initialize_local(use_fine_tuned=True, model_path=self.hf_repo)
+            if self._initialized:
+                return
 
         if use_fine_tuned and self.fine_tuned_model_path is None:
             backend_root = Path(__file__).parent.parent.parent
@@ -98,15 +113,9 @@ class TransformerClaimClassifier:
 
         if use_fine_tuned and self.fine_tuned_model_path:
             if not Path(self.fine_tuned_model_path).exists():
-                if self.hf_token:
-                    logger.info(f"Local model not found, but token exists. Switching to Remote API for Repo: {self.hf_repo}")
-                    self.use_remote = True
-                    self._initialized = True
-                    return
-                else:
-                    logger.warning(f"Local model not found at {self.fine_tuned_model_path} and no HF token. Falling back to base model.")
-                    use_fine_tuned = False
-                    self.fine_tuned_model_path = None
+                logger.warning(f"Local model folder not found at {self.fine_tuned_model_path}. Trying base model.")
+                use_fine_tuned = False
+                self.fine_tuned_model_path = None
 
         self._initialize_local(use_fine_tuned, self.fine_tuned_model_path)
 
@@ -169,6 +178,8 @@ Sentences:
 {json.dumps(sentences, indent=2)}
 """
             
+            response = None
+            last_error = "Unknown error"
             for m_name in model_candidates:
                 try:
                     # Verify and use
