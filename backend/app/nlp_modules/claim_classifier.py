@@ -72,7 +72,10 @@ class TransformerClaimClassifier:
              os.getenv("HUGGINGFACE_API_TOKEN") or "")
             .strip()
         )
-        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "nt-prgrmr/my_finetuned_distilbert").strip()
+        # Primary model candidate
+        self.hf_repo = os.getenv("HUGGING_FACE_MODEL_ID", "chkla/roberta-argument").strip()
+        # Secondary candidates for defense stability
+        self.hf_fallbacks = ["sarvesh/argument-classification-bert", "bert-base-uncased"]
         
         # Decide whether to use remote API or local
         # If torch is missing but token is present, force remote
@@ -259,12 +262,14 @@ Sentences:
         if not self.hf_token:
             return self._heuristic_classify(sentences)
 
-        url = f"https://api-inference.huggingface.co/models/{self.hf_repo}"
         headers = {
             "Authorization": f"Bearer {self.hf_token}",
             "Content-Type": "application/json",
             "x-use-cache": "false"
         }
+        
+        # Primary model and then fallbacks
+        models_to_try = [self.hf_repo] + [m for m in self.hf_fallbacks if m != self.hf_repo]
         
         results = []
         batch_size = 5
@@ -272,37 +277,42 @@ Sentences:
             batch = sentences[i:i + batch_size]
             payload = {"inputs": batch, "options": {"wait_for_model": True}}
             
-            try:
-                async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(url, json=payload, headers=headers)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    for item in data:
-                        if isinstance(item, list) and len(item) > 0:
-                            best = max(item, key=lambda x: x.get('score', 0))
-                            results.append({
-                                "component": str(best.get('label', 'unknown')).lower(),
-                                "confidence": float(best.get('score', 0.0))
-                            })
-                        elif isinstance(item, dict) and 'label' in item:
-                            results.append({
-                                "component": str(item.get('label', 'unknown')).lower(),
-                                "confidence": float(item.get('score', 0.0))
-                            })
-                        else:
-                            results.append({"component": "unknown", "confidence": 0.0})
-                else:
-                    # On any non-200 status, trigger LLM fallback then heuristics
-                    logger.warning(f"HF API returned {response.status_code}. Attempting LLM fallback...")
-                    try:
-                        llm_results = await self._classify_llm(batch)
-                        results.extend(llm_results)
-                    except Exception as llm_err:
-                        logger.error(f"LLM fallback also failed: {llm_err}. Using heuristics.")
-                        results.extend(self._heuristic_classify(batch))
-            except Exception as e:
-                logger.error(f"HF API request failed: {e}. Attempting LLM fallback...")
+            batch_success = False
+            for model_id in models_to_try:
+                url = f"https://api-inference.huggingface.co/models/{model_id}"
+                try:
+                    async with httpx.AsyncClient(timeout=20.0) as client:
+                        response = await client.post(url, json=payload, headers=headers)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        for item in data:
+                            if isinstance(item, list) and len(item) > 0:
+                                best = max(item, key=lambda x: x.get('score', 0))
+                                results.append({
+                                    "component": str(best.get('label', 'unknown')).lower(),
+                                    "confidence": float(best.get('score', 0.0))
+                                })
+                            elif isinstance(item, dict) and 'label' in item:
+                                results.append({
+                                    "component": str(item.get('label', 'unknown')).lower(),
+                                    "confidence": float(item.get('score', 0.0))
+                                })
+                            else:
+                                results.append({"component": "unknown", "confidence": 0.0})
+                        batch_success = True
+                        break # Success with this model, move to next batch
+                    elif response.status_code == 404:
+                        logger.warning(f"HF API model {model_id} not found (404). Trying next fallback...")
+                    else:
+                        logger.warning(f"HF API model {model_id} returned {response.status_code}. Trying next...")
+                except Exception as e:
+                    logger.error(f"HF API error for {model_id}: {e}")
+                    continue
+
+            if not batch_success:
+                # All HF models failed for this batch, try LLM fallback
+                logger.warning(f"All HF models failed for batch starting at {i}. Attempting LLM fallback...")
                 try:
                     llm_results = await self._classify_llm(batch)
                     results.extend(llm_results)

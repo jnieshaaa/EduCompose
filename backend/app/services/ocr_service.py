@@ -175,8 +175,10 @@ class OCRService:
 
             prompt = (
                 "Extract all text from this image exactly as it appears. "
-                "Keep the original formatting including paragraphs. "
-                "Return ONLY the extracted text."
+                "Keep the original formatting including paragraphs and indentation. "
+                "Do not add any explanations or commentary. "
+                "Return ONLY the extracted text content. "
+                "If the image contains a handwritten or printed essay, transcribe it faithfully."
             )
             
             # Build prioritized list of stable models
@@ -301,8 +303,8 @@ class OCRService:
             num_pages = len(pdf_reader.pages)
             logger.info(f"PDF has {num_pages} pages")
             
-            # Limit direct extraction to first 20 pages if it's huge
-            page_limit = 20
+            # Limit direct extraction to first 50 pages (increased for defense stability)
+            page_limit = 50
             pages_to_extract = min(num_pages, page_limit)
             
             text_parts = []
@@ -322,6 +324,17 @@ class OCRService:
                 combined_text = '\n\n'.join(text_parts)
                 # Check if we got meaningful text (more than just whitespace/formatting)
                 if len(combined_text.strip()) > 50:  # At least 50 characters
+                    # CRITICAL FIX: Check for "Wall of Text" with no spaces bug
+                    # Common in PyPDF2 when extraction fails to detect spacing
+                    words = combined_text.split()
+                    if len(words) > 0:
+                        avg_word_len = len(combined_text) / len(words)
+                        # If average word length is suspiciously high (e.g., > 20 chars per word)
+                        # it's likely a spacing failure.
+                        if avg_word_len > 25:
+                            logger.warning(f"Detected 'no-spaces' bug in direct extraction (avg word len: {avg_word_len:.1f}). Falling back to OCR.")
+                            return None
+                            
                     logger.info(f"Successfully extracted {len(combined_text)} characters directly from PDF")
                     return combined_text
                 else:
@@ -421,11 +434,14 @@ class OCRService:
                     username = os.getenv('USERNAME', '')
                     possible_paths = [
                         os.path.expanduser(rf"~\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin"),
+                        os.path.expanduser(rf"~\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-24.08.0\Library\bin"),
                         r"C:\Program Files\poppler\bin",
                         r"C:\poppler\bin",
+                        r"C:\Program Files\Poppler\Library\bin",
+                        r"C:\msys64\mingw64\bin", # Common MSYS2 path
                     ]
                     for path in possible_paths:
-                        if os.path.exists(path) and os.path.exists(os.path.join(path, "pdftoppm.exe")):
+                        if os.path.exists(path) and (os.path.exists(os.path.join(path, "pdftoppm.exe")) or os.path.exists(os.path.join(path, "pdftoppm"))):
                             poppler_path = path
                             logger.info(f"Found Poppler at: {poppler_path}")
                             break

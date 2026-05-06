@@ -390,7 +390,7 @@ Please return your response as a valid JSON object with this structure:
             # Configure generation config with higher token limit
             generation_config = {
                 "temperature": 0.1,  # Low temperature for consistent results
-                "max_output_tokens": 8192,  # Maximum for Gemini 2.5 models
+                "max_output_tokens": 16384,  # Increased to prevent truncation for long essays
             }
             
             response = self.llm_client.models.generate_content(
@@ -558,23 +558,26 @@ Return ONLY a valid JSON object with an "errors" array. Do not include markdown 
             in_string = False
         
         # Close all open structures in reverse order
-        # This is a bit naive but works for truncated JSON
-        # We try to find the last valid comma if we're between elements
         if not in_string:
-            # Remove trailing commas
-            clean_result = clean_result.rstrip().rstrip(',')
+            # Remove trailing commas and garbage
+            clean_result = clean_result.rstrip().rstrip(',').rstrip(':').rstrip('{').rstrip('[')
             
-            if open_brackets > 0:
-                # If we are in the middle of an object in the array, close it first
-                if open_braces > 1: # Assuming main object + one internal
-                    clean_result += "}" * (open_braces - 1)
-                clean_result += "]"
-                open_brackets = 0 # reset for final close
-                open_braces = 1 # reset to close the main wrapper
-            
-            if open_braces > 0:
-                clean_result += "}" * open_braces
-        
+            # If we are inside an object in an array, we need to close that object first
+            # But only if we have unbalanced braces inside the array
+            while open_braces > 0:
+                # Add dummy values for potentially truncated properties
+                if clean_result.endswith('"'):
+                    clean_result += ': "..."}'
+                elif clean_result.endswith(':'):
+                    clean_result += ' "..."}'
+                else:
+                    clean_result += '}'
+                open_braces -= 1
+                
+            while open_brackets > 0:
+                clean_result += ']'
+                open_brackets -= 1
+                
         return clean_result
     
     def _parse_llm_response(self, response_text: str, original_text: str) -> List[Dict[str, Any]]:
