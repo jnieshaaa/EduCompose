@@ -1843,7 +1843,20 @@ export const gradeEssay = async (
     let extractedText: string = "";
     let wordCount: number = 0;
 
+    let forceOCR = false;
     if (essayData.content && essayData.content.trim()) {
+      const existingText = essayData.content;
+      const existingWords = existingText.trim().split(/\s+/).filter(w => w.length > 0);
+      const avgWordLen = existingWords.length > 0 ? existingText.length / existingWords.length : 100;
+      
+      // If average word length is suspiciously high (> 25), it's likely the no-space bug
+      if (avgWordLen > 25 && existingText.length > 100) {
+        console.warn(`[gradeEssay] Detected 'no-spaces' bug in saved content (avg word len: ${avgWordLen.toFixed(1)}). Forcing re-OCR.`);
+        forceOCR = true;
+      }
+    }
+
+    if (essayData.content && essayData.content.trim() && !forceOCR) {
       onProgress?.(20, "Using text content from editor...");
       extractedText = essayData.content;
       wordCount = extractedText
