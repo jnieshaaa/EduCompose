@@ -35,7 +35,11 @@ import {
 import type { EssayActivity } from "../../types/activityTypes";
 import { buildFullNameFromObject } from "../../utils/nameUtils";
 import { useAuth } from "../../contexts/AuthContext";
-import { motion } from "framer-motion";
+import { useAcademicContext } from "../../hooks/useAcademicContext";
+import { useAlert } from "../../hooks/useAlert";
+import { reportService } from "../../services/reportService";
+import { motion, AnimatePresence } from "framer-motion";
+import { Download, ChevronDown } from "lucide-react";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -224,6 +228,10 @@ export function DashboardTab() {
   const [data, setData] = useState<DashboardData | null>(null);
   const navigate = useNavigate();
   const [perfChartMode, setPerfChartMode] = useState<"blocks" | "students">("blocks");
+  const { currentAY } = useAcademicContext();
+  const { showError, showSuccess } = useAlert();
+  const [isReportDropdownOpen, setIsReportDropdownOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState<string | null>(null);
 
   const filteredRecentActivity = useMemo(() => {
     if (!data) return [];
@@ -388,6 +396,36 @@ export function DashboardTab() {
     loadDashboardData();
   }, [user]);
 
+  const handleDownloadReport = async (blockId: string) => {
+    if (!data || !currentAY) return;
+    
+    const block = data.activityFilterBlocks.find(b => b.id === blockId);
+    const section = {
+      id: blockId,
+      block_id: blockId,
+      name: block?.name || '',
+      year: 1, // Default, will be fetched if needed or mapped
+      students_estimated: 0,
+    } as any;
+
+    const course = {
+      id: block?.courseId || '',
+      course_code: (data.activityFilterCourses.find(c => c.id === block?.courseId))?.label.split(':')[0] || '',
+      course_title: (data.activityFilterCourses.find(c => c.id === block?.courseId))?.label || '',
+    } as any;
+
+    setIsGeneratingReport(blockId);
+    try {
+      await reportService.generateClassReport(section, course, currentAY);
+      showSuccess("Report generated successfully.");
+      setIsReportDropdownOpen(false);
+    } catch (err) {
+      showError("Failed to generate report.");
+    } finally {
+      setIsGeneratingReport(null);
+    }
+  };
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <Loader2 className="w-10 h-10 animate-spin text-primary/30 mb-4" />
@@ -405,10 +443,59 @@ export function DashboardTab() {
             Student progress and activities
           </p>
         </div>
-        <div className="flex items-center gap-3">
-           <button className="flex items-center justify-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-sm hover:bg-neutral-50 transition-all">
+        <div className="flex items-center gap-3 relative">
+           <button 
+            onClick={() => setIsReportDropdownOpen(!isReportDropdownOpen)}
+            className="flex items-center justify-center gap-2 bg-white border border-neutral-100 text-neutral-500 text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-sm hover:bg-primary hover:text-white hover:border-primary transition-all group"
+           >
              Generate Report
+             <ChevronDown size={14} className={`transition-transform ${isReportDropdownOpen ? 'rotate-180' : ''}`} />
            </button>
+
+           <AnimatePresence>
+            {isReportDropdownOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-full right-0 mt-2 w-80 bg-white border border-neutral-100 rounded-2xl shadow-xl z-50 overflow-hidden"
+              >
+                <div className="p-4 border-b border-neutral-50 bg-neutral-50/50">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Select Class Section</p>
+                </div>
+                <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+                  {data?.activityFilterBlocks.map((block) => (
+                    <button
+                      key={block.id}
+                      disabled={!!isGeneratingReport}
+                      onClick={() => handleDownloadReport(block.id)}
+                      className="w-full flex items-center justify-between p-3.5 rounded-xl hover:bg-primary/5 text-left group transition-all"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] shrink-0">
+                          {block.name.substring(0, 4)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-neutral-700 group-hover:text-primary transition-colors truncate">
+                            Section {block.name}
+                          </p>
+                          <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-tight">Class Report</p>
+                        </div>
+                      </div>
+                      {isGeneratingReport === block.id ? (
+                        <Loader2 size={14} className="animate-spin text-primary shrink-0 ml-2" />
+                      ) : (
+                        <Download size={14} className="text-neutral-300 group-hover:text-primary transition-all shrink-0 ml-2" />
+                      )}
+                    </button>
+                  ))}
+                  {(!data?.activityFilterBlocks || data.activityFilterBlocks.length === 0) && (
+                    <p className="p-4 text-center text-xs text-neutral-400">No active sections found.</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+           </AnimatePresence>
         </div>
       </div>
 

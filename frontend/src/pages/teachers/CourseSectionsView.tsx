@@ -16,7 +16,9 @@ import { UnifiedStudentBatchUploadDialog } from "../../components/students/Unifi
 import { supabase } from "../../lib/supabaseClient";
 import { useAlert } from "../../hooks/useAlert";
 import { useAcademicContext } from "../../hooks/useAcademicContext";
+import { reportService } from "../../services/reportService";
 import { motion, AnimatePresence } from "framer-motion";
+import { Download } from "lucide-react";
 import type {
   Course,
   Section,
@@ -63,6 +65,7 @@ export function CourseSectionsView({
   const [newBlock, setNewBlock] = useState({ year: 1, name: "" });
   const [selectedBlocksFromList, setSelectedBlocksFromList] = useState<{year: number, name: string}[]>([]);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isGeneratingReport, setIsGeneratingReport] = useState<string | null>(null);
 
   const fetchCatalogs = useCallback(async () => {
     try {
@@ -148,6 +151,27 @@ export function CourseSectionsView({
       setIsLoading(false);
     }
   }, [course.id, urlProgramLoadId, showError, currentAY, currentSemester]);
+
+  const handleGenerateReport = async (block: Section) => {
+    if (!currentAY) {
+      showError("Academic Year not set. Please check settings.");
+      return;
+    }
+    
+    setIsGeneratingReport(block.id);
+    try {
+      const result = await reportService.generateClassReport(block, course, currentAY);
+      if (result.success) {
+        showSuccess(`Report for ${block.year}${block.name} generated successfully.`);
+      } else {
+        showError(result.error || "Failed to generate report.");
+      }
+    } catch (err: any) {
+      showError(err.message || "An unexpected error occurred.");
+    } finally {
+      setIsGeneratingReport(null);
+    }
+  };
 
   const fetchBlocks = useCallback(async () => {
     if (!selectedProgramLoad) return;
@@ -716,6 +740,22 @@ export function CourseSectionsView({
                                 <Plus size={15} />
                               </button>
                             )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Generating report for block:", block.id);
+                                handleGenerateReport(block);
+                              }}
+                              disabled={isGeneratingReport === block.id}
+                              title="Generate Excel Report"
+                              className="p-2 text-primary hover:bg-primary hover:text-white rounded-xl transition-all disabled:opacity-50"
+                            >
+                              {isGeneratingReport === block.id ? (
+                                <Loader2 size={15} className="animate-spin" />
+                              ) : (
+                                <Download size={15} />
+                              )}
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
