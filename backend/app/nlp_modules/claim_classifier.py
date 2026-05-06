@@ -200,7 +200,39 @@ Sentences:
                     continue
             
             if not response or not response.text:
-                logger.error(f"All Gemini models failed for classification. Last error: {last_error}")
+                if os.getenv("GROQ_API_KEY"):
+                    logger.info("🚨 Gemini classification failed. Triggering GROQ FALLBACK...")
+                    try:
+                        import httpx
+                        groq_key = os.getenv("GROQ_API_KEY")
+                        url = "https://api.groq.com/openai/v1/chat/completions"
+                        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+                        payload = {
+                            "model": "llama-3.1-70b-versatile",
+                            "messages": [
+                                {"role": "system", "content": "You are a claim classifier. Return ONLY a JSON array of objects with 'label' and 'score'."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.1,
+                            "response_format": {"type": "json_object"}
+                        }
+                        with httpx.Client(timeout=15.0) as client:
+                            groq_res = client.post(url, json=payload, headers=headers)
+                        if groq_res.status_code == 200:
+                            groq_data = groq_res.json()
+                            raw_content = groq_data['choices'][0]['message']['content']
+                            # Wrap it to make it look like a Gemini response object for the subsequent logic
+                            class MockResponse:
+                                def __init__(self, text): self.text = text
+                            response = MockResponse(raw_content)
+                            logger.info("✓ Groq classification fallback successful!")
+                        else:
+                            logger.error(f"Groq API error: {groq_res.status_code}")
+                    except Exception as ge:
+                        logger.error(f"Groq classification fallback failed: {ge}")
+
+            if not response or not response.text:
+                logger.error(f"All Gemini models (and Groq fallback) failed for classification. Last error: {last_error}")
                 return self._heuristic_classify(sentences)
             
             cleaned_text = response.text.strip()

@@ -269,20 +269,23 @@ class GrammarAnalyzer:
         initial_delay: float = 1.5
     ) -> Tuple[List[Dict[str, Any]], bool]:
         """
-        Check grammar using LLM with retry mechanism and exponential backoff
+        Check grammar using LLM with retry mechanism, model rotation, and ultimate fallback to Groq
         """
         if not self.llm_client or not self.available_llm:
+            # If no Gemini/OpenAI, check if Groq is available as a last resort
+            if os.getenv("GROQ_API_KEY"):
+                logger.info("🚀 Gemini/OpenAI unavailable. Jumping straight to Groq fallback.")
+                return self._check_with_groq(text, sentences), True
             return [], False
         
         last_exception = None
         delay = initial_delay
         
-        # Prepare model rotation if using Gemini (May 2026 landscape)
+        # Prepare model rotation if using Gemini
         model_rotation = []
         if self.available_llm == "gemini":
             env_model = os.getenv("GEMINI_MODEL_NAME", "gemini-flash-latest").replace("models/", "")
             model_rotation = [env_model, 'gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest', 'gemini-3.1-pro-preview']
-            # Deduplicate while preserving order
             model_rotation = list(dict.fromkeys(model_rotation))
         
         for attempt in range(max_retries):
@@ -291,7 +294,6 @@ class GrammarAnalyzer:
                     errors = self._check_with_openai(text, sentences)
                     return errors, True
                 elif self.available_llm == "gemini":
-                    # Rotate model on each retry attempt
                     current_model = model_rotation[attempt % len(model_rotation)]
                     if current_model != self.gemini_model:
                         logger.info(f"🔄 Rotating Gemini model to: {current_model} (Attempt {attempt + 1})")
@@ -300,22 +302,26 @@ class GrammarAnalyzer:
                     errors = self._check_with_gemini(text, sentences)
                     return errors, True
             except Exception as e:
-                error_msg = str(e)
-                # Don't retry quota errors
-                if "429" in error_msg or "quota" in error_msg.lower() or "exceeded" in error_msg.lower():
-                    logger.error(f"❌ {self.available_llm.upper()} API quota exceeded. Error: {e}")
-                    return [], False
+                error_msg = str(e).lower()
+                # If it's a quota error, don't keep retrying Gemini - switch to Groq if possible
+                is_quota = any(q in error_msg for q in ["429", "quota", "exceeded"])
+                
+                if is_quota and os.getenv("GROQ_API_KEY"):
+                    logger.warning(f"⚠️ Gemini Quota Exceeded. Switching to GROQ Fallback...")
+                    return self._check_with_groq(text, sentences), True
                 
                 last_exception = e
                 if attempt < max_retries - 1:
-                    # Exponential backoff: delay * 2^attempt
-                    wait_time = delay * (1.5 ** attempt) # Slightly gentler growth
+                    wait_time = delay * (1.5 ** attempt)
                     logger.warning(
-                        f"LLM grammar check attempt {attempt + 1}/{max_retries} failed ({current_model if self.available_llm == 'gemini' else ''}): {e}. "
-                        f"Retrying in {wait_time:.2f} seconds..."
+                        f"LLM attempt {attempt + 1} failed: {e}. Retrying in {wait_time:.2f}s..."
                     )
                     time.sleep(wait_time)
                 else:
+                    # Final attempt failed - check for Groq fallback
+                    if os.getenv("GROQ_API_KEY"):
+                        logger.info("🚨 All Gemini attempts failed. Triggering ULTIMATE GROQ FALLBACK...")
+                        return self._check_with_groq(text, sentences), True
                     logger.error(f"LLM grammar check failed after {max_retries} attempts: {e}")
         
         return [], False
@@ -445,6 +451,53 @@ Please return your response as a valid JSON object with this structure:
             else:
                 logger.error(f"Gemini grammar check error: {e}")
                 return []
+
+    def _check_with_groq(self, text: str, sentences: List[str]) -> List[Dict[str, Any]]:
+        """Ultimate fallback using Groq API (Llama 3)"""
+        try:
+            api_key = os.getenv("GROQ_API_KEY")
+            if not api_key:
+                return []
+            
+            import httpx
+            prompt = self._build_grammar_prompt(text, sentences)
+            
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama-3.1-70b-versatile", # Modern stable Groq model
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are an expert grammar checker. Return ONLY a JSON object with an 'errors' array."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.1,
+                "response_format": {"type": "json_object"}
+            }
+            
+            # Synchronous call since the analyzer is sync
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(url, json=payload, headers=headers)
+                
+            if response.status_code == 200:
+                result = response.json()
+                result_text = result['choices'][0]['message']['content']
+                return self._parse_llm_response(result_text, text)
+            else:
+                logger.error(f"Groq API error: {response.status_code} - {response.text}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Groq fallback failed: {e}")
+            return []
     
     def _build_grammar_prompt(self, text: str, sentences: List[str]) -> str:
         """Build prompt for LLM grammar checking with enhanced paragraph splitting and context-aware spelling"""
