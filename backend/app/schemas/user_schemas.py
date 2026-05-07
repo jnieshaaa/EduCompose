@@ -8,8 +8,8 @@ from typing import Optional
 
 class UserBase(BaseModel):
     email: EmailStr
-    username: str
-    full_name: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     role: str = "teacher"
     title: Optional[str] = None
     nickname: Optional[str] = None
@@ -47,7 +47,7 @@ class DeleteAccountRequest(BaseModel):
     password: str
 
 class UserResponse(UserBase):
-    id: int
+    id: str  # Changed from int to str for UUID support
     is_active: bool
     email_verified: bool = False
     created_at: datetime

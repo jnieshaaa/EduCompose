@@ -536,7 +536,7 @@ class AuthService:
                 # Query the public.users table (our custom table)
                 # PostgREST format: /table?column=eq.value&select=columns
                 response = await client.get(
-                    f"{supabase_url}/rest/v1/users?auth_user_id=eq.{auth_user_id}&select=id,email,full_name,role,is_active",
+                    f"{supabase_url}/rest/v1/users?id=eq.{auth_user_id}&select=id,email,full_name,role,is_active",
                     headers={
                         "apikey": supabase_service_role_key,
                         "Authorization": f"Bearer {supabase_service_role_key}",
