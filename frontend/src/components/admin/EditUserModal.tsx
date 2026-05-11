@@ -187,33 +187,35 @@ export default function EditUserModal({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title</label>
-              <select
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none"
-              >
-                <option value="">None</option>
-                <option value="Mr.">Mr.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Dr.">Dr.</option>
-                <option value="Prof.">Prof.</option>
-              </select>
+          {role !== 'admin' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title</label>
+                <select
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all appearance-none"
+                >
+                  <option value="" disabled>None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value.trimStart())}
+                  placeholder="Nickname"
+                  className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
+                />
+              </div>
             </div>
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Nickname"
-                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
@@ -221,7 +223,7 @@ export default function EditUserModal({
               <input
                 required
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={(e) => setFirstName(e.target.value.trimStart())}
                 className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
@@ -229,7 +231,7 @@ export default function EditUserModal({
               <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
               <input
                 value={middleName}
-                onChange={(e) => setMiddleName(e.target.value)}
+                onChange={(e) => setMiddleName(e.target.value.trimStart())}
                 className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>
@@ -238,7 +240,7 @@ export default function EditUserModal({
               <input
                 required
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e) => setLastName(e.target.value.trimStart())}
                 className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
               />
             </div>

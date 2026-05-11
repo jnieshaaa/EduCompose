@@ -87,6 +87,27 @@ export default function CreateUserModal({
       return;
     }
 
+    if (birthday) {
+      const birthDate = new Date(birthday);
+      const today = new Date();
+      
+      if (birthDate > today) {
+        setError("Invalid birthday: Date cannot be in the future");
+        return;
+      }
+      
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 15) {
+        setError("Registration restricted: Users must be at least 15 years old");
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
@@ -200,53 +221,59 @@ export default function CreateUserModal({
           </AnimatePresence>
 
           {/* Institutional (Optional) */}
-          <div className="grid grid-cols-1 gap-4 bg-neutral-50/50 p-4 rounded-2xl border border-neutral-100">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
-              <select
-                value={schoolId}
-                onChange={(e) => setSchoolId(e.target.value)}
-                className="w-full h-10 px-4 bg-white border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-xs font-semibold transition-all appearance-none cursor-pointer"
-              >
-                <option value="">No School Associated</option>
-                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+          {role !== 'admin' && (
+            <div className="grid grid-cols-1 gap-4 bg-neutral-50/50 p-4 rounded-2xl border border-neutral-100">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">School</label>
+                <select
+                  value={schoolId}
+                  onChange={(e) => setSchoolId(e.target.value)}
+                  className="w-full h-10 px-4 bg-white border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-xs font-semibold transition-all appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>No School Associated</option>
+                  {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
+                <select
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="w-full h-10 px-4 bg-white border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-xs font-semibold transition-all appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>No Department Associated</option>
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Department</label>
-              <select
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                className="w-full h-10 px-4 bg-white border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary text-xs font-semibold transition-all appearance-none cursor-pointer"
-              >
-                <option value="">No Department Associated</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-          </div>
+          )}
 
           <div className="space-y-5">
-            <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Teacher Info</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title (Mr, Ms, etc)</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="EX: PROF."
-                  className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="EX: DOC SMITH"
-                  className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
-                />
-              </div>
-            </div>
+            {role !== 'admin' && (
+              <>
+                <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Teacher Info</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title (Mr, Ms, etc)</label>
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="EX: PROF."
+                      className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Nickname</label>
+                    <input
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value.trimStart())}
+                      placeholder="EX: DOC SMITH"
+                      className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <h3 className="text-[9px] font-medium text-primary uppercase tracking-widest pl-1 border-l-2 border-primary">Personal Info</h3>
             
@@ -256,7 +283,7 @@ export default function CreateUserModal({
                 <input
                   required
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => setFirstName(e.target.value.trimStart())}
                   placeholder="EX: JOHN"
                   className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />
@@ -265,7 +292,7 @@ export default function CreateUserModal({
                 <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Middle Name</label>
                 <input
                   value={middleName}
-                  onChange={(e) => setMiddleName(e.target.value)}
+                  onChange={(e) => setMiddleName(e.target.value.trimStart())}
                   placeholder="OPTIONAL"
                   className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />
@@ -278,7 +305,7 @@ export default function CreateUserModal({
                 <input
                   required
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => setLastName(e.target.value.trimStart())}
                   placeholder="EX: DOE"
                   className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />
@@ -301,10 +328,12 @@ export default function CreateUserModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday</label>
+                <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Birthday*</label>
                 <input
+                  required
                   type="date"
                   value={birthday}
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split('T')[0]}
                   onChange={(e) => setBirthday(e.target.value)}
                   className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />
@@ -313,7 +342,7 @@ export default function CreateUserModal({
                 <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">ID / Code</label>
                 <input
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => setCode(e.target.value.trimStart())}
                   placeholder="EX: ADM-001"
                   className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />

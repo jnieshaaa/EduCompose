@@ -40,6 +40,7 @@ import { useAlert } from "../../hooks/useAlert";
 import { reportService } from "../../services/reportService";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, ChevronDown } from "lucide-react";
+import ActivityLogsModal from "../../components/admin/ActivityLogsModal";
 
 // Format timestamp to relative time (e.g., "2 minutes ago")
 const formatTimeAgo = (timestamp: string | Date): string => {
@@ -97,6 +98,8 @@ interface DashboardData {
     score?: number;
     courseId?: string;
     blockId?: string;
+    activityId?: string;
+    activityTitle?: string;
     courseIds: string[];
     blockIds: string[];
     courseLabel?: string;
@@ -232,6 +235,8 @@ export function DashboardTab() {
   const { showError, showSuccess } = useAlert();
   const [isReportDropdownOpen, setIsReportDropdownOpen] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState<string | null>(null);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [perfSelectedBlock, setPerfSelectedBlock] = useState("all");
 
   const filteredRecentActivity = useMemo(() => {
     if (!data) return [];
@@ -240,8 +245,12 @@ export function DashboardTab() {
 
   const filteredPerformanceEssays = useMemo(() => {
     if (!data) return [];
-    return data.performanceEssays;
-  }, [data]);
+    let essays = data.performanceEssays;
+    if (perfSelectedBlock !== "all") {
+      essays = essays.filter(e => e.blockIds.includes(perfSelectedBlock));
+    }
+    return essays;
+  }, [data, perfSelectedBlock]);
 
   const perfBlockNameById = useMemo(() => {
     if (!data) return new Map<string, string>();
@@ -279,7 +288,7 @@ export function DashboardTab() {
 
         const activityMetaById = new Map();
         for (const a of activities) {
-          activityMetaById.set(a.id, {
+          activityMetaById.set(String(a.id), {
             courseIds: a.courseIds || [],
             blockIds: a.blockIds || [],
             title: a.title,
@@ -338,13 +347,14 @@ export function DashboardTab() {
           (students as StudentNameRow[] || []).forEach(s => studentMap.set(s.id, buildFullNameFromObject(s)));
         }
 
-        const recentActivity = essaysData.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).slice(0, 30).map(e => {
-          const meta = activityMetaById.get(e.activity_id);
+        const allRecentActivity = essaysData.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map(e => {
+          const meta = activityMetaById.get(String(e.activity_id));
           const analysis = analysisMap.get(String(e.id));
           return {
             essayId: e.id, student: studentMap.get(e.student_id) || "Unknown", action: e.status === 'submitted' ? "Submitted" : "Analyzed",
             essay: e.title, time: formatTimeAgo(e.submitted_at), status: e.status === 'submitted' ? "new" : "evaluated",
             score: analysis?.overall_score || undefined, courseIds: meta?.courseIds || [], blockIds: meta?.blockIds || [],
+            activityId: e.activity_id || undefined, activityTitle: meta?.title || "Unknown Activity"
           } as DashboardData["recentActivity"][0];
         });
 
@@ -377,7 +387,7 @@ export function DashboardTab() {
             coherenceScore: { value: evaluatedCount ? `${(performanceEssays.reduce((a,b)=>a+(b.coherence_score||0),0)/evaluatedCount).toFixed(1)}%` : "0%", trend: "-0.5%", status: "down" },
             vocabularyComplexity: { value: "Advanced", trend: "Steady", status: "neutral" }
           },
-          recentActivity,
+          recentActivity: allRecentActivity,
           activityFilterCourses: allCourses.filter(c => [...new Set(activities.flatMap(a => a.courseIds || []))].includes(c.id)).map(c => ({id: c.id, label: c.course_title})),
           activityFilterBlocks: allSections.filter(s => activeSectionIds.includes(s.id)).map(s => ({id: s.id, name: s.name, courseId: (allCourses.find(c => c.id === s.programLoadId))?.id || "" })),
           performanceFilterPrograms,
@@ -546,10 +556,25 @@ export function DashboardTab() {
                     <h2 className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Class Results</h2>
                     <p className="text-xs text-neutral-500 font-medium">See how your classes are performing</p>
                   </div>
-                 <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-neutral-100">
-                     <button onClick={() => setPerfChartMode("blocks")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'blocks' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Class Average</button>
-                    <button onClick={() => setPerfChartMode("students")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'students' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Students</button>
-                 </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" size={12} />
+                      <select
+                        value={perfSelectedBlock}
+                        onChange={(e) => setPerfSelectedBlock(e.target.value)}
+                        className="h-9 pl-9 pr-4 bg-white border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-wider outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+                      >
+                        <option value="all">All Blocks</option>
+                        {data?.performanceFilterBlocks.map(b => (
+                          <option key={b.id} value={String(b.id)}>Block {b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-neutral-100">
+                        <button onClick={() => setPerfChartMode("blocks")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'blocks' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Class Average</button>
+                        <button onClick={() => setPerfChartMode("students")} className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${perfChartMode === 'students' ? 'bg-neutral-900 text-white' : 'text-neutral-400 hover:text-neutral-600'}`}>Students</button>
+                    </div>
+                  </div>
               </div>
               <div className="flex-1 p-6">
                   {perfActivityChart.rows.length > 0 ? (
@@ -684,11 +709,15 @@ export function DashboardTab() {
                         <p className="text-[10px] font-bold">No updates yet...</p>
                     </div>
                  ) : (
-                   filteredRecentActivity.map((act, i) => (
+                   filteredRecentActivity.slice(0, 10).map((act, i) => (
                      <div key={i} className="group p-4 rounded-2xl hover:bg-neutral-50 transition-all border border-transparent hover:border-neutral-100">
                         <div className="flex justify-between items-start mb-1.5">
                            <p className="text-sm font-bold text-neutral-800 tracking-tight truncate max-w-[140px]">{act.student}</p>
                            <span className="text-[11px] font-bold text-neutral-300 uppercase">{act.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                           <BookOpen size={10} className="text-primary/50" />
+                           <span className="text-[9px] font-bold text-primary uppercase tracking-wider truncate">{act.activityTitle}</span>
                         </div>
                         <p className="text-xs text-neutral-500 line-clamp-1 mb-3">{act.action} "{act.essay}"</p>
                         <div className="flex items-center justify-between">
@@ -704,7 +733,10 @@ export function DashboardTab() {
                  )}
               </div>
               <div className="p-4 bg-neutral-50/50 border-t border-neutral-50">
-                 <button className="w-full py-2.5 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center justify-center gap-2">
+                 <button 
+                  onClick={() => setIsActivityModalOpen(true)}
+                  className="w-full py-2.5 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center justify-center gap-2"
+                 >
                      View all logs <ArrowRight size={12} />
                  </button>
               </div>
@@ -712,6 +744,15 @@ export function DashboardTab() {
 
         </div>
       </div>
+       <ActivityLogsModal
+        isOpen={isActivityModalOpen}
+        onClose={() => setIsActivityModalOpen(false)}
+        activities={filteredRecentActivity}
+        courses={data?.activityFilterCourses || []}
+        blocks={data?.activityFilterBlocks || []}
+        programs={data?.performanceFilterPrograms || []}
+        allActivities={data?.activities || []}
+       />
     </div>
   );
 }

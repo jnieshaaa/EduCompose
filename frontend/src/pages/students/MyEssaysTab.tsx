@@ -8,7 +8,7 @@ import {
   CheckCircle, 
   Clock, 
   Zap, 
-  Filter,
+  Layers,
   Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -139,11 +139,43 @@ export function MyEssaysTab() {
     };
   }, []);
 
+  const [courseFilter, setCourseFilter] = useState('all');
+  const [gradeFilter, setGradeFilter] = useState('all');
+
+  const uniqueCourses = useMemo(() => {
+    const courses = essaysData.map(e => e.courseName);
+    return ['all', ...Array.from(new Set(courses))];
+  }, [essaysData]);
+
   const filteredEssays = useMemo(() => {
-    return essaysData.filter(essay =>
-      essay.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [essaysData, searchQuery]);
+    return essaysData.filter(essay => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = 
+        essay.title.toLowerCase().includes(q) ||
+        essay.courseName.toLowerCase().includes(q) ||
+        (essay.aiScore !== null && String(essay.aiScore).includes(q));
+      
+      const matchesCourse = courseFilter === 'all' || essay.courseName === courseFilter;
+      
+      let matchesGrade = true;
+      if (gradeFilter !== 'all') {
+        const score = essay.aiScore;
+        if (score === null) {
+          matchesGrade = false;
+        } else if (gradeFilter === 'below75') {
+          matchesGrade = score < 75;
+        } else if (gradeFilter === '75-80') {
+          matchesGrade = score >= 75 && score <= 80;
+        } else if (gradeFilter === '81-90') {
+          matchesGrade = score >= 81 && score <= 90;
+        } else if (gradeFilter === '91-100') {
+          matchesGrade = score >= 91 && score <= 100;
+        }
+      }
+
+      return matchesSearch && matchesCourse && matchesGrade;
+    });
+  }, [essaysData, searchQuery, courseFilter, gradeFilter]);
 
   const stats = useMemo(() => {
     const total = essaysData.length;
@@ -245,10 +277,36 @@ export function MyEssaysTab() {
             className="w-full pl-11 pr-5 h-14 bg-white border border-neutral-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary/50 outline-none transition-all shadow-sm"
           />
         </div>
-        <button className="h-14 px-6 bg-white border border-neutral-100 rounded-3xl flex items-center gap-2 text-[11px] font-bold text-neutral-400 uppercase tracking-widest hover:bg-neutral-50 transition-all shadow-sm">
-          <Filter size={14} />
-          All Progress
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={14} />
+          <select
+            value={courseFilter}
+            onChange={(e) => setCourseFilter(e.target.value)}
+            className="h-14 pl-11 pr-8 bg-white border border-neutral-100 rounded-3xl text-[11px] font-bold text-neutral-400 uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer shadow-sm min-w-[160px]"
+          >
+            <option value="all">All Courses</option>
+            {uniqueCourses.filter(c => c !== 'all').map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="relative">
+          <Zap className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={14} />
+          <select
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            className="h-14 pl-11 pr-8 bg-white border border-neutral-100 rounded-3xl text-[11px] font-bold text-neutral-400 uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer shadow-sm min-w-[160px]"
+          >
+            <option value="all">All Progress</option>
+            <option value="below75">75 Below</option>
+            <option value="75-80">75 - 80</option>
+            <option value="81-90">81 - 90</option>
+            <option value="91-100">91 - 100</option>
+          </select>
+        </div>
+      </div>
       </div>
 
       {/* Main Table Card */}

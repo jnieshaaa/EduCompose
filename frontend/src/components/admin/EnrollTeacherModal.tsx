@@ -65,6 +65,29 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
     try {
       setLoading(true);
       setFormError("");
+      
+      if (formData.birthday) {
+        const birthDate = new Date(formData.birthday);
+        const today = new Date();
+        
+        if (birthDate > today) {
+          setFormError("Invalid birthday: Date cannot be in the future");
+          setLoading(false);
+          return;
+        }
+        
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 15) {
+          setFormError("Enrollment restricted: Teachers must be at least 15 years old");
+          setLoading(false);
+          return;
+        }
+      }
 
       const normalizedEmail = formData.email.trim().toLowerCase();
 
@@ -204,6 +227,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                       type="date"
                       className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all cursor-pointer"
                       value={formData.birthday}
+                      max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split('T')[0]}
                       onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                     />
                   </div>
@@ -219,7 +243,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   >
-                    <option value="">Select Title</option>
+                    <option value="" disabled>Select Title</option>
                     <option value="Mr.">Mr.</option>
                     <option value="Ms.">Ms.</option>
                     <option value="Mrs.">Mrs.</option>
@@ -234,7 +258,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     placeholder="E.g. Jay"
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.nickname}
-                    onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, nickname: e.target.value.trimStart() })}
                   />
                 </div>
              </div>
@@ -248,7 +272,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     placeholder="Juan"
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value.trimStart() })}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -257,7 +281,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     placeholder="Dela"
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.middle_name}
-                    onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, middle_name: e.target.value.trimStart() })}
                   />
                 </div>
              </div>
@@ -271,7 +295,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     placeholder="Cruz"
                     className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl outline-none focus:ring-4 focus:ring-secondary/5 focus:bg-white focus:border-secondary text-sm font-medium transition-all"
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value.trimStart() })}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -310,7 +334,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     value={formData.school_id}
                     onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
                   >
-                    <option value="">Select University</option>
+                    <option value="" disabled>Select University</option>
                     {schools.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
@@ -327,7 +351,7 @@ const EnrollTeacherModal: React.FC<EnrollTeacherModalProps> = ({ isOpen, onClose
                     value={formData.department_id}
                     onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
                   >
-                    <option value="">Select Department</option>
+                    <option value="" disabled>Select Department</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>[{d.code}] {d.name}</option>
                     ))}
