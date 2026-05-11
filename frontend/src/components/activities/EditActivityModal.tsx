@@ -170,7 +170,7 @@ export function EditActivityModal({
               type="text"
               placeholder="e.g., Argumentative Essay on Climate Change"
               value={formData.title}
-              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value.trimStart() }))}
               className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-sm bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300"
             />
           </div>
@@ -447,7 +447,7 @@ export function EditActivityModal({
               placeholder="Provide instructions or guidelines for students…"
               rows={3}
               value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value.trimStart() }))}
               className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-xs bg-neutral-50 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 focus:bg-white transition-all placeholder:text-neutral-300 resize-none leading-relaxed"
             />
           </div>

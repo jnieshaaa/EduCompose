@@ -22,6 +22,8 @@ interface InputProps {
   onFocus?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   maxLength?: number;
+  min?: string | number;
+  max?: string | number;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -42,6 +44,8 @@ const Input: React.FC<InputProps> = ({
   onFocus,
   onBlur,
   maxLength,
+  min,
+  max,
 }) => {
   const baseClasses =
     "w-full px-3 py-2 border rounded-rd focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200";
@@ -111,6 +115,8 @@ const Input: React.FC<InputProps> = ({
           className={inputClasses}
           readOnly={readOnly}
           maxLength={maxLength}
+          min={min}
+          max={max}
         />
       )}
 

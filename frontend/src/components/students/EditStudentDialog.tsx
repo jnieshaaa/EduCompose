@@ -71,7 +71,7 @@ export function EditStudentDialog({
                 required
                 className="mt-1"
                 value={editingStudent.first_name}
-                onChange={(val) => onStudentChange({ ...editingStudent, first_name: val })}
+                onChange={(val) => onStudentChange({ ...editingStudent, first_name: val.trimStart() })}
               />
             </div>
             <div>
@@ -80,7 +80,7 @@ export function EditStudentDialog({
                 required
                 className="mt-1"
                 value={editingStudent.last_name}
-                onChange={(val) => onStudentChange({ ...editingStudent, last_name: val })}
+                onChange={(val) => onStudentChange({ ...editingStudent, last_name: val.trimStart() })}
               />
             </div>
             <div className="col-span-2">
@@ -90,7 +90,7 @@ export function EditStudentDialog({
                 type="email"
                 className="mt-1"
                 value={editingStudent.email}
-                onChange={(val) => onStudentChange({ ...editingStudent, email: val })}
+                onChange={(val) => onStudentChange({ ...editingStudent, email: val.replace(/\s/g, "") })}
               />
             </div>
             <div className="col-span-2">
@@ -100,6 +100,7 @@ export function EditStudentDialog({
                 type="date"
                 className="mt-1"
                 value={editingStudent.birthday || ""}
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split('T')[0]}
                 onChange={(val) => onStudentChange({ ...editingStudent, birthday: val })}
               />
             </div>

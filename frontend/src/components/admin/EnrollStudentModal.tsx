@@ -348,7 +348,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({ isOpen, onClose
                     placeholder="student@university.edu"
                     className="w-full h-11 pl-10 pr-4 bg-white border border-neutral-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary text-sm font-medium transition-all"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/\s/g, '') })}
                   />
                 </div>
               </div>

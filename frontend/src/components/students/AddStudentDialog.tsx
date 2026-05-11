@@ -376,7 +376,7 @@ export function AddStudentDialog({
                   placeholder="Juan"
                   className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                   value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value.trimStart() })}
                 />
               </div>
             </div>
@@ -387,7 +387,7 @@ export function AddStudentDialog({
                 placeholder="Dela"
                 className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                 value={formData.middle_name}
-                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value.trimStart() })}
               />
             </div>
 
@@ -398,7 +398,7 @@ export function AddStudentDialog({
                 placeholder="Cruz"
                 className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                 value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value.trimStart() })}
               />
             </div>
 
@@ -412,7 +412,7 @@ export function AddStudentDialog({
                   placeholder="juan.cruz@email.com"
                   className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/\s/g, '') })}
                 />
               </div>
             </div>
@@ -455,6 +455,7 @@ export function AddStudentDialog({
                   type="date"
                   className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all"
                   value={formData.birthday}
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split('T')[0]}
                   onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                 />
               </div>
@@ -498,7 +499,7 @@ export function AddStudentDialog({
                     placeholder="e.g. A"
                     className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm transition-all uppercase"
                     value={formData.block_name}
-                    onChange={(e) => setFormData({ ...formData, block_name: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, block_name: e.target.value.trimStart() })}
                   />
                 </div>
               </>

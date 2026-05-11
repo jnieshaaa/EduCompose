@@ -46,7 +46,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
       const selectQuery = blockId 
         ? `
             *,
-            student_profiles!inner (*),
+            student_profiles (*),
             block_students (
               block_id,
               blocks (
@@ -63,7 +63,7 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
           `
         : `
             *,
-            student_profiles!inner (*),
+            student_profiles (*),
             block_students (
               block_id,
               blocks (
@@ -79,14 +79,23 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
             )
           `;
 
-      let query = supabase.from("users").select(selectQuery).eq("role", "student");
+      // Base query for students managed by this teacher
+      let query = supabase
+        .from("users")
+        .select(selectQuery)
+        .eq("role", "student")
+        .eq("is_active", true)
+        .not("student_profiles.enrollment_status", "eq", "dropped");
 
       if (blockId) {
         // Filter by specific block
         query = query.eq("block_students.block_id", blockId);
       } else {
-        // For the general students tab, show students managed by this teacher
-        query = query.eq("student_profiles.teacher_id", userData.user.id);
+        // For the general students tab, show students managed by this teacher if they are a teacher
+        const { data: userRole } = await supabase.from("users").select("role").eq("id", userData.user.id).single();
+        if (userRole?.role === "teacher") {
+          query = query.eq("student_profiles.teacher_id", userData.user.id);
+        }
       }
 
       const { data, error } = await query;
@@ -524,24 +533,48 @@ export function useStudents(blockId?: string, ay?: string, term?: string, showAr
     showWarning(
       blockId 
       ? "Are you sure you want to remove this student from this class? You can add them back later." 
-      : "Are you sure you want to permanently delete this student?", {
+      : "Are you sure you want to remove this student from your active list?", {
       onConfirm: async () => {
         try {
-          if (blockId) {
-            const { error } = await supabase
-              .from("block_students")
-              .delete()
-              .eq("student_id", studentId)
-              .eq("block_id", blockId);
-            if (error) throw error;
+          const { data: { user } } = await supabase.auth.getUser();
+          const { data: userRecord } = await supabase.from("users").select("role").eq("id", user?.id).single();
+          const { adminApi } = await import("../api");
+
+          if (userRecord?.role === "teacher") {
+            if (blockId) {
+              const { error } = await supabase
+                .from("block_students")
+                .delete()
+                .eq("student_id", studentId)
+                .eq("block_id", blockId);
+
+              if (error) throw error;
+              showSuccess("Student removed from this block.");
+            } else {
+              const { error } = await supabase
+                .from("student_profiles")
+                .update({ enrollment_status: "dropped" })
+                .eq("user_id", studentId);
+
+              if (error) throw error;
+              showSuccess("Student removed from your list.");
+            }
           } else {
-            // Use the secure backend proxy to delete from Auth AND Local DB
-            const { adminApi } = await import("../api");
-            await adminApi.deleteUser(studentId);
+            if (blockId) {
+              const { error } = await supabase
+                .from("block_students")
+                .delete()
+                .eq("student_id", studentId)
+                .eq("block_id", blockId);
+              if (error) throw error;
+              showSuccess("Student unlinked from block.");
+            } else {
+              await adminApi.deleteUser(studentId);
+              showSuccess("Student record permanently deleted.");
+            }
           }
           
           setStudents(prev => prev.filter(s => s.id !== studentId));
-          showSuccess(blockId ? "Student removed from class." : "Student permanently deleted.");
         } catch (err) {
           showError("Failed to remove student.");
         }

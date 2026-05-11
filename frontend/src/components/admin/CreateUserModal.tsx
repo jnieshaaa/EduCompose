@@ -257,7 +257,7 @@ export default function CreateUserModal({
                     <label className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest ml-1">Title (Mr, Ms, etc)</label>
                     <input
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => setTitle(e.target.value.trimStart())}
                       placeholder="EX: PROF."
                       className="w-full h-10 px-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                     />
@@ -361,7 +361,7 @@ export default function CreateUserModal({
                   required
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value.replace(/\s/g, ''))}
                   placeholder="admin.email@university.edu"
                   className="w-full h-10 pl-10 pr-4 bg-neutral-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-primary text-xs font-semibold transition-all"
                 />

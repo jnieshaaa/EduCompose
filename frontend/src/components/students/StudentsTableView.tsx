@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
-import Button from "../ui/Button";
 import {
   Table,
   TableBody,
@@ -10,17 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+
 import { 
-  MoreVertical, 
-  // Eye, 
-  // Edit, 
-  Trash2, 
   ChevronLeft, 
   ChevronRight, 
   ChevronUp, 
@@ -42,7 +32,6 @@ export function StudentsTableView({
   students,
   urlSectionFilter,
   // onEditStudent,
-  onDeleteStudent,
   // onViewEssayHistory,
   isLoading = false,
 }: StudentsTableViewProps) {
@@ -155,7 +144,6 @@ export function StudentsTableView({
                 </TableHead>
               )}
               <TableHead className="uppercase text-[11px] font-bold tracking-widest text-neutral-400">Email</TableHead>
-              <TableHead className='text-right uppercase text-[11px] font-bold tracking-widest text-neutral-400'>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -181,48 +169,6 @@ export function StudentsTableView({
                 )}
                 <TableCell>
                   <div className='text-sm text-neutral-500 font-medium'>{student.email}</div>
-                </TableCell>
-                <TableCell className='text-right'>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant='ghost' size='sm' className="hover:bg-neutral-100 rounded-lg h-8 w-8 p-0">
-                        <MoreVertical className='w-4 h-4' />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end' className="w-48 p-2 rounded-xl shadow-xl border border-neutral-100 animate-in fade-in zoom-in duration-200">
-                      {/* <DropdownMenuItem
-                        className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onViewEssayHistory) onViewEssayHistory(student);
-                        }}
-                      >
-                        <Eye className='w-4 h-4 text-primary' />
-                        View History
-                      </DropdownMenuItem> */}
-                      {/* <DropdownMenuItem
-                        className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditStudent(student);
-                        }}
-                      >
-                        <Edit className='w-4 h-4 text-amber-500' />
-                        Edit Student
-                      </DropdownMenuItem> */}
-                      {/* <div className="my-1 border-t border-neutral-100" /> */}
-                      <DropdownMenuItem
-                        className='flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg cursor-pointer font-medium'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteStudent(student.id);
-                        }}
-                      >
-                        <Trash2 className='w-4 h-4' />
-                        Remove Student
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

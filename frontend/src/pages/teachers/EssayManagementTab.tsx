@@ -489,7 +489,7 @@ export function EssayManagementTab() {
               label="Essay Title"
               placeholder="e.g. Critical Analysis of Modernism"
               value={newActivity.title}
-              onChange={(value) => setNewActivity((prev) => ({ ...prev, title: value }))}
+              onChange={(value) => setNewActivity((prev) => ({ ...prev, title: value.trimStart() }))}
               required
             />
 
@@ -543,7 +543,7 @@ export function EssayManagementTab() {
                   value={newActivity.rubricId}
                   onChange={(e) => setNewActivity((prev) => ({ ...prev, rubricId: e.target.value }))}
                 >
-                  <option value="">Select rubric (optional)</option>
+                  <option value="">Select Rubric</option>
                   {rubrics.map((r) => (
                     <option key={r.id} value={r.id}>{r.title}</option>
                   ))}
@@ -556,7 +556,8 @@ export function EssayManagementTab() {
                 </label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
                   value={newActivity.dueDate}
                   onChange={(e) => setNewActivity((prev) => ({ ...prev, dueDate: e.target.value }))}
                 />
@@ -569,7 +570,7 @@ export function EssayManagementTab() {
               type="textarea"
               rows={4}
               value={newActivity.description}
-              onChange={(value) => setNewActivity((prev) => ({ ...prev, description: value }))}
+              onChange={(value) => setNewActivity((prev) => ({ ...prev, description: value.trimStart() }))}
             />
 
             <div className="flex justify-end pt-2">

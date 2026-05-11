@@ -87,7 +87,7 @@ export function SignUpForm({
           type="email"
           value={email}
           onChange={(e) => {
-            setEmail(e.target.value);
+            setEmail(e.target.value.replace(/\s/g, ""));
             setError("");
           }}
           placeholder="e.g. you@example.com"

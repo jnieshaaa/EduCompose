@@ -750,7 +750,6 @@ export function DashboardTab() {
         activities={filteredRecentActivity}
         courses={data?.activityFilterCourses || []}
         blocks={data?.activityFilterBlocks || []}
-        programs={data?.performanceFilterPrograms || []}
         allActivities={data?.activities || []}
        />
     </div>

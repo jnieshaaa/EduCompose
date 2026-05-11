@@ -1,22 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
-import Button from "../ui/Button";
 import {
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2,
   Mail,
   User,
   GraduationCap
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+
 import type { Student } from "../../types/academic";
 
 interface StudentsCardViewProps {
@@ -30,9 +20,7 @@ interface StudentsCardViewProps {
 export function StudentsCardView({
   students,
   urlSectionFilter,
-  onEditStudent,
-  onDeleteStudent,
-  onViewEssayHistory,
+
 }: StudentsCardViewProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -61,38 +49,6 @@ export function StudentsCardView({
                       <p className="text-sm text-neutral-500 font-mono">{student.student_code}</p>
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-1"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            onViewEssayHistory && onViewEssayHistory(student)
-                          }
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Essay History
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEditStudent(student)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Student
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-error-default"
-                          onClick={() => onDeleteStudent(student.id)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Remove Student
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-neutral-500 mb-3">

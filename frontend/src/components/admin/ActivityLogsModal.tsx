@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Filter, Activity, ArrowRight, BookOpen, Layers, Users } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { X, Search, Activity, ArrowRight, BookOpen, ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface ActivityLog {
   essayId: string;
@@ -23,7 +23,6 @@ interface ActivityLogsModalProps {
   activities: ActivityLog[];
   courses: { id: string; label: string }[];
   blocks: { id: string; name: string; courseId: string }[];
-  programs: { id: string; label: string }[];
   allActivities: any[];
 }
 
@@ -33,12 +32,13 @@ export default function ActivityLogsModal({
   activities,
   courses,
   blocks,
-  programs,
   allActivities,
 }: ActivityLogsModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedActivity, setSelectedActivity] = useState("all");
   const [selectedBlock, setSelectedBlock] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("all");
 
   // Get filtered blocks based on selected activity
   const availableBlocks = useMemo(() => {
@@ -60,14 +60,26 @@ export default function ActivityLogsModal({
       const matchesSearch = 
         log.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.essay.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (log.activityTitle || "").toLowerCase().includes(searchTerm.toLowerCase());
+        (log.activityTitle || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (log.score?.toString() || "").includes(searchTerm);
       
       const matchesActivity = selectedActivity === "all" || String(log.activityId) === String(selectedActivity);
       const matchesBlock = selectedBlock === "all" || log.blockIds.map(String).includes(String(selectedBlock));
+      const matchesCourse = selectedCourse === "all" || log.courseIds.map(String).includes(String(selectedCourse));
+      
+      let matchesGrade = true;
+      if (selectedGrade !== "all" && log.score !== undefined) {
+        if (selectedGrade === "75-below") matchesGrade = log.score < 75;
+        else if (selectedGrade === "75-80") matchesGrade = log.score >= 75 && log.score <= 80;
+        else if (selectedGrade === "81-90") matchesGrade = log.score >= 81 && log.score <= 90;
+        else if (selectedGrade === "91-100") matchesGrade = log.score >= 91 && log.score <= 100;
+      } else if (selectedGrade !== "all" && log.score === undefined) {
+        matchesGrade = false;
+      }
 
-      return matchesSearch && matchesActivity && matchesBlock;
+      return matchesSearch && matchesActivity && matchesBlock && matchesCourse && matchesGrade;
     });
-  }, [activities, searchTerm, selectedActivity, selectedBlock]);
+  }, [activities, searchTerm, selectedActivity, selectedBlock, selectedCourse, selectedGrade]);
 
   if (!isOpen) return null;
 
@@ -97,42 +109,69 @@ export default function ActivityLogsModal({
 
         {/* Filters */}
         <div className="p-8 bg-white border-b border-neutral-50 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative group/search">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-primary transition-colors" size={18} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="relative group/search col-span-1 sm:col-span-2 lg:col-span-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300 group-focus-within/search:text-primary transition-colors" size={16} />
               <input
-                placeholder="Search logs..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-medium placeholder:text-neutral-300 focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
+                className="w-full h-11 pl-10 pr-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:bg-white focus:border-primary transition-all outline-none"
               />
             </div>
 
             <div className="relative">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={16} />
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+              >
+                <option value="all">All Courses</option>
+                {courses.map(c => <option key={c.id} value={String(c.id)}>{c.label}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={14} />
+            </div>
+
+            <div className="relative">
               <select
                 value={selectedActivity}
                 onChange={(e) => {
                   setSelectedActivity(e.target.value);
                   setSelectedBlock("all");
                 }}
-                className="w-full h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
               >
                 <option value="all">All Activities</option>
                 {allActivities.map(a => <option key={a.id} value={String(a.id)}>{a.title}</option>)}
               </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={14} />
             </div>
 
             <div className="relative">
-              <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={16} />
               <select
                 value={selectedBlock}
                 onChange={(e) => setSelectedBlock(e.target.value)}
-                className="w-full h-12 pl-12 pr-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
               >
                 <option value="all">All Blocks</option>
                 {availableBlocks.map(b => <option key={b.id} value={String(b.id)}>Block {b.name}</option>)}
               </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={14} />
+            </div>
+
+            <div className="relative">
+              <select
+                value={selectedGrade}
+                onChange={(e) => setSelectedGrade(e.target.value)}
+                className="w-full h-11 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-[10px] font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+              >
+                <option value="all">All Grades</option>
+                <option value="75-below">75 Below</option>
+                <option value="75-80">75 - 80</option>
+                <option value="81-90">81 - 90</option>
+                <option value="91-100">91 - 100</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={14} />
             </div>
           </div>
         </div>

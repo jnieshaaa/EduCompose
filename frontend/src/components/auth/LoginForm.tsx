@@ -55,7 +55,7 @@ export function LoginForm({
           type="email"
           value={email}
           onChange={(e) => {
-            setEmail(e.target.value);
+            setEmail(e.target.value.replace(/\s/g, ""));
             setError("");
           }}
           placeholder="Enter your email"
